@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generación guiada de tres variantes finales para Designer."""
+"""Guided generation of three final variants for Designer."""
 
 from __future__ import annotations
 
@@ -38,70 +38,70 @@ STYLE_VARIANT_FLAVORS: Dict[str, Tuple[str, str, str]] = {
 
 VARIANT_PROFILES: Dict[str, Dict[str, str]] = {
     "expressive": {
-        "label": "Firma expresiva",
-        "concept_suffix": "como firma visible, con más tensión y presencia inmediata",
-        "preview_copy": "La versión más de marca, más frontal y con mayor gesto visual.",
-        "preview_note": "Firma expresiva",
-        "density": "Media, con bloques protagonistas, contraste marcado y ritmo algo más teatral.",
-        "tone_suffix": "Se siente más frontal, memorables los acentos y menos neutral la composición.",
-        "component": "Hero protagonista con gesto fuerte, acentos de marca y CTA muy visible.",
-        "rationale_suffix": "Es la que mejor defiende identidad y recuerdo sin abandonar el sistema elegido.",
-        "not_this": "No intenta suavizar la personalidad ni parecer una interfaz corporativa plana.",
+        "label": "Выразительный почерк",
+        "concept_suffix": "Этот вариант подаёт систему как заметный почерк, с большим напряжением и мгновенным присутствием",
+        "preview_copy": "Самая брендовая версия: более фронтальная и с более сильным визуальным жестом.",
+        "preview_note": "Выразительный почерк",
+        "density": "Средняя, с главными блоками, выраженным контрастом и чуть более театральным ритмом.",
+        "tone_suffix": "Ощущается более фронтальной: акценты запоминаются, композиция менее нейтральна.",
+        "component": "Главный hero с сильным жестом, акцентами бренда и очень заметным CTA.",
+        "rationale_suffix": "Лучше всех защищает айдентику и запоминаемость, не покидая выбранную систему.",
+        "not_this": "Не пытается смягчить характер или выглядеть плоским корпоративным интерфейсом.",
     },
     "editorial": {
-        "label": "Narrativa editorial",
-        "concept_suffix": "con más jerarquía narrativa, lectura guiada y sensación curada",
-        "preview_copy": "La versión que explica mejor y da más sensación de criterio visual.",
-        "preview_note": "Narrativa editorial",
-        "density": "Aireada, con secuencia clara, titulares más protagonistas y respiración deliberada.",
-        "tone_suffix": "Se percibe más curada, pausada y orientada a explicar antes que a empujar.",
-        "component": "Secuencia hero + bloque editorial + CTA sobrio con más espacio de lectura.",
-        "rationale_suffix": "Funciona cuando el producto necesita explicar bien su valor sin perder carácter.",
-        "not_this": "No es la variante más agresiva ni la más pensada para escaneo operativo continuo.",
+        "label": "Редакционный нарратив",
+        "concept_suffix": "Этот вариант добавляет нарративную иерархию, ведомое чтение и ощущение продуманности",
+        "preview_copy": "Версия, которая лучше объясняет и сильнее передаёт визуальный вкус.",
+        "preview_note": "Редакционный нарратив",
+        "density": "Воздушная, с ясной последовательностью, более заметными заголовками и намеренными паузами.",
+        "tone_suffix": "Воспринимается более продуманной, неспешной и нацеленной объяснять, а не подталкивать.",
+        "component": "Последовательность hero + редакционный блок + сдержанный CTA с большим пространством для чтения.",
+        "rationale_suffix": "Работает, когда продукту нужно хорошо объяснить свою ценность, не теряя характера.",
+        "not_this": "Не самый агрессивный вариант и не самый подходящий для постоянного операционного просмотра.",
     },
     "technical": {
-        "label": "Señal técnica",
-        "concept_suffix": "con más semántica de estado, contraste y lectura de monitorización",
-        "preview_copy": "La versión más precisa y orientada a lectura técnica del producto.",
-        "preview_note": "Señal técnica",
-        "density": "Media-alta, con bloques compactos, énfasis en estados y jerarquía de lectura rápida.",
-        "tone_suffix": "Parece más precisa, instrumental y orientada a claridad de sistema.",
-        "component": "Panel principal con estados, gráficas cortas y jerarquía clara de señales.",
-        "rationale_suffix": "Conviene cuando el producto necesita reforzar control, estado y lectura inequívoca.",
-        "not_this": "No busca calidez editorial ni silencio visual como primera capa de experiencia.",
+        "label": "Технический сигнал",
+        "concept_suffix": "Этот вариант усиливает семантику состояний, контраст и чтение в духе мониторинга",
+        "preview_copy": "Самая точная версия, нацеленная на техническое чтение продукта.",
+        "preview_note": "Технический сигнал",
+        "density": "Выше средней, с компактными блоками, акцентом на состояниях и иерархией для быстрого чтения.",
+        "tone_suffix": "Выглядит более точной, инструментальной и нацеленной на ясность системы.",
+        "component": "Главная панель с состояниями, короткими графиками и ясной иерархией сигналов.",
+        "rationale_suffix": "Подходит, когда продукту нужно усилить контроль, видимость состояния и однозначное чтение.",
+        "not_this": "Не ищет редакционного тепла или визуальной тишины как первого слоя опыта.",
     },
     "operational": {
-        "label": "Producto operativo",
-        "concept_suffix": "como una versión más utilizable en producto real, con foco en tarea y lectura rápida",
-        "preview_copy": "La versión más aterrizada para uso diario y escaneo rápido.",
-        "preview_note": "Producto operativo",
-        "density": "Media, con equilibrio entre claridad, decisión y densidad suficiente para uso real.",
-        "tone_suffix": "Se siente más de producto vivo que de manifiesto visual, manteniendo la familia elegida.",
-        "component": "Resumen operativo con métricas clave, CTA contextual y jerarquía de escaneo muy clara.",
-        "rationale_suffix": "Suele ser la opción más aterrizada para producto continuo y adopción amplia.",
-        "not_this": "No convierte la dirección en una pieza puramente de marca o de storytelling.",
+        "label": "Рабочий продукт",
+        "concept_suffix": "Этот вариант делает систему удобнее для реального продукта, с фокусом на задаче и быстром чтении",
+        "preview_copy": "Самая приземлённая версия для ежедневной работы и быстрого просмотра.",
+        "preview_note": "Рабочий продукт",
+        "density": "Средняя, с балансом ясности, решений и достаточной плотности для реальной работы.",
+        "tone_suffix": "Ощущается скорее живым продуктом, чем визуальным манифестом, и сохраняет выбранное семейство.",
+        "component": "Рабочая сводка с ключевыми метриками, контекстным CTA и очень ясной иерархией просмотра.",
+        "rationale_suffix": "Обычно это самый приземлённый вариант для постоянно развивающегося продукта и широкой аудитории.",
+        "not_this": "Не превращает направление в чисто брендовую вещь или storytelling.",
     },
     "minimal": {
-        "label": "Producto limpio",
-        "concept_suffix": "más limpia, enfocada y silenciosa, reduciendo ruido alrededor del sistema base",
-        "preview_copy": "La versión más limpia, ligera y sencilla de ejecutar.",
-        "preview_note": "Producto limpio",
-        "density": "Aireada, con más espacio negativo, menos capas simultáneas y foco en lo esencial.",
-        "tone_suffix": "Da una sensación más ligera, sofisticada y fácil de ejecutar a diario.",
-        "component": "Hero de producto limpio con CTA dominante, prueba social y soporte mínimo.",
-        "rationale_suffix": "Ayuda a mantener la familia elegida sin saturar la experiencia final.",
-        "not_this": "No es la variante más expresiva ni la que lleva el gesto visual al límite.",
+        "label": "Чистый продукт",
+        "concept_suffix": "Этот вариант чище, сфокусированнее и тише, с меньшим шумом вокруг базовой системы",
+        "preview_copy": "Самая чистая, лёгкая и простая в реализации версия.",
+        "preview_note": "Чистый продукт",
+        "density": "Воздушная, с большим негативным пространством, меньшим числом одновременных слоёв и фокусом на главном.",
+        "tone_suffix": "Даёт ощущение лёгкости, изысканности и простоты в ежедневной реализации.",
+        "component": "Чистый продуктовый hero с доминирующим CTA, социальным доказательством и минимумом поддержки.",
+        "rationale_suffix": "Помогает сохранить выбранное семейство, не перегружая итоговый опыт.",
+        "not_this": "Не самый выразительный вариант и не тот, что доводит визуальный жест до предела.",
     },
     "balanced": {
-        "label": "Equilibrio base",
-        "concept_suffix": "en una clave más equilibrada, pensada para sostener marca y producto a la vez",
-        "preview_copy": "La síntesis entre personalidad visual y facilidad de uso.",
-        "preview_note": "Equilibrio base",
-        "density": "Equilibrada, con suficiente aire para respirar y suficiente estructura para guiar.",
-        "tone_suffix": "Se percibe más estable, versátil y sencilla de extender al resto del sistema.",
-        "component": "Sección de valor con supporting copy, prueba social y CTA principal bien jerarquizado.",
-        "rationale_suffix": "Es una buena síntesis entre personalidad y facilidad de ejecución.",
-        "not_this": "No busca extremos visuales ni dramatizar cada bloque del producto.",
+        "label": "Базовый баланс",
+        "concept_suffix": "Этот вариант держит более сбалансированный тон, чтобы одновременно поддерживать бренд и продукт",
+        "preview_copy": "Синтез визуального характера и удобства использования.",
+        "preview_note": "Базовый баланс",
+        "density": "Сбалансированная: достаточно воздуха, чтобы дышать, и достаточно структуры, чтобы вести.",
+        "tone_suffix": "Воспринимается более стабильной, универсальной и простой для расширения на всю систему.",
+        "component": "Секция ценности с supporting copy, социальным доказательством и главным CTA с ясной иерархией.",
+        "rationale_suffix": "Хороший синтез характера и простоты реализации.",
+        "not_this": "Не ищет визуальных крайностей и не драматизирует каждый блок продукта.",
     },
 }
 
@@ -140,7 +140,7 @@ def _resolve_guided_selection(
     parsed = parse_guided_choice((latest_choice or {}).get("choice"))
     if not parsed or parsed.get("stage") != "style-brief":
         raise ValueError(
-            "No hay una selección guiada válida de sistema + tipografía + paleta todavía."
+            "Пока нет корректного выбора в guided-режиме: система + типографика + палитра."
         )
 
     return {
@@ -156,7 +156,7 @@ def build_guided_style_variants(
     font_pairing_id: str,
     palette_mode: str,
 ) -> List[Dict[str, Any]]:
-    """Construye tres propuestas finales dentro de la misma familia elegida."""
+    """Build three final proposals inside the same chosen family."""
     style = get_style_trend(style_id)
     font_pairing = resolve_font_pairing(style_id, pairing_id=font_pairing_id)
     palette_meta = resolve_palette_mode_meta(palette_mode)
@@ -188,15 +188,15 @@ def build_guided_style_variants(
             *list(style["anti_patterns"])[:1],
         ]
         proposal["context_signals"] = [
-            f"Familia fijada por el usuario: {style['name']}.",
-            f"Pairing fijado por el usuario: {font_pairing['label']} ({font_pairing['headings']} / {font_pairing['body']}).",
-            f"Gama cromática fijada por el usuario: {palette_meta['label']}.",
+            f"Семейство, зафиксированное пользователем: {style['name']}.",
+            f"Pairing, зафиксированный пользователем: {font_pairing['label']} ({font_pairing['headings']} / {font_pairing['body']}).",
+            f"Цветовая гамма, зафиксированная пользователем: {palette_meta['label']}.",
             *list(style.get("visual_principles", []))[:2],
-            f"Elementos firma del sistema: {', '.join(style.get('signature_elements', [])[:3])}.",
+            f"Фирменные элементы системы: {', '.join(style.get('signature_elements', [])[:3])}.",
         ]
         proposal["prompt_seed"] = (
             f"{style.get('prompt_seed', '').strip()} "
-            f"Mantén esta familia visual incluso cuando varíes la propuesta hacia '{profile['label']}'."
+            f"Сохраняй это визуальное семейство, даже когда смещаешь предложение к варианту «{profile['label']}»."
         ).strip()
         proposals.append(proposal)
 
@@ -210,7 +210,7 @@ def write_guided_style_options(
     font_pairing_id: Optional[str] = None,
     palette_mode: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Escribe el sidecar y la pantalla final de tres variantes guiadas."""
+    """Write the sidecar and the final screen with three guided variants."""
     selection = _resolve_guided_selection(
         visual_path,
         style_id=style_id,
@@ -240,10 +240,10 @@ def write_guided_style_options(
     html_result = write_style_options_html(
         visual_path,
         proposals_file=proposals_path,
-        title=f"Elige la versión final de {style['name']}",
+        title=f"Выбери финальную версию для {style['name']}",
         subtitle=(
-            f"Base fijada: {font_pairing['label']} + {palette_meta['label']}. "
-            "Ahora sí: Designer te enseña tres versiones finales comparables dentro de esa misma familia."
+            f"Основа зафиксирована: {font_pairing['label']} + {palette_meta['label']}. "
+            "Теперь Designer показывает три сопоставимые финальные версии внутри этого же семейства."
         ),
     )
 

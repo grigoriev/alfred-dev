@@ -124,9 +124,9 @@ class TestDesignerStyleOptions(unittest.TestCase):
         payload = build_style_options_payload(self.state_dir)
         self.assertIn("#0F172A", payload["html"])
         self.assertIn("#3B82F6", payload["html"])
-        self.assertIn("Titulares: Inter", payload["html"])
-        self.assertIn("Cuerpo: DM Sans", payload["html"])
-        self.assertIn("Notas: sans-serif geométrica, alta legibilidad", payload["html"])
+        self.assertIn("Заголовки: Inter", payload["html"])
+        self.assertIn("Основной текст: DM Sans", payload["html"])
+        self.assertIn("Заметки: sans-serif geométrica, alta legibilidad", payload["html"])
 
     def test_render_style_options_html_uses_flavor_specific_cards(self):
         html = render_style_options_html(
@@ -548,7 +548,7 @@ class TestDesignerStyleOptions(unittest.TestCase):
         self.assertTrue(os.path.isfile(html_path))
         with open(html_path, "r", encoding="utf-8") as fh:
             content = fh.read()
-        self.assertIn("Selecciona una direccion visual", content)
+        self.assertIn("Выбери визуальное направление", content)
         self.assertIn("data-choice=\"B\"", content)
 
     def test_write_style_options_script_returns_pending_without_sidecar(self):

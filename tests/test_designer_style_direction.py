@@ -115,18 +115,18 @@ class TestDesignerStyleDirection(unittest.TestCase):
             content = fh.read()
 
         self.assertIn(
-            "Designer recomienda `B` — Editorial cálido como sistema de diseño base para esta fase.",
+            "Designer рекомендует `B` — Editorial cálido как базовую дизайн-систему для этой фазы.",
             content,
         )
-        self.assertIn("## Por qué gana esta opción", content)
+        self.assertIn("## Почему выигрывает этот вариант", content)
         self.assertIn("Fraunces", content)
         self.assertIn("No es una UI dashboard densa ni hiper-técnica.", content)
         self.assertIn("color.bg.canvas", content)
-        self.assertIn("## Principios ejecutables del sistema", content)
-        self.assertIn("### Gramática de composición", content)
-        self.assertIn("### Guardrails de implementación", content)
-        self.assertIn("## Semilla de dirección", content)
-        self.assertIn("Propuestas fuente: `content/style-options.json`", content)
+        self.assertIn("## Выполнимые принципы системы", content)
+        self.assertIn("### Грамматика композиции", content)
+        self.assertIn("### Guardrails реализации", content)
+        self.assertIn("## Зерно направления", content)
+        self.assertIn("Исходные предложения: `content/style-options.json`", content)
 
     def test_render_style_direction_markdown_has_required_sections(self):
         record = {
@@ -159,12 +159,12 @@ class TestDesignerStyleDirection(unittest.TestCase):
             },
         }
         content = render_style_direction_markdown(record)
-        self.assertIn("## Sistema de diseño elegido", content)
-        self.assertIn("## Por qué gana esta opción", content)
-        self.assertIn("## Qué NO es este sistema", content)
-        self.assertIn("## Tokens iniciales sugeridos", content)
-        self.assertIn("## Principios ejecutables del sistema", content)
-        self.assertIn("## Semilla de dirección", content)
+        self.assertIn("## Выбранная дизайн-система", content)
+        self.assertIn("## Почему выигрывает этот вариант", content)
+        self.assertIn("## Чем эта система НЕ является", content)
+        self.assertIn("## Предлагаемые начальные токены", content)
+        self.assertIn("## Выполнимые принципы системы", content)
+        self.assertIn("## Зерно направления", content)
         self.assertIn("Producto orientado a descubrimiento visual.", content)
 
     def test_render_style_direction_markdown_uses_basename_when_project_context_missing(self):
@@ -191,7 +191,7 @@ class TestDesignerStyleDirection(unittest.TestCase):
         }
 
         content = render_style_direction_markdown(record)
-        self.assertIn("Propuestas fuente: `style-options.json`", content)
+        self.assertIn("Исходные предложения: `style-options.json`", content)
         self.assertNotIn("../../", content)
 
     def test_render_style_direction_markdown_shows_variant_and_pairing_metadata(self):
@@ -228,8 +228,8 @@ class TestDesignerStyleDirection(unittest.TestCase):
         }
 
         content = render_style_direction_markdown(record)
-        self.assertIn("Variante final: **Producto operativo**", content)
-        self.assertIn("Modo de paleta: **Solidos**", content)
+        self.assertIn("Финальный вариант: **Producto operativo**", content)
+        self.assertIn("Режим палитры: **Solidos**", content)
         self.assertIn("Pairing: Brutal legible", content)
         self.assertIn("Id pairing: `brutal-readable`", content)
 
@@ -262,13 +262,13 @@ class TestDesignerStyleDirection(unittest.TestCase):
         with open(artifact_path, "r", encoding="utf-8") as fh:
             content = fh.read()
 
-        self.assertIn("Lenguaje editorial con jerarquía clara", content)
-        self.assertIn("Funciona bien cuando el producto necesita transmitir criterio", content)
-        self.assertIn("Hero editorial con titular protagonista", content)
-        self.assertIn("## Principios ejecutables del sistema", content)
-        self.assertIn("## Semilla de dirección", content)
-        self.assertIn("No es una UI de dashboard densa", content)
-        self.assertIn("Necesidad de transmitir criterio, calma y sensación de cuidado.", content)
+        self.assertIn("Редакционный язык с ясной иерархией", content)
+        self.assertIn("Подходит, когда продукту нужно передать вкус", content)
+        self.assertIn("Редакционный hero с главным заголовком", content)
+        self.assertIn("## Выполнимые принципы системы", content)
+        self.assertIn("## Зерно направления", content)
+        self.assertIn("Это не плотный dashboard UI", content)
+        self.assertIn("Нужно передать вкус, спокойствие и ощущение заботы.", content)
 
     def test_sidecar_alias_fields_are_normalized(self):
         with open(self.events_path, "w", encoding="utf-8") as fh:

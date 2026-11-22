@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Renderizado de demos visuales y galeria del catalogo de Designer."""
+"""Render visual demos and the Designer catalog gallery."""
 
 from __future__ import annotations
 
@@ -21,43 +21,43 @@ from core.designer_style_direction import resolve_visual_session_dir
 STYLE_DEMO_GALLERY_FILENAME = "designer-style-gallery.html"
 
 DEMO_CONTENT = {
-    "eyebrow": "Designer / sandbox de sistemas de diseño",
-    "headline": "Claude Code, pero con un sistema de diseño de verdad",
+    "eyebrow": "Designer / песочница дизайн-систем",
+    "headline": "Claude Code, но с настоящей дизайн-системой",
     "body": (
-        "Una landing simple para comparar sistemas de diseño con el mismo contenido: "
-        "19 agentes, 26 comandos, memoria local y quality gates con evidencia."
+        "Простой landing, чтобы сравнить дизайн-системы на одном и том же контенте: "
+        "19 агентов, 26 команд, локальная память и quality gates с доказательствами."
     ),
-    "primary_cta": "Instalar Alfred Dev",
-    "secondary_cta": "Ver vision tecnica",
+    "primary_cta": "Установить Alfred Dev",
+    "secondary_cta": "Смотреть техническое видение",
     "meta": [
-        ("19", "agentes"),
-        ("26", "comandos"),
+        ("19", "агентов"),
+        ("26", "команд"),
         ("61", "playbooks"),
-        ("6", "flujos"),
+        ("6", "процессов"),
     ],
-    "feature_title": "Lo que cambia al trabajar con Alfred Dev",
+    "feature_title": "Что меняется при работе с Alfred Dev",
     "features": [
         {
-            "title": "Orquestacion con criterio",
-            "body": "Alfred decide orden, agentes y gates en vez de dejar el flujo a prompts sueltos.",
+            "title": "Оркестрация с умом",
+            "body": "Alfred решает порядок, агентов и gates, а не оставляет процесс на волю разрозненных промптов.",
         },
         {
-            "title": "Memoria local persistente",
-            "body": "Decisiones, commits y continuidad se quedan dentro del proyecto, no en una conversacion efimera.",
+            "title": "Постоянная локальная память",
+            "body": "Решения, коммиты и непрерывность остаются внутри проекта, а не в мимолётном разговоре.",
         },
         {
-            "title": "Direccion visual antes del CSS",
-            "body": "Designer fija el lenguaje visual antes de que architect o senior-dev diseñen componentes.",
+            "title": "Визуальное направление до CSS",
+            "body": "Designer фиксирует визуальный язык до того, как architect или senior-dev спроектируют компоненты.",
         },
         {
-            "title": "Entrega con evidencia",
-            "body": "Los quality gates paran el avance si no hay pruebas, salida real y trazabilidad suficiente.",
+            "title": "Поставка с доказательствами",
+            "body": "Quality gates останавливают продвижение, если нет тестов, реального вывода и достаточной трассируемости.",
         },
     ],
     "steps": [
-        "Detecta stack y runtime del repo.",
-        "Compone equipo y activa especialistas utiles.",
-        "Ejecuta el flujo con fases, memoria y verificacion.",
+        "Определяет stack и runtime репозитория.",
+        "Собирает команду и подключает нужных специалистов.",
+        "Выполняет процесс с фазами, памятью и проверкой.",
     ],
 }
 
@@ -72,7 +72,7 @@ def _style_class(style_id: str) -> str:
 
 def _refs_markup(items: List[Dict[str, str]]) -> str:
     if not items:
-        return '<span class="style-links__empty">Sin referencias fijadas: Designer define el sistema de diseño a partir del contexto.</span>'
+        return '<span class="style-links__empty">Референсы не заданы: Designer определяет дизайн-систему из контекста.</span>'
     return "".join(
         f'<a href="{_escape(item["url"])}" target="_blank" rel="noreferrer">{_escape(item["label"])}</a>'
         for item in items
@@ -193,19 +193,19 @@ def _hero_title_markup(style_id: str) -> str:
     if style_id == "kinetic-typography":
         return (
             '<h1 class="hero__title hero__title--kinetic">'
-            '<span>ALFRED</span><span>DEV</span><span>PARA</span><span>EQUIPOS</span>'
+            '<span>ALFRED</span><span>DEV</span><span>ДЛЯ</span><span>КОМАНД</span>'
             '</h1>'
         )
     if style_id == "maximalism-neo-retro":
         return (
             '<h1 class="hero__title hero__title--maxi">'
-            'Un sistema serio<br>para equipos<br>que no quieren<br>parecer plantilla'
+            'Серьёзная система<br>для команд,<br>которые не хотят<br>выглядеть шаблоном'
             '</h1>'
         )
     if style_id == "neo-brutalism":
         return (
             '<h1 class="hero__title hero__title--brutal">'
-            'UN PLUGIN<br>CON CRITERIO<br>Y GOLPE VISUAL'
+            'ПЛАГИН<br>СО ВКУСОМ<br>И ВИЗУАЛЬНЫМ УДАРОМ'
             '</h1>'
         )
     return f'<h1 class="hero__title">{_escape(DEMO_CONTENT["headline"])}</h1>'
@@ -1162,7 +1162,7 @@ def render_style_demo_document(
     custom_headings: Optional[str] = None,
     custom_body: Optional[str] = None,
 ) -> str:
-    """Renderiza una landing simple de demo para un sistema de diseño."""
+    """Render a simple demo landing page for a design system."""
     style = get_style_trend(style_id)
     palette, resolved_palette_mode = resolve_palette(style_id, palette_mode)
     pairing = resolve_font_pairing(
@@ -1190,17 +1190,17 @@ def render_style_demo_document(
         else ""
     )
     custom_note = (
-        f'<p class="section-kicker">URL tipografica custom: <a href="{_escape(custom_url)}" target="_blank" rel="noreferrer">{_escape(custom_url)}</a></p>'
+        f'<p class="section-kicker">Свой URL шрифтов: <a href="{_escape(custom_url)}" target="_blank" rel="noreferrer">{_escape(custom_url)}</a></p>'
         if custom_url
         else ""
     )
 
     return f"""<!DOCTYPE html>
-<html lang="es">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{_escape(style["name"])} — Demo de sistema de diseño de Designer</title>
+  <title>{_escape(style["name"])} — демо дизайн-системы Designer</title>
   {google_fonts_link}
   <style>
     {_demo_base_css(palette, pairing["headings"], pairing["body"])}
@@ -1251,7 +1251,7 @@ def render_style_demo_document(
         <div class="feature-grid">{feature_cards}</div>
       </div>
       <aside class="story-rail">
-        <p class="section-kicker">Ruta que explica el producto</p>
+        <p class="section-kicker">Маршрут, который объясняет продукт</p>
         <ul>{steps}</ul>
       </aside>
     </section>
@@ -1259,7 +1259,7 @@ def render_style_demo_document(
     <section class="cta-band" id="cta">
       <p class="section-kicker">{_escape(style["description"])}</p>
       <h2>{_escape(style["when_to_use"])}</h2>
-      <p>Esta demo no pretende cerrar diseño final. Sirve para validar si este sistema de diseño merece pasar a la siguiente ronda de Designer.</p>
+      <p>Это демо не фиксирует финальный дизайн. Оно помогает проверить, стоит ли этой дизайн-системе пройти в следующий раунд Designer.</p>
     </section>
   </div>
 </body>
@@ -1268,12 +1268,12 @@ def render_style_demo_document(
 
 
 def render_style_gallery_html(title: Optional[str] = None, subtitle: Optional[str] = None) -> str:
-    """Renderiza una galería navegable del catálogo de sistemas de diseño."""
+    """Render a browsable gallery of the design system catalog."""
     catalog = get_style_catalog()
-    title_text = title or "Atlas de sistemas de diseño de Designer"
+    title_text = title or "Атлас дизайн-систем Designer"
     subtitle_text = subtitle or (
-        "Catálogo de sistemas de diseño para explorar direcciones comparables antes de que Designer "
-        "proponga las tres opciones finales de una fase real."
+        "Каталог дизайн-систем, чтобы изучить сопоставимые направления до того, как Designer "
+        "предложит три финальных варианта в реальной фазе."
     )
 
     card_markup = []
@@ -1287,19 +1287,19 @@ def render_style_gallery_html(title: Optional[str] = None, subtitle: Optional[st
             '<div class="gallery-card__header">'
             f'<div class="gallery-card__meta"><span class="style-card__tag">{_escape(entry["name"])}</span>'
             f'<h2>{_escape(entry["name"])}</h2></div>'
-            f'<a href="{_escape(demo_href)}">Abrir demo</a>'
+            f'<a href="{_escape(demo_href)}">Открыть демо</a>'
             '</div>'
             f'<p>{_escape(entry["summary"])}</p>'
             f'<div class="palette-mode-list">{palette_chips}</div>'
             f'<div class="style-links">{refs}</div>'
             f'<div class="style-fonts">{_fonts_markup(pairings)}</div>'
             '<div class="gallery-card__links">'
-            f'<a href="{_escape(demo_href)}">Sistema de diseño base</a>'
+            f'<a href="{_escape(demo_href)}">Базовая дизайн-система</a>'
             '</div></article>'
         )
 
     return f"""<!DOCTYPE html>
-<html lang="es">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1322,10 +1322,10 @@ def render_style_gallery_html(title: Optional[str] = None, subtitle: Optional[st
 <body>
   <div class="gallery-body">
     <section class="gallery-head">
-      <p class="section-kicker">Designer / catálogo de sistemas de diseño</p>
+      <p class="section-kicker">Designer / каталог дизайн-систем</p>
       <h1>{_escape(title_text)}</h1>
       <p>{_escape(subtitle_text)}</p>
-      <p>Regla operativa: el catálogo puede tener muchos sistemas de diseño base, pero la fase real de Designer sigue cerrando con tres propuestas comparables, no con diez opciones a la vez.</p>
+      <p>Рабочее правило: в каталоге может быть много базовых дизайн-систем, но реальная фаза Designer по-прежнему завершается тремя сопоставимыми предложениями, а не десятью вариантами сразу.</p>
     </section>
     <section class="gallery-grid">
       {"".join(card_markup)}
@@ -1342,7 +1342,7 @@ def write_style_demo_gallery(
     title: Optional[str] = None,
     subtitle: Optional[str] = None,
 ) -> Dict[str, object]:
-    """Escribe una galeria y una demo simple por estilo dentro de una sesion visual."""
+    """Write a gallery and one simple demo per style into a visual session."""
     session_dir = resolve_visual_session_dir(visual_path)
     content_dir = os.path.join(session_dir, "content")
     demos_dir = os.path.join(content_dir, "demos")

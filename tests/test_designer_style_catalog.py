@@ -39,7 +39,7 @@ class TestDesignerStyleCatalog(unittest.TestCase):
 
         self.assertEqual(proposal["style_family"], "neo-brutalism")
         self.assertEqual(proposal["palette_mode"], "pastel")
-        self.assertEqual(proposal["palette_mode_label"], "Pastel")
+        self.assertEqual(proposal["palette_mode_label"], "Пастельная")
         self.assertGreaterEqual(len(proposal["reference_urls"]), 1)
         self.assertEqual(proposal["typography"]["pairing_id"], "brutal-core")
         self.assertEqual(proposal["typography"]["pairing_label"], "Brutal Core")
@@ -47,9 +47,9 @@ class TestDesignerStyleCatalog(unittest.TestCase):
         self.assertIn("https://fonts.google.com/specimen/", proposal["typography"]["headings_url"])
         self.assertIn("https://fonts.googleapis.com/css2?", proposal["typography"]["css_url"])
         self.assertGreaterEqual(len(proposal["visual_principles"]), 2)
-        self.assertIn("bordes negros", proposal["prompt_seed"].lower())
-        self.assertIn("cajas desplazadas", proposal["layout_grammar"].lower())
-        self.assertIn("CTA con sombra brutal", proposal["signature_elements"])
+        self.assertIn("чёрные рамки", proposal["prompt_seed"].lower())
+        self.assertIn("смещённые коробки", proposal["layout_grammar"].lower())
+        self.assertIn("CTA с брутальной тенью", proposal["signature_elements"])
         self.assertGreaterEqual(len(proposal["implementation_guardrails"]), 1)
 
     def test_custom_google_fonts_url_overrides_default_pairing(self):

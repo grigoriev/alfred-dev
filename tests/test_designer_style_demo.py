@@ -38,9 +38,9 @@ class TestDesignerStyleDemo(unittest.TestCase):
     def test_render_style_demo_document_includes_google_fonts_and_style_name(self):
         html = render_style_demo_document("neo-brutalism")
         self.assertIn("<!DOCTYPE html>", html)
-        self.assertIn("Neo-brutalismo", html)
+        self.assertIn("Необрутализм", html)
         self.assertIn("fonts.googleapis.com/css2", html)
-        self.assertIn("Instalar Alfred Dev", html)
+        self.assertIn("Установить Alfred Dev", html)
 
     def test_write_style_demo_gallery_creates_gallery_and_demo_pages(self):
         result = write_style_demo_gallery(self.state_dir)
@@ -56,9 +56,9 @@ class TestDesignerStyleDemo(unittest.TestCase):
 
         with open(result["gallery_path"], "r", encoding="utf-8") as fh:
             gallery = fh.read()
-        self.assertIn("Atlas de sistemas de diseño de Designer", gallery)
+        self.assertIn("Атлас дизайн-систем Designer", gallery)
         self.assertIn("/files/demos/neo-brutalism.html", gallery)
-        self.assertIn("Maximalismo &amp; Neo-retro", gallery)
+        self.assertIn("Максимализм и неоретро", gallery)
 
     def test_write_style_demo_gallery_script_outputs_json(self):
         result = subprocess.run(

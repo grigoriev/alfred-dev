@@ -43,18 +43,18 @@ class TestDesignerStyleVariants(unittest.TestCase):
         )
         self.assertEqual(
             {proposal["typography"]["pairing_label"] for proposal in proposals},
-            {"Brutal legible"},
+            {"Читаемый брутализм"},
         )
         self.assertEqual(len({proposal["preview_flavor"] for proposal in proposals}), 3)
         self.assertEqual(
             [proposal["preview_title"] for proposal in proposals],
-            ["Firma expresiva", "Producto operativo", "Producto limpio"],
+            ["Выразительный почерк", "Рабочий продукт", "Чистый продукт"],
         )
         self.assertTrue(all(proposal["prompt_seed"] for proposal in proposals))
         self.assertTrue(all(proposal["layout_grammar"] for proposal in proposals))
         self.assertTrue(all(proposal["signature_elements"] for proposal in proposals))
         self.assertTrue(
-            all("neo-brutalismo real" in proposal["prompt_seed"].lower() for proposal in proposals)
+            all("настоящий необрутализм" in proposal["prompt_seed"].lower() for proposal in proposals)
         )
 
     def test_write_guided_style_options_uses_latest_brief_choice(self):
@@ -76,14 +76,14 @@ class TestDesignerStyleVariants(unittest.TestCase):
         self.assertEqual(payload["guided_selection"]["font_pairing_id"], "brutal-readable")
         self.assertEqual(payload["guided_selection"]["palette_mode"], "solid")
         self.assertEqual(len(payload["proposals"]), 3)
-        self.assertEqual(payload["proposals"][0]["typography"]["pairing_label"], "Brutal legible")
-        self.assertEqual(payload["proposals"][1]["preview_note"], "Producto operativo")
+        self.assertEqual(payload["proposals"][0]["typography"]["pairing_label"], "Читаемый брутализм")
+        self.assertEqual(payload["proposals"][1]["preview_note"], "Рабочий продукт")
 
         with open(result["html_path"], "r", encoding="utf-8") as fh:
             html = fh.read()
-        self.assertIn("Elige la versión final de Anti-diseno / Neo-brutalismo", html)
-        self.assertIn("Brutal legible", html)
-        self.assertIn("Variante:", html)
+        self.assertIn("Выбери финальную версию для Антидизайн / Необрутализм", html)
+        self.assertIn("Читаемый брутализм", html)
+        self.assertIn("Вариант:", html)
         self.assertIn("style-family--neo-brutalism", html)
         self.assertIn('data-style-family="neo-brutalism"', html)
         self.assertIn("preview-brutal", html)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Renderizado y escritura del artefacto docs/style-direction.md."""
+"""Render and write the docs/style-direction.md artifact."""
 
 from __future__ import annotations
 
@@ -15,13 +15,13 @@ STYLE_DIRECTION_DOC_RELATIVE_PATH = os.path.join("docs", "style-direction.md")
 
 
 def resolve_visual_session_dir(path: str) -> str:
-    """Acepta session_dir o state_dir y devuelve el session_dir real."""
+    """Accept session_dir or state_dir and return the real session_dir."""
     state_dir = resolve_state_dir(path)
     return os.path.dirname(state_dir)
 
 
 def discover_proposals_file(visual_path: str) -> Optional[str]:
-    """Busca el sidecar JSON de propuestas en ubicaciones canónicas."""
+    """Find the proposals JSON sidecar in the canonical locations."""
     session_dir = resolve_visual_session_dir(visual_path)
     state_dir = resolve_state_dir(visual_path)
     candidates = [
@@ -216,27 +216,27 @@ def _infer_direction_flavor(proposal: Dict[str, Any]) -> str:
     text = _semantic_source_text(proposal)
     if _matches_any(
         text,
-        ["grafana", "datadog", "monitorizacion", "monitorización", "dark", "oscuro", "tiempo real", "24/7"],
+        ["grafana", "datadog", "monitorizacion", "monitorización", "dark", "oscuro", "tiempo real", "24/7", "мониторинг", "темн", "тёмн", "реальном времени"],
     ):
         return "technical"
     if _matches_any(
         text,
-        ["editorial", "premium", "lujo", "magazine", "revista", "serif", "cálid", "calid"],
+        ["editorial", "premium", "lujo", "magazine", "revista", "serif", "cálid", "calid", "редакцион", "журнал", "премиал", "роскош", "тёпл", "тепл"],
     ):
         return "editorial"
     if _matches_any(
         text,
-        ["dashboard", "dato", "analítica", "analitica", "operativ", "enterprise", "métrica", "metrica"],
+        ["dashboard", "dato", "analítica", "analitica", "operativ", "enterprise", "métrica", "metrica", "дашборд", "данн", "аналитик", "операцион", "метрик"],
     ):
         return "operational"
     if _matches_any(
         text,
-        ["minimal", "limpio", "clean", "airead", "sobrio", "negativo", "claridad", "linear", "notion", "attio", "saas moderno", "whitespace"],
+        ["minimal", "limpio", "clean", "airead", "sobrio", "negativo", "claridad", "linear", "notion", "attio", "saas moderno", "whitespace", "минимал", "чист", "воздушн", "сдержан", "негативн", "ясност"],
     ):
         return "minimal"
     if _matches_any(
         text,
-        ["vibrante", "expresiv", "energ", "bold", "experimental", "memorable", "impacto"],
+        ["vibrante", "expresiv", "energ", "bold", "experimental", "memorable", "impacto", "ярк", "выразительн", "энерг", "смел", "эксперимент", "запомина"],
     ):
         return "expressive"
     return "balanced"
@@ -249,8 +249,8 @@ def _human_join(items: List[str]) -> str:
     if len(clean) == 1:
         return clean[0]
     if len(clean) == 2:
-        return f"{clean[0]} y {clean[1]}"
-    return f"{', '.join(clean[:-1])} y {clean[-1]}"
+        return f"{clean[0]} и {clean[1]}"
+    return f"{', '.join(clean[:-1])} и {clean[-1]}"
 
 
 def _lower_first(text: str) -> str:
@@ -262,56 +262,56 @@ def _lower_first(text: str) -> str:
 
 def _infer_tone(flavor: str) -> str:
     return {
-        "editorial": "Cálido, curado y con sensación premium.",
-        "technical": "Técnico, preciso y orientado a monitorización continua.",
-        "operational": "Preciso, claro y orientado a decisión.",
-        "minimal": "Sobrio, ligero y muy enfocado.",
-        "expressive": "Vibrante, seguro y memorable.",
-        "balanced": "Equilibrado, contemporáneo y fácil de leer.",
+        "editorial": "Тёплый, продуманный и с премиальным ощущением.",
+        "technical": "Технический, точный и нацеленный на постоянный мониторинг.",
+        "operational": "Точный, ясный и нацеленный на решения.",
+        "minimal": "Сдержанный, лёгкий и очень сфокусированный.",
+        "expressive": "Яркий, уверенный и запоминающийся.",
+        "balanced": "Сбалансированный, современный и легко читаемый.",
     }[flavor]
 
 
 def _infer_concept(flavor: str) -> str:
     return {
-        "editorial": "Lenguaje editorial con jerarquía clara, ritmo pausado y sensación cuidada.",
-        "technical": "Interfaz técnica de contraste alto, señales semánticas claras y lectura inmediata del estado.",
-        "operational": "Interfaz orientada a escaneo rápido, comparación y priorización de información.",
-        "minimal": "Sistema limpio y enfocado, con mucho aire y una jerarquía simple.",
-        "expressive": "Dirección con acento expresivo, contraste claro y personalidad reconocible.",
-        "balanced": "Dirección equilibrada, con jerarquía clara y personalidad contenida.",
+        "editorial": "Редакционный язык с ясной иерархией, неспешным ритмом и ощущением заботы.",
+        "technical": "Технический интерфейс с высоким контрастом, ясными семантическими сигналами и мгновенным чтением состояния.",
+        "operational": "Интерфейс для быстрого просмотра, сравнения и приоритизации информации.",
+        "minimal": "Чистая и сфокусированная система с большим количеством воздуха и простой иерархией.",
+        "expressive": "Направление с выразительным акцентом, ясным контрастом и узнаваемым характером.",
+        "balanced": "Сбалансированное направление с ясной иерархией и сдержанным характером.",
     }[flavor]
 
 
 def _infer_spacing_density(flavor: str) -> str:
     return {
-        "editorial": "Aireada, con bloques respirables y jerarquía pausada.",
-        "technical": "Alta, con bloques compactos, lectura de estado y jerarquía de monitorización.",
-        "operational": "Media-alta, pensada para escaneo rápido y densidad controlada.",
-        "minimal": "Aireada, con mucho espacio negativo y pocos cambios de ritmo.",
-        "expressive": "Media, con ritmo dinámico y contraste claro entre bloques.",
-        "balanced": "Equilibrada, con margen suficiente y lectura cómoda.",
+        "editorial": "Воздушная, с дышащими блоками и неспешной иерархией.",
+        "technical": "Высокая, с компактными блоками, чтением состояния и иерархией мониторинга.",
+        "operational": "Выше средней, для быстрого просмотра и контролируемой плотности.",
+        "minimal": "Воздушная, с большим негативным пространством и редкими сменами ритма.",
+        "expressive": "Средняя, с динамичным ритмом и ясным контрастом между блоками.",
+        "balanced": "Сбалансированная, с достаточными отступами и комфортным чтением.",
     }[flavor]
 
 
 def _infer_sample_component(flavor: str) -> str:
     return {
-        "editorial": "Hero editorial con titular protagonista, sumario breve y CTA sobrio.",
-        "technical": "Panel técnico con estados, series temporales y alertas semánticas de alto contraste.",
-        "operational": "Panel de resumen con métricas clave, estado visible y CTA contextual.",
-        "minimal": "Hero de producto con beneficio principal, prueba social y CTA dominante.",
-        "expressive": "Tarjeta o hero protagonista con visual dominante, titular corto y CTA muy claro.",
-        "balanced": "Sección de resumen con titular fuerte, supporting copy y CTA principal.",
+        "editorial": "Редакционный hero с главным заголовком, кратким лидом и сдержанным CTA.",
+        "technical": "Техническая панель с состояниями, временными рядами и контрастными семантическими алертами.",
+        "operational": "Сводная панель с ключевыми метриками, видимым состоянием и контекстным CTA.",
+        "minimal": "Продуктовый hero с главным преимуществом, социальным доказательством и доминирующим CTA.",
+        "expressive": "Главная карточка или hero с доминирующим визуалом, коротким заголовком и очень ясным CTA.",
+        "balanced": "Сводная секция с сильным заголовком, supporting copy и главным CTA.",
     }[flavor]
 
 
 def _infer_context_signals(flavor: str) -> List[str]:
     return {
-        "editorial": ["Necesidad de transmitir criterio, calma y sensación de cuidado."],
-        "technical": ["Necesidad de monitorización continua, contraste alto y lectura rápida del estado."],
-        "operational": ["Necesidad de lectura rápida, foco operativo y baja ambigüedad visual."],
-        "minimal": ["Necesidad de claridad inmediata y reducción de ruido visual."],
-        "expressive": ["Necesidad de identidad fuerte y recordación sin perder legibilidad."],
-        "balanced": ["Necesidad de equilibrio entre personalidad visual y facilidad de uso."],
+        "editorial": ["Нужно передать вкус, спокойствие и ощущение заботы."],
+        "technical": ["Нужно обеспечить постоянный мониторинг, высокий контраст и быстрое чтение состояния."],
+        "operational": ["Нужно обеспечить быстрое чтение, операционный фокус и низкую визуальную неоднозначность."],
+        "minimal": ["Нужно дать мгновенную ясность и снизить визуальный шум."],
+        "expressive": ["Нужно дать сильную айдентику и запоминаемость без потери читаемости."],
+        "balanced": ["Нужно найти баланс между визуальным характером и удобством использования."],
     }[flavor]
 
 
@@ -321,11 +321,15 @@ def _signals_to_rationale_prefix(signals: List[str]) -> str:
         return ""
 
     lowered = [_lower_first(item) for item in cleaned]
-    if all(item.startswith("necesidad de ") for item in lowered):
-        needs = [item[len("necesidad de "):] for item in lowered]
-        return f"Funciona bien cuando el producto necesita {_human_join(needs)}"
+    need_prefixes = ("нужно ", "necesidad de ")
+    if all(item.startswith(need_prefixes) for item in lowered):
+        needs = [
+            next(item[len(prefix):] for prefix in need_prefixes if item.startswith(prefix))
+            for item in lowered
+        ]
+        return f"Подходит, когда продукту нужно {_human_join(needs)}"
 
-    return f"Funciona bien en contextos con {_lower_first(_human_join(cleaned))}"
+    return f"Подходит для контекста, где есть {_lower_first(_human_join(cleaned))}"
 
 
 def _infer_rationale(proposal: Dict[str, Any], flavor: str) -> str:
@@ -335,45 +339,45 @@ def _infer_rationale(proposal: Dict[str, Any], flavor: str) -> str:
             _coerce_string(proposal["concept"] or _infer_concept(flavor)).rstrip(".!?")
         )
         return (
-            f"{_signals_to_rationale_prefix(signals[:2])} "
-            f"porque refuerza {concept_phrase}."
+            f"{_signals_to_rationale_prefix(signals[:2])}, "
+            f"потому что в основе лежит {concept_phrase}."
         )
 
     return {
-        "editorial": "Funciona bien cuando el producto necesita transmitir criterio, calma y sensación de cuidado.",
-        "technical": "Funciona bien cuando el producto necesita monitorización continua, alto contraste y señales semánticas inequívocas.",
-        "operational": "Funciona bien cuando el producto necesita confianza operativa, lectura rápida y foco en la tarea.",
-        "minimal": "Funciona bien cuando el producto necesita claridad inmediata, foco y una primera impresión limpia.",
-        "expressive": "Funciona bien cuando el producto necesita identidad visible y energía controlada sin perder legibilidad.",
-        "balanced": "Funciona bien cuando el producto necesita personalidad contenida y una jerarquía fácil de entender.",
+        "editorial": "Подходит, когда продукту нужно передать вкус, спокойствие и ощущение заботы.",
+        "technical": "Подходит, когда продукту нужны постоянный мониторинг, высокий контраст и однозначные семантические сигналы.",
+        "operational": "Подходит, когда продукту нужны операционное доверие, быстрое чтение и фокус на задаче.",
+        "minimal": "Подходит, когда продукту нужны мгновенная ясность, фокус и чистое первое впечатление.",
+        "expressive": "Подходит, когда продукту нужны заметная айдентика и контролируемая энергия без потери читаемости.",
+        "balanced": "Подходит, когда продукту нужны сдержанный характер и понятная иерархия.",
     }[flavor]
 
 
 def _infer_not_this_direction(flavor: str) -> List[str]:
     return {
         "editorial": [
-            "No es una UI de dashboard densa ni orientada a monitorización.",
-            "No busca agresividad cromática ni sensación de producto técnico frío.",
+            "Это не плотный dashboard UI и не интерфейс для мониторинга.",
+            "Не ищет цветовой агрессии или ощущения холодного технического продукта.",
         ],
         "technical": [
-            "No es una propuesta lifestyle ni de marketing aspiracional.",
-            "No prioriza calidez editorial ni respiración generosa sobre lectura de estado.",
+            "Это не lifestyle-предложение и не аспирационный маркетинг.",
+            "Не ставит редакционное тепло и щедрый воздух выше чтения состояния.",
         ],
         "operational": [
-            "No es una propuesta lifestyle o de revista.",
-            "No prioriza ornamento sobre legibilidad operativa.",
+            "Это не lifestyle- и не журнальное предложение.",
+            "Не ставит орнамент выше операционной читаемости.",
         ],
         "minimal": [
-            "No es maximalista ni ornamental.",
-            "No busca apariencia enterprise pesada ni recargada.",
+            "Не максималистичное и не орнаментальное.",
+            "Не стремится к тяжёлому или перегруженному enterprise-виду.",
         ],
         "expressive": [
-            "No es minimalismo silencioso ni neutral.",
-            "No busca una estética corporativa plana o sin tensión visual.",
+            "Это не тихий и не нейтральный минимализм.",
+            "Не стремится к плоской корпоративной эстетике без визуального напряжения.",
         ],
         "balanced": [
-            "No busca ruido visual ni decisiones ornamentales sin función.",
-            "No pretende una estética extrema a costa de la claridad.",
+            "Не ищет визуального шума или орнаментальных решений без функции.",
+            "Не гонится за крайней эстетикой ценой ясности.",
         ],
     }[flavor]
 
@@ -408,14 +412,14 @@ def _enrich_proposal_semantics(proposal: Dict[str, Any]) -> Dict[str, Any]:
     if not enriched.get("shape_language"):
         enriched["shape_language"] = _infer_concept(flavor)
     if not enriched.get("motion_language"):
-        enriched["motion_language"] = "Interacciones sobrias y coherentes con la jerarquia principal."
+        enriched["motion_language"] = "Сдержанные взаимодействия, согласованные с основной иерархией."
     if not enriched.get("signature_elements"):
         enriched["signature_elements"] = [enriched["sample_component"]]
     if not enriched.get("implementation_guardrails"):
         enriched["implementation_guardrails"] = list(enriched["not_this_direction"])
     if not enriched.get("prompt_seed"):
         enriched["prompt_seed"] = (
-            f"Manten una direccion {flavor} coherente con el producto y evita mezclarla con sistemas visuales ajenos."
+            f"Держи направление {flavor} согласованным с продуктом и не смешивай его с чужими визуальными системами."
         )
 
     return enriched
@@ -566,7 +570,7 @@ def _normalize_single_proposal(choice: str, proposal: Dict[str, Any]) -> Dict[st
 
 
 def load_style_proposals(proposals_file: str) -> Dict[str, Dict[str, Any]]:
-    """Carga y normaliza el sidecar JSON de propuestas de Designer."""
+    """Load and normalize the Designer proposals JSON sidecar."""
     with open(proposals_file, "r", encoding="utf-8") as fh:
         raw = json.load(fh)
 
@@ -602,19 +606,19 @@ def build_style_direction_record(
     proposals_file: Optional[str] = None,
     choice_override: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Combina la elección registrada y la propuesta seleccionada."""
+    """Combine the recorded choice with the selected proposal."""
     selected_choice = read_latest_style_choice(visual_path)
     if selected_choice is None and not choice_override:
-        raise ValueError("No hay ninguna elección válida registrada todavía.")
+        raise ValueError("Пока не зарегистрировано ни одного корректного выбора.")
 
     proposals_path = proposals_file or discover_proposals_file(visual_path)
     if not proposals_path:
-        raise ValueError("No se ha encontrado ningún fichero de propuestas de Designer.")
+        raise ValueError("Файл с предложениями Designer не найден.")
 
     proposals = load_style_proposals(proposals_path)
     choice = _coerce_string(choice_override or (selected_choice or {}).get("choice"))
     if choice not in proposals:
-        raise ValueError(f"La opción elegida '{choice}' no existe en el sidecar de propuestas.")
+        raise ValueError(f"Выбранного варианта '{choice}' нет в sidecar с предложениями.")
 
     proposal = proposals[choice]
     selected_label = _coerce_string((selected_choice or {}).get("label")) or proposal["name"]
@@ -639,7 +643,7 @@ def _render_table(headers: List[str], rows: List[List[str]]) -> List[str]:
     return lines
 
 
-def _fallback_text(value: str, fallback: str = "Sin documentar todavía.") -> str:
+def _fallback_text(value: str, fallback: str = "Пока не задокументировано.") -> str:
     return value or fallback
 
 
@@ -681,41 +685,41 @@ def _proposal_source_label(record: Dict[str, Any]) -> str:
 
 
 def render_style_direction_markdown(record: Dict[str, Any]) -> str:
-    """Genera el Markdown final de docs/style-direction.md."""
+    """Build the final Markdown for docs/style-direction.md."""
     proposal = _normalize_single_proposal(
         _coerce_string(record.get("choice") or (record.get("proposal") or {}).get("choice") or "A"),
         dict(record["proposal"]),
     )
     decision_summary = _ensure_sentence(
         proposal["concept"] or proposal["tone"] or proposal["rationale"]
-    ) or "Designer deja la dirección elegida registrada, pero todavía falta enriquecer la intención visual."
+    ) or "Designer зарегистрировал выбранное направление, но визуальное намерение ещё нужно дополнить."
     rationale = _fallback_text(
         proposal["rationale"],
-        "Falta aterrizar por qué esta propuesta gana frente a las demás.",
+        "Ещё нужно объяснить, почему это предложение лучше остальных.",
     )
     proposals_source = _proposal_source_label(record)
     lines: List[str] = [
-        "# Sistema de diseño base",
+        "# Базовая дизайн-система",
         "",
-        "## Resumen",
+        "## Сводка",
         "",
-        f"Designer recomienda `{record['choice']}` — {record['selected_label']} como sistema de diseño base para esta fase.",
+        f"Designer рекомендует `{record['choice']}` — {record['selected_label']} как базовую дизайн-систему для этой фазы.",
         "",
-        f"Esta opción prioriza {decision_summary[0].lower() + decision_summary[1:] if len(decision_summary) > 1 else decision_summary.lower()}",
+        f"Приоритет этого варианта: {decision_summary[0].lower() + decision_summary[1:] if len(decision_summary) > 1 else decision_summary.lower()}",
         "",
-        f"- Nombre operativo: **{proposal['name']}**",
+        f"- Рабочее название: **{proposal['name']}**",
     ]
     if record.get("selected_at"):
-        lines.append(f"- Elección registrada en: {record['selected_at']}")
+        lines.append(f"- Выбор зарегистрирован: {record['selected_at']}")
     lines.extend(
         [
-            f"- Artefacto generado: `{STYLE_DIRECTION_DOC_RELATIVE_PATH}`",
+            f"- Созданный артефакт: `{STYLE_DIRECTION_DOC_RELATIVE_PATH}`",
             "",
-            "## Sistema de diseño elegido",
+            "## Выбранная дизайн-система",
             "",
-            f"**Nombre:** {proposal['name']}",
+            f"**Название:** {proposal['name']}",
             "",
-            f"**Concepto:** {_fallback_text(proposal['concept'])}",
+            f"**Концепция:** {_fallback_text(proposal['concept'])}",
             "",
         ]
     )
@@ -724,34 +728,34 @@ def render_style_direction_markdown(record: Dict[str, Any]) -> str:
         family_label = proposal.get("style_family_label") or proposal.get("style_family")
         lines.extend(
             [
-                "### Base del sistema",
+                "### Основа системы",
                 "",
-                f"- Familia: {family_label}",
+                f"- Семейство: {family_label}",
             ]
         )
         if proposal.get("style_family"):
-            lines.append(f"- Id canónico: `{proposal['style_family']}`")
+            lines.append(f"- Канонический id: `{proposal['style_family']}`")
         if proposal.get("palette_mode"):
             palette_mode_label = proposal.get("palette_mode_label") or proposal["palette_mode"]
-            lines.append(f"- Modo de paleta: **{palette_mode_label}**")
+            lines.append(f"- Режим палитры: **{palette_mode_label}**")
             if palette_mode_label != proposal["palette_mode"]:
-                lines.append(f"- Id de paleta: `{proposal['palette_mode']}`")
+                lines.append(f"- Id палитры: `{proposal['palette_mode']}`")
         if proposal.get("variant_label"):
-            lines.append(f"- Variante final: **{proposal['variant_label']}**")
+            lines.append(f"- Финальный вариант: **{proposal['variant_label']}**")
         lines.append("")
 
-    lines.extend(["### Paleta", ""])
+    lines.extend(["### Палитра", ""])
     if proposal["palette"]:
         lines.extend(
             _render_table(
-                ["Rol", "Valor"],
+                ["Роль", "Значение"],
                 [[item["role"], item["value"]] for item in proposal["palette"]],
             )
         )
     else:
-        lines.append("Pendiente de documentar.")
+        lines.append("Ещё не задокументировано.")
 
-    lines.extend(["", "### Tipografía", ""])
+    lines.extend(["", "### Типографика", ""])
     typography = proposal["typography"]
     if typography:
         if typography.get("pairing_label"):
@@ -759,13 +763,13 @@ def render_style_direction_markdown(record: Dict[str, Any]) -> str:
         if typography.get("pairing_id"):
             lines.append(f"- Id pairing: `{typography['pairing_id']}`")
         if typography.get("headings"):
-            lines.append(f"- Encabezados: {typography['headings']}")
+            lines.append(f"- Заголовки: {typography['headings']}")
         if typography.get("body"):
-            lines.append(f"- Cuerpo: {typography['body']}")
+            lines.append(f"- Основной текст: {typography['body']}")
         if typography.get("scale"):
-            lines.append(f"- Escala: {typography['scale']}")
+            lines.append(f"- Шкала: {typography['scale']}")
         if typography.get("notes"):
-            lines.append(f"- Notas: {typography['notes']}")
+            lines.append(f"- Заметки: {typography['notes']}")
         if typography.get("headings_url"):
             lines.append(f"- URL headings: {typography['headings_url']}")
         if typography.get("body_url"):
@@ -773,103 +777,103 @@ def render_style_direction_markdown(record: Dict[str, Any]) -> str:
         if typography.get("css_url"):
             lines.append(f"- CSS URL: {typography['css_url']}")
         if typography.get("source"):
-            lines.append(f"- Fuente tipográfica: {typography['source']}")
+            lines.append(f"- Источник шрифтов: {typography['source']}")
     else:
-        lines.append("- Pendiente de documentar.")
+        lines.append("- Ещё не задокументировано.")
 
     lines.extend(
         [
             "",
-            "### Espaciado y densidad",
+            "### Отступы и плотность",
             "",
             _fallback_text(proposal["spacing_density"]),
             "",
-            "### Tono visual general",
+            "### Общий визуальный тон",
             "",
             _fallback_text(proposal["tone"]),
             "",
-            "### Componente de muestra",
+            "### Пример компонента",
             "",
             _fallback_text(proposal["sample_component"]),
         ]
     )
-    lines.extend(["", "## Principios ejecutables del sistema", ""])
+    lines.extend(["", "## Выполнимые принципы системы", ""])
     if proposal["visual_principles"]:
         lines.extend(f"- {item}" for item in proposal["visual_principles"])
     else:
-        lines.append("- Sin documentar todavía.")
+        lines.append("- Пока не задокументировано.")
 
     lines.extend(
         [
             "",
-            "### Gramática de composición",
+            "### Грамматика композиции",
             "",
             _fallback_text(proposal["layout_grammar"]),
             "",
-            "### Tratamiento de superficies",
+            "### Обработка поверхностей",
             "",
             _fallback_text(proposal["surface_treatment"]),
             "",
-            "### Lenguaje de forma",
+            "### Язык формы",
             "",
             _fallback_text(proposal["shape_language"]),
             "",
-            "### Lenguaje de movimiento",
+            "### Язык движения",
             "",
             _fallback_text(proposal["motion_language"]),
             "",
-            "### Elementos firma",
+            "### Фирменные элементы",
             "",
         ]
     )
     if proposal["signature_elements"]:
         lines.extend(f"- {item}" for item in proposal["signature_elements"])
     else:
-        lines.append("- Sin documentar todavía.")
+        lines.append("- Пока не задокументировано.")
 
-    lines.extend(["", "### Guardrails de implementación", ""])
+    lines.extend(["", "### Guardrails реализации", ""])
     if proposal["implementation_guardrails"]:
         lines.extend(f"- {item}" for item in proposal["implementation_guardrails"])
     else:
-        lines.append("- Sin documentar todavía.")
+        lines.append("- Пока не задокументировано.")
 
     lines.extend(
         [
             "",
-            "## Semilla de dirección",
+            "## Зерно направления",
             "",
             _fallback_text(proposal["prompt_seed"]),
             "",
-            "## Por qué gana esta opción",
+            "## Почему выигрывает этот вариант",
             "",
             rationale,
             "",
-            "## Qué NO es este sistema",
+            "## Чем эта система НЕ является",
             "",
         ]
     )
     if proposal["not_this_direction"]:
         lines.extend(f"- {item}" for item in proposal["not_this_direction"])
     else:
-        lines.append("- Sin delimitar todavía.")
+        lines.append("- Пока не определено.")
 
-    lines.extend(["", "## Tokens iniciales sugeridos", ""])
+    lines.extend(["", "## Предлагаемые начальные токены", ""])
     if proposal["tokens"]:
         lines.extend(
             _render_table(
-                ["Token", "Valor inicial"],
+                ["Токен", "Начальное значение"],
                 [[item["name"], item["value"]] for item in proposal["tokens"]],
             )
         )
     else:
-        lines.append("Sin documentar todavía.")
+        lines.append("Пока не задокументировано.")
 
     if proposal["context_signals"]:
-        lines.extend(["", "## Señales del contexto", ""])
+        lines.extend(["", "## Сигналы контекста", ""])
         lines.extend(f"- {item}" for item in proposal["context_signals"])
 
     if proposal.get("reference_urls"):
-        lines.extend(["", "## Referencias visuales", ""])
+        lines.extend(["", "## Визуальные референсы", ""])
         lines.extend(
             f"- [{item['label']}]({item['url']})"
             for item in proposal["reference_urls"]
@@ -878,13 +882,13 @@ def render_style_direction_markdown(record: Dict[str, Any]) -> str:
     lines.extend(
         [
             "",
-            "## Metadatos",
+            "## Метаданные",
             "",
-            f"- Generado automáticamente el {record['generated_at']}",
+            f"- Создано автоматически: {record['generated_at']}",
         ]
     )
     if proposals_source:
-        lines.append(f"- Propuestas fuente: `{proposals_source}`")
+        lines.append(f"- Исходные предложения: `{proposals_source}`")
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -895,7 +899,7 @@ def write_style_direction_artifact(
     proposals_file: Optional[str] = None,
     choice_override: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Escribe docs/style-direction.md a partir de la opción elegida."""
+    """Write docs/style-direction.md from the chosen option."""
     record = build_style_direction_record(
         visual_path,
         proposals_file=proposals_file,
