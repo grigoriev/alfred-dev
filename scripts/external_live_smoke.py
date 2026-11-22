@@ -2,7 +2,7 @@
 """Safe preflight for open external checks of release 0.7.0.
 
 By default it does not write to GitHub, does not start SonarQube and does not
-run Codex. It only records whether the environment is ready for those real
+call Greptile. It only records whether the environment is ready for those real
 tests and writes sanitized JSON evidence. Actions with external effects need
 explicit flags.
 """
@@ -187,81 +187,56 @@ def _docker_sonarqube_preflight() -> dict[str, Any]:
     }
 
 
-def _codex_preflight() -> dict[str, Any]:
-    codex = shutil.which("codex")
+def _greptile_preflight() -> dict[str, Any]:
+    greptile = shutil.which("greptile")
     payload: dict[str, Any] = {
         "status": "missing",
         "live_attempted": False,
         "checks": [],
     }
-    if not codex:
-        payload["reason"] = "codex is not available in PATH."
+    if not greptile:
+        payload["reason"] = "greptile is not available in PATH."
         return payload
 
-    version = _run([codex, "--version"], timeout=10)
-    help_result = _run(
-        [codex, "exec", "--sandbox", "read-only", "--ephemeral", "--help"],
-        timeout=15,
-        preview_limit=8000,
-    )
+    version = _run([greptile, "--version"], timeout=10)
+    help_result = _run([greptile, "review", "--help"], timeout=15, preview_limit=8000)
     payload["checks"].extend([version, help_result])
     if version["returncode"] != 0:
         payload["status"] = "unavailable"
-        payload["reason"] = "codex exists but does not report its version correctly."
+        payload["reason"] = "greptile exists but does not report its version correctly."
     elif help_result["returncode"] != 0:
-        payload["status"] = "exec_help_failed"
-        payload["reason"] = "codex exec does not accept the read-only/ephemeral preflight."
+        payload["status"] = "review_help_failed"
+        payload["reason"] = "greptile review --help failed."
     elif missing_flags := [
         flag
-        for flag in ("--sandbox", "--ephemeral", "--json", "--output-last-message")
+        for flag in ("--agent", "--json", "--instructions", "--branch")
         if flag not in help_result["stdout_preview"]
     ]:
-        payload["status"] = "exec_help_missing_flags"
-        payload["reason"] = "codex exec does not expose the flags that CTO needs."
+        payload["status"] = "review_help_missing_flags"
+        payload["reason"] = "greptile review does not expose the flags that CTO needs."
         payload["missing_flags"] = missing_flags
     else:
         payload["status"] = "ready"
-        payload["reason"] = (
-            "codex exec accepts --sandbox read-only, --ephemeral, --json "
-            "and --output-last-message."
-        )
+        payload["reason"] = "greptile review accepts --agent, --json, --instructions and --branch."
     return payload
 
 
-def _codex_live_exec() -> dict[str, Any]:
-    codex = shutil.which("codex")
-    if not codex:
+def _greptile_live_auth() -> dict[str, Any]:
+    """Check sign-in and repository status. Starts no review and uses no quota."""
+    greptile = shutil.which("greptile")
+    if not greptile:
         return {
             "status": "missing",
             "live_attempted": False,
-            "reason": "codex is not available in PATH.",
+            "reason": "greptile is not available in PATH.",
         }
-    with tempfile.TemporaryDirectory(prefix="alfred-codex-live-") as tmp:
-        final_message = Path(tmp) / "last-message.md"
-        command = [
-            codex,
-            "exec",
-            "--sandbox",
-            "read-only",
-            "--ephemeral",
-            "--json",
-            "--output-last-message",
-            str(final_message),
-            "-c",
-            "approval_policy=never",
-            "Reply with exactly OK_ALFRED_CODEX_EXTERNAL_060 and nothing else.",
-        ]
-        result = _run(command, timeout=120)
-        final_preview = _safe_preview(
-            final_message.read_text(encoding="utf-8")
-            if final_message.is_file()
-            else ""
-        )
+    whoami = _run([greptile, "whoami"], timeout=30)
+    repo_status = _run([greptile, "init", "--json"], timeout=30)
+    enabled = '"enabled":true' in repo_status["stdout_preview"].replace(" ", "")
     return {
-        "status": "ok" if result["returncode"] == 0 and "OK_ALFRED_CODEX_EXTERNAL_060" in final_preview else "failed",
+        "status": "ok" if whoami["returncode"] == 0 and repo_status["returncode"] == 0 and enabled else "failed",
         "live_attempted": True,
-        "check": result,
-        "final_message_preview": final_preview,
+        "checks": [whoami, repo_status],
     }
 
 
@@ -269,14 +244,14 @@ def _counts(payload: dict[str, Any]) -> dict[str, int]:
     statuses = [
         payload.get("github", {}).get("status", "unknown"),
         payload.get("docker_sonarqube", {}).get("status", "unknown"),
-        payload.get("codex_cto", {}).get("status", "unknown"),
+        payload.get("greptile_cto", {}).get("status", "unknown"),
     ]
     return {
         "ready": sum(1 for status in statuses if status in {"ready", "docker_ready", "ok"}),
         "blocked": sum(1 for status in statuses if status not in {"ready", "docker_ready", "ok"}),
         "live_attempted": sum(
             1
-            for section in ("github", "docker_sonarqube", "codex_cto")
+            for section in ("github", "docker_sonarqube", "greptile_cto")
             if payload.get(section, {}).get("write_attempted")
             or payload.get(section, {}).get("live_attempted")
         ),
@@ -296,15 +271,15 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "github": _github_preflight(args.github_repo),
         "docker_sonarqube": _docker_sonarqube_preflight(),
-        "codex_cto": _codex_preflight(),
+        "greptile_cto": _greptile_preflight(),
     }
 
     if args.allow_github_write:
         payload["mode"] = "live"
         payload["github"] = _github_live_sync(args.github_repo)
-    if args.allow_codex_exec:
+    if args.allow_greptile_auth:
         payload["mode"] = "live"
-        payload["codex_cto"] = _codex_live_exec()
+        payload["greptile_cto"] = _greptile_live_auth()
 
     payload["counts"] = _counts(payload)
     return payload
@@ -320,9 +295,9 @@ def main(argv: list[str] | None = None) -> int:
         help="Allow creating/updating smoke issues in --github-repo.",
     )
     parser.add_argument(
-        "--allow-codex-exec",
+        "--allow-greptile-auth",
         action="store_true",
-        help="Allow running a real read-only codex exec prompt.",
+        help="Check Greptile sign-in and repository status (starts no review).",
     )
     parser.add_argument(
         "--require-all-ready",
@@ -340,7 +315,7 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     if args.allow_github_write and payload["github"].get("status") != "ok":
         return 1
-    if args.allow_codex_exec and payload["codex_cto"].get("status") != "ok":
+    if args.allow_greptile_auth and payload["greptile_cto"].get("status") != "ok":
         return 1
     if args.require_all_ready and payload["counts"]["blocked"]:
         return 2

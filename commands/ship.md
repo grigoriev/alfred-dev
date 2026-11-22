@@ -97,9 +97,10 @@ compliance в виде скелета), не объявляй gate пройде�
 
 ## Опциональные специалисты в `ship`
 
-Единственный опциональный в runtime это **cto**. Если `equipo_sesion` содержит его
-активным, используй его в `auditoria_final` как последовательную внешнюю
-завершающую проверку. Не вызывай copywriter, github-manager и librarian.
+Единственный опциональный в runtime это **cto**. Он включён по умолчанию
+(`agentes_opcionales.cto: true`). Если `equipo_sesion` содержит его активным,
+используй его в `auditoria_final` как последовательную внешнюю завершающую проверку
+через Greptile CLI. Greptile видит только закоммиченные изменения ветки. Не вызывай copywriter, github-manager и librarian.
 
 ## Каноничное завершение команды
 

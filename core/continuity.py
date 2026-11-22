@@ -5111,6 +5111,8 @@ def _parse_cto_request(raw_request: str) -> Dict[str, Any]:
 
     scope = "all"
     target = "."
+    branch = ""
+    effort = "default"
     invalid_scope = ""
     consumed_next_scope = False
     positional: List[str] = []
@@ -5142,6 +5144,20 @@ def _parse_cto_request(raw_request: str) -> Dict[str, Any]:
                 invalid_scope = candidate
             index += 1
             continue
+        if token == "--branch":
+            if index + 1 < len(tokens):
+                branch = tokens[index + 1].strip()
+                consumed_next_scope = True
+            index += 1
+            continue
+        if token.startswith("--branch="):
+            branch = token.split("=", 1)[1].strip()
+            index += 1
+            continue
+        if token in {"--plus", "--apex"}:
+            effort = token[2:]
+            index += 1
+            continue
         if token.startswith("--"):
             index += 1
             continue
@@ -5154,6 +5170,8 @@ def _parse_cto_request(raw_request: str) -> Dict[str, Any]:
     return {
         "scope": scope,
         "target": target,
+        "branch": branch,
+        "effort": effort,
         "invalid_scope": invalid_scope,
         "valid": not bool(invalid_scope),
     }
@@ -5168,22 +5186,30 @@ def render_cto_summary(result: Dict[str, Any]) -> str:
             "## Недопустимый scope\n\n"
             f"- Полученное значение: `{result.get('invalid_scope', '')}`\n"
             f"- Допустимые scopes: `{', '.join(sorted(_CTO_SCOPES))}`\n"
-            "- Я не запускаю CTO, не выполняю Codex CLI и не изменяю проект.\n"
+            "- Я не запускаю CTO, не выполняю Greptile CLI и не изменяю проект.\n"
         )
 
-    codex_status = result.get("codex_status", "unknown")
-    codex_version = result.get("codex_version", "")
-    version_line = f"- Codex CLI: `{codex_version}`\n" if codex_version else f"- Codex CLI: `{codex_status}`\n"
+    greptile_status = result.get("greptile_status", "unknown")
+    greptile_version = result.get("greptile_version", "")
+    version_line = (
+        f"- Greptile CLI: `{greptile_version}`\n"
+        if greptile_version
+        else f"- Greptile CLI: `{greptile_status}`\n"
+    )
+    branch = result.get("branch") or "ветка по умолчанию удалённого репозитория"
     return (
         f"`{marker}`\n\n"
         "## CTO подготовлен\n\n"
         f"- Целевой каталог: `{result.get('target', '.')}`\n"
         f"- Scope: `{result.get('scope', 'all')}`\n"
+        f"- База сравнения: {branch}\n"
+        f"- Глубина: `{result.get('effort', 'default')}`\n"
         f"{version_line}"
         "- Внешний запуск: ожидает интерактивной сессии.\n"
-        "- Я не запускал Agent, не выполнял `codex exec` и не выдаю это за sign-off QA, безопасности или архитектуры.\n\n"
+        "- Я не запускал Agent, не выполнял `greptile review` и не выдаю это за sign-off QA, безопасности или архитектуры.\n\n"
         "### Следующий шаг\n\n"
-        "Выполни `/alfred-dev:cto` в интерактивной сессии, если хочешь разрешить внешнее ревью через Codex CLI.\n"
+        "Выполни `/alfred-dev:cto` в интерактивной сессии, когда фича готова и закоммичена, "
+        "чтобы разрешить внешнее ревью через Greptile CLI.\n"
     )
 
 
@@ -5193,6 +5219,8 @@ def prepare_cto_review(project_dir: str, raw_request: str = "") -> Dict[str, Any
         "command": "cto",
         "target": parsed["target"],
         "scope": parsed["scope"],
+        "branch": parsed["branch"],
+        "effort": parsed["effort"],
         "valid": parsed["valid"],
         "invalid_scope": parsed["invalid_scope"],
         "headless_marker": "CTO_HEADLESS_START",
@@ -5201,26 +5229,26 @@ def prepare_cto_review(project_dir: str, raw_request: str = "") -> Dict[str, Any
 
     if not parsed["valid"]:
         result["headless_marker"] = "CTO_INVALID_SCOPE"
-        result["codex_status"] = "not_checked"
+        result["greptile_status"] = "not_checked"
         return result
 
-    codex = shutil.which("codex")
-    if not codex:
-        result["codex_status"] = "missing"
+    greptile = shutil.which("greptile")
+    if not greptile:
+        result["greptile_status"] = "missing"
         return result
 
     try:
-        version = _run_short_command([codex, "--version"], timeout=5)
+        version = _run_short_command([greptile, "--version"], timeout=5)
     except (OSError, subprocess.SubprocessError):
-        result["codex_status"] = "unavailable"
+        result["greptile_status"] = "unavailable"
         return result
 
     if version.returncode == 0:
-        result["codex_status"] = "available"
-        result["codex_version"] = " ".join((version.stdout or "").split()).strip()
+        result["greptile_status"] = "available"
+        result["greptile_version"] = " ".join((version.stdout or "").split()).strip()
     else:
-        result["codex_status"] = "unavailable"
-        result["codex_version"] = " ".join((version.stderr or version.stdout or "").split()).strip()
+        result["greptile_status"] = "unavailable"
+        result["greptile_version"] = " ".join((version.stderr or version.stdout or "").split()).strip()
     return result
 
 
@@ -7670,7 +7698,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     cto_parser = subparsers.add_parser(
         "cto",
-        help="Prepare a CTO review without running Codex CLI",
+        help="Prepare a CTO review without running Greptile CLI",
     )
     cto_parser.add_argument("project_dir", nargs="?", default=".")
     cto_parser.add_argument("--json", action="store_true", dest="as_json")

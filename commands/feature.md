@@ -169,8 +169,10 @@ CHANGELOG, если применимо. Не переписывай то, что
 
 ## Опциональные агенты
 
-Единственный опциональный в runtime это **cto**. Если он активен в `equipo_sesion`
-или в `.claude/alfred-dev.local.md`, запускай его последовательно в фазе `calidad`.
+Единственный опциональный в runtime это **cto**. Он включён по умолчанию
+(`agentes_opcionales.cto: true`). Если он активен в `equipo_sesion` или в
+`.claude/alfred-dev.local.md`, запускай его последовательно в фазе `calidad`, когда
+фича полностью готова и закоммичена. CTO проверяет изменения через Greptile CLI.
 Не вызывай data-engineer, github-manager, copywriter и librarian.
 
 ## Каноничное завершение команды

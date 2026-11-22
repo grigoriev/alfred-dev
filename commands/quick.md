@@ -71,9 +71,8 @@ python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command quick -
 
 ### Фаза 1: Ограниченное выполнение (`ejecucion_acotada`)
 
-Активируй `senior-dev` как основного агента. Единственный опциональный в runtime
-это **cto**; не вызывай data-engineer, ux-reviewer, copywriter и
-i18n-specialist.
+Активируй `senior-dev` как основного агента. Не вызывай data-engineer,
+ux-reviewer, copywriter и i18n-specialist. CTO в `quick` не участвует.
 
 Правила:
 - Держи поверхность изменения небольшой и локальной.
@@ -85,9 +84,9 @@ i18n-specialist.
 
 ### Фаза 2: Быстрая валидация (`validacion_rapida`)
 
-Активируй `qa-engineer` и `security-officer` параллельно. Если `cto`
-активен, используй его как последовательную внешнюю завершающую проверку, когда второе
-техническое мнение даёт реальный сигнал по изменению.
+Активируй `qa-engineer` и `security-officer` параллельно. CTO здесь не подключается:
+он проверяет только полностью готовую фичу. Если пользователь хочет внешнее ревью,
+предложи ему `/alfred-dev:cto` после коммита.
 
 Правила:
 - Проверь локальную регрессию затронутой поверхности.

@@ -3,7 +3,7 @@
 # Job test: pytest on Python 3.10-3.13. On 3.12 it also runs
 # scripts/release_audit.py and coverage (minimum 60%).
 # Job plugin: Linux, macOS and Windows. Installs Claude CLI, validates,
-# installs 0.7.2 from the checkout (not from GitHub main) and uninstalls.
+# installs 0.7.3 from the checkout (not from GitHub main) and uninstalls.
 # FastMCP (requirements.txt) is optional and is not installed here.
 #
 # Security: no dynamic user input (issue titles, PR bodies, commit
@@ -42,7 +42,7 @@ jobs:
       - name: Run tests
         run: python3 -m pytest tests/ -q --tb=short
 
-      - name: Release audit 0.7.2
+      - name: Release audit 0.7.3
         if: matrix.python-version == '3.12'
         run: python3 scripts/release_audit.py
 
@@ -113,7 +113,7 @@ jobs:
       - name: 5. Register local marketplace
         run: claude plugin marketplace add "${{ github.workspace }}" --scope user
 
-      - name: 6. Install alfred-dev 0.7.2
+      - name: 6. Install alfred-dev 0.7.3
         run: claude plugin install alfred-dev@alfred-dev --scope user -y
 
       - name: 7. Show installed inventory
@@ -125,7 +125,7 @@ jobs:
           from pathlib import Path
           import os
           text = Path(os.environ["RUNNER_TEMP"], "alfred-details.txt").read_text(encoding="utf-8")
-          needed = ("0.7.2", "Skills (11)", "Agents (10)", "MCP servers (1)")
+          needed = ("0.7.3", "Skills (11)", "Agents (10)", "MCP servers (1)")
           missing = [item for item in needed if item not in text]
           if missing:
               raise SystemExit("Incomplete inventory: " + ", ".join(missing))

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Short synchronous SessionStart. Does not call GitHub. Does not rewrite permissions.
 # Routes: /alfred-dev:alfred /alfred-dev:feature /alfred-dev:audit /alfred-dev:progress /alfred-dev:retomar
-# CTO on demand. Agent Teams only if it is already active.
+# CTO reviews finished features. Agent Teams only if it is already active.
 
 set -euo pipefail
 

@@ -31,15 +31,15 @@ OPTIONAL_AGENT_CATALOG: Dict[str, Dict[str, Any]] = {
     "cto": {
         "group": "audit",
         "label": "CTO",
-        "specialty": "Внешнее техническое второе мнение и финальный аудит",
+        "specialty": "Внешнее ревью готовой фичи через Greptile CLI",
         "static_suggestion": False,
+        # On by default, but it joins only the phases where a feature is done:
+        # the quality closure of feature and the final audit of ship.
+        "default_enabled": True,
         "integration": {
             "fases": [
                 "calidad",
-                "validacion_rapida",
-                "validacion",
                 "auditoria_final",
-                "auditoria_paralela",
             ],
             "posicion": "secuencial",
         },
@@ -120,10 +120,17 @@ def order_optional_agent_names(names: Iterable[str]) -> List[str]:
     return ordered + extras
 
 
-def build_optional_agent_flags(default: bool = False) -> Dict[str, bool]:
-    """Build the block of bool flags for config/equipo_sesion."""
+def build_optional_agent_flags(default: Optional[bool] = None) -> Dict[str, bool]:
+    """Build the block of bool flags for config/equipo_sesion.
+
+    Without ``default`` each agent takes ``default_enabled`` from the catalog.
+    """
     return {
-        agent_name: bool(default)
+        agent_name: bool(
+            OPTIONAL_AGENT_CATALOG[agent_name].get("default_enabled", False)
+            if default is None
+            else default
+        )
         for agent_name in get_optional_agent_names()
     }
 

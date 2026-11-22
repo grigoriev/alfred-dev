@@ -171,7 +171,13 @@ class TestLoadConfig(unittest.TestCase):
 
     def test_build_equipo_sesion_from_config_returns_none_without_runtime_flags(self):
         config = load_config("/path/that/does/not/exist")
+        config["agentes_opcionales"]["cto"] = False
         self.assertIsNone(build_equipo_sesion_from_config(config))
+
+    def test_build_equipo_sesion_from_config_enables_cto_by_default(self):
+        config = load_config("/path/that/does/not/exist")
+        equipo = build_equipo_sesion_from_config(config)
+        self.assertTrue(equipo["opcionales_activos"]["cto"])
 
     def test_build_equipo_sesion_from_config_preserves_catalog_and_memory(self):
         config = load_config("/path/that/does/not/exist")
@@ -422,10 +428,10 @@ class TestLoadConfig(unittest.TestCase):
         updated = apply_config_section_update(
             config,
             "agentes_opcionales",
-            {"cto": True},
+            {"cto": False},
         )
 
-        self.assertTrue(updated["agentes_opcionales"]["cto"])
+        self.assertFalse(updated["agentes_opcionales"]["cto"])
         self.assertEqual(
             set(updated["agentes_opcionales"].keys()),
             set(get_optional_agent_names()),
@@ -445,7 +451,7 @@ class TestLoadConfig(unittest.TestCase):
                 "bundler": "vite",
             },
             "agentes_opcionales": {
-                "cto": True,
+                "cto": False,
             },
             "memoria": {
                 "enabled": True,
@@ -775,7 +781,7 @@ class TestOptionalAgents(unittest.TestCase):
         self.assertIn("agentes_opcionales", DEFAULT_CONFIG)
         agents = DEFAULT_CONFIG["agentes_opcionales"]
         self.assertEqual(set(agents.keys()), {"cto"})
-        self.assertFalse(agents["cto"])
+        self.assertTrue(agents["cto"])
 
     def test_optional_agent_catalog_keeps_group_distribution(self):
         grouped = get_optional_agents_by_group()

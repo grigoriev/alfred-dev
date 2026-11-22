@@ -161,7 +161,8 @@ class TestContinuitySuggestions(unittest.TestCase):
         self.assertEqual(state["equipo_sesion"]["fuente"], "config_persistida")
         self.assertEqual(set(state["equipo_sesion"]["opcionales_activos"]), {"cto"})
         self.assertTrue(state["equipo_sesion"]["opcionales_activos"]["cto"])
-        self.assertIn("Опциональные последовательно: `cto`.", traceability)
+        # quick never runs CTO: it reviews only a finished feature.
+        self.assertNotIn("Опциональные последовательно: `cto`.", traceability)
 
     def test_active_state_has_priority_over_brownfield_map(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -787,17 +788,25 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertEqual(result["command"], "cto")
         self.assertEqual(result["target"], "src")
         self.assertEqual(result["scope"], "security")
-        self.assertEqual(result["codex_status"], "missing")
+        self.assertEqual(result["greptile_status"], "missing")
         self.assertEqual(result["headless_marker"], "CTO_HEADLESS_START")
 
         summary = render_cto_summary(result)
         self.assertIn("`CTO_HEADLESS_START`", summary)
         self.assertIn("Scope: `security`", summary)
         self.assertIn("Я не запускал Agent", summary)
-        self.assertIn("не выполнял `codex exec`", summary)
+        self.assertIn("не выполнял `greptile review`", summary)
         self.assertIn("sign-off QA, безопасности или архитектуры", summary)
 
-    def test_prepare_cto_review_rejects_invalid_scope_without_codex(self):
+    def test_prepare_cto_review_parses_branch_and_effort(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = prepare_cto_review(tmpdir, raw_request="--branch develop --apex --scope tests")
+        self.assertEqual(result["branch"], "develop")
+        self.assertEqual(result["effort"], "apex")
+        self.assertEqual(result["scope"], "tests")
+        self.assertEqual(result["target"], ".")
+
+    def test_prepare_cto_review_rejects_invalid_scope_without_greptile(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             result = prepare_cto_review(
                 tmpdir,
@@ -806,14 +815,14 @@ class TestContinuityHelpers(unittest.TestCase):
 
         self.assertFalse(result["valid"])
         self.assertEqual(result["invalid_scope"], "bananas")
-        self.assertEqual(result["codex_status"], "not_checked")
+        self.assertEqual(result["greptile_status"], "not_checked")
         self.assertEqual(result["headless_marker"], "CTO_INVALID_SCOPE")
 
         summary = render_cto_summary(result)
         self.assertIn("`CTO_INVALID_SCOPE`", summary)
         self.assertIn("Допустимые scopes", summary)
         self.assertIn("Я не запускаю CTO", summary)
-        self.assertIn("не выполняю Codex CLI", summary)
+        self.assertIn("не выполняю Greptile CLI", summary)
 
     def test_start_flow_audit_reports_docker_menu_when_docker_missing(self):
         original_path = os.environ.get("PATH", "")

@@ -121,13 +121,13 @@ DEFAULT_CONFIG = {
     "personalidad": {
         "nivel_sarcasmo": 3,
         "verbosidad": "normal",
-        "idioma": "es",
+        "idioma": "ru",
         "celebrar_victorias": True,
         "insultar_malas_practicas": True,
     },
     # Optional agents: predefined agents that the user enables per project.
-    # All are off by default. /alfred-dev:ajustes or contextual discovery on
-    # the first plugin start in a new project turns them on.
+    # The catalog sets the default per agent (CTO is on).
+    # /alfred-dev:ajustes changes them per project.
     "agentes_opcionales": build_optional_agent_flags(),
     "memoria": dict(DEFAULT_MEMORY_CONFIG),
     "notas": "",
@@ -780,9 +780,9 @@ def _describe_config_section(
     elif section_name == "compliance":
         compliance = config.get("compliance", {})
         summary = (
-            f"estilo={compliance.get('estilo', 'auto')}, "
+            f"стиль={compliance.get('estilo', 'auto')}, "
             f"lint={'вкл' if compliance.get('lint', True) else 'выкл'}, "
-            f"format_on_save={'вкл' if compliance.get('format_on_save', True) else 'выкл'}."
+            f"формат при сохранении={'вкл' if compliance.get('format_on_save', True) else 'выкл'}."
         )
         details = [
             {"name": key, "value": compliance.get(key, DEFAULT_CONFIG["compliance"][key])}
@@ -801,9 +801,9 @@ def _describe_config_section(
     elif section_name == "personalidad":
         personality = config.get("personalidad", {})
         summary = (
-            f"idioma={personality.get('idioma', 'es')}, "
-            f"nivel_sarcasmo={personality.get('nivel_sarcasmo', 3)}/5, "
-            f"verbosidad={personality.get('verbosidad', 'normal')}."
+            f"язык={personality.get('idioma', 'ru')}, "
+            f"сарказм={personality.get('nivel_sarcasmo', 3)}/5, "
+            f"подробность={personality.get('verbosidad', 'normal')}."
         )
         details = [
             {"name": key, "value": personality.get(key, DEFAULT_CONFIG["personalidad"][key])}

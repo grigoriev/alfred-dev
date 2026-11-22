@@ -242,7 +242,7 @@ AGENTS: Dict[str, Dict[str, Any]] = {
     },
     "cto": {
         "nombre_display": "CTO",
-        "rol": "Внешний технический аудитор через Codex CLI",
+        "rol": "Внешний ревьюер готовой фичи через Greptile CLI",
         "color": "yellow",
         "modelo": "inherit",
         "opcional": True,

@@ -434,11 +434,9 @@ class TestSession(unittest.TestCase):
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
-        self.assertIn(
-            "`validacion` -> `ожидает` · gate `automatico+seguridad` · опциональные последовательно: `cto`",
-            progress,
-        )
-        self.assertIn("- Опциональные последовательно: `cto`.", traceability)
+        # CTO reviews only a finished feature, so it skips the validacion phase.
+        self.assertNotIn("опциональные последовательно: `cto`", progress)
+        self.assertNotIn("- Опциональные последовательно: `cto`.", traceability)
 
     def test_ship_flow_uses_persisted_optional_agents_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -499,11 +497,9 @@ class TestSession(unittest.TestCase):
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
-        self.assertIn(
-            "`validacion_rapida` -> `ожидает` · gate `automatico+seguridad` · опциональные последовательно: `cto`",
-            progress,
-        )
-        self.assertIn("- Опциональные последовательно: `cto`.", traceability)
+        # CTO reviews only a finished feature, so it skips the validacion_rapida phase.
+        self.assertNotIn("опциональные последовательно: `cto`", progress)
+        self.assertNotIn("- Опциональные последовательно: `cto`.", traceability)
 
     def test_audit_flow_uses_persisted_optional_agents_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -531,12 +527,10 @@ class TestSession(unittest.TestCase):
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
-        self.assertIn("Активные опциональные специалисты: последовательно: `cto`.", current)
-        self.assertIn(
-            "`auditoria_paralela` -> `в работе` · gate `automatico+seguridad` · опциональные последовательно: `cto`",
-            progress,
-        )
-        self.assertIn("- Опциональные последовательно: `cto`.", traceability)
+        # CTO reviews only a finished feature, so it skips the audit flow.
+        self.assertNotIn("Активные опциональные специалисты: последовательно: `cto`.", current)
+        self.assertNotIn("опциональные последовательно: `cto`", progress)
+        self.assertIn("- Опциональные агенты в этом процессе только по запросу: `cto`.", traceability)
 
     def test_spike_flow_marks_persisted_optionals_as_on_demand_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -579,12 +573,12 @@ class TestSession(unittest.TestCase):
         self.assertIn("`exploracion` -> `в работе` · gate `libre`", progress)
         self.assertIn("`conclusiones` -> `ожидает` · gate `usuario`", progress)
 
-    def test_save_state_operational_docs_show_cto_for_audit(self):
+    def test_save_state_operational_docs_show_cto_for_ship(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
-            session = create_session("audit", "Annual audit")
-            session["fase_actual"] = "auditoria_paralela"
+            session = create_session("ship", "Release")
+            session["fase_actual"] = "auditoria_final"
             session["fase_numero"] = 0
             session["equipo_sesion"] = {
                 "opcionales_activos": {
@@ -853,11 +847,12 @@ class TestRunFlow(unittest.TestCase):
     """Tests for run_flow, which creates a session with a team."""
 
     def test_tc15_without_equipo_sesion(self):
-        """TC-15: run_flow without equipo_sesion creates a session with equipo_sesion=None."""
+        """TC-15: run_flow without equipo_sesion takes the team from the default config."""
         with tempfile.TemporaryDirectory() as tmpdir:
             session = run_flow("feature", "New feature", project_dir=tmpdir)
         self.assertIn("equipo_sesion", session)
-        self.assertIsNone(session["equipo_sesion"])
+        self.assertTrue(session["equipo_sesion"]["opcionales_activos"]["cto"])
+        self.assertEqual(session["equipo_sesion"]["fuente"], "config_persistida")
         self.assertIsNone(session["equipo_sesion_error"])
 
     def test_tc16_with_valid_equipo_sesion(self):
@@ -866,8 +861,8 @@ class TestRunFlow(unittest.TestCase):
         self.assertEqual(session["equipo_sesion"], VALID_EQUIPO_SESION)
         self.assertIsNone(session["equipo_sesion_error"])
 
-    def test_tc17_invalid_equipo_sesion_falls_back_to_none_with_error(self):
-        """TC-17: run_flow with an invalid equipo_sesion falls back to None and records the reason."""
+    def test_tc17_invalid_equipo_sesion_falls_back_to_config_with_error(self):
+        """TC-17: run_flow with an invalid equipo_sesion falls back to the config and records the reason."""
         import io
         captured = io.StringIO()
         old_stderr = sys.stderr
@@ -882,7 +877,7 @@ class TestRunFlow(unittest.TestCase):
                 )
         finally:
             sys.stderr = old_stderr
-        self.assertIsNone(session["equipo_sesion"])
+        self.assertEqual(session["equipo_sesion"]["fuente"], "config_persistida")
         self.assertIn("Alfred Dev", captured.getvalue())
         # Verify that the session records the reason for the rejection
         self.assertIsNotNone(session["equipo_sesion_error"])
@@ -988,7 +983,7 @@ class TestRunFlow(unittest.TestCase):
         self.assertIn("Применена сохранённая конфигурация", session["equipo_sesion_error"])
 
     def test_quick_flow_uses_optional_agents_on_light_phases(self):
-        """quick includes CTO only in validacion_rapida."""
+        """quick never includes CTO: it reviews only a finished feature."""
         opcionales = {
             **VALID_EQUIPO_SESION["opcionales_activos"],
             "cto": True,
@@ -997,10 +992,10 @@ class TestRunFlow(unittest.TestCase):
         validacion = get_effective_agents("validacion_rapida", opcionales)
         self.assertEqual(ejecucion["paralelo"], [])
         self.assertEqual(ejecucion["secuencial"], [])
-        self.assertIn("cto", validacion["secuencial"])
+        self.assertNotIn("cto", validacion["secuencial"])
 
     def test_fix_flow_uses_optional_agents_on_bug_phases(self):
-        """fix includes CTO only in validacion."""
+        """fix never includes CTO: it reviews only a finished feature."""
         opcionales = {
             **VALID_EQUIPO_SESION["opcionales_activos"],
             "cto": True,
@@ -1013,7 +1008,7 @@ class TestRunFlow(unittest.TestCase):
         self.assertEqual(diagnostico["secuencial"], [])
         self.assertEqual(correccion["paralelo"], [])
         self.assertEqual(correccion["secuencial"], [])
-        self.assertIn("cto", validacion["secuencial"])
+        self.assertNotIn("cto", validacion["secuencial"])
 
     def test_unknown_optional_flags_are_ignored_by_effective_agents(self):
         """Removed optional agents do not come back even if the state has them."""
@@ -1041,7 +1036,7 @@ class TestRunFlow(unittest.TestCase):
         self.assertIn("cto", auditoria["secuencial"])
 
     def test_ship_and_audit_use_release_optional_agents(self):
-        """ship and audit include CTO in the audit phases."""
+        """ship includes CTO in the final audit; audit does not include it."""
         opcionales = {
             **VALID_EQUIPO_SESION["opcionales_activos"],
             "cto": True,
@@ -1056,7 +1051,7 @@ class TestRunFlow(unittest.TestCase):
         self.assertEqual(documentacion["paralelo"], [])
         self.assertEqual(empaquetado["secuencial"], [])
         self.assertEqual(despliegue["secuencial"], [])
-        self.assertIn("cto", auditoria_paralela["secuencial"])
+        self.assertNotIn("cto", auditoria_paralela["secuencial"])
 
 
 class TestIterativeLoop(unittest.TestCase):

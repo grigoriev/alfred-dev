@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-VERSION = "0.7.2"
+VERSION = "0.7.3"
 OLD_VERSION = "0.5" + ".3"
 INSTALLED_PLUGIN_DIR = Path.home() / ".claude" / "plugins" / "cache" / "alfred-dev" / "alfred-dev" / VERSION
 GLOBAL_ALFRED_ALIAS_FILE = Path.home() / ".claude" / "skills" / "alfred" / "SKILL.md"
@@ -1303,7 +1303,7 @@ def check_command_execution_contracts() -> list[str]:
         ],
         "cto": [
             "Аргументы пользователя: $ARGUMENTS",
-            "codex login",
+            "greptile login",
             "scope=all",
             "Не реализуй ни один пункт",
             "проверяемый следующий шаг",
@@ -1414,17 +1414,14 @@ def check_public_claims() -> list[str]:
             "снижают вариативность",
         ],
         "agents/cto.md": [
-            "Не навязывай модель по собственной инициативе",
-            "Codex CLI (локальная конфигурация пользователя)",
-            "codex exec",
-            "--sandbox read-only",
-            "--ephemeral",
-            "--json",
-            "--output-last-message",
-            "codex_report",
-            "codex_jsonl",
-            "approval_policy",
+            "Не меняй модель и настройки ревью по собственной инициативе",
+            "Greptile CLI (конфигурация репозитория)",
+            "greptile review --agent --json",
+            "--instructions",
+            "greptile init --json",
+            "greptile_report",
             "status --porcelain=v1 -z",
+            "только когда фича полностью готова",
         ],
         "CHANGELOG.md": [
             "displayName: \"Alfred Dev\"",
@@ -1655,7 +1652,7 @@ def check_public_claims() -> list[str]:
         surface_message,
         display_name_message,
         "sensitive skills keep explicit manual activation",
-        "CTO does not pin an obsolete Codex CLI model",
+        "CTO does not pin a review model",
         "runtime prompts without legacy /alfred",
     ]
 
@@ -1773,8 +1770,7 @@ def check_config_contracts() -> list[str]:
             "bundler": "vite",
         },
         "agentes_opcionales": {
-            "cto": True,
-            "cto": True,
+            "cto": False,
         },
         "memoria": {
             "enabled": True,
@@ -3433,19 +3429,15 @@ def check_external_contracts() -> list[str]:
             ("Сохраняй локальную истину", sync),
         ],
         "cto external audit": [
-            ("codex --version", cto_all),
-            ("codex login", cto_all),
+            ("greptile --version", cto_all),
+            ("greptile login", cto_all),
             ("явное подтверждение", cto_all),
-            ("codex exec", cto_all),
-            ("--sandbox read-only", cto_all),
-            ("--ephemeral", cto_all),
-            ("--json", cto_all),
-            ("--output-last-message", cto_all),
-            ("codex_report", cto_all),
-            ("codex_jsonl", cto_all),
-            ("approval_policy", cto_all),
+            ("greptile review --agent --json", cto_all),
+            ("greptile init --json", cto_all),
+            ("--instructions", cto_all),
+            ("greptile_report", cto_all),
             ("status --porcelain=v1 -z", cto_all),
-            ("НЕ изменяй никакие файлы", cto_all),
+            ("Никогда не включай инструкции, позволяющие изменять файлы", cto_all),
             ("Ты никогда не запускаешь код проекта", cto_all),
             ("Ты не заменяешь `qa-engineer`, `security-officer` и `architect`", cto_all),
             ("не заменяет канонический sign-off", cto_all),
