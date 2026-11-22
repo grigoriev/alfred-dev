@@ -23,7 +23,7 @@ from core.config_loader import load_config, save_project_config
 from core.orchestrator import (
     FLOWS, create_session, advance_phase, check_gate,
     load_state, save_state, get_effective_agents,
-    run_flow, _validate_equipo_sesion, _KNOWN_OPTIONAL_AGENTS,
+    run_flow, _validate_session_team, _KNOWN_OPTIONAL_AGENTS,
     OPTIONAL_INTEGRATIONS,
     should_retry_phase, reset_phase_iterations,
     is_autopilot_gate_passable, run_flow_autopilot,
@@ -40,7 +40,7 @@ def _save_project_config_with_optionals(
     """Save a minimal local config that enables the given optional agents."""
     config = load_config("/path/that/does/not/exist")
     for agent_name in enabled_optionals:
-        config["agentes_opcionales"][agent_name] = True
+        config["optional_agents"][agent_name] = True
     return save_project_config(
         project_dir,
         config,
@@ -51,23 +51,23 @@ def _save_project_config_with_optionals(
 
 class TestFlows(unittest.TestCase):
     def test_feature_flow_has_7_phases(self):
-        self.assertEqual(len(FLOWS["feature"]["fases"]), 7)
+        self.assertEqual(len(FLOWS["feature"]["phases"]), 7)
 
     def test_fix_flow_has_3_phases(self):
-        self.assertEqual(len(FLOWS["fix"]["fases"]), 3)
+        self.assertEqual(len(FLOWS["fix"]["phases"]), 3)
 
     def test_quick_flow_has_2_phases(self):
-        self.assertEqual(len(FLOWS["quick"]["fases"]), 2)
+        self.assertEqual(len(FLOWS["quick"]["phases"]), 2)
 
     def test_all_flows_defined(self):
         expected = {"feature", "fix", "quick", "spike", "ship", "audit"}
         self.assertEqual(set(FLOWS.keys()), expected)
 
-    def test_architecture_gate_is_usuario_seguridad(self):
-        """The arquitectura phase must have the usuario+seguridad gate."""
-        fase_arq = FLOWS["feature"]["fases"][2]
-        self.assertEqual(fase_arq["nombre"], "arquitectura")
-        self.assertEqual(fase_arq["gate_tipo"], "usuario+seguridad")
+    def test_architecture_gate_is_user_security(self):
+        """The architecture phase must have the user+security gate."""
+        phase_arq = FLOWS["feature"]["phases"][2]
+        self.assertEqual(phase_arq["name"], "architecture")
+        self.assertEqual(phase_arq["gate_type"], "user+security")
 
     def test_optional_integrations_cover_known_optional_agents(self):
         self.assertEqual(set(OPTIONAL_INTEGRATIONS.keys()), _KNOWN_OPTIONAL_AGENTS)
@@ -76,10 +76,10 @@ class TestFlows(unittest.TestCase):
 class TestSession(unittest.TestCase):
     def test_create_session(self):
         session = create_session("feature", "Authentication system")
-        self.assertEqual(session["comando"], "feature")
-        self.assertEqual(session["fase_actual"], "producto")
-        self.assertEqual(session["fase_numero"], 0)
-        self.assertEqual(len(session["fases_completadas"]), 0)
+        self.assertEqual(session["command"], "feature")
+        self.assertEqual(session["current_phase"], "product")
+        self.assertEqual(session["phase_number"], 0)
+        self.assertEqual(len(session["completed_phases"]), 0)
 
     def test_save_and_load_state(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
@@ -88,16 +88,16 @@ class TestSession(unittest.TestCase):
             session = create_session("fix", "Login bug")
             save_state(session, state_path)
             loaded = load_state(state_path)
-            self.assertEqual(loaded["comando"], "fix")
-            self.assertEqual(loaded["descripcion"], "Login bug")
+            self.assertEqual(loaded["command"], "fix")
+            self.assertEqual(loaded["description"], "Login bug")
         finally:
             os.unlink(state_path)
 
     def test_create_quick_session(self):
         session = create_session("quick", "Small login tweak")
-        self.assertEqual(session["comando"], "quick")
-        self.assertEqual(session["fase_actual"], "ejecucion_acotada")
-        self.assertEqual(session["fase_numero"], 0)
+        self.assertEqual(session["command"], "quick")
+        self.assertEqual(session["current_phase"], "scoped_execution")
+        self.assertEqual(session["phase_number"], 0)
 
     def test_create_session_accepts_optional_stack(self):
         session = create_session(
@@ -136,10 +136,10 @@ class TestSession(unittest.TestCase):
 
         main_task = next(task for task in board["in-progress"] if task["id"] == loaded["kanban_task_id"])
         verify_task = next(task for task in board["backlog"] if task["id"] == loaded["kanban_verify_task_id"])
-        producto_task = next(task for task in board["in-progress"] if task["title"].startswith("feature:producto"))
+        product_task = next(task for task in board["in-progress"] if task["title"].startswith("feature:product"))
         self.assertEqual(main_task["task_type"], "main")
         self.assertEqual(verify_task["task_type"], "verify")
-        self.assertEqual(producto_task["task_type"], "phase")
+        self.assertEqual(product_task["task_type"], "phase")
 
     def test_save_state_syncs_completed_session_to_done_and_keeps_verify(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -147,8 +147,8 @@ class TestSession(unittest.TestCase):
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
             session = create_session("fix", "Login bug")
             save_state(session, state_path)
-            while session["fase_actual"] != "completado":
-                session = advance_phase(session, resultado="aprobado", artefactos=[])
+            while session["current_phase"] != "completed":
+                session = advance_phase(session, result="approved", artifacts=[])
 
             save_state(session, state_path)
 
@@ -165,12 +165,12 @@ class TestSession(unittest.TestCase):
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
             session = create_session("feature", "Checkout")
             save_state(session, state_path)
-            while session["fase_actual"] != "completado":
-                session = advance_phase(session, resultado="aprobado", artefactos=[])
+            while session["current_phase"] != "completed":
+                session = advance_phase(session, result="approved", artifacts=[])
             save_state(session, state_path)
 
             loaded = load_state(state_path)
-            write_uat_files(tmpdir, raw_request="rechazado smoke roto")
+            write_uat_files(tmpdir, raw_request="rejected smoke roto")
             save_state(loaded, state_path)
 
             reloaded = load_state(state_path)
@@ -190,10 +190,10 @@ class TestSession(unittest.TestCase):
             loaded = load_state(state_path)
             board = load_kanban_board(tmpdir)
 
-        self.assertEqual(set(loaded["kanban_phase_task_ids"].keys()), {"diagnostico", "correccion", "validacion"})
-        self.assertTrue(any(task["title"].startswith("fix:diagnostico") for task in board["in-progress"]))
-        self.assertTrue(any(task["title"].startswith("fix:correccion") for task in board["backlog"]))
-        self.assertTrue(any(task["title"].startswith("fix:validacion") for task in board["backlog"]))
+        self.assertEqual(set(loaded["kanban_phase_task_ids"].keys()), {"diagnosis", "correction", "validation"})
+        self.assertTrue(any(task["title"].startswith("fix:diagnosis") for task in board["in-progress"]))
+        self.assertTrue(any(task["title"].startswith("fix:correction") for task in board["backlog"]))
+        self.assertTrue(any(task["title"].startswith("fix:validation") for task in board["backlog"]))
 
     def test_save_state_updates_phase_tasks_when_advancing(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -202,17 +202,17 @@ class TestSession(unittest.TestCase):
             session = create_session("fix", "Login bug")
             save_state(session, state_path)
             session = load_state(state_path)
-            session = advance_phase(session, resultado="aprobado", artefactos=["docs/diag.md"])
+            session = advance_phase(session, result="approved", artifacts=["docs/diag.md"])
 
             save_state(session, state_path)
 
             board = load_kanban_board(tmpdir)
 
-        diagnostico = next(task for task in board["done"] if task["title"].startswith("fix:diagnostico"))
-        self.assertIn("результатом 'одобрено'", diagnostico["notes"])
-        self.assertIn("Артефакты:", diagnostico["body"])
-        self.assertIn("docs/diag.md", diagnostico["body"])
-        self.assertTrue(any(task["title"].startswith("fix:correccion") for task in board["in-progress"]))
+        diagnosis = next(task for task in board["done"] if task["title"].startswith("fix:diagnosis"))
+        self.assertIn("результатом 'одобрено'", diagnosis["notes"])
+        self.assertIn("Артефакты:", diagnosis["body"])
+        self.assertIn("docs/diag.md", diagnosis["body"])
+        self.assertTrue(any(task["title"].startswith("fix:correction") for task in board["in-progress"]))
 
     def test_save_state_generates_operational_docs_automatically(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -231,24 +231,24 @@ class TestSession(unittest.TestCase):
             loaded = load_state(state_path)
 
         self.assertIn("Процесс: `feature`.", current)
-        self.assertIn("Рекомендуемая следующая команда: /alfred-dev:retomar", current)
-        self.assertIn("Незакрытая gate: `usuario`.", current)
+        self.assertIn("Рекомендуемая следующая команда: /alfred-dev:resume", current)
+        self.assertIn("Незакрытая gate: `user`.", current)
         self.assertIn("Завершено фаз: 0/7.", progress)
         self.assertIn("Видимый kanban:", progress)
         self.assertIn("## Фазы процесса", progress)
-        self.assertIn("`producto` -> `в работе` · gate `usuario`", progress)
+        self.assertIn("`product` -> `в работе` · gate `user`", progress)
         self.assertIn("Незакрытая gate:", traceability)
         self.assertIn("Главный риск:", traceability)
         self.assertIn("## Критерии и подтверждения по фазам", traceability)
-        self.assertIn("### `producto`", traceability)
+        self.assertIn("### `product`", traceability)
         self.assertIn(
-            "Видимые критерии: Анализ требований и определение функционального объёма новой feature; Закрыть gate `usuario` без открытых блокеров.",
+            "Видимые критерии: Анализ требований и определение функционального объёма новой feature; Закрыть gate `user` без открытых блокеров.",
             traceability,
         )
         self.assertIn("## Ручная проверка", traceability)
-        self.assertIn(CURRENT_RELATIVE_PATH, loaded["artefactos"])
-        self.assertIn(PROGRESS_MD_RELATIVE_PATH, loaded["artefactos"])
-        self.assertIn(TRACEABILITY_MD_RELATIVE_PATH, loaded["artefactos"])
+        self.assertIn(CURRENT_RELATIVE_PATH, loaded["artifacts"])
+        self.assertIn(PROGRESS_MD_RELATIVE_PATH, loaded["artifacts"])
+        self.assertIn(TRACEABILITY_MD_RELATIVE_PATH, loaded["artifacts"])
 
     def test_save_state_updates_operational_docs_after_completion_and_uat(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -256,10 +256,10 @@ class TestSession(unittest.TestCase):
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
             session = create_session("quick", "Small login tweak")
             save_state(session, state_path)
-            while session["fase_actual"] != "completado":
-                session = advance_phase(session, resultado="aprobado", artefactos=["docs/change.md"])
+            while session["current_phase"] != "completed":
+                session = advance_phase(session, result="approved", artifacts=["docs/change.md"])
             save_state(session, state_path)
-            write_uat_files(tmpdir, raw_request="aprobado smoke manual correcto")
+            write_uat_files(tmpdir, raw_request="approved smoke manual correcto")
 
             with open(os.path.join(tmpdir, CURRENT_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 current = fh.read()
@@ -274,31 +274,31 @@ class TestSession(unittest.TestCase):
         self.assertIn("Проверка/UAT: одобрена.", progress)
         self.assertIn("Накоплено артефактов: 6.", progress)
         self.assertIn("## Фазы процесса", progress)
-        self.assertIn("`ejecucion_acotada` -> `одобрено`", progress)
+        self.assertIn("`scoped_execution` -> `одобрено`", progress)
         self.assertIn("Текущая UAT: одобрена.", traceability)
         self.assertIn("## Ручная проверка", traceability)
         self.assertIn("Статус verify: `done`.", traceability)
         self.assertIn("docs/change.md", traceability)
         self.assertIn(UAT_MD_RELATIVE_PATH, traceability)
-        self.assertIn(UAT_MD_RELATIVE_PATH, loaded["artefactos"])
-        self.assertIn(UAT_JSON_RELATIVE_PATH, loaded["artefactos"])
+        self.assertIn(UAT_MD_RELATIVE_PATH, loaded["artifacts"])
+        self.assertIn(UAT_JSON_RELATIVE_PATH, loaded["artifacts"])
 
     def test_save_state_operational_docs_show_active_optional_agents_for_phase(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
             session = create_session("feature", "New checkout")
-            session["fase_actual"] = "calidad"
-            session["fase_numero"] = 4
-            session["equipo_sesion"] = {
-                "opcionales_activos": {
+            session["current_phase"] = "quality"
+            session["phase_number"] = 4
+            session["session_team"] = {
+                "active_optionals": {
                     "cto": True,
                 },
                 "infra": {
-                    "memoria": False,
+                    "memory": False,
                     "gui": False,
                 },
-                "fuente": "composicion_dinamica",
+                "source": "dynamic_composition",
             }
 
             save_state(session, state_path)
@@ -315,7 +315,7 @@ class TestSession(unittest.TestCase):
             current,
         )
         self.assertIn(
-            "`calidad` -> `в работе` · gate `automatico+seguridad` · опциональные последовательно: `cto`",
+            "`quality` -> `в работе` · gate `automatic+security` · опциональные последовательно: `cto`",
             progress,
         )
         self.assertIn("- Опциональные последовательно: `cto`.", traceability)
@@ -325,24 +325,24 @@ class TestSession(unittest.TestCase):
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
             session = create_session("ship", "Release 1.2.0")
-            session["equipo_sesion"] = {
-                "opcionales_activos": {
+            session["session_team"] = {
+                "active_optionals": {
                     "cto": True,
                 },
                 "infra": {
-                    "memoria": False,
+                    "memory": False,
                     "gui": False,
                 },
-                "fuente": "composicion_dinamica",
+                "source": "dynamic_composition",
             }
 
             expectations = [
-                ("auditoria_final", 0, "последовательно: `cto`"),
+                ("final_audit", 0, "последовательно: `cto`"),
             ]
 
             for phase_name, phase_number, expected_summary in expectations:
-                session["fase_actual"] = phase_name
-                session["fase_numero"] = phase_number
+                session["current_phase"] = phase_name
+                session["phase_number"] = phase_number
                 save_state(session, state_path)
 
                 with open(os.path.join(tmpdir, CURRENT_RELATIVE_PATH), "r", encoding="utf-8") as fh:
@@ -396,14 +396,14 @@ class TestSession(unittest.TestCase):
             with open(os.path.join(tmpdir, TRACEABILITY_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 traceability = fh.read()
 
-        self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
-        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
+        self.assertEqual(persisted["session_team"]["source"], "persisted_config")
+        self.assertEqual(set(persisted["session_team"]["active_optionals"]), {"cto"})
+        self.assertTrue(persisted["session_team"]["active_optionals"]["cto"])
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
         self.assertIn(
-            "`calidad` -> `ожидает` · gate `automatico+seguridad` · опциональные последовательно: `cto`",
+            "`quality` -> `ожидает` · gate `automatic+security` · опциональные последовательно: `cto`",
             progress,
         )
         self.assertIn("- Опциональные последовательно: `cto`.", traceability)
@@ -428,13 +428,13 @@ class TestSession(unittest.TestCase):
             with open(os.path.join(tmpdir, TRACEABILITY_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 traceability = fh.read()
 
-        self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
-        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
+        self.assertEqual(persisted["session_team"]["source"], "persisted_config")
+        self.assertEqual(set(persisted["session_team"]["active_optionals"]), {"cto"})
+        self.assertTrue(persisted["session_team"]["active_optionals"]["cto"])
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
-        # CTO reviews only a finished feature, so it skips the validacion phase.
+        # CTO reviews only a finished feature, so it skips the validation phase.
         self.assertNotIn("опциональные последовательно: `cto`", progress)
         self.assertNotIn("- Опциональные последовательно: `cto`.", traceability)
 
@@ -458,15 +458,15 @@ class TestSession(unittest.TestCase):
             with open(os.path.join(tmpdir, TRACEABILITY_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 traceability = fh.read()
 
-        self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
-        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
+        self.assertEqual(persisted["session_team"]["source"], "persisted_config")
+        self.assertEqual(set(persisted["session_team"]["active_optionals"]), {"cto"})
+        self.assertTrue(persisted["session_team"]["active_optionals"]["cto"])
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
         self.assertIn("Активные опциональные специалисты: последовательно: `cto`.", current)
         self.assertIn(
-            "`auditoria_final` -> `в работе` · gate `automatico+seguridad` · опциональные последовательно: `cto`",
+            "`final_audit` -> `в работе` · gate `automatic+security` · опциональные последовательно: `cto`",
             progress,
         )
         self.assertIn("- Опциональные последовательно: `cto`.", traceability)
@@ -491,13 +491,13 @@ class TestSession(unittest.TestCase):
             with open(os.path.join(tmpdir, TRACEABILITY_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 traceability = fh.read()
 
-        self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
-        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
+        self.assertEqual(persisted["session_team"]["source"], "persisted_config")
+        self.assertEqual(set(persisted["session_team"]["active_optionals"]), {"cto"})
+        self.assertTrue(persisted["session_team"]["active_optionals"]["cto"])
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
-        # CTO reviews only a finished feature, so it skips the validacion_rapida phase.
+        # CTO reviews only a finished feature, so it skips the quick_validation phase.
         self.assertNotIn("опциональные последовательно: `cto`", progress)
         self.assertNotIn("- Опциональные последовательно: `cto`.", traceability)
 
@@ -521,9 +521,9 @@ class TestSession(unittest.TestCase):
             with open(os.path.join(tmpdir, TRACEABILITY_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 traceability = fh.read()
 
-        self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
-        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
+        self.assertEqual(persisted["session_team"]["source"], "persisted_config")
+        self.assertEqual(set(persisted["session_team"]["active_optionals"]), {"cto"})
+        self.assertTrue(persisted["session_team"]["active_optionals"]["cto"])
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
@@ -552,9 +552,9 @@ class TestSession(unittest.TestCase):
             with open(os.path.join(tmpdir, TRACEABILITY_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 traceability = fh.read()
 
-        self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
-        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
+        self.assertEqual(persisted["session_team"]["source"], "persisted_config")
+        self.assertEqual(set(persisted["session_team"]["active_optionals"]), {"cto"})
+        self.assertTrue(persisted["session_team"]["active_optionals"]["cto"])
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
         self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
@@ -570,25 +570,25 @@ class TestSession(unittest.TestCase):
             "- Опциональные агенты в этом процессе только по запросу: `cto`.",
             traceability,
         )
-        self.assertIn("`exploracion` -> `в работе` · gate `libre`", progress)
-        self.assertIn("`conclusiones` -> `ожидает` · gate `usuario`", progress)
+        self.assertIn("`exploration` -> `в работе` · gate `free`", progress)
+        self.assertIn("`conclusions` -> `ожидает` · gate `user`", progress)
 
     def test_save_state_operational_docs_show_cto_for_ship(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
             session = create_session("ship", "Release")
-            session["fase_actual"] = "auditoria_final"
-            session["fase_numero"] = 0
-            session["equipo_sesion"] = {
-                "opcionales_activos": {
+            session["current_phase"] = "final_audit"
+            session["phase_number"] = 0
+            session["session_team"] = {
+                "active_optionals": {
                     "cto": True,
                 },
                 "infra": {
-                    "memoria": False,
+                    "memory": False,
                     "gui": False,
                 },
-                "fuente": "composicion_dinamica",
+                "source": "dynamic_composition",
             }
 
             save_state(session, state_path)
@@ -615,51 +615,51 @@ class TestSession(unittest.TestCase):
             )
             save_state(session, state_path)
             session = load_state(state_path)
-            session = advance_phase(session, resultado="aprobado", artefactos=[])
+            session = advance_phase(session, result="approved", artifacts=[])
 
             save_state(session, state_path)
 
             board = load_kanban_board(tmpdir)
 
-        producto = next(task for task in board["done"] if task["title"].startswith("feature:producto"))
-        estilo = next(task for task in board["done"] if task["title"].startswith("feature:estilo_visual"))
-        self.assertIn("результатом 'одобрено'", producto["notes"])
-        self.assertIn("пропущена", estilo["notes"])
-        self.assertIn("Gate: usuario", producto["body"])
-        self.assertIn("Статус фазы: пропущена", estilo["body"])
-        self.assertTrue(any(task["title"].startswith("feature:arquitectura") for task in board["in-progress"]))
+        product = next(task for task in board["done"] if task["title"].startswith("feature:product"))
+        style = next(task for task in board["done"] if task["title"].startswith("feature:visual_style"))
+        self.assertIn("результатом 'одобрено'", product["notes"])
+        self.assertIn("пропущена", style["notes"])
+        self.assertIn("Gate: user", product["body"])
+        self.assertIn("Статус фазы: пропущена", style["body"])
+        self.assertTrue(any(task["title"].startswith("feature:architecture") for task in board["in-progress"]))
 
-    def test_ship_empaquetado_has_no_optional_agents(self):
+    def test_ship_packaging_has_no_optional_agents(self):
         effective = get_effective_agents(
-            "empaquetado",
+            "packaging",
             {"cto": True},
         )
-        self.assertEqual(effective["paralelo"], [])
-        self.assertEqual(effective["secuencial"], [])
+        self.assertEqual(effective["parallel"], [])
+        self.assertEqual(effective["sequential"], [])
 
-    def test_ship_empaquetado_gate_is_automatico_seguridad(self):
-        empaquetado = FLOWS["ship"]["fases"][2]
-        self.assertEqual(empaquetado["nombre"], "empaquetado")
-        self.assertEqual(empaquetado["gate_tipo"], "automatico+seguridad")
+    def test_ship_packaging_gate_is_automatic_security(self):
+        packaging = FLOWS["ship"]["phases"][2]
+        self.assertEqual(packaging["name"], "packaging")
+        self.assertEqual(packaging["gate_type"], "automatic+security")
 
     def test_save_state_phase_task_body_includes_gate_and_iterations(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
             session = create_session("feature", "Authentication system")
-            session["iteraciones_fase"] = 2
-            session = advance_phase(session, resultado="aprobado", artefactos=["docs/producto.md"])
+            session["phase_iterations"] = 2
+            session = advance_phase(session, result="approved", artifacts=["docs/product.md"])
 
             save_state(session, state_path)
 
             board = load_kanban_board(tmpdir)
 
-        producto = next(task for task in board["done"] if task["title"].startswith("feature:producto"))
-        self.assertIn("Gate: usuario", producto["body"])
-        self.assertIn("Внутренних итераций: 2", producto["body"])
-        self.assertIn("docs/producto.md", producto["body"])
+        product = next(task for task in board["done"] if task["title"].startswith("feature:product"))
+        self.assertIn("Gate: user", product["body"])
+        self.assertIn("Внутренних итераций: 2", product["body"])
+        self.assertIn("docs/product.md", product["body"])
 
-    def test_save_state_enriches_estilo_visual_with_artifact_and_choice_evidence(self):
+    def test_save_state_enriches_visual_style_with_artifact_and_choice_evidence(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             os.makedirs(os.path.join(tmpdir, "docs"), exist_ok=True)
@@ -681,107 +681,107 @@ class TestSession(unittest.TestCase):
                 )
 
             session = create_session("feature", "Authentication system")
-            session = advance_phase(session, resultado="aprobado", artefactos=["docs/producto.md"])
-            session = advance_phase(session, resultado="aprobado", artefactos=[])
+            session = advance_phase(session, result="approved", artifacts=["docs/product.md"])
+            session = advance_phase(session, result="approved", artifacts=[])
 
             save_state(session, state_path)
 
             persisted = load_state(state_path)
             board = load_kanban_board(tmpdir)
 
-        estilo_phase = next(
-            phase for phase in persisted["fases_completadas"] if phase["nombre"] == "estilo_visual"
+        style_phase = next(
+            phase for phase in persisted["completed_phases"] if phase["name"] == "visual_style"
         )
-        self.assertIn("docs/style-direction.md", estilo_phase["artefactos"])
-        self.assertIn("docs/style-direction.md", persisted["artefactos"])
+        self.assertIn("docs/style-direction.md", style_phase["artifacts"])
+        self.assertIn("docs/style-direction.md", persisted["artifacts"])
 
-        estilo_task = next(task for task in board["done"] if task["title"].startswith("feature:estilo_visual"))
-        self.assertIn("docs/style-direction.md", estilo_task["body"])
-        self.assertIn("Warm editorial", estilo_task["notes"])
-        self.assertIn("Визуальный выбор", estilo_task["evidence"])
+        style_task = next(task for task in board["done"] if task["title"].startswith("feature:visual_style"))
+        self.assertIn("docs/style-direction.md", style_task["body"])
+        self.assertIn("Warm editorial", style_task["notes"])
+        self.assertIn("Визуальный выбор", style_task["evidence"])
 
 
 class TestGates(unittest.TestCase):
     def test_gate_passes_with_correct_result(self):
         session = create_session("feature", "Test feature")
-        result = check_gate(session, resultado="aprobado")
+        result = check_gate(session, result="approved")
         self.assertTrue(result["passed"])
 
     def test_gate_fails_with_incorrect_result(self):
         session = create_session("feature", "Test feature")
-        result = check_gate(session, resultado="rechazado")
+        result = check_gate(session, result="rejected")
         self.assertFalse(result["passed"])
 
     def test_automatic_gate_fails_when_tests_fail(self):
         """Automatic gates block if the tests fail."""
         session = create_session("feature", "Test")
-        # Advance to the desarrollo phase (automatic gate)
-        session = advance_phase(session)  # producto -> estilo_visual
-        session = advance_phase(session)  # estilo_visual -> arquitectura
-        session = advance_phase(session)  # arquitectura -> desarrollo
-        result = check_gate(session, resultado="aprobado", tests_ok=False)
+        # Advance to the development phase (automatic gate)
+        session = advance_phase(session)  # product -> visual_style
+        session = advance_phase(session)  # visual_style -> architecture
+        session = advance_phase(session)  # architecture -> development
+        result = check_gate(session, result="approved", tests_ok=False)
         self.assertFalse(result["passed"])
         self.assertIn("тесты", result["reason"].lower())
 
     def test_automatic_gate_passes_when_tests_ok(self):
         """Automatic gates pass if the tests and the result are OK."""
         session = create_session("feature", "Test")
-        session = advance_phase(session)  # producto -> estilo_visual
-        session = advance_phase(session)  # estilo_visual -> arquitectura
-        session = advance_phase(session)  # arquitectura -> desarrollo
-        result = check_gate(session, resultado="aprobado", tests_ok=True)
+        session = advance_phase(session)  # product -> visual_style
+        session = advance_phase(session)  # visual_style -> architecture
+        session = advance_phase(session)  # architecture -> development
+        result = check_gate(session, result="approved", tests_ok=True)
         self.assertTrue(result["passed"])
 
     def test_security_gate_fails_when_security_fails(self):
         """Gates with security block if security_ok is False."""
         session = create_session("feature", "Test")
-        session = advance_phase(session)  # producto -> estilo_visual
-        session = advance_phase(session)  # estilo_visual -> arquitectura
-        session = advance_phase(session)  # arquitectura -> desarrollo
-        session = advance_phase(session)  # desarrollo -> calidad
-        # calidad phase: automatico+seguridad gate
-        result = check_gate(session, resultado="aprobado", security_ok=False)
+        session = advance_phase(session)  # product -> visual_style
+        session = advance_phase(session)  # visual_style -> architecture
+        session = advance_phase(session)  # architecture -> development
+        session = advance_phase(session)  # development -> quality
+        # quality phase: automatic+security gate
+        result = check_gate(session, result="approved", security_ok=False)
         self.assertFalse(result["passed"])
         self.assertIn("безопасности", result["reason"].lower())
 
     def test_advance_phase_propagates_tests_ok(self):
         """advance_phase passes tests_ok to check_gate."""
         session = create_session("feature", "Test")
-        session = advance_phase(session)  # producto -> estilo_visual
-        session = advance_phase(session)  # estilo_visual -> arquitectura
-        session = advance_phase(session)  # arquitectura -> desarrollo
-        # Try to advance desarrollo with red tests
+        session = advance_phase(session)  # product -> visual_style
+        session = advance_phase(session)  # visual_style -> architecture
+        session = advance_phase(session)  # architecture -> development
+        # Try to advance development with red tests
         with self.assertRaises(RuntimeError):
-            advance_phase(session, resultado="aprobado", tests_ok=False)
+            advance_phase(session, result="approved", tests_ok=False)
 
 
 class TestAdvancePhase(unittest.TestCase):
     def test_advance_moves_to_next_phase(self):
         session = create_session("feature", "Test")
-        session = advance_phase(session, resultado="aprobado", artefactos=[])
-        self.assertEqual(session["fase_actual"], "estilo_visual")
-        self.assertEqual(session["fase_numero"], 1)
-        self.assertEqual(len(session["fases_completadas"]), 1)
+        session = advance_phase(session, result="approved", artifacts=[])
+        self.assertEqual(session["current_phase"], "visual_style")
+        self.assertEqual(session["phase_number"], 1)
+        self.assertEqual(len(session["completed_phases"]), 1)
 
     def test_cannot_advance_past_last_phase(self):
         session = create_session("spike", "Research")
-        session = advance_phase(session, resultado="aprobado", artefactos=[])
-        session = advance_phase(session, resultado="aprobado", artefactos=[])
-        self.assertEqual(session["fase_actual"], "completado")
+        session = advance_phase(session, result="approved", artifacts=[])
+        session = advance_phase(session, result="approved", artifacts=[])
+        self.assertEqual(session["current_phase"], "completed")
 
 
-# --- Shared fixture for equipo_sesion ---
+# --- Shared fixture for team_session ---
 # A valid session team with dynamic composition.
 # The validation and run_flow tests use it as a reference.
-VALID_EQUIPO_SESION = {
-    "opcionales_activos": {
+VALID_SESSION_TEAM = {
+    "active_optionals": {
         "cto": True,
     },
     "infra": {
-        "memoria": True,
+        "memory": True,
         "gui": False,
     },
-    "fuente": "composicion_dinamica",
+    "source": "dynamic_composition",
 }
 
 
@@ -790,23 +790,23 @@ class TestValidateEquipoSesion(unittest.TestCase):
 
     def test_tc20_valid_complete_dict(self):
         """TC-20: a valid complete dict returns True."""
-        self.assertTrue(_validate_equipo_sesion(VALID_EQUIPO_SESION))
+        self.assertTrue(_validate_session_team(VALID_SESSION_TEAM))
 
     def test_tc21_empty_dict(self):
         """TC-21: an empty dict returns False."""
-        self.assertFalse(_validate_equipo_sesion({}))
+        self.assertFalse(_validate_session_team({}))
 
     def test_tc22_extra_optional_agent_is_accepted_with_warning(self):
         """TC-22: an extra agent is accepted (True) but writes a warning to stderr."""
         import copy
         import io
-        malo = copy.deepcopy(VALID_EQUIPO_SESION)
-        malo["opcionales_activos"]["made-up-agent"] = True
+        malo = copy.deepcopy(VALID_SESSION_TEAM)
+        malo["active_optionals"]["made-up-agent"] = True
         captured = io.StringIO()
         old_stderr = sys.stderr
         sys.stderr = captured
         try:
-            result = _validate_equipo_sesion(malo)
+            result = _validate_session_team(malo)
         finally:
             sys.stderr = old_stderr
         self.assertTrue(result)
@@ -815,54 +815,54 @@ class TestValidateEquipoSesion(unittest.TestCase):
     def test_tc22b_missing_optional_agent_fails(self):
         """TC-22b: if a known agent is missing, return False."""
         import copy
-        malo = copy.deepcopy(VALID_EQUIPO_SESION)
-        del malo["opcionales_activos"]["cto"]
-        self.assertFalse(_validate_equipo_sesion(malo))
+        malo = copy.deepcopy(VALID_SESSION_TEAM)
+        del malo["active_optionals"]["cto"]
+        self.assertFalse(_validate_session_team(malo))
 
     def test_tc22c_legacy_lucius_key_is_accepted_as_cto(self):
         """TC-22c: old states with `lucius` are normalized to `cto`."""
         import copy
-        legacy = copy.deepcopy(VALID_EQUIPO_SESION)
-        legacy["opcionales_activos"]["lucius"] = legacy["opcionales_activos"].pop("cto")
-        self.assertTrue(_validate_equipo_sesion(legacy))
-        self.assertIn("cto", legacy["opcionales_activos"])
-        self.assertNotIn("lucius", legacy["opcionales_activos"])
+        legacy = copy.deepcopy(VALID_SESSION_TEAM)
+        legacy["active_optionals"]["lucius"] = legacy["active_optionals"].pop("cto")
+        self.assertTrue(_validate_session_team(legacy))
+        self.assertIn("cto", legacy["active_optionals"])
+        self.assertNotIn("lucius", legacy["active_optionals"])
 
     def test_tc23_non_bool_optional_value(self):
         """TC-23: a non-boolean value in the optional agents returns False."""
         import copy
-        malo = copy.deepcopy(VALID_EQUIPO_SESION)
-        malo["opcionales_activos"]["cto"] = "yes"
-        self.assertFalse(_validate_equipo_sesion(malo))
+        malo = copy.deepcopy(VALID_SESSION_TEAM)
+        malo["active_optionals"]["cto"] = "yes"
+        self.assertFalse(_validate_session_team(malo))
 
     def test_tc23b_persisted_source_is_also_valid(self):
         """TC-23b: the persisted config uses the same runtime contract."""
         import copy
-        persisted = copy.deepcopy(VALID_EQUIPO_SESION)
-        persisted["fuente"] = "config_persistida"
-        self.assertTrue(_validate_equipo_sesion(persisted))
+        persisted = copy.deepcopy(VALID_SESSION_TEAM)
+        persisted["source"] = "persisted_config"
+        self.assertTrue(_validate_session_team(persisted))
 
 
 class TestRunFlow(unittest.TestCase):
     """Tests for run_flow, which creates a session with a team."""
 
-    def test_tc15_without_equipo_sesion(self):
-        """TC-15: run_flow without equipo_sesion takes the team from the default config."""
+    def test_tc15_without_team_session(self):
+        """TC-15: run_flow without session_team takes the team from the default config."""
         with tempfile.TemporaryDirectory() as tmpdir:
             session = run_flow("feature", "New feature", project_dir=tmpdir)
-        self.assertIn("equipo_sesion", session)
-        self.assertTrue(session["equipo_sesion"]["opcionales_activos"]["cto"])
-        self.assertEqual(session["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertIsNone(session["equipo_sesion_error"])
+        self.assertIn("session_team", session)
+        self.assertTrue(session["session_team"]["active_optionals"]["cto"])
+        self.assertEqual(session["session_team"]["source"], "persisted_config")
+        self.assertIsNone(session["session_team_error"])
 
-    def test_tc16_with_valid_equipo_sesion(self):
-        """TC-16: run_flow with a valid equipo_sesion injects it into the session."""
-        session = run_flow("feature", "New feature", equipo_sesion=VALID_EQUIPO_SESION)
-        self.assertEqual(session["equipo_sesion"], VALID_EQUIPO_SESION)
-        self.assertIsNone(session["equipo_sesion_error"])
+    def test_tc16_with_valid_team_session(self):
+        """TC-16: run_flow with a valid session_team injects it into the session."""
+        session = run_flow("feature", "New feature", session_team=VALID_SESSION_TEAM)
+        self.assertEqual(session["session_team"], VALID_SESSION_TEAM)
+        self.assertIsNone(session["session_team_error"])
 
-    def test_tc17_invalid_equipo_sesion_falls_back_to_config_with_error(self):
-        """TC-17: run_flow with an invalid equipo_sesion falls back to the config and records the reason."""
+    def test_tc17_invalid_team_session_falls_back_to_config_with_error(self):
+        """TC-17: run_flow with an invalid session_team falls back to the config and records the reason."""
         import io
         captured = io.StringIO()
         old_stderr = sys.stderr
@@ -872,16 +872,16 @@ class TestRunFlow(unittest.TestCase):
                 session = run_flow(
                     "feature",
                     "Test",
-                    equipo_sesion={"bad": True},
+                    session_team={"bad": True},
                     project_dir=tmpdir,
                 )
         finally:
             sys.stderr = old_stderr
-        self.assertEqual(session["equipo_sesion"]["fuente"], "config_persistida")
+        self.assertEqual(session["session_team"]["source"], "persisted_config")
         self.assertIn("Alfred Dev", captured.getvalue())
         # Verify that the session records the reason for the rejection
-        self.assertIsNotNone(session["equipo_sesion_error"])
-        self.assertIn("не прошла проверку", session["equipo_sesion_error"])
+        self.assertIsNotNone(session["session_team_error"])
+        self.assertIn("не прошла проверку", session["session_team_error"])
 
     def test_tc18_unknown_command_raises_valueerror(self):
         """TC-18: run_flow with an unknown command raises ValueError."""
@@ -890,39 +890,39 @@ class TestRunFlow(unittest.TestCase):
 
     def test_tc19_end_to_end_integration(self):
         """TC-19: run_flow -> extract optional agents -> get_effective_agents."""
-        session = run_flow("feature", "New module", equipo_sesion=VALID_EQUIPO_SESION)
-        opcionales = session["equipo_sesion"]["opcionales_activos"]
-        arquitectura = get_effective_agents("arquitectura", opcionales)
-        calidad = get_effective_agents("calidad", opcionales)
-        self.assertEqual(arquitectura["paralelo"], [])
-        self.assertEqual(arquitectura["secuencial"], [])
-        self.assertIn("cto", calidad["secuencial"])
+        session = run_flow("feature", "New module", session_team=VALID_SESSION_TEAM)
+        optionals = session["session_team"]["active_optionals"]
+        architecture = get_effective_agents("architecture", optionals)
+        quality = get_effective_agents("quality", optionals)
+        self.assertEqual(architecture["parallel"], [])
+        self.assertEqual(architecture["sequential"], [])
+        self.assertIn("cto", quality["sequential"])
 
     def test_tc24_backward_compat_get_effective_agents_with_none(self):
-        """TC-24: get_effective_agents(fase, None) still works."""
-        result = get_effective_agents("calidad", None)
-        self.assertEqual(result, {"paralelo": [], "secuencial": []})
+        """TC-24: get_effective_agents(phase, None) still works."""
+        result = get_effective_agents("quality", None)
+        self.assertEqual(result, {"parallel": [], "sequential": []})
 
     def test_run_flow_detects_stack_and_injects_it_into_session(self):
         with patch(
             "core.config_loader.detect_stack",
-            return_value={"runtime": "python", "framework": "fastapi", "lenguaje": "python"},
+            return_value={"runtime": "python", "framework": "fastapi", "language": "python"},
         ):
             session = run_flow("feature", "API backend")
         self.assertEqual(session["stack"]["framework"], "fastapi")
 
-    def test_run_flow_skips_estilo_visual_when_detected_stack_has_no_frontend(self):
+    def test_run_flow_skips_visual_style_when_detected_stack_has_no_frontend(self):
         with patch(
             "core.config_loader.detect_stack",
-            return_value={"runtime": "python", "framework": "fastapi", "lenguaje": "python"},
+            return_value={"runtime": "python", "framework": "fastapi", "language": "python"},
         ):
             session = run_flow("feature", "API backend")
 
-        session = advance_phase(session, resultado="aprobado")
-        self.assertEqual(session["fase_actual"], "arquitectura")
-        skipped = [f for f in session["fases_completadas"] if f["nombre"] == "estilo_visual"]
+        session = advance_phase(session, result="approved")
+        self.assertEqual(session["current_phase"], "architecture")
+        skipped = [f for f in session["completed_phases"] if f["name"] == "visual_style"]
         self.assertEqual(len(skipped), 1)
-        self.assertEqual(skipped[0]["resultado"], "saltada")
+        self.assertEqual(skipped[0]["result"], "skipped")
 
     def test_run_flow_uses_persisted_project_config_when_no_ephemeral_team_is_passed(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -935,9 +935,9 @@ class TestRunFlow(unittest.TestCase):
             ) as fh:
                 fh.write(
                     "---\n"
-                    "agentes_opcionales:\n"
+                    "optional_agents:\n"
                     "  cto: true\n"
-                    "memoria:\n"
+                    "memory:\n"
                     "  enabled: true\n"
                     "---\n"
                 )
@@ -948,11 +948,11 @@ class TestRunFlow(unittest.TestCase):
                 project_dir=tmpdir,
             )
 
-        self.assertIsNotNone(session["equipo_sesion"])
-        self.assertEqual(session["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(session["equipo_sesion"]["opcionales_activos"]), {"cto"})
-        self.assertTrue(session["equipo_sesion"]["opcionales_activos"]["cto"])
-        self.assertTrue(session["equipo_sesion"]["infra"]["memoria"])
+        self.assertIsNotNone(session["session_team"])
+        self.assertEqual(session["session_team"]["source"], "persisted_config")
+        self.assertEqual(set(session["session_team"]["active_optionals"]), {"cto"})
+        self.assertTrue(session["session_team"]["active_optionals"]["cto"])
+        self.assertTrue(session["session_team"]["infra"]["memory"])
 
     def test_run_flow_invalid_ephemeral_team_falls_back_to_persisted_project_config(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -965,7 +965,7 @@ class TestRunFlow(unittest.TestCase):
             ) as fh:
                 fh.write(
                     "---\n"
-                    "agentes_opcionales:\n"
+                    "optional_agents:\n"
                     "  cto: true\n"
                     "---\n"
                 )
@@ -973,85 +973,85 @@ class TestRunFlow(unittest.TestCase):
             session = run_flow(
                 "ship",
                 "Release 2.1.0",
-                equipo_sesion={"bad": True},
+                session_team={"bad": True},
                 project_dir=tmpdir,
             )
 
-        self.assertEqual(session["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertTrue(session["equipo_sesion"]["opcionales_activos"]["cto"])
-        self.assertIsNotNone(session["equipo_sesion_error"])
-        self.assertIn("Применена сохранённая конфигурация", session["equipo_sesion_error"])
+        self.assertEqual(session["session_team"]["source"], "persisted_config")
+        self.assertTrue(session["session_team"]["active_optionals"]["cto"])
+        self.assertIsNotNone(session["session_team_error"])
+        self.assertIn("Применена сохранённая конфигурация", session["session_team_error"])
 
     def test_quick_flow_uses_optional_agents_on_light_phases(self):
         """quick never includes CTO: it reviews only a finished feature."""
-        opcionales = {
-            **VALID_EQUIPO_SESION["opcionales_activos"],
+        optionals = {
+            **VALID_SESSION_TEAM["active_optionals"],
             "cto": True,
         }
-        ejecucion = get_effective_agents("ejecucion_acotada", opcionales)
-        validacion = get_effective_agents("validacion_rapida", opcionales)
-        self.assertEqual(ejecucion["paralelo"], [])
-        self.assertEqual(ejecucion["secuencial"], [])
-        self.assertNotIn("cto", validacion["secuencial"])
+        ejecucion = get_effective_agents("scoped_execution", optionals)
+        validation = get_effective_agents("quick_validation", optionals)
+        self.assertEqual(ejecucion["parallel"], [])
+        self.assertEqual(ejecucion["sequential"], [])
+        self.assertNotIn("cto", validation["sequential"])
 
     def test_fix_flow_uses_optional_agents_on_bug_phases(self):
         """fix never includes CTO: it reviews only a finished feature."""
-        opcionales = {
-            **VALID_EQUIPO_SESION["opcionales_activos"],
+        optionals = {
+            **VALID_SESSION_TEAM["active_optionals"],
             "cto": True,
         }
-        diagnostico = get_effective_agents("diagnostico", opcionales)
-        correccion = get_effective_agents("correccion", opcionales)
-        validacion = get_effective_agents("validacion", opcionales)
+        diagnosis = get_effective_agents("diagnosis", optionals)
+        correction = get_effective_agents("correction", optionals)
+        validation = get_effective_agents("validation", optionals)
 
-        self.assertEqual(diagnostico["paralelo"], [])
-        self.assertEqual(diagnostico["secuencial"], [])
-        self.assertEqual(correccion["paralelo"], [])
-        self.assertEqual(correccion["secuencial"], [])
-        self.assertNotIn("cto", validacion["secuencial"])
+        self.assertEqual(diagnosis["parallel"], [])
+        self.assertEqual(diagnosis["sequential"], [])
+        self.assertEqual(correction["parallel"], [])
+        self.assertEqual(correction["sequential"], [])
+        self.assertNotIn("cto", validation["sequential"])
 
     def test_unknown_optional_flags_are_ignored_by_effective_agents(self):
         """Removed optional agents do not come back even if the state has them."""
-        opcionales = {
+        optionals = {
             "cto": True,
             "copywriter": True,
             "github-manager": True,
         }
-        calidad = get_effective_agents("calidad", opcionales)
-        documentacion = get_effective_agents("documentacion", opcionales)
-        empaquetado = get_effective_agents("empaquetado", opcionales)
-        self.assertEqual(calidad["secuencial"], ["cto"])
-        self.assertEqual(documentacion["paralelo"], [])
-        self.assertEqual(empaquetado["secuencial"], [])
+        quality = get_effective_agents("quality", optionals)
+        documentation = get_effective_agents("documentation", optionals)
+        packaging = get_effective_agents("packaging", optionals)
+        self.assertEqual(quality["sequential"], ["cto"])
+        self.assertEqual(documentation["parallel"], [])
+        self.assertEqual(packaging["sequential"], [])
 
     def test_cto_runs_as_external_audit_in_quality_closures(self):
         """CTO joins the closing phases as a sequential external audit."""
-        opcionales = {
-            **VALID_EQUIPO_SESION["opcionales_activos"],
+        optionals = {
+            **VALID_SESSION_TEAM["active_optionals"],
             "cto": True,
         }
-        calidad = get_effective_agents("calidad", opcionales)
-        auditoria = get_effective_agents("auditoria_final", opcionales)
-        self.assertIn("cto", calidad["secuencial"])
-        self.assertIn("cto", auditoria["secuencial"])
+        quality = get_effective_agents("quality", optionals)
+        auditoria = get_effective_agents("final_audit", optionals)
+        self.assertIn("cto", quality["sequential"])
+        self.assertIn("cto", auditoria["sequential"])
 
     def test_ship_and_audit_use_release_optional_agents(self):
         """ship includes CTO in the final audit; audit does not include it."""
-        opcionales = {
-            **VALID_EQUIPO_SESION["opcionales_activos"],
+        optionals = {
+            **VALID_SESSION_TEAM["active_optionals"],
             "cto": True,
         }
-        auditoria_final = get_effective_agents("auditoria_final", opcionales)
-        documentacion = get_effective_agents("documentacion", opcionales)
-        empaquetado = get_effective_agents("empaquetado", opcionales)
-        despliegue = get_effective_agents("despliegue", opcionales)
-        auditoria_paralela = get_effective_agents("auditoria_paralela", opcionales)
+        final_audit = get_effective_agents("final_audit", optionals)
+        documentation = get_effective_agents("documentation", optionals)
+        packaging = get_effective_agents("packaging", optionals)
+        deployment = get_effective_agents("deployment", optionals)
+        parallel_audit = get_effective_agents("parallel_audit", optionals)
 
-        self.assertIn("cto", auditoria_final["secuencial"])
-        self.assertEqual(documentacion["paralelo"], [])
-        self.assertEqual(empaquetado["secuencial"], [])
-        self.assertEqual(despliegue["secuencial"], [])
-        self.assertNotIn("cto", auditoria_paralela["secuencial"])
+        self.assertIn("cto", final_audit["sequential"])
+        self.assertEqual(documentation["parallel"], [])
+        self.assertEqual(packaging["sequential"], [])
+        self.assertEqual(deployment["sequential"], [])
+        self.assertNotIn("cto", parallel_audit["sequential"])
 
 
 class TestIterativeLoop(unittest.TestCase):
@@ -1060,59 +1060,59 @@ class TestIterativeLoop(unittest.TestCase):
     def test_should_retry_when_gate_fails(self):
         """If the gate fails and iterations remain, recommend a retry."""
         session = create_session("feature", "Test loop")
-        # Phase 0 = producto, gate_tipo = usuario
-        result = should_retry_phase(session, resultado="rechazado")
+        # Phase 0 = product, gate_type = user
+        result = should_retry_phase(session, result="rejected")
         self.assertEqual(result["action"], "retry")
         self.assertEqual(result["iteration"], 1)
 
     def test_should_advance_when_gate_passes(self):
         """If the gate passes, recommend to advance."""
         session = create_session("feature", "Test loop")
-        result = should_retry_phase(session, resultado="aprobado")
+        result = should_retry_phase(session, result="approved")
         self.assertEqual(result["action"], "advance")
 
     def test_should_escalate_after_max_iterations(self):
         """When iterations run out, recommend escalation to the user."""
         session = create_session("feature", "Test loop")
-        session["iteraciones_fase"] = MAX_PHASE_ITERATIONS
-        result = should_retry_phase(session, resultado="rechazado")
+        session["phase_iterations"] = MAX_PHASE_ITERATIONS
+        result = should_retry_phase(session, result="rejected")
         self.assertEqual(result["action"], "escalate")
 
     def test_iteration_counter_increments(self):
         """The iteration counter increments with each retry."""
         session = create_session("feature", "Test loop")
-        session["iteraciones_fase"] = 0
-        should_retry_phase(session, resultado="rechazado")
-        self.assertEqual(session["iteraciones_fase"], 1)
-        should_retry_phase(session, resultado="rechazado")
-        self.assertEqual(session["iteraciones_fase"], 2)
+        session["phase_iterations"] = 0
+        should_retry_phase(session, result="rejected")
+        self.assertEqual(session["phase_iterations"], 1)
+        should_retry_phase(session, result="rejected")
+        self.assertEqual(session["phase_iterations"], 2)
 
     def test_reset_phase_iterations(self):
         """The reset sets the counter to 0."""
         session = create_session("feature", "Test loop")
-        session["iteraciones_fase"] = 3
+        session["phase_iterations"] = 3
         reset_phase_iterations(session)
-        self.assertEqual(session["iteraciones_fase"], 0)
+        self.assertEqual(session["phase_iterations"], 0)
 
     def test_advance_phase_resets_iterations(self):
         """Advancing the phase resets the counter automatically."""
         session = create_session("feature", "Test loop")
-        session["iteraciones_fase"] = 3
-        session = advance_phase(session, resultado="aprobado")
-        self.assertEqual(session.get("iteraciones_fase", 0), 0)
+        session["phase_iterations"] = 3
+        session = advance_phase(session, result="approved")
+        self.assertEqual(session.get("phase_iterations", 0), 0)
 
     def test_advance_phase_preserves_iterations(self):
         """advance_phase stores the iteration counter in the completed phase."""
         session = create_session("feature", "Test iterations")
-        session["iteraciones_fase"] = 3
-        session = advance_phase(session, resultado="aprobado")
-        fase_completada = session["fases_completadas"][-1]
-        self.assertEqual(fase_completada["iteraciones"], 3)
+        session["phase_iterations"] = 3
+        session = advance_phase(session, result="approved")
+        completed_phase = session["completed_phases"][-1]
+        self.assertEqual(completed_phase["iterations"], 3)
 
     def test_should_retry_invalid_session_state_escalates_instead_of_retrying(self):
         session = create_session("feature", "Test loop")
-        session["fase_numero"] = -1
-        result = should_retry_phase(session, resultado="rechazado")
+        session["phase_number"] = -1
+        result = should_retry_phase(session, result="rejected")
         self.assertEqual(result["action"], "escalate")
         self.assertIn("Недопустимое", result["reason"])
 
@@ -1136,7 +1136,7 @@ class TestAutopilot(unittest.TestCase):
             ) as fh:
                 fh.write(
                     "---\n"
-                    "agentes_opcionales:\n"
+                    "optional_agents:\n"
                     "  cto: true\n"
                     "---\n"
                 )
@@ -1144,15 +1144,15 @@ class TestAutopilot(unittest.TestCase):
             session = run_flow_autopilot("ship", "Automatic release", project_dir=tmpdir)
 
         self.assertTrue(session["autopilot"])
-        self.assertEqual(session["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertTrue(session["equipo_sesion"]["opcionales_activos"]["cto"])
-        self.assertEqual(session["iteraciones_fase"], 0)
-        self.assertEqual(session["max_iteraciones_fase"], MAX_PHASE_ITERATIONS)
+        self.assertEqual(session["session_team"]["source"], "persisted_config")
+        self.assertTrue(session["session_team"]["active_optionals"]["cto"])
+        self.assertEqual(session["phase_iterations"], 0)
+        self.assertEqual(session["max_phase_iterations"], MAX_PHASE_ITERATIONS)
 
     def test_autopilot_approves_user_gates(self):
         """In autopilot, user gates are approved automatically."""
         session = create_session("feature", "Test autopilot")
-        # Phase 0 = producto, gate_tipo = usuario
+        # Phase 0 = product, gate_type = user
         result = is_autopilot_gate_passable(session)
         self.assertTrue(result["passed"])
         self.assertIn("autopilot", result["reason"])
@@ -1160,21 +1160,21 @@ class TestAutopilot(unittest.TestCase):
     def test_autopilot_evaluates_automatic_gates(self):
         """In autopilot, automatic gates are evaluated normally."""
         session = create_session("feature", "Test autopilot")
-        # Advance to phase 3 = desarrollo, gate_tipo = automatico
-        session = advance_phase(session, resultado="aprobado")  # producto -> estilo_visual
-        session = advance_phase(session, resultado="aprobado")  # estilo_visual -> arquitectura
-        session = advance_phase(session, resultado="aprobado")  # arquitectura -> desarrollo
+        # Advance to phase 3 = development, gate_type = automatic
+        session = advance_phase(session, result="approved")  # product -> visual_style
+        session = advance_phase(session, result="approved")  # visual_style -> architecture
+        session = advance_phase(session, result="approved")  # architecture -> development
         result = is_autopilot_gate_passable(session, tests_ok=False)
         self.assertFalse(result["passed"])
 
     def test_autopilot_evaluates_security_gates(self):
         """In autopilot, security gates are evaluated normally."""
         session = create_session("feature", "Test autopilot")
-        session = advance_phase(session, resultado="aprobado")  # producto -> estilo_visual
-        session = advance_phase(session, resultado="aprobado")  # estilo_visual -> arquitectura
-        session = advance_phase(session, resultado="aprobado")  # arquitectura -> desarrollo
-        session = advance_phase(session, resultado="aprobado", tests_ok=True)  # desarrollo -> calidad
-        # Phase 4 = calidad, gate_tipo = automatico+seguridad
+        session = advance_phase(session, result="approved")  # product -> visual_style
+        session = advance_phase(session, result="approved")  # visual_style -> architecture
+        session = advance_phase(session, result="approved")  # architecture -> development
+        session = advance_phase(session, result="approved", tests_ok=True)  # development -> quality
+        # Phase 4 = quality, gate_type = automatic+security
         result = is_autopilot_gate_passable(session, security_ok=False)
         self.assertFalse(result["passed"])
 
@@ -1186,19 +1186,19 @@ class TestAutopilot(unittest.TestCase):
     def test_autopilot_gate_completed_session(self):
         """is_autopilot_gate_passable does not fail with a completed session."""
         session = create_session("spike", "Test")
-        session = advance_phase(session, resultado="aprobado")
-        session = advance_phase(session, resultado="aprobado")
-        # Now fase_actual == "completado"
+        session = advance_phase(session, result="approved")
+        session = advance_phase(session, result="approved")
+        # Now current_phase == "completed"
         result = is_autopilot_gate_passable(session)
         self.assertTrue(result["passed"])
 
-    def test_autopilot_usuario_seguridad_auto_approves_user_part(self):
-        """In autopilot, GATE_USUARIO_SEGURIDAD approves the user part
+    def test_autopilot_user_security_auto_approves_user_part(self):
+        """In autopilot, GATE_USER_SECURITY approves the user part
         but evaluates the security part. This test documents the behavior."""
         session = create_session("feature", "Test autopilot")
-        session = advance_phase(session, resultado="aprobado")  # producto -> estilo_visual
-        session = advance_phase(session, resultado="aprobado")  # estilo_visual -> arquitectura
-        # Now in the arquitectura phase with the GATE_USUARIO_SEGURIDAD gate
+        session = advance_phase(session, result="approved")  # product -> visual_style
+        session = advance_phase(session, result="approved")  # visual_style -> architecture
+        # Now in the architecture phase with the GATE_USER_SECURITY gate
         # With security OK: must pass
         result = is_autopilot_gate_passable(session, security_ok=True)
         self.assertTrue(result["passed"])
@@ -1208,11 +1208,11 @@ class TestAutopilot(unittest.TestCase):
 
     def test_autopilot_ship_deploy_keeps_user_confirmation_mandatory(self):
         session = create_session("ship", "Release autopilot")
-        session = advance_phase(session, resultado="aprobado", tests_ok=True, security_ok=True)
-        session = advance_phase(session, resultado="aprobado")
-        session = advance_phase(session, resultado="aprobado", tests_ok=True, security_ok=True)
+        session = advance_phase(session, result="approved", tests_ok=True, security_ok=True)
+        session = advance_phase(session, result="approved")
+        session = advance_phase(session, result="approved", tests_ok=True, security_ok=True)
 
-        self.assertEqual(session["fase_actual"], "despliegue")
+        self.assertEqual(session["current_phase"], "deployment")
         result = is_autopilot_gate_passable(session, security_ok=True)
         self.assertFalse(result["passed"])
         self.assertIn("явного подтверждения пользователя", result["reason"])
@@ -1224,32 +1224,32 @@ class TestCompletedSessionGuards(unittest.TestCase):
     def test_check_gate_completed_session(self):
         """check_gate returns passed=True for completed sessions."""
         session = create_session("spike", "Research")
-        session = advance_phase(session, resultado="aprobado")
-        session = advance_phase(session, resultado="aprobado")
-        self.assertEqual(session["fase_actual"], "completado")
-        result = check_gate(session, resultado="aprobado")
+        session = advance_phase(session, result="approved")
+        session = advance_phase(session, result="approved")
+        self.assertEqual(session["current_phase"], "completed")
+        result = check_gate(session, result="approved")
         self.assertTrue(result["passed"])
 
-    def test_check_gate_overflowed_fase_numero(self):
+    def test_check_gate_overflowed_phase_number(self):
         """An out-of-range index must be rejected as an invalid state."""
         session = create_session("spike", "Test")
-        session["fase_numero"] = 999
-        result = check_gate(session, resultado="aprobado")
+        session["phase_number"] = 999
+        result = check_gate(session, result="approved")
         self.assertFalse(result["passed"])
         self.assertIn("вне диапазона", result["reason"])
 
-    def test_check_gate_negative_fase_numero_is_invalid(self):
+    def test_check_gate_negative_phase_number_is_invalid(self):
         session = create_session("feature", "Test")
-        session["fase_numero"] = -1
-        result = check_gate(session, resultado="aprobado")
+        session["phase_number"] = -1
+        result = check_gate(session, result="approved")
         self.assertFalse(result["passed"])
         self.assertIn("отрицательным", result["reason"])
 
     def test_advance_phase_rejects_invalid_phase_index(self):
         session = create_session("feature", "Test")
-        session["fase_numero"] = -1
+        session["phase_number"] = -1
         with self.assertRaises(RuntimeError):
-            advance_phase(session, resultado="aprobado")
+            advance_phase(session, result="approved")
 
 
 class TestLoadStateValidation(unittest.TestCase):
@@ -1260,9 +1260,9 @@ class TestLoadStateValidation(unittest.TestCase):
             with open(state_path, "w", encoding="utf-8") as fh:
                 json.dump(
                     {
-                        "comando": "feature",
-                        "fase_actual": "producto",
-                        "fase_numero": -1,
+                        "command": "feature",
+                        "current_phase": "product",
+                        "phase_number": -1,
                     },
                     fh,
                 )
@@ -1277,9 +1277,9 @@ class TestLoadStateValidation(unittest.TestCase):
             with open(state_path, "w", encoding="utf-8") as fh:
                 json.dump(
                     {
-                        "comando": "feature",
-                        "fase_actual": "producto",
-                        "fase_numero": 3,
+                        "command": "feature",
+                        "current_phase": "product",
+                        "phase_number": 3,
                     },
                     fh,
                 )
@@ -1294,15 +1294,15 @@ class TestLoadStateValidation(unittest.TestCase):
             with open(state_path, "w", encoding="utf-8") as fh:
                 json.dump(
                     {
-                        "comando": "spike",
-                        "fase_actual": "completado",
-                        "fase_numero": len(FLOWS["spike"]["fases"]),
+                        "command": "spike",
+                        "current_phase": "completed",
+                        "phase_number": len(FLOWS["spike"]["phases"]),
                     },
                     fh,
                 )
             loaded = load_state(state_path)
             self.assertIsNotNone(loaded)
-            self.assertEqual(loaded["fase_actual"], "completado")
+            self.assertEqual(loaded["current_phase"], "completed")
         finally:
             os.unlink(state_path)
 

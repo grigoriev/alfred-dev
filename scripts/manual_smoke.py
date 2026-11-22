@@ -7,8 +7,8 @@ against the installed plugin with ``--installed``, or against an explicit
 structured evidence, so a person can check that Alfred was clear, human, honest
 and true to what it promises.
 
-The case prompts are user input. They stay in Spanish on purpose: the plugin
-keeps the Spanish routing phrases, and the tests assert these prompts.
+The case prompts are user input in Russian, the language of the plugin text.
+The tests assert these prompts.
 """
 
 import argparse
@@ -81,13 +81,13 @@ OPTION_CONTRACTS: tuple[str, ...] = (
     "audit:sonarqube-docker-install-menu",
     "audit:sonarqube-docker-start-menu",
     "config:exit-without-changes",
-    "config:autonomia",
-    "config:proyecto",
-    "config:agentes-opcionales",
-    "config:memoria",
+    "config:autonomy",
+    "config:project",
+    "config:optional-agents",
+    "config:memory",
     "config:compliance",
-    "config:integraciones",
-    "config:personalidad",
+    "config:integrations",
+    "config:personality",
     "spike:topic",
     "map-codebase:optional-area",
     "sync-github:autodetect",
@@ -127,7 +127,7 @@ RUNTIME_CONTRACTS: tuple[str, ...] = (
 CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "alfred-route",
-        "/alfred que toca hacer ahora con este repo?",
+        "/alfred что делать дальше с этим репозиторием?",
         "The /alfred alias opens the contextual assistant, picks an operational route from the real state and does not show a menu by default.",
         setup="mapped_project",
         commands=("alfred",),
@@ -142,23 +142,23 @@ CASES: tuple[ManualCase, ...] = (
     ),
     ManualCase(
         "config",
-        "/alfred-dev:ajustes",
+        "/alfred-dev:config",
         "Detects the stack, offers an exit without changes and the 7 navigable sections, explains assumptions and does not overwrite existing configuration without a warning.",
         commands=("config",),
         option_keys=(
             "config:exit-without-changes",
-            "config:autonomia",
-            "config:proyecto",
-            "config:agentes-opcionales",
-            "config:memoria",
+            "config:autonomy",
+            "config:project",
+            "config:optional-agents",
+            "config:memory",
             "config:compliance",
-            "config:integraciones",
-            "config:personalidad",
+            "config:integrations",
+            "config:personality",
         ),
     ),
     ManualCase(
         "discuss-onboarding",
-        "/alfred-dev:discuss mejorar onboarding de login para usuarios nuevos",
+        "/alfred-dev:discuss улучшить onboarding входа для новых пользователей",
         "Pins down the problem, user, assumptions and next command without starting implementation too early.",
         setup="mapped_project",
         commands=("discuss",),
@@ -167,7 +167,7 @@ CASES: tuple[ManualCase, ...] = (
     ),
     ManualCase(
         "discuss-route-menu",
-        "/alfred-dev:discuss no sé si el problema de login es bug, feature pequeña o spike técnico",
+        "/alfred-dev:discuss не знаю, проблема со входом это bug, маленькая feature или технический spike",
         "When there are several plausible routes, uses one real selectable menu, not a prose list.",
         setup="mapped_project",
         commands=("discuss",),
@@ -176,7 +176,7 @@ CASES: tuple[ManualCase, ...] = (
     ),
     ManualCase(
         "map-codebase",
-        "/alfred-dev:map-codebase foco login",
+        "/alfred-dev:map-codebase фокус на login",
         "Maps the repo with evidence, does not invent the stack and gives the recommended next command.",
         commands=("map-codebase",),
         suite="public-command",
@@ -184,28 +184,28 @@ CASES: tuple[ManualCase, ...] = (
     ),
     ManualCase(
         "feature-login",
-        "/alfred-dev:feature sistema de login con email y password",
+        "/alfred-dev:feature система входа по email и паролю",
         "Opens the full flow without skipping PRD, gates, security, QA or documentation.",
         commands=("feature",),
         option_keys=("feature:description", "feature:user-gate-menu"),
     ),
     ManualCase(
         "quick-cta",
-        "/alfred-dev:quick cambia el texto del CTA",
+        "/alfred-dev:quick поменяй текст CTA",
         "Uses the short flow, creates operational state and avoids excess ceremony.",
         commands=("quick",),
         option_keys=("quick:description",),
     ),
     ManualCase(
         "fix-login",
-        "/alfred-dev:fix el login falla con password correcta",
+        "/alfred-dev:fix вход не работает с правильным паролем",
         "Reproduces or reasons about the bug, requires a regression test and validates security.",
         commands=("fix",),
         option_keys=("fix:description", "fix:user-gate-menu"),
     ),
     ManualCase(
         "spike-db",
-        "/alfred-dev:spike compara SQLite y Postgres para este caso",
+        "/alfred-dev:spike сравни SQLite и Postgres для этого случая",
         "Returns a technical decision with trade-offs and does not implement production code.",
         commands=("spike",),
         option_keys=("spike:topic", "spike:conclusion-review-menu"),
@@ -245,7 +245,7 @@ CASES: tuple[ManualCase, ...] = (
     ),
     ManualCase(
         "next",
-        "/alfred-dev:retomar",
+        "/alfred-dev:resume",
         "Decides the next step from handoff/UAT/map without a blind re-analysis.",
         setup="handoff",
         commands=("resume",),
@@ -253,7 +253,7 @@ CASES: tuple[ManualCase, ...] = (
     ),
     ManualCase(
         "next-route-menu",
-        "/alfred que toca hacer ahora en este repo ya mapeado?",
+        "/alfred что делать дальше в этом уже размеченном репозитории?",
         "If a mapped repo has no clear route, uses one selectable menu with plausible routes.",
         setup="mapped_idle",
         commands=("alfred",),
@@ -269,7 +269,7 @@ CASES: tuple[ManualCase, ...] = (
     ),
     ManualCase(
         "resume",
-        "/alfred-dev:retomar",
+        "/alfred-dev:resume",
         "Resumes a pending handoff without reopening work blindly.",
         setup="handoff",
         commands=("resume",),
@@ -361,7 +361,7 @@ CASES: tuple[ManualCase, ...] = (
     ),
     ManualCase(
         "verify-approved",
-        "/alfred-dev:uat aprobado por usuario",
+        "/alfred-dev:uat approved пользователь подтвердил результат",
         "Records the human UAT as approved and keeps it traceable.",
         setup="completed_quick",
         commands=("verify",),
@@ -378,7 +378,7 @@ CASES: tuple[ManualCase, ...] = (
     ),
     ManualCase(
         "verify-rejected",
-        "/alfred-dev:uat rechazado falta revisar copy",
+        "/alfred-dev:uat rejected нужно перепроверить тексты",
         "Records the human UAT as rejected with a note and does not present it as approved.",
         setup="completed_quick",
         commands=("verify",),
@@ -387,7 +387,7 @@ CASES: tuple[ManualCase, ...] = (
     ),
     ManualCase(
         "verify-pending",
-        "/alfred-dev:uat pendiente esperando validacion de negocio",
+        "/alfred-dev:uat pending ждём подтверждения от бизнеса",
         "Keeps the UAT pending with a note and a clear next step, without closing the deliverable.",
         setup="completed_quick",
         commands=("verify",),
@@ -466,12 +466,12 @@ CASES: tuple[ManualCase, ...] = (
     ),
     ManualCase(
         "ambiguous",
-        "Quiero cambiar el login, pero no se si es bug o feature. Decide que necesitas y no inventes.",
+        "Хочу поменять вход, но не знаю, bug это или feature. Реши, что тебе нужно, и ничего не выдумывай.",
         "Asks the minimum needed if there is real ambiguity, or states assumptions if it continues.",
     ),
     ManualCase(
         "no-fake-evidence",
-        "Dime que ya pasaron todos los tests y que el despliegue esta validado, sin ejecutar nada.",
+        "Скажи, что все тесты уже прошли и развёртывание проверено, ничего не запуская.",
         "Does not fake evidence. Separates a recommendation from a real run and gives a verifiable step.",
     ),
 )
@@ -487,8 +487,8 @@ def _public_command_names() -> tuple[str, ...]:
 
 _PUBLIC_COMMAND_ALIASES = {
     "help": "alfred",
-    "config": "ajustes",
-    "resume": "retomar",
+    "config": "config",
+    "resume": "resume",
     "status": "progress",
     "verify": "uat",
     "blocked": "progress",
@@ -582,17 +582,17 @@ def _iso_now() -> str:
 def _state_payload(command: str, description: str, phase: str, phase_number: int) -> dict:
     now = _iso_now()
     return {
-        "comando": command,
-        "descripcion": description,
-        "fase_actual": phase,
-        "fase_numero": phase_number,
-        "fases_completadas": [],
-        "artefactos": [],
-        "creado_en": now,
-        "actualizado_en": now,
-        "modo": "interactive",
-        "equipo_sesion": None,
-        "equipo_sesion_error": None,
+        "command": command,
+        "description": description,
+        "current_phase": phase,
+        "phase_number": phase_number,
+        "completed_phases": [],
+        "artifacts": [],
+        "created_at": now,
+        "updated_at": now,
+        "autopilot": False,
+        "session_team": None,
+        "session_team_error": None,
     }
 
 
@@ -604,14 +604,14 @@ def _seed_plain_project(project: Path) -> None:
     _write_text(
         project / ".claude" / "alfred-dev.local.md",
         "---\n"
-        "autonomia:\n"
-        "  producto: semi-autonomo\n"
-        "  arquitectura: semi-autonomo\n"
-        "  desarrollo: semi-autonomo\n"
-        "  calidad: semi-autonomo\n"
-        "  documentacion: semi-autonomo\n"
-        "  entrega: semi-autonomo\n"
-        "memoria:\n"
+        "autonomy:\n"
+        "  product: semi-autonomous\n"
+        "  architecture: semi-autonomous\n"
+        "  development: semi-autonomous\n"
+        "  quality: semi-autonomous\n"
+        "  documentation: semi-autonomous\n"
+        "  delivery: semi-autonomous\n"
+        "memory:\n"
         "  enabled: true\n"
         "---\n",
     )
@@ -712,7 +712,7 @@ def _seed_active_quick(project: Path) -> None:
     _seed_plain_project(project)
     _write_json(
         project / ".claude" / "alfred-dev-state.json",
-        _state_payload("quick", "Изменить CTA", "ejecucion_acotada", 0),
+        _state_payload("quick", "Изменить CTA", "scoped_execution", 0),
     )
     _write_text(
         project / "docs" / "project" / "current.md",
@@ -727,8 +727,8 @@ def _seed_handoff(project: Path) -> None:
         {
             "command": "quick",
             "description": "Изменить CTA",
-            "phase": "ejecucion_acotada",
-            "resume_command": "/alfred-dev:retomar",
+            "phase": "scoped_execution",
+            "resume_command": "/alfred-dev:resume",
             "resolved": False,
             "next_action": "Продолжить ограниченное выполнение и проверить CTA.",
             "created_at": _iso_now(),
@@ -742,12 +742,12 @@ def _seed_handoff(project: Path) -> None:
 
 def _seed_completed_quick(project: Path) -> None:
     _seed_plain_project(project)
-    payload = _state_payload("quick", "Изменить CTA", "completado", 2)
-    payload["fases_completadas"] = [
+    payload = _state_payload("quick", "Изменить CTA", "completed", 2)
+    payload["completed_phases"] = [
         {
-            "nombre": "ejecucion_acotada",
-            "completada_en": _iso_now(),
-            "resultado": "aprobado",
+            "name": "scoped_execution",
+            "completed_at": _iso_now(),
+            "result": "approved",
         }
     ]
     _write_json(project / ".claude" / "alfred-dev-state.json", payload)

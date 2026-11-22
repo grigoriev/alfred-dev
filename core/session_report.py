@@ -38,30 +38,30 @@ from core.orchestrator import FLOWS
 
 _REPORT_DIR = "docs/alfred-reports"
 
-_REPORT_TEMPLATE = """# Отчёт о сессии: {comando}
+_REPORT_TEMPLATE = """# Отчёт о сессии: {command}
 
-**Дата:** {fecha}
-**Примерная длительность:** {duracion}
-**Описание:** {descripcion}
+**Дата:** {date}
+**Примерная длительность:** {duration}
+**Описание:** {description}
 
 ---
 
-{secciones}
+{sections}
 
 ---
 
 *Создано автоматически Alfred Dev v{version}*
 """
 
-_REPORT_TEMPLATE_INTERRUPTED = """# Сессия прервана: {comando}
+_REPORT_TEMPLATE_INTERRUPTED = """# Сессия прервана: {command}
 
-**Дата:** {fecha}
-**Примерная длительность:** {duracion}
-**Описание:** {descripcion}
+**Дата:** {date}
+**Примерная длительность:** {duration}
+**Описание:** {description}
 
 ---
 
-{secciones}
+{sections}
 
 ---
 
@@ -105,43 +105,43 @@ def _truncate_text(value: Any, limit: int = 120, default: str = "") -> str:
 
 def _session_team_source_label(session: Dict[str, Any]) -> str:
     """Return a human-readable label for the runtime team source."""
-    equipo = session.get("equipo_sesion")
-    if not isinstance(equipo, dict):
+    team = session.get("session_team")
+    if not isinstance(team, dict):
         return ""
 
-    source = _single_line_text(equipo.get("fuente", ""))
-    if source == "config_persistida":
+    source = _single_line_text(team.get("source", ""))
+    if source == "persisted_config":
         return "сохранённая конфигурация"
-    if source == "composicion_dinamica":
+    if source == "dynamic_composition":
         return "динамический состав"
     return ""
 
 
 def _session_on_demand_optionals_for_flow(session: Dict[str, Any]) -> List[str]:
     """Return active optional agents that take part in no phase of the flow."""
-    command = _single_line_text(session.get("comando", ""))
+    command = _single_line_text(session.get("command", ""))
     flow = FLOWS.get(command, {})
     flow_phases = {
-        _single_line_text(phase.get("nombre", ""))
-        for phase in (flow.get("fases") or [])
-        if _single_line_text(phase.get("nombre", ""))
+        _single_line_text(phase.get("name", ""))
+        for phase in (flow.get("phases") or [])
+        if _single_line_text(phase.get("name", ""))
     }
 
-    equipo = session.get("equipo_sesion")
-    if not isinstance(equipo, dict):
+    team = session.get("session_team")
+    if not isinstance(team, dict):
         return []
-    opcionales = equipo.get("opcionales_activos", {})
-    if not isinstance(opcionales, dict):
+    optionals = team.get("active_optionals", {})
+    if not isinstance(optionals, dict):
         return []
 
-    activos = order_optional_agent_names(
-        name for name, enabled in normalize_optional_agent_flags(opcionales).items() if enabled
+    active_items = order_optional_agent_names(
+        name for name, enabled in normalize_optional_agent_flags(optionals).items() if enabled
     )
     on_demand: List[str] = []
-    for agent_name in activos:
+    for agent_name in active_items:
         integrated_phases = {
             _single_line_text(phase_name)
-            for phase_name in _OPTIONAL_INTEGRATIONS.get(agent_name, {}).get("fases", [])
+            for phase_name in _OPTIONAL_INTEGRATIONS.get(agent_name, {}).get("phases", [])
             if _single_line_text(phase_name)
         }
         if not flow_phases.intersection(integrated_phases):
@@ -151,13 +151,13 @@ def _session_on_demand_optionals_for_flow(session: Dict[str, Any]) -> List[str]:
 
 def _last_completed_at(session: Dict[str, Any]) -> str:
     """Get the timestamp of the last phase or session close."""
-    completed = session.get("fases_completadas") or []
+    completed = session.get("completed_phases") or []
     if completed and isinstance(completed[-1], dict):
-        completed_at = _single_line_text(completed[-1].get("completada_en", ""))
+        completed_at = _single_line_text(completed[-1].get("completed_at", ""))
         if completed_at:
             return completed_at
 
-    for key in ("actualizado_en", "creado_en"):
+    for key in ("updated_at", "created_at"):
         value = _single_line_text(session.get(key, ""))
         if value:
             return value
@@ -169,7 +169,7 @@ def _load_matching_session_uat(
     project_dir: Optional[str], session: Dict[str, Any]
 ) -> Optional[Dict[str, Any]]:
     """Load the UAT that belongs exactly to this completed session."""
-    if not project_dir or session.get("fase_actual") != "completado":
+    if not project_dir or session.get("current_phase") != "completed":
         return None
 
     try:
@@ -181,7 +181,7 @@ def _load_matching_session_uat(
     if not isinstance(uat, dict):
         return None
 
-    command = _single_line_text(session.get("comando", "desconocido"), default="desconocido")
+    command = _single_line_text(session.get("command", "unknown"), default="unknown")
     target_id = f"session:{command}:{_last_completed_at(session)}"
     if uat.get("target_id") == target_id:
         return uat
@@ -229,12 +229,12 @@ def _open_memory_db(project_dir: Optional[str]):
 
 def _find_session_iteration(db: Any, session: Dict[str, Any], completed: bool) -> Optional[Dict[str, Any]]:
     """Find the memory iteration that best matches the session."""
-    command_key = _normalized_match_key(session.get("comando", ""))
-    description_key = _normalized_match_key(session.get("descripcion", ""))
+    command_key = _normalized_match_key(session.get("command", ""))
+    description_key = _normalized_match_key(session.get("description", ""))
     session_time = _parse_iso_datetime(
-        _last_completed_at(session) if completed else session.get("actualizado_en") or session.get("creado_en")
+        _last_completed_at(session) if completed else session.get("updated_at") or session.get("created_at")
     )
-    desired_status = "completed" if completed and session.get("fase_actual") == "completado" else "active"
+    desired_status = "completed" if completed and session.get("current_phase") == "completed" else "active"
 
     best_match: Optional[Dict[str, Any]] = None
     best_score: Optional[Tuple[int, int, int, str, int]] = None
@@ -254,7 +254,7 @@ def _find_session_iteration(db: Any, session: Dict[str, Any], completed: bool) -
         else:
             description_score = 0
 
-        status = _single_line_text(iteration.get("status", ""), default="desconocido")
+        status = _single_line_text(iteration.get("status", ""), default="unknown")
         if status == desired_status:
             status_score = 3
         elif desired_status == "completed" and status == "abandoned":
@@ -361,14 +361,14 @@ def _verification_status(
     project_dir: Optional[str], session: Dict[str, Any], completed: bool
 ) -> Dict[str, str]:
     """Summarize the verify/UAT state and the recommended next step."""
-    if not completed or session.get("fase_actual") != "completado":
+    if not completed or session.get("current_phase") != "completed":
         current_phase = _single_line_text(
-            session.get("fase_actual", "неизвестна"), default="неизвестна"
+            session.get("current_phase", "неизвестна"), default="неизвестна"
         )
         return {
             "label": "пока не применяется",
             "detail": f"Процесс ещё активен в фазе '{current_phase}'.",
-            "next_command": "/alfred-dev:retomar",
+            "next_command": "/alfred-dev:resume",
             "next_reason": "Сессия ещё не закрыта: лучше продолжить её с того места, где она остановилась.",
         }
 
@@ -381,7 +381,7 @@ def _verification_status(
             "next_reason": "Нужно проверить итоговый результат, прежде чем считать процесс действительно закрытым.",
         }
 
-    status = _single_line_text(uat.get("status", ""), default="desconocido")
+    status = _single_line_text(uat.get("status", ""), default="unknown")
     updated_at = _single_line_text(uat.get("updated_at", ""))
     notes = _single_line_text(uat.get("notes", ""))
 
@@ -430,7 +430,7 @@ def _report_next_step_payload(
         default="/alfred",
     )
 
-    if next_command == "/alfred-dev:retomar":
+    if next_command == "/alfred-dev:resume":
         return {
             "focus": "Продолжить текущую сессию",
             "source_label": "активная сессия",
@@ -472,18 +472,18 @@ def _section_summary(
 ) -> str:
     """Build a short, actionable executive summary."""
     phases = [
-        phase for phase in (session.get("fases_completadas") or []) if isinstance(phase, dict)
+        phase for phase in (session.get("completed_phases") or []) if isinstance(phase, dict)
     ]
-    skipped = sum(1 for phase in phases if _single_line_text(phase.get("resultado", "")) == "saltada")
-    retried = sum(1 for phase in phases if int(phase.get("iteraciones", 0) or 0) > 0)
-    artifacts = [item for item in (session.get("artefactos") or []) if _single_line_text(item)]
+    skipped = sum(1 for phase in phases if _single_line_text(phase.get("result", "")) == "skipped")
+    retried = sum(1 for phase in phases if int(phase.get("iterations", 0) or 0) > 0)
+    artifacts = [item for item in (session.get("artifacts") or []) if _single_line_text(item)]
     verification = _verification_status(project_dir, session, completed)
 
-    if completed and session.get("fase_actual") == "completado":
+    if completed and session.get("current_phase") == "completed":
         state_label = "процесс завершён по состоянию"
     else:
         current_phase = _single_line_text(
-            session.get("fase_actual", "неизвестна"), default="неизвестна"
+            session.get("current_phase", "неизвестна"), default="неизвестна"
         )
         state_label = f"сессия прервана в фазе '{current_phase}'"
 
@@ -499,17 +499,17 @@ def _section_summary(
         lines.append(f"- Решений в памяти, связанных с сессией: {int(decisions.get('total', 0))}.")
     lines.append(f"- Проверка/UAT: {verification['label']}. {verification['detail']}")
 
-    equipo = session.get("equipo_sesion") or {}
-    opcionales = equipo.get("opcionales_activos", {}) if isinstance(equipo, dict) else {}
-    activos = order_optional_agent_names(
-        name for name, enabled in normalize_optional_agent_flags(opcionales).items() if enabled
+    team = session.get("session_team") or {}
+    optionals = team.get("active_optionals", {}) if isinstance(team, dict) else {}
+    active_items = order_optional_agent_names(
+        name for name, enabled in normalize_optional_agent_flags(optionals).items() if enabled
     )
     team_source = _session_team_source_label(session)
     on_demand = _session_on_demand_optionals_for_flow(session)
     if team_source:
         lines.append(f"- Источник runtime-команды: {team_source}.")
-    if activos:
-        lines.append(f"- Активные опциональные агенты: {', '.join(activos)}.")
+    if active_items:
+        lines.append(f"- Активные опциональные агенты: {', '.join(active_items)}.")
     if on_demand:
         lines.append(f"- Опциональные агенты только по запросу в этом процессе: {', '.join(on_demand)}.")
 
@@ -579,31 +579,31 @@ def _section_phases(session: Dict[str, Any]) -> str:
     Returns:
         Markdown block with the phase table.
     """
-    fases = session.get("fases_completadas", [])
-    if not fases:
+    phases = session.get("completed_phases", [])
+    if not phases:
         return "## Фазы\n\nВ этой сессии не завершено ни одной фазы.\n"
 
     lines = ["## Завершённые фазы\n"]
     lines.append("| Фаза | Результат | Артефакты |")
     lines.append("|------|-----------|------------|")
 
-    for fase in fases:
-        nombre = _markdown_table_cell(fase.get("nombre", "неизвестна"))
-        resultado = _markdown_table_cell(fase.get("resultado", "нет результата"))
-        artefactos = fase.get("artefactos", [])
-        artefactos_str = (
-            _markdown_table_cell(", ".join(_single_line_text(a) for a in artefactos))
-            if artefactos
+    for phase in phases:
+        name = _markdown_table_cell(phase.get("name", "неизвестна"))
+        result = _markdown_table_cell(phase.get("result", "нет результата"))
+        artifacts = phase.get("artifacts", [])
+        artifacts_str = (
+            _markdown_table_cell(", ".join(_single_line_text(a) for a in artifacts))
+            if artifacts
             else "-"
         )
-        lines.append(f"| {nombre} | {resultado} | {artefactos_str} |")
+        lines.append(f"| {name} | {result} | {artifacts_str} |")
 
     lines.append("")
-    fase_actual = session.get("fase_actual", "неизвестна")
-    if fase_actual == "completado":
+    current_phase = session.get("current_phase", "неизвестна")
+    if current_phase == "completed":
         lines.append("Итоговое состояние: **процесс завершён**.")
     else:
-        lines.append(f"Итоговое состояние: остановлен в фазе **{fase_actual}**.")
+        lines.append(f"Итоговое состояние: остановлен в фазе **{current_phase}**.")
 
     return "\n".join(lines) + "\n"
 
@@ -676,14 +676,14 @@ def _section_team(session: Dict[str, Any]) -> str:
     Returns:
         Markdown block with the team.
     """
-    equipo = session.get("equipo_sesion")
-    if not equipo:
+    team = session.get("session_team")
+    if not team:
         return ""
 
-    opcionales = equipo.get("opcionales_activos", {})
-    activos = [name for name, enabled in normalize_optional_agent_flags(opcionales).items() if enabled]
+    optionals = team.get("active_optionals", {})
+    active_items = [name for name, enabled in normalize_optional_agent_flags(optionals).items() if enabled]
 
-    if not activos:
+    if not active_items:
         return ""
 
     lines = ["## Команда сессии\n"]
@@ -691,7 +691,7 @@ def _section_team(session: Dict[str, Any]) -> str:
     if source:
         lines.append(f"Источник runtime: **{source}**.\n")
     lines.append("Активные опциональные агенты:\n")
-    for agent in order_optional_agent_names(activos):
+    for agent in order_optional_agent_names(active_items):
         lines.append(f"- {agent}")
 
     on_demand = _session_on_demand_optionals_for_flow(session)
@@ -715,13 +715,13 @@ def _section_artifacts(session: Dict[str, Any]) -> str:
     Returns:
         Markdown block with the artifacts.
     """
-    artefactos = session.get("artefactos", [])
-    if not artefactos:
+    artifacts = session.get("artifacts", [])
+    if not artifacts:
         return ""
 
     lines = ["## Созданные артефакты\n"]
-    for artefacto in artefactos:
-        lines.append(f"- {_markdown_inline_code(artefacto)}")
+    for artifact in artifacts:
+        lines.append(f"- {_markdown_inline_code(artifact)}")
 
     return "\n".join(lines) + "\n"
 
@@ -766,20 +766,20 @@ def _section_iterations(session: Dict[str, Any]) -> str:
         Markdown block with the iteration table, or an empty string if
         no phase had retries.
     """
-    fases = session.get("fases_completadas", [])
-    fases_con_iteraciones = [
-        f for f in fases if f.get("iteraciones", 0) > 0
+    phases = session.get("completed_phases", [])
+    phases_with_iterations = [
+        f for f in phases if f.get("iterations", 0) > 0
     ]
-    if not fases_con_iteraciones:
+    if not phases_with_iterations:
         return ""
 
     lines = ["## Итерации по фазам\n"]
     lines.append("| Фаза | Итерации |")
     lines.append("|------|------------|")
-    for fase in fases_con_iteraciones:
+    for phase in phases_with_iterations:
         lines.append(
-            f"| {_markdown_table_cell(fase['nombre'])} | "
-            f"{_markdown_table_cell(fase['iteraciones'])} |"
+            f"| {_markdown_table_cell(phase['name'])} | "
+            f"{_markdown_table_cell(phase['iterations'])} |"
         )
 
     return "\n".join(lines) + "\n"
@@ -788,7 +788,7 @@ def _section_iterations(session: Dict[str, Any]) -> str:
 def _estimate_duration(session: Dict[str, Any]) -> str:
     """Estimate the session duration from its timestamps.
 
-    Computes the difference between ``creado_en`` and ``actualizado_en``.
+    Computes the difference between ``created_at`` and ``updated_at``.
 
     Args:
         session: session state.
@@ -796,15 +796,15 @@ def _estimate_duration(session: Dict[str, Any]) -> str:
     Returns:
         String with the estimated duration in a readable format.
     """
-    creado = session.get("creado_en", "")
-    actualizado = session.get("actualizado_en", "")
+    created = session.get("created_at", "")
+    updated = session.get("updated_at", "")
 
-    if not creado or not actualizado:
+    if not created or not updated:
         return "нет данных"
 
     try:
-        dt_start = datetime.fromisoformat(creado)
-        dt_end = datetime.fromisoformat(actualizado)
+        dt_start = datetime.fromisoformat(created)
+        dt_end = datetime.fromisoformat(updated)
         delta = dt_end - dt_start
         total_seconds = int(delta.total_seconds())
 
@@ -854,36 +854,36 @@ def generate_report(
 
     # Assemble sections
     decisions = _session_decisions_snapshot(base, session, completed)
-    secciones = []
-    secciones.append(_section_summary(session, evidence, decisions, base, completed))
-    secciones.append(_section_next_step(session, base, completed))
-    secciones.append(_section_decisions(decisions))
-    secciones.append(_section_mode(session))
-    secciones.append(_section_phases(session))
-    secciones.append(_section_iterations(session))
-    secciones.append(_section_evidence(evidence))
-    secciones.append(_section_team(session))
-    secciones.append(_section_artifacts(session))
+    sections = []
+    sections.append(_section_summary(session, evidence, decisions, base, completed))
+    sections.append(_section_next_step(session, base, completed))
+    sections.append(_section_decisions(decisions))
+    sections.append(_section_mode(session))
+    sections.append(_section_phases(session))
+    sections.append(_section_iterations(session))
+    sections.append(_section_evidence(evidence))
+    sections.append(_section_team(session))
+    sections.append(_section_artifacts(session))
 
     # Drop empty sections
-    secciones_text = "\n".join(s for s in secciones if s.strip())
+    sections_text = "\n".join(s for s in sections if s.strip())
 
     # Header data
-    comando = _single_line_text(session.get("comando", "desconocido"), default="desconocido")
-    descripcion = _single_line_text(
-        session.get("descripcion", "без описания"), default="без описания"
+    command = _single_line_text(session.get("command", "unknown"), default="unknown")
+    description = _single_line_text(
+        session.get("description", "без описания"), default="без описания"
     )
-    duracion = _estimate_duration(session)
-    fecha = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    duration = _estimate_duration(session)
+    date_text = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     version = _get_plugin_version()
 
     template = _REPORT_TEMPLATE if completed else _REPORT_TEMPLATE_INTERRUPTED
     report_content = template.format(
-        comando=comando,
-        fecha=fecha,
-        duracion=duracion,
-        descripcion=descripcion,
-        secciones=secciones_text,
+        command=command,
+        date=date_text,
+        duration=duration,
+        description=description,
+        sections=sections_text,
         version=version,
     )
 
@@ -893,8 +893,8 @@ def generate_report(
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-%f")
     # Sanitize the command name to prevent path traversal
-    safe_comando = re.sub(r"[^a-zA-Z0-9_-]", "_", comando)
-    filename = f"{timestamp}-{safe_comando}.md"
+    safe_command = re.sub(r"[^a-zA-Z0-9_-]", "_", command)
+    filename = f"{timestamp}-{safe_command}.md"
     report_path = os.path.join(report_dir, filename)
 
     try:

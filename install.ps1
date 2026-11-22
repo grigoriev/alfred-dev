@@ -20,7 +20,7 @@ $ErrorActionPreference = 'Stop'
 
 $Repo = "grigoriev/alfred-dev"
 $PluginName = "alfred-dev"
-$Version = "0.7.3"
+$Version = "0.8.0"
 
 # -- Helper functions -----------------------------------------------------
 
@@ -433,7 +433,7 @@ Write-Host "Установка завершена" -ForegroundColor Green
 Write-Host ""
 Write-Host "  В Claude Code выполни /reload-plugins, а затем:"
 Write-Host "  /alfred-dev:alfred" -ForegroundColor White
-Write-Host "  Статус: /alfred-dev:progress · продолжить: /alfred-dev:retomar" -ForegroundColor DarkGray
+Write-Host "  Статус: /alfred-dev:progress · продолжить: /alfred-dev:resume" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Если /reload-plugins предупреждает о MCP/стоимости cache или плагин не появился, перезапусти Claude Code." -ForegroundColor DarkGray
 Write-Host "  Репозиторий: https://github.com/$Repo" -ForegroundColor DarkGray

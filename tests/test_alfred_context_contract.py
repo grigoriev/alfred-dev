@@ -31,7 +31,7 @@ class TestAlfredContextContract(unittest.TestCase):
         self.assertIn('python3 .claude/alfred-continuity.py next "$PWD" --json', self.command)
 
     def test_routes_to_operational_commands_first(self):
-        self.assertIn("действуй как `/alfred-dev:retomar`", self.command)
+        self.assertIn("действуй как `/alfred-dev:resume`", self.command)
         self.assertIn("действуй как `/alfred-dev:pause`", self.command)
         self.assertIn("действуй как `/alfred-dev:progress`", self.command)
         self.assertIn("действуй как `/alfred-dev:uat`", self.command)

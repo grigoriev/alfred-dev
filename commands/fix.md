@@ -39,23 +39,23 @@ python3 .claude/alfred-continuity.py start-flow "$PWD" --command fix --raw "$ARG
 Перед запуском первой фазы найди общий файл формирования команды
 внутри плагина Alfred Dev, НЕ внутри аудируемого проекта. Если не знаешь
 точного пути, сначала найди его в установке плагина (например, в
-`${CLAUDE_PLUGIN_ROOT}/commands/_composicion.md`) и прочитай оттуда.
+`${CLAUDE_PLUGIN_ROOT}/commands/_composition.md`) и прочитай оттуда.
 
 Затем следуй протоколу динамического формирования (шаги 1-4). Если по
 какой-либо причине не удаётся найти этот файл, не блокируй
 `/alfred-dev:fix` из-за одного лишь поиска: продолжай с базовой командой по
 умолчанию и коротко отметь деградацию.
 
-Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md`. Минимальный sync: индекс и
-`current.md`. В `fix` не спрашивай про CTO. Перед закрытием `validacion`:
+Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_living_docs.md`. Минимальный sync: индекс и
+`current.md`. В `fix` не спрашивай про CTO. Перед закрытием `validation`:
 
 ```bash
-python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command fix --phase validacion
+python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command fix --phase validation
 ```
 
 ## Режим autopilot
 
-Перед началом прочитай `.claude/alfred-dev.local.md` и проверь настроенный уровень автономности. Если все фазы в `autonomo`, или если состояние в `.claude/alfred-dev-state.json` содержит `"autopilot": true` или legacy-алиас `"modo": "autopilot"`, включи **режим autopilot**:
+Перед началом прочитай `.claude/alfred-dev.local.md` и проверь настроенный уровень автономности. Если все фазы в `autonomous`, или если состояние в `.claude/alfred-dev-state.json` содержит `"autopilot": true`, включи **режим autopilot**:
 
 - **Пользовательские gate** утверждаются автоматически без `AskUserQuestion`.
 - **Gate безопасности и автоматические** (тесты, QA, security-officer) оцениваются как обычно.
@@ -89,13 +89,13 @@ python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command fix --p
 Когда fix валидирован, закрой так:
 
 ```bash
-python3 .claude/alfred-continuity.py cierre "$PWD"
+python3 .claude/alfred-continuity.py closing "$PWD"
 ```
 
 ## Каноничное завершение команды
 
 - НЕ закрывай длинным объяснением, если состояние fix уже сохранено.
-  Если ты уже выполнил `cierre`, этот блок и есть итоговый ответ.
+  Если ты уже выполнил `closing`, этот блок и есть итоговый ответ.
 - Если пользовательский gate остаётся в ожидании, используй один навигируемый
   `AskUserQuestion`, привязанный к текущей фазе.
 - Если процесс остаётся открытым, опирайся на `.claude/alfred-dev-state.json` и на

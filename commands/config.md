@@ -1,12 +1,12 @@
 ---
-description: "Настраивает Alfred Dev: автономность, проект, CTO, память и личность. Раньше /alfred-dev:config"
+description: "Настраивает Alfred Dev: автономность, проект, CTO, память и личность."
 ---
 
-# /alfred-dev:ajustes
+# /alfred-dev:config
 
 Прочитай файл `.claude/alfred-dev.local.md`, если он существует. Если нет, создай его с текущей каноничной конфигурацией плагина.
 
-Всегда записывай каноничный ключ `autonomia` во frontmatter, даже если встретишь legacy-варианты вроде `autonomía`. Runtime понимает их для обратной совместимости, но новая запись должна быть нормализована.
+Всегда записывай во frontmatter только каноничные ключи, например `autonomy`. Runtime читает только их.
 
 ## Шаг 0: детерминированный helper
 
@@ -45,13 +45,13 @@ python3 "${CLAUDE_PLUGIN_ROOT}/core/config_cli.py" "$PWD" --headless
 
 Покажи пользователю текущую конфигурацию, организованную по секциям:
 
-1. **Автономность по фазам** (`interactivo` / `semi-autonomo` / `autonomo`): producto, arquitectura, desarrollo, calidad, documentacion, entrega
+1. **Автономность по фазам** (`interactive` / `semi-autonomous` / `autonomous`): product, architecture, development, quality, documentation, delivery
 2. **Проект** (определён или задан вручную): runtime, язык, framework, ORM, test runner, bundler
 3. **Опциональные агенты**: только CTO
 4. **Постоянная память**: enabled, sync_to_native, sync_commits_limit, capture_decisions, capture_commits, retention_days
-5. **Compliance**: estilo, lint, format_on_save
+5. **Compliance**: style, lint, format_on_save
 6. **Интеграции**: git, ci, deploy
-7. **Личность**: nivel_sarcasmo (1-5), verbosidad, idioma, celebrar_victorias, insultar_malas_practicas
+7. **Личность**: sarcasm_level (1-5), verbosity, language, celebrate_wins, call_out_bad_practices
 
 Используй AskUserQuestion, чтобы спросить, какую секцию изменить, через **навигируемое
 главное меню**. Не придумывай это меню вручную, если можно этого избежать: опирайся
@@ -77,7 +77,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/core/config_cli.py" "$PWD" --headless
 сохранить стабильный порядок, каноничные ключи и чистый round-trip с
 `load_config()`.
 
-Если у проекта нет конфигурации и в текущем каталоге есть файлы, выполни автоматическое определение стека и покажи результаты пользователю для подтверждения. Если это первая сессия проекта, может оказаться, что SessionStart уже создал `.claude/alfred-dev.local.md` с автономностью по фазам `autonomo` и включённой памятью.
+Если у проекта нет конфигурации и в текущем каталоге есть файлы, выполни автоматическое определение стека и покажи результаты пользователю для подтверждения. Если это первая сессия проекта, может оказаться, что SessionStart уже создал `.claude/alfred-dev.local.md` с автономностью по фазам `autonomous` и включённой памятью.
 
 ## Секция опциональных агентов
 
@@ -110,7 +110,7 @@ AskUserQuestion({
 Сохраняй только этот ключ. Значение по умолчанию `true`:
 
 ```yaml
-agentes_opcionales:
+optional_agents:
   cto: true
 ```
 
@@ -125,11 +125,11 @@ UI операционными советами. Для обращения к н�
 
 ### Шаг 1: проверить текущее состояние
 
-Сначала прочитай эффективную конфигурацию и проверь `memoria.enabled`:
+Сначала прочитай эффективную конфигурацию и проверь `memory.enabled`:
 
-- **Если `memoria.enabled` равен `true` и существует `.claude/alfred-memory.db`**: прочитай статистику MCP-инструментом `memory_stats` и покажи компактную сводку: число решений, зарегистрированных коммитов, итераций и дату самой старой записи. Укажи, что память **активна**.
-- **Если `memoria.enabled` равен `true`, но БД ещё нет**: укажи, что память **настроена как активная** и что база данных будет инициализирована при следующем запуске или как только она понадобится runtime.
-- **Если `memoria.enabled` равен `false`**: укажи, что память **неактивна**, хотя в `.claude/alfred-memory.db` могут существовать исторические данные.
+- **Если `memory.enabled` равен `true` и существует `.claude/alfred-memory.db`**: прочитай статистику MCP-инструментом `memory_stats` и покажи компактную сводку: число решений, зарегистрированных коммитов, итераций и дату самой старой записи. Укажи, что память **активна**.
+- **Если `memory.enabled` равен `true`, но БД ещё нет**: укажи, что память **настроена как активная** и что база данных будет инициализирована при следующем запуске или как только она понадобится runtime.
+- **Если `memory.enabled` равен `false`**: укажи, что память **неактивна**, хотя в `.claude/alfred-memory.db` могут существовать исторические данные.
 
 ### Шаг 2: спросить пользователя
 
@@ -140,10 +140,10 @@ UI операционными советами. Для обращения к н�
 
 ### Шаг 3: применить конфигурацию
 
-Если пользователь выбирает **включить** память, запиши (или обнови) секцию `memoria:` во frontmatter `.claude/alfred-dev.local.md` с этими значениями:
+Если пользователь выбирает **включить** память, запиши (или обнови) секцию `memory:` во frontmatter `.claude/alfred-dev.local.md` с этими значениями:
 
 ```yaml
-memoria:
+memory:
   enabled: true
   sync_to_native: true
   sync_commits_limit: 10
@@ -155,7 +155,7 @@ memoria:
 Если пользователь выбирает **выключить** память, обнови секцию до:
 
 ```yaml
-memoria:
+memory:
   enabled: false
 ```
 

@@ -50,7 +50,7 @@ class TestAuditCommandContract(unittest.TestCase):
         self.assertIn("SonarQube пропущен по явному решению пользователя", self.audit)
 
     def test_audit_locates_plugin_files_outside_the_project(self):
-        self.assertIn("${CLAUDE_PLUGIN_ROOT}/commands/_composicion.md", self.audit)
+        self.assertIn("${CLAUDE_PLUGIN_ROOT}/commands/_composition.md", self.audit)
 
 
 class TestSonarQubeSkillContract(unittest.TestCase):

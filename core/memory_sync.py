@@ -260,27 +260,27 @@ class MemorySync:
                     payload = {}
 
             phase_name = (
-                str(payload.get("fase", "")).strip()
+                str(payload.get("phase", "")).strip()
                 or str(ev.get("phase", "")).strip()
             )
             if not phase_name:
                 continue
 
-            result = str(payload.get("resultado", "")).strip() or "aprobado"
+            result = str(payload.get("result", "")).strip() or "approved"
             completed_at = (
-                str(payload.get("completada_en", "")).strip()
+                str(payload.get("completed_at", "")).strip()
                 or str(ev.get("created_at", "")).strip()
             )
             phases.append({
-                "nombre": phase_name,
-                "resultado": result,
+                "name": phase_name,
+                "result": result,
                 "fecha": completed_at[:10],
             })
 
         # Find the current phase for the description
-        fase_actual = "в процессе"
+        current_phase = "в процессе"
         if phases:
-            fase_actual = f"после {phases[-1]['nombre']}"
+            current_phase = f"после {phases[-1]['name']}"
 
         command = active.get("command", "неизвестно")
         description = active.get("description", "")
@@ -288,12 +288,12 @@ class MemorySync:
 
         content = _frontmatter(
             name=f"Активная итерация: {command} #{active['id']}",
-            description=f"{description} -- текущая фаза: {fase_actual}",
+            description=f"{description} -- текущая фаза: {current_phase}",
         )
         content += f"\n**Команда:** {command}\n"
         content += f"**Описание:** {description}\n"
         content += f"**Статус:** активна с {started}\n"
-        content += f"**Текущая фаза:** {fase_actual}\n"
+        content += f"**Текущая фаза:** {current_phase}\n"
 
         if phases:
             content += "\n### Завершённые фазы\n\n"
@@ -301,8 +301,8 @@ class MemorySync:
             content += "|------|-----------|-------|\n"
             for p in phases:
                 content += (
-                    f"| {_markdown_table_cell(p['nombre'])} | "
-                    f"{_markdown_table_cell(p['resultado'])} | "
+                    f"| {_markdown_table_cell(p['name'])} | "
+                    f"{_markdown_table_cell(p['result'])} | "
                     f"{_markdown_table_cell(p['fecha'])} |\n"
                 )
 

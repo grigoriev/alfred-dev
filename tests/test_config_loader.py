@@ -15,8 +15,8 @@ from core.config_loader import (
     build_config_section_change_preview,
     build_config_section_menu,
     build_config_section_summaries,
-    build_equipo_sesion_from_config,
-    build_project_equipo_sesion,
+    build_session_team_from_config,
+    build_project_session_team,
     DEFAULT_CONFIG,
     detect_stack,
     ensure_bootstrap_local_config,
@@ -50,76 +50,67 @@ class TestLoadConfig(unittest.TestCase):
     def test_returns_defaults_when_no_file(self):
         config = load_config("/path/that/does/not/exist")
         self.assertEqual(
-            config["autonomia"],
+            config["autonomy"],
             {
-                "producto": "autonomo",
-                "arquitectura": "autonomo",
-                "desarrollo": "autonomo",
-                "calidad": "autonomo",
-                "documentacion": "autonomo",
-                "entrega": "autonomo",
+                "product": "autonomous",
+                "architecture": "autonomous",
+                "development": "autonomous",
+                "quality": "autonomous",
+                "documentation": "autonomous",
+                "delivery": "autonomous",
             },
         )
-        self.assertEqual(config["personalidad"]["nivel_sarcasmo"], 3)
-        self.assertTrue(config["personalidad"]["celebrar_victorias"])
-        self.assertTrue(config["personalidad"]["insultar_malas_practicas"])
-        self.assertEqual(config["memoria"]["sync_commits_limit"], 10)
-        self.assertFalse(config["memoria"]["enabled"])
+        self.assertEqual(config["personality"]["sarcasm_level"], 3)
+        self.assertTrue(config["personality"]["celebrate_wins"])
+        self.assertTrue(config["personality"]["call_out_bad_practices"])
+        self.assertEqual(config["memory"]["sync_commits_limit"], 10)
+        self.assertFalse(config["memory"]["enabled"])
 
     def test_loads_yaml_frontmatter(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-            f.write("---\nautonomia:\n  producto: autónomo\n---\n# Notas\n")
+            f.write("---\nautonomy:\n  product: autonomous\n---\n# Заметки\n")
             f.flush()
             config = load_config(f.name)
         os.unlink(f.name)
-        self.assertEqual(config["autonomia"]["producto"], "autonomo")
-        self.assertEqual(config["autonomia"]["arquitectura"], "autonomo")
+        self.assertEqual(config["autonomy"]["product"], "autonomous")
+        self.assertEqual(config["autonomy"]["architecture"], "autonomous")
 
     def test_extracts_notes_section(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-            f.write("---\nautonomia:\n  producto: interactivo\n---\n## Notas\nPrefer Hono over Express.\n")
+            f.write("---\nautonomy:\n  product: interactive\n---\n## Заметки\nPrefer Hono over Express.\n")
             f.flush()
             config = load_config(f.name)
         os.unlink(f.name)
-        self.assertIn("Prefer Hono", config["notas"])
-
-    def test_accepts_accented_autonomia_section_name(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
-            f.write("---\nautonomía:\n  producto: autónomo\n---\n")
-            f.flush()
-            config = load_config(f.name)
-        os.unlink(f.name)
-        self.assertEqual(config["autonomia"]["producto"], "autonomo")
-        self.assertNotIn("autonomía", config)
+        self.assertIn("Prefer Hono", config["notes"])
 
     def test_maps_legacy_autonomy_domains_to_current_phases(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
             f.write(
                 "---\n"
-                "autonomia:\n"
-                "  seguridad: semi-autónomo\n"
-                "  refactor: interactivo\n"
-                "  docs: interactivo\n"
-                "  devops: semi-autonomo\n"
-                "  tests: interactivo\n"
+                "autonomy:\n"
+                "  security: semi-autonomous\n"
+                "  refactor: interactive\n"
+                "  docs: interactive\n"
+                "  devops: semi-autonomous\n"
+                "  tests: interactive\n"
                 "---\n"
             )
             f.flush()
             config = load_config(f.name)
         os.unlink(f.name)
-        self.assertEqual(config["autonomia"]["desarrollo"], "interactivo")
-        self.assertEqual(config["autonomia"]["documentacion"], "interactivo")
-        self.assertEqual(config["autonomia"]["entrega"], "semi-autonomo")
-        self.assertEqual(config["autonomia"]["calidad"], "interactivo")
-        self.assertEqual(config["autonomia"]["arquitectura"], "semi-autonomo")
+        self.assertEqual(config["autonomy"]["development"], "interactive")
+        self.assertEqual(config["autonomy"]["documentation"], "interactive")
+        self.assertEqual(config["autonomy"]["delivery"], "semi-autonomous")
+        self.assertEqual(config["autonomy"]["quality"], "interactive")
+        self.assertEqual(config["autonomy"]["architecture"], "semi-autonomous")
 
     def test_parses_frontmatter_after_leading_blank_lines(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
-            f.write("\n\n---\npersonalidad:\n  nivel_sarcasmo: 4\n---\n")
+            f.write("\n\n---\npersonality:\n  sarcasm_level: 4\n---\n")
             f.flush()
             config = load_config(f.name)
         os.unlink(f.name)
-        self.assertEqual(config["personalidad"]["nivel_sarcasmo"], 4)
+        self.assertEqual(config["personality"]["sarcasm_level"], 4)
 
     def test_load_project_config_applies_detected_stack_by_default(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -127,8 +118,8 @@ class TestLoadConfig(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as f:
                 json.dump({"name": "demo", "dependencies": {"next": "^15.0.0"}}, f)
             config = load_project_config(tmpdir)
-        self.assertEqual(config["proyecto"]["runtime"], "node")
-        self.assertEqual(config["proyecto"]["framework"], "next")
+        self.assertEqual(config["project"]["runtime"], "node")
+        self.assertEqual(config["project"]["framework"], "next")
 
     def test_load_project_config_preserves_explicit_project_overrides(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -141,57 +132,57 @@ class TestLoadConfig(unittest.TestCase):
                 "w",
                 encoding="utf-8",
             ) as f:
-                f.write("---\nproyecto:\n  framework: hono\n---\n")
+                f.write("---\nproject:\n  framework: hono\n---\n")
             config = load_project_config(tmpdir)
-        self.assertEqual(config["proyecto"]["runtime"], "node")
-        self.assertEqual(config["proyecto"]["framework"], "hono")
+        self.assertEqual(config["project"]["runtime"], "node")
+        self.assertEqual(config["project"]["framework"], "hono")
 
     def test_is_autopilot_configured_checks_all_phases(self):
         self.assertTrue(is_autopilot_configured(DEFAULT_CONFIG))
         config = load_config("/path/that/does/not/exist")
-        config["autonomia"]["calidad"] = "interactivo"
+        config["autonomy"]["quality"] = "interactive"
         self.assertFalse(is_autopilot_configured(config))
 
-    def test_is_autopilot_enabled_for_project_accepts_legacy_modo_field(self):
+    def test_is_autopilot_enabled_for_project_reads_state_flag(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             claude_dir = os.path.join(tmpdir, ".claude")
             os.makedirs(claude_dir, exist_ok=True)
             state_path = os.path.join(claude_dir, "alfred-dev-state.json")
             with open(state_path, "w", encoding="utf-8") as f:
-                json.dump({"modo": "autopilot"}, f)
+                json.dump({"autopilot": True}, f)
             self.assertTrue(is_autopilot_enabled_for_project(tmpdir))
 
     def test_get_active_optional_agents_returns_enabled_agents_in_catalog_order(self):
         config = load_config("/path/that/does/not/exist")
-        config["agentes_opcionales"]["cto"] = True
+        config["optional_agents"]["cto"] = True
         self.assertEqual(
             get_active_optional_agents(config),
             ["cto"],
         )
 
-    def test_build_equipo_sesion_from_config_returns_none_without_runtime_flags(self):
+    def test_build_session_team_from_config_returns_none_without_runtime_flags(self):
         config = load_config("/path/that/does/not/exist")
-        config["agentes_opcionales"]["cto"] = False
-        self.assertIsNone(build_equipo_sesion_from_config(config))
+        config["optional_agents"]["cto"] = False
+        self.assertIsNone(build_session_team_from_config(config))
 
-    def test_build_equipo_sesion_from_config_enables_cto_by_default(self):
+    def test_build_session_team_from_config_enables_cto_by_default(self):
         config = load_config("/path/that/does/not/exist")
-        equipo = build_equipo_sesion_from_config(config)
-        self.assertTrue(equipo["opcionales_activos"]["cto"])
+        team = build_session_team_from_config(config)
+        self.assertTrue(team["active_optionals"]["cto"])
 
-    def test_build_equipo_sesion_from_config_preserves_catalog_and_memory(self):
+    def test_build_session_team_from_config_preserves_catalog_and_memory(self):
         config = load_config("/path/that/does/not/exist")
-        config["agentes_opcionales"]["cto"] = True
-        config["memoria"]["enabled"] = True
+        config["optional_agents"]["cto"] = True
+        config["memory"]["enabled"] = True
 
-        equipo = build_equipo_sesion_from_config(config)
+        team = build_session_team_from_config(config)
 
-        self.assertEqual(equipo["fuente"], "config_persistida")
-        self.assertTrue(equipo["opcionales_activos"]["cto"])
-        self.assertTrue(equipo["infra"]["memoria"])
+        self.assertEqual(team["source"], "persisted_config")
+        self.assertTrue(team["active_optionals"]["cto"])
+        self.assertTrue(team["infra"]["memory"])
 
     def test_legacy_lucius_key_is_accepted_as_cto(self):
-        """Existing projects with `agentes_opcionales.lucius` keep working."""
+        """Existing projects with `optional_agents.lucius` keep working."""
         with tempfile.TemporaryDirectory() as tmpdir:
             claude_dir = os.path.join(tmpdir, ".claude")
             os.makedirs(claude_dir, exist_ok=True)
@@ -200,23 +191,23 @@ class TestLoadConfig(unittest.TestCase):
                 "w",
                 encoding="utf-8",
             ) as f:
-                f.write("---\nagentes_opcionales:\n  lucius: true\n---\n")
+                f.write("---\noptional_agents:\n  lucius: true\n---\n")
 
             config = load_project_config(tmpdir)
-            equipo = build_project_equipo_sesion(tmpdir)
+            team = build_project_session_team(tmpdir)
 
-        self.assertTrue(config["agentes_opcionales"]["cto"])
-        self.assertNotIn("lucius", config["agentes_opcionales"])
+        self.assertTrue(config["optional_agents"]["cto"])
+        self.assertNotIn("lucius", config["optional_agents"])
         self.assertEqual(get_active_optional_agents(config), ["cto"])
-        self.assertTrue(equipo["opcionales_activos"]["cto"])
+        self.assertTrue(team["active_optionals"]["cto"])
         # Direct alias without normalization, and priority of the canonical key.
-        self.assertEqual(get_active_optional_agents({"agentes_opcionales": {"lucius": True}}), ["cto"])
+        self.assertEqual(get_active_optional_agents({"optional_agents": {"lucius": True}}), ["cto"])
         self.assertEqual(
-            get_active_optional_agents({"agentes_opcionales": {"cto": False, "lucius": True}}),
+            get_active_optional_agents({"optional_agents": {"cto": False, "lucius": True}}),
             [],
         )
 
-    def test_build_project_equipo_sesion_reads_local_config(self):
+    def test_build_project_session_team_reads_local_config(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             claude_dir = os.path.join(tmpdir, ".claude")
             os.makedirs(claude_dir, exist_ok=True)
@@ -227,30 +218,30 @@ class TestLoadConfig(unittest.TestCase):
             ) as f:
                 f.write(
                     "---\n"
-                    "agentes_opcionales:\n"
+                    "optional_agents:\n"
                     "  cto: true\n"
-                    "memoria:\n"
+                    "memory:\n"
                     "  enabled: true\n"
                     "---\n"
                 )
 
-            equipo = build_project_equipo_sesion(tmpdir)
+            team = build_project_session_team(tmpdir)
 
-        self.assertEqual(equipo["fuente"], "config_persistida")
-        self.assertTrue(equipo["opcionales_activos"]["cto"])
-        self.assertTrue(equipo["infra"]["memoria"])
+        self.assertEqual(team["source"], "persisted_config")
+        self.assertTrue(team["active_optionals"]["cto"])
+        self.assertTrue(team["infra"]["memory"])
 
     def test_render_config_markdown_serializes_canonical_frontmatter_and_notes(self):
         config = load_config("/path/that/does/not/exist")
-        config["agentes_opcionales"]["cto"] = True
-        config["personalidad"]["idioma"] = "es"
+        config["optional_agents"]["cto"] = True
+        config["personality"]["language"] = "es"
         content = render_config_markdown(config, notes="Prefer Netlify over Vercel.")
 
-        self.assertTrue(content.startswith("---\nautonomia:\n"))
+        self.assertTrue(content.startswith("---\nautonomy:\n"))
         self.assertIn("cto: true", content)
-        self.assertIn("## Notas", content)
+        self.assertIn("## Заметки", content)
         self.assertIn("Prefer Netlify over Vercel.", content)
-        self.assertNotIn("\nnotas:", content)
+        self.assertNotIn("\nnotes:", content)
 
     def test_save_config_roundtrips_with_load_config(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
@@ -258,24 +249,24 @@ class TestLoadConfig(unittest.TestCase):
 
         try:
             config = load_config("/path/that/does/not/exist")
-            config["autonomia"]["calidad"] = "interactivo"
-            config["agentes_opcionales"]["cto"] = True
-            config["memoria"]["enabled"] = True
+            config["autonomy"]["quality"] = "interactive"
+            config["optional_agents"]["cto"] = True
+            config["memory"]["enabled"] = True
             save_config(path, config, notes="Review the copy before publishing.")
 
             reloaded = load_config(path)
         finally:
             os.unlink(path)
 
-        self.assertEqual(reloaded["autonomia"]["calidad"], "interactivo")
-        self.assertTrue(reloaded["agentes_opcionales"]["cto"])
-        self.assertTrue(reloaded["memoria"]["enabled"])
-        self.assertIn("Review the copy", reloaded["notas"])
+        self.assertEqual(reloaded["autonomy"]["quality"], "interactive")
+        self.assertTrue(reloaded["optional_agents"]["cto"])
+        self.assertTrue(reloaded["memory"]["enabled"])
+        self.assertIn("Review the copy", reloaded["notes"])
 
     def test_save_project_config_writes_canonical_local_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             config = load_config("/path/that/does/not/exist")
-            config["agentes_opcionales"]["cto"] = True
+            config["optional_agents"]["cto"] = True
 
             path = save_project_config(
                 tmpdir,
@@ -285,8 +276,8 @@ class TestLoadConfig(unittest.TestCase):
             reloaded = load_config(path)
 
         self.assertTrue(path.endswith(os.path.join(".claude", "alfred-dev.local.md")))
-        self.assertTrue(reloaded["agentes_opcionales"]["cto"])
-        self.assertIn("tone friendly", reloaded["notas"])
+        self.assertTrue(reloaded["optional_agents"]["cto"])
+        self.assertIn("tone friendly", reloaded["notes"])
 
     def test_ensure_bootstrap_local_config_creates_minimal_canonical_file(self):
         with tempfile.NamedTemporaryFile(delete=False) as f:
@@ -301,13 +292,13 @@ class TestLoadConfig(unittest.TestCase):
             os.unlink(path)
 
         self.assertTrue(changed)
-        self.assertTrue(reloaded["memoria"]["enabled"])
-        self.assertEqual(reloaded["autonomia"]["producto"], "autonomo")
-        self.assertIn("Ты можешь настроить его через `/alfred-dev:ajustes`.", content)
+        self.assertTrue(reloaded["memory"]["enabled"])
+        self.assertEqual(reloaded["autonomy"]["product"], "autonomous")
+        self.assertIn("Ты можешь настроить его через `/alfred-dev:config`.", content)
 
     def test_ensure_bootstrap_local_config_respects_explicit_memory_disable(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
-            f.write("---\nmemoria:\n  enabled: false\n---\n")
+            f.write("---\nmemory:\n  enabled: false\n---\n")
             path = f.name
         try:
             changed = ensure_bootstrap_local_config(path)
@@ -316,12 +307,12 @@ class TestLoadConfig(unittest.TestCase):
             os.unlink(path)
 
         self.assertTrue(changed)
-        self.assertFalse(reloaded["memoria"]["enabled"])
-        self.assertEqual(reloaded["autonomia"]["documentacion"], "autonomo")
+        self.assertFalse(reloaded["memory"]["enabled"])
+        self.assertEqual(reloaded["autonomy"]["documentation"], "autonomous")
 
     def test_ensure_bootstrap_local_config_wraps_body_only_content(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
-            f.write("# Notas\n\nmemoria:\n  enabled: true\n")
+            f.write("# Заметки\n\nmemory:\n  enabled: true\n")
             path = f.name
         try:
             changed = ensure_bootstrap_local_config(path)
@@ -332,33 +323,33 @@ class TestLoadConfig(unittest.TestCase):
             os.unlink(path)
 
         self.assertTrue(changed)
-        self.assertTrue(content.startswith("---\nautonomia:\n"))
-        self.assertTrue(reloaded["memoria"]["enabled"])
+        self.assertTrue(content.startswith("---\nautonomy:\n"))
+        self.assertTrue(reloaded["memory"]["enabled"])
 
     def test_build_config_section_summaries_describe_effective_state(self):
         config = load_config("/path/that/does/not/exist")
-        config["autonomia"]["producto"] = "interactivo"
-        config["autonomia"]["calidad"] = "semi-autonomo"
-        config["agentes_opcionales"]["cto"] = True
-        config["memoria"]["enabled"] = True
+        config["autonomy"]["product"] = "interactive"
+        config["autonomy"]["quality"] = "semi-autonomous"
+        config["optional_agents"]["cto"] = True
+        config["memory"]["enabled"] = True
 
         summaries = build_config_section_summaries(config)
 
         self.assertEqual(
             [section["section"] for section in summaries],
             [
-                "autonomia",
-                "proyecto",
-                "agentes_opcionales",
-                "memoria",
+                "autonomy",
+                "project",
+                "optional_agents",
+                "memory",
                 "compliance",
-                "integraciones",
-                "personalidad",
+                "integrations",
+                "personality",
             ],
         )
-        autonomy = next(section for section in summaries if section["section"] == "autonomia")
-        agents = next(section for section in summaries if section["section"] == "agentes_opcionales")
-        memory = next(section for section in summaries if section["section"] == "memoria")
+        autonomy = next(section for section in summaries if section["section"] == "autonomy")
+        agents = next(section for section in summaries if section["section"] == "optional_agents")
+        memory = next(section for section in summaries if section["section"] == "memory")
 
         self.assertIn("интерактивных", autonomy["summary"])
         self.assertIn("Активных: 1", agents["summary"])
@@ -377,7 +368,7 @@ class TestLoadConfig(unittest.TestCase):
                     f,
                 )
             config = load_config("/path/that/does/not/exist")
-            config["agentes_opcionales"]["cto"] = True
+            config["optional_agents"]["cto"] = True
             menu = build_config_section_menu(config, project_dir=tmpdir)
 
         labels = [option["label"] for option in menu["options"]]
@@ -406,73 +397,73 @@ class TestLoadConfig(unittest.TestCase):
 
     def test_apply_config_section_update_normalizes_and_preserves_rest(self):
         config = load_config("/path/that/does/not/exist")
-        config["memoria"]["enabled"] = True
+        config["memory"]["enabled"] = True
 
         updated = apply_config_section_update(
             config,
-            "autonomia",
+            "autonomy",
             {
-                "producto": "interactivo",
-                "documentación": "semi-autónomo",
+                "product": "interactive",
+                "documentation": "semi autonomous",
             },
         )
 
-        self.assertEqual(updated["autonomia"]["producto"], "interactivo")
-        self.assertEqual(updated["autonomia"]["documentacion"], "semi-autonomo")
-        self.assertEqual(updated["autonomia"]["calidad"], "autonomo")
-        self.assertTrue(updated["memoria"]["enabled"])
+        self.assertEqual(updated["autonomy"]["product"], "interactive")
+        self.assertEqual(updated["autonomy"]["documentation"], "semi-autonomous")
+        self.assertEqual(updated["autonomy"]["quality"], "autonomous")
+        self.assertTrue(updated["memory"]["enabled"])
 
     def test_apply_config_section_update_keeps_optional_catalog_complete(self):
         config = load_config("/path/that/does/not/exist")
 
         updated = apply_config_section_update(
             config,
-            "agentes_opcionales",
+            "optional_agents",
             {"cto": False},
         )
 
-        self.assertFalse(updated["agentes_opcionales"]["cto"])
+        self.assertFalse(updated["optional_agents"]["cto"])
         self.assertEqual(
-            set(updated["agentes_opcionales"].keys()),
+            set(updated["optional_agents"].keys()),
             set(get_optional_agent_names()),
         )
 
     def test_all_config_sections_preview_and_persist_round_trip(self):
         updates = {
-            "autonomia": {
-                "producto": "interactivo",
-                "calidad": "semi-autonomo",
+            "autonomy": {
+                "product": "interactive",
+                "quality": "semi-autonomous",
             },
-            "proyecto": {
+            "project": {
                 "runtime": "node",
-                "lenguaje": "typescript",
+                "language": "typescript",
                 "framework": "next",
                 "test_runner": "vitest",
                 "bundler": "vite",
             },
-            "agentes_opcionales": {
+            "optional_agents": {
                 "cto": False,
             },
-            "memoria": {
+            "memory": {
                 "enabled": True,
                 "sync_commits_limit": 3,
                 "retention_days": 30,
             },
             "compliance": {
-                "estilo": "strict",
+                "style": "strict",
                 "lint": False,
                 "format_on_save": False,
             },
-            "integraciones": {
+            "integrations": {
                 "git": False,
                 "ci": True,
                 "deploy": True,
             },
-            "personalidad": {
-                "nivel_sarcasmo": 1,
-                "verbosidad": "alta",
-                "idioma": "es-ES",
-                "celebrar_victorias": False,
+            "personality": {
+                "sarcasm_level": 1,
+                "verbosity": "alta",
+                "language": "es-ES",
+                "celebrate_wins": False,
             },
         }
 
@@ -498,10 +489,10 @@ class TestLoadConfig(unittest.TestCase):
                 ) as f:
                     f.write(
                         "---\n"
-                        "memoria:\n"
+                        "memory:\n"
                         "  enabled: false\n"
                         "---\n\n"
-                        "## Notas\n\n"
+                        "## Заметки\n\n"
                         "Stable note.\n"
                     )
                     path = f.name
@@ -520,13 +511,13 @@ class TestLoadConfig(unittest.TestCase):
                 self.assertEqual(persisted_preview["section"], section_name)
                 for key, value in patch.items():
                     self.assertEqual(reloaded[section_name][key], value)
-                self.assertIn("Stable note", reloaded["notas"])
+                self.assertIn("Stable note", reloaded["notes"])
 
     def test_build_config_section_change_preview_reports_before_and_after(self):
         config = load_config("/path/that/does/not/exist")
         preview = build_config_section_change_preview(
             config,
-            "memoria",
+            "memory",
             {"enabled": True},
         )
 
@@ -534,13 +525,13 @@ class TestLoadConfig(unittest.TestCase):
         self.assertEqual(preview["label"], "Постоянная память")
         self.assertIn("Неактивна", preview["before"]["summary"])
         self.assertIn("Активна с нативной синхронизацией", preview["after"]["summary"])
-        self.assertTrue(preview["updated_config"]["memoria"]["enabled"])
+        self.assertTrue(preview["updated_config"]["memory"]["enabled"])
 
     def test_build_config_section_change_preview_detects_noop_updates(self):
         config = load_config("/path/that/does/not/exist")
         preview = build_config_section_change_preview(
             config,
-            "integraciones",
+            "integrations",
             {"git": True},
         )
 
@@ -554,10 +545,10 @@ class TestLoadConfig(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
             f.write(
                 "---\n"
-                "memoria:\n"
+                "memory:\n"
                 "  enabled: false\n"
                 "---\n\n"
-                "## Notas\n\n"
+                "## Заметки\n\n"
                 "Keep a friendly tone.\n"
             )
             path = f.name
@@ -565,7 +556,7 @@ class TestLoadConfig(unittest.TestCase):
         try:
             preview = update_config_section(
                 path,
-                "memoria",
+                "memory",
                 {"enabled": True},
                 include_defaults=False,
             )
@@ -574,8 +565,8 @@ class TestLoadConfig(unittest.TestCase):
             os.unlink(path)
 
         self.assertTrue(preview["changed"])
-        self.assertTrue(reloaded["memoria"]["enabled"])
-        self.assertIn("Keep a friendly tone", reloaded["notas"])
+        self.assertTrue(reloaded["memory"]["enabled"])
+        self.assertIn("Keep a friendly tone", reloaded["notes"])
 
     def test_update_project_config_section_writes_project_local_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -586,18 +577,18 @@ class TestLoadConfig(unittest.TestCase):
                 "w",
                 encoding="utf-8",
             ) as f:
-                f.write("---\nintegraciones:\n  ci: false\n---\n")
+                f.write("---\nintegrations:\n  ci: false\n---\n")
 
             preview = update_project_config_section(
                 tmpdir,
-                "integraciones",
+                "integrations",
                 {"ci": True},
                 include_defaults=False,
             )
             reloaded = load_project_config(tmpdir)
 
         self.assertTrue(preview["changed"])
-        self.assertTrue(reloaded["integraciones"]["ci"])
+        self.assertTrue(reloaded["integrations"]["ci"])
 
 
 class TestDetectStack(unittest.TestCase):
@@ -610,19 +601,19 @@ class TestDetectStack(unittest.TestCase):
                 json.dump({}, f)
             stack = detect_stack(tmpdir)
         self.assertEqual(stack["runtime"], "node")
-        self.assertEqual(stack["lenguaje"], "typescript")
+        self.assertEqual(stack["language"], "typescript")
 
     def test_detects_python_project(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with open(os.path.join(tmpdir, "pyproject.toml"), "w") as f:
                 f.write("[project]\nname = 'test'\n")
             stack = detect_stack(tmpdir)
-        self.assertEqual(stack["lenguaje"], "python")
+        self.assertEqual(stack["language"], "python")
 
     def test_returns_unknown_for_empty_dir(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             stack = detect_stack(tmpdir)
-        self.assertEqual(stack["lenguaje"], "desconocido")
+        self.assertEqual(stack["language"], "unknown")
 
     def test_prefers_frontend_framework_when_node_project_is_mixed(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -645,8 +636,8 @@ class TestDetectStack(unittest.TestCase):
             with open(os.path.join(tmpdir, "requirements.txt"), "w") as f:
                 f.write("django-stubs==5.0.0\npytest==8.0.0\n")
             stack = detect_stack(tmpdir)
-        self.assertEqual(stack["framework"], "desconocido")
-        self.assertEqual(stack["orm"], "ninguno")
+        self.assertEqual(stack["framework"], "unknown")
+        self.assertEqual(stack["orm"], "none")
         self.assertEqual(stack["test_runner"], "pytest")
 
     def test_detects_jvm_maven_project(self):
@@ -662,7 +653,7 @@ class TestDetectStack(unittest.TestCase):
                 )
             stack = detect_stack(tmpdir)
         self.assertEqual(stack["runtime"], "jvm")
-        self.assertEqual(stack["lenguaje"], "java")
+        self.assertEqual(stack["language"], "java")
         self.assertEqual(stack["framework"], "spring-boot")
         self.assertEqual(stack["test_runner"], "junit")
 
@@ -684,7 +675,7 @@ class TestDetectStack(unittest.TestCase):
                 json.dump(pkg, f)
             stack = detect_stack(tmpdir)
         self.assertEqual(stack["runtime"], "jvm")
-        self.assertEqual(stack["lenguaje"], "java")
+        self.assertEqual(stack["language"], "java")
         self.assertEqual(stack["framework"], "spring-boot")
 
     def test_node_wins_when_package_json_declares_a_framework(self):
@@ -715,7 +706,7 @@ class TestDetectStack(unittest.TestCase):
                 )
             stack = detect_stack(tmpdir)
         self.assertEqual(stack["runtime"], "jvm")
-        self.assertEqual(stack["lenguaje"], "kotlin")
+        self.assertEqual(stack["language"], "kotlin")
         self.assertEqual(stack["framework"], "quarkus")
 
     def test_detects_php_composer_project(self):
@@ -735,7 +726,7 @@ class TestDetectStack(unittest.TestCase):
                 )
             stack = detect_stack(tmpdir)
         self.assertEqual(stack["runtime"], "php")
-        self.assertEqual(stack["lenguaje"], "php")
+        self.assertEqual(stack["language"], "php")
         self.assertEqual(stack["framework"], "laravel")
         self.assertEqual(stack["orm"], "doctrine")
         self.assertEqual(stack["test_runner"], "pest")
@@ -753,7 +744,7 @@ class TestDetectStack(unittest.TestCase):
                 )
             stack = detect_stack(tmpdir)
         self.assertEqual(stack["runtime"], "dotnet")
-        self.assertEqual(stack["lenguaje"], "csharp")
+        self.assertEqual(stack["language"], "csharp")
         self.assertEqual(stack["framework"], "aspnet")
         self.assertEqual(stack["orm"], "entity-framework")
         self.assertEqual(stack["test_runner"], "xunit")
@@ -769,7 +760,7 @@ class TestDetectStack(unittest.TestCase):
                 )
             stack = detect_stack(tmpdir)
         self.assertEqual(stack["runtime"], "swift")
-        self.assertEqual(stack["lenguaje"], "swift")
+        self.assertEqual(stack["language"], "swift")
         self.assertEqual(stack["framework"], "vapor")
         self.assertEqual(stack["test_runner"], "swift-test")
 
@@ -778,8 +769,8 @@ class TestOptionalAgents(unittest.TestCase):
     """Tests for the reduced optional agent catalog (CTO only)."""
 
     def test_default_config_has_optional_agents(self):
-        self.assertIn("agentes_opcionales", DEFAULT_CONFIG)
-        agents = DEFAULT_CONFIG["agentes_opcionales"]
+        self.assertIn("optional_agents", DEFAULT_CONFIG)
+        agents = DEFAULT_CONFIG["optional_agents"]
         self.assertEqual(set(agents.keys()), {"cto"})
         self.assertTrue(agents["cto"])
 
@@ -805,12 +796,12 @@ class TestOptionalAgents(unittest.TestCase):
 
     def test_legacy_optional_flags_are_ignored(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-            f.write("---\nagentes_opcionales:\n  data-engineer: true\n  cto: true\n---\n")
+            f.write("---\noptional_agents:\n  data-engineer: true\n  cto: true\n---\n")
             f.flush()
             config = load_config(f.name)
         os.unlink(f.name)
-        self.assertTrue(config["agentes_opcionales"]["cto"])
-        self.assertNotIn("data-engineer", config["agentes_opcionales"])
+        self.assertTrue(config["optional_agents"]["cto"])
+        self.assertNotIn("data-engineer", config["optional_agents"])
 
 
 class TestConfigCli(unittest.TestCase):

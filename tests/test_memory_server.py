@@ -244,7 +244,7 @@ class TestMCPTools(unittest.TestCase):
             self.db,
             {
                 "event_type": "custom",
-                "phase": "calidad",
+                "phase": "quality",
                 "payload": {"note": "token refresh broken"},
             },
         )
@@ -300,7 +300,7 @@ class TestMCPTools(unittest.TestCase):
             self.db,
             {
                 "event_type": "custom",
-                "phase": "calidad",
+                "phase": "quality",
                 "summary": "large content",
                 "content": "x" * (memory_server_module._EVENT_CONTENT_MAX + 1000),
                 "payload": {
@@ -586,7 +586,7 @@ class TestMCPMemoryConfig(unittest.TestCase):
         ) as handle:
             handle.write(
                 "---\n"
-                "memoria:\n"
+                "memory:\n"
                 "  enabled: true\n"
                 "  capture_decisions: false\n"
                 "  capture_commits: false\n"

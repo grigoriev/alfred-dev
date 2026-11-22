@@ -18,7 +18,7 @@ argument-hint: "Идея, потребность или feature, которую 
 - `docs/project/current.md`
 - индекс `docs/project/README.md` (через `sync-project-docs`)
 
-Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md`, если переходишь в ручной режим.
+Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_living_docs.md`, если переходишь в ручной режим.
 
 Результат должен ясно показывать:
 
@@ -65,7 +65,7 @@ python3 .claude/alfred-continuity.py discuss "$PWD" --raw "$ARGUMENTS"
   таблицей прозой: представь одно настоящее выбираемое меню с
   правдоподобными маршрутами и одним рекомендованным.
 - если helper сообщает, что есть активная сессия или незакрытый handoff, действуй как
-  `/alfred-dev:next` или `/alfred-dev:retomar` в зависимости от случая;
+  `/alfred-dev:next` или `/alfred-dev:resume` в зависимости от случая;
 - если helper падает, недоступен или `Bash` отклонён, НЕ повторяй его:
   немедленно переходи в ручной режим.
 

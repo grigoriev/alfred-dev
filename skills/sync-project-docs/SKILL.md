@@ -18,7 +18,7 @@ description: "Использовать для синхронизации жив�
    python3 .claude/alfred-continuity.py sync-project-docs "$PWD"
    ```
 
-2. Прочитай `docs/project/README.md` и протокол `commands/_docs_vivas.md`.
+2. Прочитай `docs/project/README.md` и протокол `commands/_living_docs.md`.
 
 3. Обновляй только файлы этой фазы. Если нового API не было, не
    трогай руководство по API. Если решения не было, не выдумывай ADR.
@@ -49,4 +49,4 @@ description: "Использовать для синхронизации жив�
 
 - Не переписывай весь `docs/` в каждой фазе.
 - Не копируй чат в Markdown.
-- Не ставь `filled`, пока остаются `_(pendiente)_`.
+- Не ставь `filled`, пока остаются `_(заполнить)_`.

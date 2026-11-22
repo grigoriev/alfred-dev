@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-pain hygiene and a shareable wrap-up (cierre)."""
+"""Pre-pain hygiene and a shareable wrap-up (closing)."""
 
 import json
 import os
@@ -9,7 +9,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from core.hygiene import build_cierre, render_cierre_markdown, run_hygiene
+from core.hygiene import build_closing, render_closing_markdown, run_hygiene
 from core.project_docs import FILLED_MARKER, SCAFFOLD_MARKER, ensure_project_docs
 
 
@@ -31,10 +31,10 @@ class TestHygiene(unittest.TestCase):
             with open(os.path.join(claude, "alfred-dev-state.json"), "w", encoding="utf-8") as handle:
                 json.dump(
                     {
-                        "comando": "quick",
-                        "descripcion": "CTA",
-                        "fase_actual": "completado",
-                        "fase_numero": 1,
+                        "command": "quick",
+                        "description": "CTA",
+                        "current_phase": "completed",
+                        "phase_number": 1,
                     },
                     handle,
                 )
@@ -52,17 +52,17 @@ class TestHygiene(unittest.TestCase):
             self.assertFalse(result["passed"])
             self.assertTrue(any("threat-model" in item for item in result["blockers"]))
 
-    def test_cierre_is_shareable(self):
+    def test_closing_is_shareable(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             claude = os.path.join(tmpdir, ".claude")
             os.makedirs(claude, exist_ok=True)
             with open(os.path.join(claude, "alfred-dev-state.json"), "w", encoding="utf-8") as handle:
                 json.dump(
                     {
-                        "comando": "quick",
-                        "descripcion": "change the CTA",
-                        "fase_actual": "validacion_rapida",
-                        "fase_numero": 1,
+                        "command": "quick",
+                        "description": "change the CTA",
+                        "current_phase": "quick_validation",
+                        "phase_number": 1,
                     },
                     handle,
                 )
@@ -74,8 +74,8 @@ class TestHygiene(unittest.TestCase):
                     },
                     handle,
                 )
-            cierre = build_cierre(tmpdir)
-            text = render_cierre_markdown(cierre)
+            closing = build_closing(tmpdir)
+            text = render_closing_markdown(closing)
             self.assertIn("change the CTA", text)
             self.assertIn("pytest tests/test_cta.py", text)
             self.assertIn("Итог Alfred", text)

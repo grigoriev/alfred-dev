@@ -17,7 +17,7 @@ from core.memory_config import (
 
 
 class TestMemoryConfig(unittest.TestCase):
-    """Check defaults and parsing of the memoria block."""
+    """Check defaults and parsing of the memory block."""
 
     def setUp(self):
         self._tmpdir = tempfile.mkdtemp()
@@ -39,13 +39,13 @@ class TestMemoryConfig(unittest.TestCase):
         self.assertEqual(config["retention_days"], 365)
 
     def test_reads_memory_block_from_frontmatter(self):
-        """Parse bools and ints from the memoria block."""
+        """Parse bools and ints from the memory block."""
         with open(self._config_path, "w", encoding="utf-8") as handle:
             handle.write(
                 "---\n"
-                "equipo:\n"
+                "optional_agents:\n"
                 "  librarian: true\n"
-                "memoria:\n"
+                "memory:\n"
                 "  enabled: true\n"
                 "  sync_to_native: false\n"
                 "  sync_commits_limit: 25\n"
@@ -67,7 +67,7 @@ class TestMemoryConfig(unittest.TestCase):
     def test_ignores_memory_block_outside_frontmatter(self):
         """Do not enable memory from the Markdown body."""
         with open(self._config_path, "w", encoding="utf-8") as handle:
-            handle.write("# Notes\n\nmemoria:\n  enabled: true\n")
+            handle.write("# Notes\n\nmemory:\n  enabled: true\n")
 
         config = load_memory_config(self._tmpdir)
         self.assertEqual(config, DEFAULT_MEMORY_CONFIG)
@@ -76,7 +76,7 @@ class TestMemoryConfig(unittest.TestCase):
     def test_ignores_unclosed_frontmatter(self):
         """Do not partly apply an unclosed frontmatter."""
         with open(self._config_path, "w", encoding="utf-8") as handle:
-            handle.write("---\nmemoria:\n  enabled: true\n")
+            handle.write("---\nmemory:\n  enabled: true\n")
 
         config = load_memory_config(self._tmpdir)
         self.assertEqual(config, DEFAULT_MEMORY_CONFIG)
@@ -87,7 +87,7 @@ class TestMemoryConfig(unittest.TestCase):
         with open(self._config_path, "w", encoding="utf-8") as handle:
             handle.write(
                 "---\n"
-                "memoria:\n"
+                "memory:\n"
                 "  enabled: maybe\n"
                 "  sync_to_native: 1\n"
                 "  sync_commits_limit: 0\n"

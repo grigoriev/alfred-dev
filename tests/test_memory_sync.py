@@ -103,7 +103,7 @@ class SyncTestBase(unittest.TestCase):
             alternatives=["Memcached", "In-memory cache"],
             rationale="Redis offers native TTL and optional persistence",
             impact="high",
-            phase="arquitectura",
+            phase="architecture",
             tags=["cache", "infra"],
             iteration_id=self.iter_id,
         )
@@ -114,7 +114,7 @@ class SyncTestBase(unittest.TestCase):
             alternatives=["JWT"],
             rationale="Compliance requires immediate revocation",
             impact="critical",
-            phase="arquitectura",
+            phase="architecture",
             tags=["auth", "security"],
             iteration_id=self.iter_id,
         )
@@ -253,21 +253,21 @@ class TestSyncAll(SyncTestBase):
             )
         self.db.log_event(
             event_type="phase_completed",
-            phase="arquitectura",
+            phase="architecture",
             payload={
-                "fase": "arquitectura",
-                "resultado": "aprobado",
-                "completada_en": "2026-01-10T10:00:00+00:00",
+                "phase": "architecture",
+                "result": "approved",
+                "completed_at": "2026-01-10T10:00:00+00:00",
             },
             iteration_id=self.iter_id,
         )
         self.db.log_event(
             event_type="phase_completed",
-            phase="desarrollo",
+            phase="development",
             payload={
-                "fase": "desarrollo",
-                "resultado": "aprobado",
-                "completada_en": "2026-01-11T10:00:00+00:00",
+                "phase": "development",
+                "result": "approved",
+                "completed_at": "2026-01-11T10:00:00+00:00",
             },
             iteration_id=self.iter_id,
         )
@@ -279,19 +279,19 @@ class TestSyncAll(SyncTestBase):
         ) as f:
             content = f.read()
 
-        self.assertIn("arquitectura", content)
-        self.assertIn("desarrollo", content)
-        self.assertIn("после desarrollo", content)
+        self.assertIn("architecture", content)
+        self.assertIn("development", content)
+        self.assertIn("после development", content)
 
     def test_iteration_escapes_phases_with_pipes_and_newlines(self):
         """Free-form content must not break the phase table."""
         self.db.log_event(
             event_type="phase_completed",
-            phase="arquitectura",
+            phase="architecture",
             payload={
-                "fase": "arquitectura | backend\nprincipal",
-                "resultado": "ok | aprobado",
-                "completada_en": "2026-01-10T10:00:00+00:00",
+                "phase": "architecture | backend\nprincipal",
+                "result": "ok | approved",
+                "completed_at": "2026-01-10T10:00:00+00:00",
             },
             iteration_id=self.iter_id,
         )
@@ -303,8 +303,8 @@ class TestSyncAll(SyncTestBase):
         ) as f:
             content = f.read()
 
-        self.assertIn(r"arquitectura \| backend principal", content)
-        self.assertIn(r"ok \| aprobado", content)
+        self.assertIn(r"architecture \| backend principal", content)
+        self.assertIn(r"ok \| approved", content)
 
 
 class TestUpdateIndex(SyncTestBase):
@@ -691,14 +691,14 @@ class TestE2E(unittest.TestCase):
                 alternatives=["Flask", "Django"],
                 rationale="Performance and native typing",
                 impact="high",
-                phase="arquitectura",
+                phase="architecture",
                 tags=["backend"],
             )
             d2 = db.log_decision(
                 title="Database",
                 chosen="PostgreSQL",
                 impact="critical",
-                phase="arquitectura",
+                phase="architecture",
             )
             db.log_commit(
                 sha="abc1234567890",

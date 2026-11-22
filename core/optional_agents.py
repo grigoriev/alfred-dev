@@ -37,11 +37,11 @@ OPTIONAL_AGENT_CATALOG: Dict[str, Dict[str, Any]] = {
         # the quality closure of feature and the final audit of ship.
         "default_enabled": True,
         "integration": {
-            "fases": [
-                "calidad",
-                "auditoria_final",
+            "phases": [
+                "quality",
+                "final_audit",
             ],
-            "posicion": "secuencial",
+            "position": "sequential",
         },
     },
 }
@@ -121,7 +121,7 @@ def order_optional_agent_names(names: Iterable[str]) -> List[str]:
 
 
 def build_optional_agent_flags(default: Optional[bool] = None) -> Dict[str, bool]:
-    """Build the block of bool flags for config/equipo_sesion.
+    """Build the block of bool flags for config/session_team.
 
     Without ``default`` each agent takes ``default_enabled`` from the catalog.
     """
@@ -259,8 +259,8 @@ def get_optional_integrations() -> Dict[str, Dict[str, Any]]:
     """Return a shallow copy of the per-phase integrations."""
     return {
         agent_name: {
-            "fases": list(metadata["integration"]["fases"]),
-            "posicion": metadata["integration"]["posicion"],
+            "phases": list(metadata["integration"]["phases"]),
+            "position": metadata["integration"]["position"],
         }
         for agent_name, metadata in OPTIONAL_AGENT_CATALOG.items()
     }

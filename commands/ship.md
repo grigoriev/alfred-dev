@@ -38,24 +38,24 @@ python3 .claude/alfred-continuity.py start-flow "$PWD" --command ship --raw "П�
 Перед запуском первой фазы найди общий файл формирования команды
 внутри плагина Alfred Dev, НЕ внутри аудируемого проекта. Если не знаешь
 точного пути, сначала найди его в установке плагина (например, в
-`${CLAUDE_PLUGIN_ROOT}/commands/_composicion.md`) и прочитай оттуда.
+`${CLAUDE_PLUGIN_ROOT}/commands/_composition.md`) и прочитай оттуда.
 
 Затем следуй протоколу динамического формирования (шаги 1-4). Если по
 какой-либо причине не удаётся найти этот файл, не блокируй
 `/alfred-dev:ship` из-за одного лишь поиска: продолжай с базовой командой по
 умолчанию и коротко отметь деградацию.
 
-Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md`. В документации
+Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_living_docs.md`. В документации
 релиза Tech Writer обновляет индекс и CHANGELOG. Перед закрытием
-`documentacion`:
+`documentation`:
 
 ```bash
-python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command ship --phase documentacion
+python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command ship --phase documentation
 ```
 
 ## Режим autopilot
 
-Перед началом прочитай `.claude/alfred-dev.local.md` и проверь настроенный уровень автономности. Если все фазы в `autonomo`, или если состояние в `.claude/alfred-dev-state.json` содержит `"autopilot": true` или legacy-алиас `"modo": "autopilot"`, включи **режим autopilot**:
+Перед началом прочитай `.claude/alfred-dev.local.md` и проверь настроенный уровень автономности. Если все фазы в `autonomous`, или если состояние в `.claude/alfred-dev-state.json` содержит `"autopilot": true`, включи **режим autopilot**:
 
 - **Пользовательские gate** утверждаются автоматически без `AskUserQuestion`.
 - **Gate безопасности и автоматические** оцениваются как обычно.
@@ -74,7 +74,7 @@ compliance в виде скелета), не объявляй gate пройде�
 
 ### Фаза 1: Финальный аудит
 Активируй `qa-engineer` и `security-officer` параллельно. Полный набор тестов, покрытие, регрессия. Финальный OWASP, dependency audit, SBOM, CRA compliance.
-Если `cto` активен в `equipo_sesion`, он подключается после как последовательная внешняя завершающая проверка, чтобы сверить результат перед упаковкой.
+Если `cto` активен в `session_team`, он подключается после как последовательная внешняя завершающая проверка, чтобы сверить результат перед упаковкой.
 **GATE (автоматический+безопасность):** Оба одобряют. Оценивается всегда, даже в autopilot.
 
 ### Фаза 2: Документация
@@ -98,8 +98,8 @@ compliance в виде скелета), не объявляй gate пройде�
 ## Опциональные специалисты в `ship`
 
 Единственный опциональный в runtime это **cto**. Он включён по умолчанию
-(`agentes_opcionales.cto: true`). Если `equipo_sesion` содержит его активным,
-используй его в `auditoria_final` как последовательную внешнюю завершающую проверку
+(`optional_agents.cto: true`). Если `session_team` содержит его активным,
+используй его в `final_audit` как последовательную внешнюю завершающую проверку
 через Greptile CLI. Greptile видит только закоммиченные изменения ветки. Не вызывай copywriter, github-manager и librarian.
 
 ## Каноничное завершение команды

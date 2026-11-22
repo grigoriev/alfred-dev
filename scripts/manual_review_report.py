@@ -28,9 +28,7 @@ RISK_TERMS = (
     "traceback",
     "reached maximum budget",
     "maximum budget",
-    # Spanish and Russian terms match model output in either language.
-    "incoherencia",
-    "no se pudo",
+    # Russian terms match model output in the plugin language.
     "несоответств",
     "не удалось",
     "failed",

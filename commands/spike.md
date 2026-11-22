@@ -39,21 +39,21 @@ gate и закончи.
 Перед запуском первой фазы найди общий файл формирования команды
 внутри плагина Alfred Dev, НЕ внутри аудируемого проекта. Если не знаешь
 точного пути, сначала найди его в установке плагина (например, в
-`${CLAUDE_PLUGIN_ROOT}/commands/_composicion.md`) и прочитай оттуда.
+`${CLAUDE_PLUGIN_ROOT}/commands/_composition.md`) и прочитай оттуда.
 
 Затем следуй протоколу динамического формирования (шаги 1-4). Если по
 какой-либо причине не удаётся найти этот файл, не блокируй
 `/alfred-dev:spike` из-за одного лишь поиска: продолжай с базовой командой по
 умолчанию и коротко отметь деградацию.
 
-Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md`. Если spike закрывает
-решение, напиши ADR. Перед закрытием `conclusiones`:
+Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_living_docs.md`. Если spike закрывает
+решение, напиши ADR. Перед закрытием `conclusions`:
 
 ```bash
-python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command spike --phase conclusiones
+python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command spike --phase conclusions
 ```
 
-Если `equipo_sesion` содержит активных опциональных (через эфемерное динамическое
+Если `session_team` содержит активных опциональных (через эфемерное динамическое
 формирование или fallback на `.claude/alfred-dev.local.md`), всегда обращайся к нему
 как к каноничному runtime-источнику. В `spike` по умолчанию опциональные не входят
 в стандартный цикл: считай их специалистами **по запросу** и используй

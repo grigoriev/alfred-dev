@@ -24,7 +24,7 @@ python3 .claude/alfred-continuity.py quick "$PWD" --raw "$ARGUMENTS"
 Этот helper должен:
 - блокировать, если есть незакрытый handoff или UAT;
 - создать `.claude/alfred-dev-state.json` с процессом `quick`;
-- оставить сессию готовой для `pause`, `retomar` и `uat`.
+- оставить сессию готовой для `pause`, `resume` и `uat`.
 
 Если helper возвращает вывод подготовки (`## Quick подготовлен`) или хук
 `prefetch-finish-guard` указывает, что helper-first уже вернул готовый
@@ -33,7 +33,7 @@ python3 .claude/alfred-continuity.py quick "$PWD" --raw "$ARGUMENTS"
 в `claude -p` завершение должно быть кратким, операционным и короче 20 строк.
 
 2. Если helper возвращает ошибку, потому что уже есть активная сессия, НЕ открывай
-   новую параллельно. Действуй как `/alfred-dev:retomar`.
+   новую параллельно. Действуй как `/alfred-dev:resume`.
 
 3. После helper-а прочитай:
    - `.claude/alfred-dev-state.json`
@@ -50,26 +50,26 @@ python3 .claude/alfred-continuity.py quick "$PWD" --raw "$ARGUMENTS"
 5. Перед выполнением фазы 1 найди общий файл формирования команды
    внутри плагина Alfred Dev, НЕ внутри аудируемого проекта. Если не знаешь
    точного пути, сначала найди его в установке плагина (например,
-   в `${CLAUDE_PLUGIN_ROOT}/commands/_composicion.md`) и
+   в `${CLAUDE_PLUGIN_ROOT}/commands/_composition.md`) и
    прочитай оттуда. В `quick` **не** используй `AskUserQuestion` для CTO и
    для опциональных. Ядро, и за код. Если не удаётся найти этот
    файл, продолжай с базовой командой.
 
-6. Если `equipo_sesion` содержит активных опциональных (через эфемерное динамическое
+6. Если `session_team` содержит активных опциональных (через эфемерное динамическое
    формирование или fallback на `.claude/alfred-dev.local.md`), всегда обращайся к нему
    как к каноничному runtime-источнику перед каждой фазой. Если опциональный не входит
    в стандартный цикл `quick`, явно оставь его «по запросу».
 
-7. Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md`. Минимальный sync: индекс и
-   `current.md`. Перед закрытием `validacion_rapida`:
+7. Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_living_docs.md`. Минимальный sync: индекс и
+   `current.md`. Перед закрытием `quick_validation`:
 
 ```bash
-python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command quick --phase validacion_rapida
+python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command quick --phase quick_validation
 ```
 
 ## Лёгкий процесс из 2 фаз
 
-### Фаза 1: Ограниченное выполнение (`ejecucion_acotada`)
+### Фаза 1: Ограниченное выполнение (`scoped_execution`)
 
 Активируй `senior-dev` как основного агента. Не вызывай data-engineer,
 ux-reviewer, copywriter и i18n-specialist. CTO в `quick` не участвует.
@@ -82,7 +82,7 @@ ux-reviewer, copywriter и i18n-specialist. CTO в `quick` не участвуе
 
 **GATE (автоматический):** тесты и проверки затронутой зоны зелёные.
 
-### Фаза 2: Быстрая валидация (`validacion_rapida`)
+### Фаза 2: Быстрая валидация (`quick_validation`)
 
 Активируй `qa-engineer` и `security-officer` параллельно. CTO здесь не подключается:
 он проверяет только полностью готовую фичу. Если пользователь хочет внешнее ревью,
@@ -117,7 +117,7 @@ ux-reviewer, copywriter и i18n-specialist. CTO в `quick` не участвуе
 - По завершении работы (не helper-first) выполни обучающее закрытие:
 
 ```bash
-python3 .claude/alfred-continuity.py cierre "$PWD"
+python3 .claude/alfred-continuity.py closing "$PWD"
 ```
 
   Используй этот вывод как финальный блок. В конце покажи, что ожидаемый следующий шаг это `/alfred-dev:uat`.

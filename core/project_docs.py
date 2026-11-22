@@ -40,42 +40,42 @@ DOC_TITLES = {
 _Req = Tuple[str, str]
 
 REQUIREMENTS: Dict[Tuple[str, str], Tuple[_Req, ...]] = {
-    ("feature", "producto"): (("index", "exists"),),
-    ("feature", "estilo_visual"): (("index", "exists"),),
-    ("feature", "arquitectura"): (
+    ("feature", "product"): (("index", "exists"),),
+    ("feature", "visual_style"): (("index", "exists"),),
+    ("feature", "architecture"): (
         ("index", "exists"),
         ("architecture", "filled"),
         ("threat_model", "filled"),
     ),
-    ("feature", "desarrollo"): (("index", "exists"),),
-    ("feature", "calidad"): (
+    ("feature", "development"): (("index", "exists"),),
+    ("feature", "quality"): (
         ("index", "exists"),
         ("compliance", "filled"),
     ),
-    ("feature", "documentacion"): (
+    ("feature", "documentation"): (
         ("index", "exists"),
         ("architecture", "filled"),
     ),
-    ("feature", "entrega"): (("index", "exists"),),
-    ("fix", "diagnostico"): (("index", "exists"),),
-    ("fix", "correccion"): (("index", "exists"),),
-    ("fix", "validacion"): (("index", "exists"),),
-    ("quick", "ejecucion_acotada"): (("index", "exists"),),
-    ("quick", "validacion_rapida"): (("index", "exists"),),
-    ("spike", "exploracion"): (("index", "exists"),),
-    ("spike", "conclusiones"): (("index", "exists"),),
+    ("feature", "delivery"): (("index", "exists"),),
+    ("fix", "diagnosis"): (("index", "exists"),),
+    ("fix", "correction"): (("index", "exists"),),
+    ("fix", "validation"): (("index", "exists"),),
+    ("quick", "scoped_execution"): (("index", "exists"),),
+    ("quick", "quick_validation"): (("index", "exists"),),
+    ("spike", "exploration"): (("index", "exists"),),
+    ("spike", "conclusions"): (("index", "exists"),),
     ("audit", "*"): (
         ("index", "exists"),
         ("compliance", "filled"),
         ("threat_model", "exists"),
     ),
-    ("ship", "auditoria_final"): (
+    ("ship", "final_audit"): (
         ("index", "exists"),
         ("compliance", "exists"),
     ),
-    ("ship", "documentacion"): (("index", "exists"),),
-    ("ship", "empaquetado"): (("index", "exists"),),
-    ("ship", "despliegue"): (("index", "exists"),),
+    ("ship", "documentation"): (("index", "exists"),),
+    ("ship", "packaging"): (("index", "exists"),),
+    ("ship", "deployment"): (("index", "exists"),),
     ("map-codebase", "*"): (
         ("index", "exists"),
         ("architecture", "exists"),
@@ -131,9 +131,9 @@ _(заполнить)_
 
 | Контроль | Рамка | Статус | Подтверждение |
 |----------|-------|--------|---------------|
-| _(заполнить)_ |  | pendiente |  |
+| _(заполнить)_ |  | pending |  |
 
-Статусы: `cumple` (с подтверждением), `parcial`, `pendiente`, `no aplica`, `riesgo aceptado`.
+Статусы: `compliant` (с подтверждением), `partial`, `pending`, `not-applicable`, `accepted-risk`.
 
 ## Принятые риски
 
@@ -206,12 +206,12 @@ def doc_status(text: str) -> str:
 
 def required_docs(command: str, phase: str = "") -> Tuple[_Req, ...]:
     """Return the doc requirements for a command and phase."""
-    comando = (command or "").strip().lower()
-    fase = (phase or "").strip().lower() or "*"
-    exact = REQUIREMENTS.get((comando, fase))
+    command = (command or "").strip().lower()
+    phase = (phase or "").strip().lower() or "*"
+    exact = REQUIREMENTS.get((command, phase))
     if exact is not None:
         return exact
-    return REQUIREMENTS.get((comando, "*"), ())
+    return REQUIREMENTS.get((command, "*"), ())
 
 
 def ensure_project_docs(project_dir: str) -> Dict[str, Any]:
@@ -266,11 +266,8 @@ def refresh_index(project_dir: str) -> str:
     existing = _read(path)
     notes = ""
     cut = "## Заметки команды"
-    # Also accept the legacy Spanish heading so notes in older indexes survive.
-    for marker in (cut, "## Notas del equipo"):
-        if marker in existing:
-            notes = existing.split(marker, 1)[1].strip()
-            break
+    if cut in existing:
+        notes = existing.split(cut, 1)[1].strip()
 
     rows = inspect_docs(project_dir)
     lines = [
@@ -343,7 +340,7 @@ def scaffold_adr(project_dir: str, title: str) -> Dict[str, Any]:
         f"# ADR-{number:03d}: {title.strip() or 'Решение'}\n\n"
         f"{SCAFFOLD_MARKER}\n\n"
         f"**Дата:** {_now_date()}\n"
-        "**Статус:** propuesto\n"
+        "**Статус:** proposed\n"
         "**Автор:** architect\n\n"
         "## Контекст\n\n_(заполнить)_\n\n"
         "## Рассмотренные варианты\n\n### Вариант 1\n\n_(заполнить)_\n\n"

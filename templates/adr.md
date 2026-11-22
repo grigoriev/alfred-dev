@@ -1,71 +1,71 @@
-# ADR-{{numero}}: {{titulo}}
+# ADR-{{number}}: {{title}}
 
-**Дата:** {{fecha}}
-**Статус:** {{estado}} (propuesto | aceptado | rechazado | obsoleto)
+**Дата:** {{date}}
+**Статус:** {{status}} (proposed | accepted | rejected | superseded)
 **Автор:** architect
 
 ## Контекст
 
-{{contexto_del_problema}}
+{{problem_context}}
 
 ## Рассмотренные варианты
 
-### Вариант 1: {{nombre_opcion_1}}
+### Вариант 1: {{option_1_name}}
 
-{{descripcion_opcion_1}}
-
-**Преимущества:**
-{{ventajas_1}}
-
-**Недостатки:**
-{{desventajas_1}}
-
-### Вариант 2: {{nombre_opcion_2}}
-
-{{descripcion_opcion_2}}
+{{option_1_description}}
 
 **Преимущества:**
-{{ventajas_2}}
+{{pros_1}}
 
 **Недостатки:**
-{{desventajas_2}}
+{{cons_1}}
 
-### Вариант 3: {{nombre_opcion_3}}
+### Вариант 2: {{option_2_name}}
 
-{{descripcion_opcion_3}}
+{{option_2_description}}
 
 **Преимущества:**
-{{ventajas_3}}
+{{pros_2}}
 
 **Недостатки:**
-{{desventajas_3}}
+{{cons_2}}
+
+### Вариант 3: {{option_3_name}}
+
+{{option_3_description}}
+
+**Преимущества:**
+{{pros_3}}
+
+**Недостатки:**
+{{cons_3}}
 
 ## Решение
 
-{{decision_tomada}}
+{{decision}}
 
 ## Обоснование
 
-{{razonamiento}}
+{{rationale}}
 
 ## Последствия
 
 ### Положительные
-{{consecuencias_positivas}}
+{{positive_consequences}}
 
 ### Отрицательные
-{{consecuencias_negativas}}
+{{negative_consequences}}
 
 ## Ссылки
 
-{{referencias}}
+{{references}}
 
 <!-- ЗАПОЛНЕННЫЙ ПРИМЕР ─────────────────────────────────────────────────
 
 # ADR-003: база данных для постоянной памяти
 
 **Дата:** 2026-02-20
-**Статус:** aceptado
+**Статус:** accepted
 **Автор:** architect
 
 ## Контекст

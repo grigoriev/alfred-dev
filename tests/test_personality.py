@@ -30,13 +30,13 @@ class TestPersonality(unittest.TestCase):
         }
         for name in core_names:
             self.assertFalse(
-                AGENTS[name].get("opcional", False),
+                AGENTS[name].get("optional", False),
                 f"Agent '{name}' must not be optional"
             )
 
     def test_intro_respects_sarcasm_level(self):
-        intro_low = get_agent_intro("alfred", nivel_sarcasmo=1)
-        intro_high = get_agent_intro("alfred", nivel_sarcasmo=5)
+        intro_low = get_agent_intro("alfred", sarcasm_level=1)
+        intro_high = get_agent_intro("alfred", sarcasm_level=5)
         self.assertIsInstance(intro_low, str)
         self.assertIsInstance(intro_high, str)
         self.assertTrue(len(intro_low) > 0)

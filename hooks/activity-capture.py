@@ -141,7 +141,7 @@ def _is_memory_enabled() -> bool:
     """Check if persistent memory is enabled in the configuration.
 
     Looks for ``alfred-dev.local.md`` in the ``.claude`` directory of the
-    current project and checks that it has the ``memoria:`` section with
+    current project and checks that it has the ``memory:`` section with
     ``enabled: true``.
 
     Returns:
@@ -515,7 +515,7 @@ def _load_state_file(file_path: str) -> Optional[dict]:
     """Read and parse the session state file.
 
     Validates that the JSON has the minimum required structure: it must be
-    a dictionary with the ``comando`` and ``fase_actual`` keys.
+    a dictionary with the ``command`` and ``current_phase`` keys.
 
     Args:
         file_path: absolute path to the alfred-dev-state.json file.
@@ -531,7 +531,7 @@ def _load_state_file(file_path: str) -> Optional[dict]:
 
     if not isinstance(state, dict):
         return None
-    if "comando" not in state or "fase_actual" not in state:
+    if "command" not in state or "current_phase" not in state:
         return None
 
     return state
@@ -668,7 +668,7 @@ def _prefetch_alfred_continuity(prompt_text: str) -> Optional[dict]:
 
 def _log_prefetch_event(db, project_dir: str, payload: dict) -> None:
     """Record in memory that Alfred prepared a helper-first command."""
-    command = payload.get("prefetched_command", "desconocido")
+    command = payload.get("prefetched_command", "unknown")
     source_command = payload.get("source_command", command)
     artifacts = []
 
@@ -714,7 +714,7 @@ def _process_state(db, file_path: str) -> None:
     1. If the DB has no active iteration, start a new one.
     2. For each completed phase in the new state that is not yet recorded
        as an event in the DB, record one ``phase_completed`` event.
-    3. If the current phase is "completado", close the active iteration.
+    3. If the current phase is "completed", close the active iteration.
 
     Also, completed phases are marked automatically (auto-pin) so that
     they survive between sessions.
@@ -727,22 +727,22 @@ def _process_state(db, file_path: str) -> None:
     if new_state is None:
         return
 
-    comando = new_state.get("comando", "desconocido")
-    descripcion = new_state.get("descripcion", "")
-    fase_actual = new_state.get("fase_actual", "")
-    fases_completadas = new_state.get("fases_completadas", [])
+    command = new_state.get("command", "unknown")
+    description = new_state.get("description", "")
+    current_phase = new_state.get("current_phase", "")
+    completed_phases = new_state.get("completed_phases", [])
 
     # --- Check for an active iteration ---
     active = db.get_active_iteration()
 
     if active is None:
         iteration_id = db.start_iteration(
-            command=comando,
-            description=descripcion,
+            command=command,
+            description=description,
         )
         db.log_event(
             event_type="iteration_started",
-            payload={"comando": comando, "descripcion": descripcion},
+            payload={"command": command, "description": description},
             iteration_id=iteration_id,
         )
         _try_sync(db, "iteration")
@@ -750,15 +750,15 @@ def _process_state(db, file_path: str) -> None:
     else:
         active_command = str(active.get("command") or "")
         active_description = str(active.get("description") or "")
-        if active_command == "session" and comando and comando != "session":
+        if active_command == "session" and command and command != "session":
             db.complete_iteration(int(active["id"]), status="abandoned")
             iteration_id = db.start_iteration(
-                command=comando,
-                description=descripcion or active_description,
+                command=command,
+                description=description or active_description,
             )
             db.log_event(
                 event_type="iteration_started",
-                payload={"comando": comando, "descripcion": descripcion},
+                payload={"command": command, "description": description},
                 iteration_id=iteration_id,
             )
             _try_sync(db, "iteration")
@@ -786,43 +786,43 @@ def _process_state(db, file_path: str) -> None:
         if payload_raw:
             try:
                 payload = json.loads(payload_raw) if isinstance(payload_raw, str) else payload_raw
-                phase_name = payload.get("fase", "") or event.get("phase", "")
+                phase_name = payload.get("phase", "") or event.get("phase", "")
                 if phase_name:
                     existing_phases.add(phase_name)
             except (json.JSONDecodeError, AttributeError):
                 pass
 
-    for fase in fases_completadas:
-        nombre_fase = fase.get("nombre", "") if isinstance(fase, dict) else str(fase)
-        if not nombre_fase:
+    for phase in completed_phases:
+        phase_name = phase.get("name", "") if isinstance(phase, dict) else str(phase)
+        if not phase_name:
             continue
-        if nombre_fase in existing_phases:
+        if phase_name in existing_phases:
             continue
 
-        payload = {"fase": nombre_fase}
-        if isinstance(fase, dict):
-            if "resultado" in fase:
-                payload["resultado"] = fase["resultado"]
-            if "completada_en" in fase:
-                payload["completada_en"] = fase["completada_en"]
-            if "artefactos" in fase:
-                payload["artefactos"] = fase["artefactos"]
+        payload = {"phase": phase_name}
+        if isinstance(phase, dict):
+            if "result" in phase:
+                payload["result"] = phase["result"]
+            if "completed_at" in phase:
+                payload["completed_at"] = phase["completed_at"]
+            if "artifacts" in phase:
+                payload["artifacts"] = phase["artifacts"]
 
         db.log_event(
             event_type="phase_completed",
-            phase=nombre_fase,
+            phase=phase_name,
             payload=payload,
             iteration_id=iteration_id,
         )
 
     # --- Detect a completed iteration ---
-    if fase_actual == "completado":
+    if current_phase == "completed":
         db.complete_iteration(iteration_id)
         db.log_event(
             event_type="iteration_completed",
             payload={
-                "comando": comando,
-                "total_fases": len(fases_completadas),
+                "command": command,
+                "total_phases": len(completed_phases),
             },
             iteration_id=iteration_id,
         )

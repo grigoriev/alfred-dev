@@ -20,14 +20,14 @@
 Перед публикацией эти поверхности должны говорить одно и то же:
 
 - `.claude-plugin/plugin.json` (18 опубликованных команд)
-- `commands/` (плюс внутренние `_composicion.md`, `_docs_vivas.md`, `next.md`, `search.md`)
+- `commands/` (плюс внутренние `_composition.md`, `_living_docs.md`, `next.md`, `search.md`)
 - `agents/` (10 карточек)
 - `skills/*/SKILL.md` (11 плоских)
 - `hooks/hooks.json` (10 скриптов)
 - `README.md`, `docs/architecture.md`, `docs/commands.md`, `docs/skills.md`
 - `package.json` (скрипты аудита)
 
-Процессы загружают `_composicion.md` и `_docs_vivas.md` из установки плагина,
+Процессы загружают `_composition.md` и `_living_docs.md` из установки плагина,
 а не из проверяемого проекта.
 
 Claude Code описывает commands/ как поддерживаемые плоские skills и рекомендует
@@ -87,7 +87,7 @@ CLI. Внешний preflight (`npm run release:audit:external:preflight`,
 - Публикуемый пакет без реальных секретов (`core/secrets.py`)
 - Модели и цвета агентов с актуальными значениями Claude Code
 - Инструменты агентов с официальными именами; нет `AskUserQuestion` в субагентах
-- `_composicion.md` входит в пакет, но не публикуется
+- `_composition.md` входит в пакет, но не публикуется
 - Определение стека: Node/TypeScript, Python, Rust, Go, Ruby, Elixir, Java/Kotlin, PHP, C#/.NET и Swift
 - Условный Designer
 - Европейский compliance GDPR (RGPD)/NIS2/CRA

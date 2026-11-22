@@ -760,7 +760,7 @@ HTML_TEMPLATE = """<!doctype html>
       const progress = memoryEmpty ? {} : (data.progress || {});
       const nextAction = progress.next_action || {};
       const overviewCards = (progress.overview_cards || []).filter(
-        (card) => !["Рекомендуемый следующий шаг", "Siguiente paso recomendado"].includes(card.label)
+        (card) => card.label !== "Рекомендуемый следующий шаг"
       );
       const health = data.health || {};
       const issues = health.issues || [];

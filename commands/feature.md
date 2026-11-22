@@ -68,8 +68,8 @@ PRD и не открывай заново избыточное уточнени�
 
 ## Динамическое формирование команды
 
-Перед запуском первой фазы прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_composicion.md`.
-Если `CLAUDE_PLUGIN_ROOT` отсутствует, найди `commands/_composicion.md` в установке
+Перед запуском первой фазы прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_composition.md`.
+Если `CLAUDE_PLUGIN_ROOT` отсутствует, найди `commands/_composition.md` в установке
 плагина.
 
 Затем следуй протоколу динамического формирования (шаги 1-4). Если по
@@ -79,7 +79,7 @@ PRD и не открывай заново избыточное уточнени�
 
 ## Живая документация
 
-Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md` и при запуске выполни:
+Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_living_docs.md` и при запуске выполни:
 
 ```bash
 python3 .claude/alfred-continuity.py sync-project-docs "$PWD"
@@ -88,14 +88,14 @@ python3 .claude/alfred-continuity.py sync-project-docs "$PWD"
 После каждой фазы делай короткий sync от `tech-writer` (только затронутое) и проверяй:
 
 ```bash
-python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command feature --phase <fase_actual>
+python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command feature --phase <current_phase>
 ```
 
 Если helper падает, не объявляй gate пройденным.
 
 ## Режим autopilot
 
-Перед началом прочитай `.claude/alfred-dev.local.md` и проверь настроенный уровень автономности. Если все фазы в `autonomo`, или если состояние в `.claude/alfred-dev-state.json` содержит `"autopilot": true` или legacy-алиас `"modo": "autopilot"`, включи **режим autopilot**:
+Перед началом прочитай `.claude/alfred-dev.local.md` и проверь настроенный уровень автономности. Если все фазы в `autonomous`, или если состояние в `.claude/alfred-dev-state.json` содержит `"autopilot": true`, включи **режим autopilot**:
 
 - **Пользовательские gate** (те, где сказано «пользователь утверждает») утверждаются автоматически без `AskUserQuestion`. Покажи краткую сводку результата каждой фазы и продолжай.
 - **Gate безопасности** оцениваются как обычно: если security-officer блокирует, процесс останавливается.
@@ -140,12 +140,12 @@ Designer читает утверждённый PRD, выводит визуал�
 
 ### Фаза 4: Качество
 Активируй агентов `qa-engineer` и `security-officer` параллельно. Code review, test plan, OWASP scan, реестр compliance в `docs/project/compliance.md`, SBOM.
-**GATE (автоматический+безопасность):** QA одобряет И безопасность одобряет. Оценивается всегда, даже в autopilot. `check-project-docs` фазы `calidad` должен пройти.
+**GATE (автоматический+безопасность):** QA одобряет И безопасность одобряет. Оценивается всегда, даже в autopilot. `check-project-docs` фазы `quality` должен пройти.
 
 ### Фаза 5: Документация
 Активируй агента `tech-writer`, чтобы закрыть пробелы: затронутый API, индекс,
 CHANGELOG, если применимо. Не переписывай то, что предыдущие фазы уже оставили в порядке.
-**GATE (свободный):** Документация полная по чек-листу `tech-writer`. Может закрываться без одобрения человека, но не объявляй фазу пройденной, если не хватает артефактов или прямого подтверждения. `check-project-docs` фазы `documentacion` должен пройти.
+**GATE (свободный):** Документация полная по чек-листу `tech-writer`. Может закрываться без одобрения человека, но не объявляй фазу пройденной, если не хватает артефактов или прямого подтверждения. `check-project-docs` фазы `documentation` должен пройти.
 
 ### Фаза 6: Поставка
 Активируй агента `devops-engineer` с проверкой security-officer. CI/CD, Docker, конфигурация деплоя.
@@ -170,8 +170,8 @@ CHANGELOG, если применимо. Не переписывай то, что
 ## Опциональные агенты
 
 Единственный опциональный в runtime это **cto**. Он включён по умолчанию
-(`agentes_opcionales.cto: true`). Если он активен в `equipo_sesion` или в
-`.claude/alfred-dev.local.md`, запускай его последовательно в фазе `calidad`, когда
+(`optional_agents.cto: true`). Если он активен в `session_team` или в
+`.claude/alfred-dev.local.md`, запускай его последовательно в фазе `quality`, когда
 фича полностью готова и закоммичена. CTO проверяет изменения через Greptile CLI.
 Не вызывай data-engineer, github-manager, copywriter и librarian.
 

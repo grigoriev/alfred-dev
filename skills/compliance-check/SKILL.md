@@ -61,7 +61,7 @@ description: "Использовать для проверки соответс�
    его заранее командой `python3 .claude/alfred-continuity.py sync-project-docs "$PWD"`.
    Используй `templates/compliance.md` как форму. Для каждого контроля: статус,
    подтверждение (путь к коду, тест или конфигурация) и действия. Без подтверждения
-   не ставь `cumple`. Замени `<!-- alfred-doc:scaffold -->` на
+   не ставь `compliant`. Замени `<!-- alfred-doc:scaffold -->` на
    `<!-- alfred-doc:filled -->`.
 
 ## Критерии успеха

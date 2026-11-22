@@ -24,7 +24,7 @@ CONVERSATION_PROTOCOL = """## Как говорить с Alfred
 
 Если пользователь описывает работу, баг, просит продолжить, сдать результат или спрашивает, что дальше, **без** slash command, действуй как `/alfred-dev:alfred`: выбери маршрут и выполни его. Не предлагай каталог.
 
-Основной маршрут: `/alfred-dev:alfred`. Процессы: `/alfred-dev:feature`, `/alfred-dev:quick`, `/alfred-dev:fix`, `/alfred-dev:spike`, `/alfred-dev:audit`, `/alfred-dev:ship`. Статус: `/alfred-dev:progress`. Продолжить: `/alfred-dev:retomar`.
+Основной маршрут: `/alfred-dev:alfred`. Процессы: `/alfred-dev:feature`, `/alfred-dev:quick`, `/alfred-dev:fix`, `/alfred-dev:spike`, `/alfred-dev:audit`, `/alfred-dev:ship`. Статус: `/alfred-dev:progress`. Продолжить: `/alfred-dev:resume`.
 
 Суждение, а не меню:
 - локальное и ограниченное изменение → `quick`, не открывай PRD
@@ -72,7 +72,7 @@ def list_accepted_adrs(project_dir: str) -> List[str]:
     titles: List[str] = []
     for name in list_adr_files(project_dir):
         text = _read(os.path.join(project_dir, ADR_DIR, name))
-        if not re.search(r"(?im)^\*\*(?:Estado|Статус):\*\*\s*(?:aceptado\b|принят)", text):
+        if not re.search(r"(?im)^\*\*(?:Status|Статус):\*\*\s*(?:accepted\b|принят)", text):
             continue
         heading = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
         titles.append(heading.group(1).strip() if heading else name)
@@ -87,10 +87,10 @@ def build_session_brief(project_dir: str) -> Dict[str, Any]:
     if not isinstance(state, dict):
         state = None
 
-    phase = str((state or {}).get("fase_actual") or "")
-    command = str((state or {}).get("comando") or "")
-    description = str((state or {}).get("descripcion") or "")
-    active = bool(state and phase and phase != "completado")
+    phase = str((state or {}).get("current_phase") or "")
+    command = str((state or {}).get("command") or "")
+    description = str((state or {}).get("description") or "")
+    active = bool(state and phase and phase != "completed")
 
     handoff = load_handoff(root)
     pending_handoff = bool(handoff and not handoff.get("resolved", False))
@@ -102,9 +102,9 @@ def build_session_brief(project_dir: str) -> Dict[str, Any]:
 
     next_step = ""
     if active:
-        next_step = "/alfred-dev:retomar"
+        next_step = "/alfred-dev:resume"
     elif pending_handoff:
-        next_step = "/alfred-dev:retomar"
+        next_step = "/alfred-dev:resume"
     elif verify is not None or uat_status in {"pending", "rejected"}:
         next_step = "/alfred-dev:uat"
     else:
@@ -134,9 +134,9 @@ def render_brief_lines(brief: Dict[str, Any]) -> str:
             f"Активная сессия: `{brief.get('command')}` / `{brief.get('phase')}`. "
             f"{desc}. Gate: {gate}."
         )
-        lines.append("Дальше: `/alfred-dev:retomar`.")
+        lines.append("Дальше: `/alfred-dev:resume`.")
     elif brief.get("pending_handoff"):
-        lines.append("Есть незакрытый handoff. Дальше: `/alfred-dev:retomar`.")
+        lines.append("Есть незакрытый handoff. Дальше: `/alfred-dev:resume`.")
     elif brief.get("uat_status") == "rejected":
         lines.append("UAT отклонена. Не развёртывай. Проверь `docs/project/uat.md`.")
     elif brief.get("verify_pending") or brief.get("uat_status") == "pending":

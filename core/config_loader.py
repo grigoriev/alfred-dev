@@ -57,89 +57,83 @@ except Exception:
     }
 
 _CANONICAL_AUTONOMY_DEFAULTS = {
-    "producto": "autonomo",
-    "arquitectura": "autonomo",
-    "desarrollo": "autonomo",
-    "calidad": "autonomo",
-    "documentacion": "autonomo",
-    "entrega": "autonomo",
+    "product": "autonomous",
+    "architecture": "autonomous",
+    "development": "autonomous",
+    "quality": "autonomous",
+    "documentation": "autonomous",
+    "delivery": "autonomous",
 }
 
 _AUTONOMY_VALUE_ALIASES = {
-    "interactivo": "interactivo",
-    "autonomo": "autonomo",
-    "semi_autonomo": "semi-autonomo",
-}
-
-_TOP_LEVEL_KEY_ALIASES = {
-    "autonomia": "autonomia",
+    "interactive": "interactive",
+    "autonomous": "autonomous",
+    "semi_autonomous": "semi-autonomous",
 }
 
 _LEGACY_AUTONOMY_KEY_ALIASES = {
-    "docs": "documentacion",
-    "documentacion": "documentacion",
-    "documentación": "documentacion",
-    "refactor": "desarrollo",
-    "tests": "calidad",
-    "devops": "entrega",
+    "docs": "documentation",
+    "refactor": "development",
+    "tests": "quality",
+    "devops": "delivery",
 }
 
-_SECURITY_PHASES = ("arquitectura", "calidad", "entrega")
+_SECURITY_PHASES = ("architecture", "quality", "delivery")
 
 
 # --- Default config ---
 # These values define the base plugin behavior when the user has set no
 # preference. Each section controls a different aspect:
 #
-# - autonomia: how much the plugin can decide on its own
-# - proyecto: project metadata (detect_stack fills it)
+# - autonomy: how much the plugin can decide on its own
+# - project: project metadata (detect_stack fills it)
 # - compliance: compliance and style rules
-# - integraciones: enabled external services
-# - personalidad: agent tone and sarcasm level
-# - notas: free user text with extra preferences
+# - integrations: enabled external services
+# - personality: agent tone and sarcasm level
+# - notes: free user text with extra preferences
 
 DEFAULT_CONFIG = {
-    "autonomia": dict(_CANONICAL_AUTONOMY_DEFAULTS),
-    "proyecto": {
-        "runtime": "desconocido",
-        "lenguaje": "desconocido",
-        "framework": "desconocido",
-        "orm": "ninguno",
-        "test_runner": "desconocido",
-        "bundler": "desconocido",
+    "autonomy": dict(_CANONICAL_AUTONOMY_DEFAULTS),
+    "project": {
+        "runtime": "unknown",
+        "language": "unknown",
+        "framework": "unknown",
+        "orm": "none",
+        "test_runner": "unknown",
+        "bundler": "unknown",
     },
     "compliance": {
-        "estilo": "auto",
+        "style": "auto",
         "lint": True,
         "format_on_save": True,
     },
-    "integraciones": {
+    "integrations": {
         "git": True,
         "ci": False,
         "deploy": False,
     },
-    "personalidad": {
-        "nivel_sarcasmo": 3,
-        "verbosidad": "normal",
-        "idioma": "ru",
-        "celebrar_victorias": True,
-        "insultar_malas_practicas": True,
+    "personality": {
+        "sarcasm_level": 3,
+        "verbosity": "normal",
+        "language": "ru",
+        "celebrate_wins": True,
+        "call_out_bad_practices": True,
     },
     # Optional agents: predefined agents that the user enables per project.
     # The catalog sets the default per agent (CTO is on).
-    # /alfred-dev:ajustes changes them per project.
-    "agentes_opcionales": build_optional_agent_flags(),
-    "memoria": dict(DEFAULT_MEMORY_CONFIG),
-    "notas": "",
+    # /alfred-dev:config changes them per project.
+    "optional_agents": build_optional_agent_flags(),
+    "memory": dict(DEFAULT_MEMORY_CONFIG),
+    "notes": "",
 }
 
 _CONFIG_FRONTMATTER_KEYS = tuple(
     key for key in DEFAULT_CONFIG.keys()
-    if key != "notas"
+    if key != "notes"
 )
 _BOOTSTRAP_LOCAL_CONFIG_PATCH = {
-    "autonomia": dict(_CANONICAL_AUTONOMY_DEFAULTS),
-    "memoria": {
+    "autonomy": dict(_CANONICAL_AUTONOMY_DEFAULTS),
+    "memory": {
         "enabled": True,
         "sync_to_native": True,
         "sync_commits_limit": 10,
@@ -150,35 +144,35 @@ _BOOTSTRAP_LOCAL_CONFIG_PATCH = {
 }
 _BOOTSTRAP_LOCAL_CONFIG_NOTE = (
     "Этот файл создаётся автоматически в первой сессии.\n"
-    "Ты можешь настроить его через `/alfred-dev:ajustes`."
+    "Ты можешь настроить его через `/alfred-dev:config`."
 )
 _CONFIG_SECTION_ORDER = (
-    "autonomia",
-    "proyecto",
-    "agentes_opcionales",
-    "memoria",
+    "autonomy",
+    "project",
+    "optional_agents",
+    "memory",
     "compliance",
-    "integraciones",
-    "personalidad",
+    "integrations",
+    "personality",
 )
 _CONFIG_SECTION_LABELS = {
-    "autonomia": "Автономность по фазам",
-    "proyecto": "Проект",
-    "agentes_opcionales": "Опциональные агенты",
-    "memoria": "Постоянная память",
+    "autonomy": "Автономность по фазам",
+    "project": "Проект",
+    "optional_agents": "Опциональные агенты",
+    "memory": "Постоянная память",
     "compliance": "Compliance",
-    "integraciones": "Интеграции",
-    "personalidad": "Личность",
+    "integrations": "Интеграции",
+    "personality": "Личность",
 }
 _CONFIG_SECTION_MENU_EXIT = {
     "label": "Выйти без изменений",
     "description": "Пока оставить текущую конфигурацию",
 }
-# Stack dicts store the Spanish sentinels "desconocido" and "ninguno".
+# Stack dicts store the sentinels "unknown" and "none".
 # Map them to Russian only when a summary shows them to the user.
 _STACK_SENTINEL_LABELS = {
-    "desconocido": "не определён",
-    "ninguno": "нет",
+    "unknown": "не определён",
+    "none": "нет",
 }
 
 
@@ -208,8 +202,8 @@ def load_config(path):
 
     Example:
         >>> config = load_config("/project/.claude/alfred-dev.local.md")
-        >>> config["autonomia"]["producto"]
-        'autonomo'
+        >>> config["autonomy"]["product"]
+        'autonomous'
     """
     # Always start from a deep copy of the defaults so that calls do not
     # mutate the global dict
@@ -243,12 +237,12 @@ def load_config(path):
             )
 
     # Extract the notes from the Markdown body.
-    # Find any section whose heading contains "Notas" (h1-h6).
+    # Find any section whose heading contains "Заметки" or "Notes" (h1-h6).
     # All content from that heading to the next heading of the same level,
     # or to the end of the document, counts as notes.
-    notas = _extract_notes(body)
-    if notas:
-        config["notas"] = notas
+    notes = _extract_notes(body)
+    if notes:
+        config["notes"] = notes
 
     return config
 
@@ -256,7 +250,7 @@ def load_config(path):
 def load_project_config(project_dir: str) -> Dict[str, Any]:
     """Load the effective config of a project: config plus stack.
 
-    Automatic detection fills the ``proyecto`` section when the user has not
+    Automatic detection fills the ``project`` section when the user has not
     overridden it explicitly in ``.claude/alfred-dev.local.md``.
 
     Args:
@@ -270,8 +264,8 @@ def load_project_config(project_dir: str) -> Dict[str, Any]:
     detected_stack = detect_stack(project_dir)
 
     effective_project = dict(detected_stack)
-    configured_project = config.get("proyecto", {})
-    defaults = DEFAULT_CONFIG["proyecto"]
+    configured_project = config.get("project", {})
+    defaults = DEFAULT_CONFIG["project"]
 
     if isinstance(configured_project, dict):
         for key, value in configured_project.items():
@@ -279,31 +273,31 @@ def load_project_config(project_dir: str) -> Dict[str, Any]:
             if key not in effective_project or value != default_value:
                 effective_project[key] = value
 
-    config["proyecto"] = effective_project
+    config["project"] = effective_project
     return config
 
 
 def get_active_optional_agents(config: Dict[str, Any]) -> List[str]:
     """Return the active optional agents in canonical order."""
-    opcionales = config.get("agentes_opcionales", {})
-    if not isinstance(opcionales, dict):
+    optionals = config.get("optional_agents", {})
+    if not isinstance(optionals, dict):
         return []
-    opcionales = normalize_optional_agent_flags(opcionales)
+    optionals = normalize_optional_agent_flags(optionals)
 
     known = set(get_optional_agent_names())
     return order_optional_agent_names(
         name
-        for name, enabled in opcionales.items()
+        for name, enabled in optionals.items()
         if enabled and name in known
     )
 
 
-def build_equipo_sesion_from_config(
+def build_session_team_from_config(
     config: Dict[str, Any],
     *,
-    source: str = "config_persistida",
+    source: str = "persisted_config",
 ) -> Optional[Dict[str, Any]]:
-    """Build the runtime ``equipo_sesion`` from the effective config.
+    """Build the runtime ``session_team`` from the effective config.
 
     This function maps the persisted project config to the same structural
     contract that dynamic composition uses. This way runtime, hooks and
@@ -312,22 +306,22 @@ def build_equipo_sesion_from_config(
 
     Args:
         config: effective, already merged config.
-        source: value of ``fuente`` to record in the session.
+        source: value of ``source`` to record in the session.
 
     Returns:
-        An ``equipo_sesion`` dict ready for runtime, or ``None`` if there is
+        An ``session_team`` dict ready for runtime, or ``None`` if there is
         nothing operational to inject (no active optional agents and memory
         off).
     """
     flags = build_optional_agent_flags()
-    raw_optionals = config.get("agentes_opcionales", {})
+    raw_optionals = config.get("optional_agents", {})
     if isinstance(raw_optionals, dict):
         raw_optionals = normalize_optional_agent_flags(raw_optionals)
         for agent_name in flags:
             if agent_name in raw_optionals:
                 flags[agent_name] = bool(raw_optionals.get(agent_name, False))
 
-    memory = config.get("memoria", {})
+    memory = config.get("memory", {})
     memory_enabled = False
     if isinstance(memory, dict):
         memory_enabled = bool(memory.get("enabled", False))
@@ -336,22 +330,22 @@ def build_equipo_sesion_from_config(
         return None
 
     return {
-        "opcionales_activos": flags,
+        "active_optionals": flags,
         "infra": {
-            "memoria": memory_enabled,
+            "memory": memory_enabled,
         },
-        "fuente": source,
+        "source": source,
     }
 
 
-def build_project_equipo_sesion(
+def build_project_session_team(
     project_dir: str,
     *,
-    source: str = "config_persistida",
+    source: str = "persisted_config",
 ) -> Optional[Dict[str, Any]]:
-    """Load the project config and derive its runtime ``equipo_sesion``."""
+    """Load the project config and derive its runtime ``session_team``."""
     config = load_project_config(project_dir)
-    return build_equipo_sesion_from_config(config, source=source)
+    return build_session_team_from_config(config, source=source)
 
 
 def build_config_section_summaries(
@@ -361,7 +355,7 @@ def build_config_section_summaries(
 ) -> List[Dict[str, Any]]:
     """Describe the current config per section with canonical summaries.
 
-    `/alfred-dev:ajustes` uses this structure to show the current state in a
+    `/alfred-dev:config` uses this structure to show the current state in a
     navigable menu without building the phrases by hand again.
     """
     effective_config = _deep_merge(
@@ -386,7 +380,7 @@ def build_config_section_menu(
     project_dir: Optional[str] = None,
     include_exit_option: bool = True,
 ) -> Dict[str, Any]:
-    """Build the main navigable menu of `/alfred-dev:ajustes`."""
+    """Build the main navigable menu of `/alfred-dev:config`."""
     options: List[Dict[str, str]] = []
     if include_exit_option:
         options.append(dict(_CONFIG_SECTION_MENU_EXIT))
@@ -424,7 +418,7 @@ def apply_config_section_update(
 ) -> Dict[str, Any]:
     """Apply a change to a canonical section and return the final config.
 
-    It uses the same normalization as `load_config()`, so `/alfred-dev:ajustes`
+    It uses the same normalization as `load_config()`, so `/alfred-dev:config`
     can update one section without losing order, defaults or aliases.
     """
     if section_name not in _CONFIG_SECTION_ORDER:
@@ -448,7 +442,7 @@ def build_config_section_change_preview(
     """Summarize the effective change of a section before it is saved.
 
     Return the canonical before/after summary and the updated config, so
-    `/alfred-dev:ajustes` can confirm the change without building it by hand
+    `/alfred-dev:config` can confirm the change without building it by hand
     or implementing the normalization again.
     """
     effective_config = _deep_merge(
@@ -504,7 +498,7 @@ def update_config_section(
     save_config(
         path,
         preview["updated_config"],
-        notes=current_config.get("notas", "") if notes is None else notes,
+        notes=current_config.get("notes", "") if notes is None else notes,
         include_defaults=include_defaults,
     )
     return preview
@@ -538,7 +532,7 @@ def render_config_markdown(
     """Serialize a config to the canonical ``.local.md`` format.
 
     The frontmatter uses canonical keys and a stable order, so the runtime,
-    the hooks and `/alfred-dev:ajustes` share exactly the same base format.
+    the hooks and `/alfred-dev:config` share exactly the same base format.
     """
     normalized_input = _normalize_loaded_config(config)
     if include_defaults:
@@ -548,7 +542,7 @@ def render_config_markdown(
     notes_body = (
         notes
         if notes is not None
-        else normalized.get("notas", "")
+        else normalized.get("notes", "")
     )
     frontmatter_payload = {
         key: copy.deepcopy(normalized[key])
@@ -560,7 +554,7 @@ def render_config_markdown(
     parts = ["---", frontmatter.rstrip(), "---"]
     trimmed_notes = str(notes_body or "").strip()
     if trimmed_notes:
-        parts.extend(["", "## Notas", "", trimmed_notes])
+        parts.extend(["", "## Заметки", "", trimmed_notes])
     return "\n".join(parts) + "\n"
 
 
@@ -608,7 +602,7 @@ def ensure_bootstrap_local_config(
     - If it exists without frontmatter, wrap the existing content in a minimal
       canonical config and keep the text as notes.
     - If it exists with frontmatter, add only the missing top-level sections
-      (`autonomia` and `memoria`) and do not overwrite explicit preferences.
+      (`autonomy` and `memory`) and do not overwrite explicit preferences.
 
     Returns:
         ``True`` if it wrote changes. ``False`` if the file was already ready.
@@ -641,12 +635,12 @@ def ensure_bootstrap_local_config(
     normalized = _normalize_loaded_config(parsed if isinstance(parsed, dict) else {})
     changed = False
 
-    if not _has_top_level_frontmatter_section(frontmatter, "autonomia"):
-        normalized["autonomia"] = copy.deepcopy(_BOOTSTRAP_LOCAL_CONFIG_PATCH["autonomia"])
+    if not _has_top_level_frontmatter_section(frontmatter, "autonomy"):
+        normalized["autonomy"] = copy.deepcopy(_BOOTSTRAP_LOCAL_CONFIG_PATCH["autonomy"])
         changed = True
 
-    if not _has_top_level_frontmatter_section(frontmatter, "memoria"):
-        normalized["memoria"] = copy.deepcopy(_BOOTSTRAP_LOCAL_CONFIG_PATCH["memoria"])
+    if not _has_top_level_frontmatter_section(frontmatter, "memory"):
+        normalized["memory"] = copy.deepcopy(_BOOTSTRAP_LOCAL_CONFIG_PATCH["memory"])
         changed = True
 
     if not changed:
@@ -679,24 +673,24 @@ def _describe_config_section(
     project_stack: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Build a stable, human-readable description of a section."""
-    if section_name == "autonomia":
-        autonomy = config.get("autonomia", {})
-        autonomy_counts = {"interactivo": 0, "semi-autonomo": 0, "autonomo": 0}
+    if section_name == "autonomy":
+        autonomy = config.get("autonomy", {})
+        autonomy_counts = {"interactive": 0, "semi-autonomous": 0, "autonomous": 0}
         for phase_name in _CANONICAL_AUTONOMY_DEFAULTS:
             level = autonomy.get(phase_name, _CANONICAL_AUTONOMY_DEFAULTS[phase_name])
             if level in autonomy_counts:
                 autonomy_counts[level] += 1
 
-        if autonomy_counts["autonomo"] == len(_CANONICAL_AUTONOMY_DEFAULTS):
+        if autonomy_counts["autonomous"] == len(_CANONICAL_AUTONOMY_DEFAULTS):
             summary = "Полный autopilot во всех 6 фазах."
         else:
             parts = []
-            if autonomy_counts["interactivo"]:
-                parts.append(f"интерактивных: {autonomy_counts['interactivo']}")
-            if autonomy_counts["semi-autonomo"]:
-                parts.append(f"полуавтономных: {autonomy_counts['semi-autonomo']}")
-            if autonomy_counts["autonomo"]:
-                parts.append(f"автономных: {autonomy_counts['autonomo']}")
+            if autonomy_counts["interactive"]:
+                parts.append(f"интерактивных: {autonomy_counts['interactive']}")
+            if autonomy_counts["semi-autonomous"]:
+                parts.append(f"полуавтономных: {autonomy_counts['semi-autonomous']}")
+            if autonomy_counts["autonomous"]:
+                parts.append(f"автономных: {autonomy_counts['autonomous']}")
             summary = "Автономность по фазам: " + ", ".join(parts) + "."
 
         details = [
@@ -706,38 +700,38 @@ def _describe_config_section(
             }
             for phase_name in _CANONICAL_AUTONOMY_DEFAULTS
         ]
-    elif section_name == "proyecto":
-        configured_project = config.get("proyecto", {})
-        project = dict(project_stack or DEFAULT_CONFIG["proyecto"])
+    elif section_name == "project":
+        configured_project = config.get("project", {})
+        project = dict(project_stack or DEFAULT_CONFIG["project"])
         if isinstance(configured_project, dict):
             for key, value in configured_project.items():
-                default_value = DEFAULT_CONFIG["proyecto"].get(key)
+                default_value = DEFAULT_CONFIG["project"].get(key)
                 if key not in project or value != default_value:
                     project[key] = value
         fields = [
-            project.get("runtime", "desconocido"),
-            project.get("lenguaje", "desconocido"),
-            project.get("framework", "desconocido"),
-            project.get("orm", "ninguno"),
-            project.get("test_runner", "desconocido"),
-            project.get("bundler", "desconocido"),
+            project.get("runtime", "unknown"),
+            project.get("language", "unknown"),
+            project.get("framework", "unknown"),
+            project.get("orm", "none"),
+            project.get("test_runner", "unknown"),
+            project.get("bundler", "unknown"),
         ]
         summary = " / ".join(_render_stack_value(value) for value in fields) + "."
         details = [
-            {"name": key, "value": project.get(key, DEFAULT_CONFIG["proyecto"][key])}
-            for key in DEFAULT_CONFIG["proyecto"]
+            {"name": key, "value": project.get(key, DEFAULT_CONFIG["project"][key])}
+            for key in DEFAULT_CONFIG["project"]
         ]
         if project_stack:
             overrides = [
                 key
-                for key in DEFAULT_CONFIG["proyecto"]
-                if project.get(key, DEFAULT_CONFIG["proyecto"][key]) != project_stack.get(key)
-                and project.get(key, DEFAULT_CONFIG["proyecto"][key]) != DEFAULT_CONFIG["proyecto"][key]
+                for key in DEFAULT_CONFIG["project"]
+                if project.get(key, DEFAULT_CONFIG["project"][key]) != project_stack.get(key)
+                and project.get(key, DEFAULT_CONFIG["project"][key]) != DEFAULT_CONFIG["project"][key]
             ]
             summary += " Определён автоматически." if not overrides else (
                 " Задано вручную: " + ", ".join(overrides) + "."
             )
-    elif section_name == "agentes_opcionales":
+    elif section_name == "optional_agents":
         active_names = get_active_optional_agents(config)
         if active_names:
             active_labels = ", ".join(
@@ -747,7 +741,7 @@ def _describe_config_section(
             on_demand_names = [
                 agent_name
                 for agent_name in active_names
-                if not get_optional_integrations()[agent_name]["fases"]
+                if not get_optional_integrations()[agent_name]["phases"]
             ]
             summary = f"Активных: {len(active_names)} ({active_labels})."
             if on_demand_names:
@@ -759,11 +753,11 @@ def _describe_config_section(
         else:
             summary = "Нет активных опциональных агентов."
         details = [
-            {"name": agent_name, "value": bool(config["agentes_opcionales"].get(agent_name, False))}
+            {"name": agent_name, "value": bool(config["optional_agents"].get(agent_name, False))}
             for agent_name in build_optional_agent_flags()
         ]
-    elif section_name == "memoria":
-        memory = config.get("memoria", {})
+    elif section_name == "memory":
+        memory = config.get("memory", {})
         if memory.get("enabled"):
             summary = (
                 "Активна с нативной синхронизацией "
@@ -780,7 +774,7 @@ def _describe_config_section(
     elif section_name == "compliance":
         compliance = config.get("compliance", {})
         summary = (
-            f"стиль={compliance.get('estilo', 'auto')}, "
+            f"стиль={compliance.get('style', 'auto')}, "
             f"lint={'вкл' if compliance.get('lint', True) else 'выкл'}, "
             f"формат при сохранении={'вкл' if compliance.get('format_on_save', True) else 'выкл'}."
         )
@@ -788,26 +782,26 @@ def _describe_config_section(
             {"name": key, "value": compliance.get(key, DEFAULT_CONFIG["compliance"][key])}
             for key in DEFAULT_CONFIG["compliance"]
         ]
-    elif section_name == "integraciones":
-        integrations = config.get("integraciones", {})
+    elif section_name == "integrations":
+        integrations = config.get("integrations", {})
         summary = ", ".join(
-            f"{key}={'вкл' if integrations.get(key, DEFAULT_CONFIG['integraciones'][key]) else 'выкл'}"
-            for key in DEFAULT_CONFIG["integraciones"]
+            f"{key}={'вкл' if integrations.get(key, DEFAULT_CONFIG['integrations'][key]) else 'выкл'}"
+            for key in DEFAULT_CONFIG["integrations"]
         ) + "."
         details = [
-            {"name": key, "value": integrations.get(key, DEFAULT_CONFIG["integraciones"][key])}
-            for key in DEFAULT_CONFIG["integraciones"]
+            {"name": key, "value": integrations.get(key, DEFAULT_CONFIG["integrations"][key])}
+            for key in DEFAULT_CONFIG["integrations"]
         ]
-    elif section_name == "personalidad":
-        personality = config.get("personalidad", {})
+    elif section_name == "personality":
+        personality = config.get("personality", {})
         summary = (
-            f"язык={personality.get('idioma', 'ru')}, "
-            f"сарказм={personality.get('nivel_sarcasmo', 3)}/5, "
-            f"подробность={personality.get('verbosidad', 'normal')}."
+            f"язык={personality.get('language', 'ru')}, "
+            f"сарказм={personality.get('sarcasm_level', 3)}/5, "
+            f"подробность={personality.get('verbosity', 'normal')}."
         )
         details = [
-            {"name": key, "value": personality.get(key, DEFAULT_CONFIG["personalidad"][key])}
-            for key in DEFAULT_CONFIG["personalidad"]
+            {"name": key, "value": personality.get(key, DEFAULT_CONFIG["personality"][key])}
+            for key in DEFAULT_CONFIG["personality"]
         ]
     else:
         raise KeyError(f"Неизвестная секция конфигурации: {section_name}")
@@ -822,12 +816,12 @@ def _describe_config_section(
 
 def is_autopilot_configured(config: Dict[str, Any]) -> bool:
     """Tell if the per-phase autonomy config turns on autopilot."""
-    autonomia = config.get("autonomia", {})
-    if not isinstance(autonomia, dict):
+    autonomy = config.get("autonomy", {})
+    if not isinstance(autonomy, dict):
         return False
 
     return all(
-        autonomia.get(phase_name) == "autonomo"
+        autonomy.get(phase_name) == "autonomous"
         for phase_name in _CANONICAL_AUTONOMY_DEFAULTS
     )
 
@@ -864,10 +858,7 @@ def is_autopilot_enabled_for_project(
     if not isinstance(state, dict):
         return False
 
-    if state.get("autopilot") is True:
-        return True
-
-    return state.get("modo") == "autopilot"
+    return state.get("autopilot") is True
 
 
 def detect_stack(project_dir):
@@ -888,8 +879,8 @@ def detect_stack(project_dir):
 
     Returns:
         dict with the keys: runtime, lenguaje, framework, orm, test_runner,
-        bundler. Values that are not detected come back as 'desconocido' or
-        'ninguno', as applicable.
+        bundler. Values that are not detected come back as 'unknown' or
+        'none', as applicable.
 
     Example:
         >>> stack = detect_stack("/my-next-project")
@@ -897,12 +888,12 @@ def detect_stack(project_dir):
         'next'
     """
     stack = {
-        "runtime": "desconocido",
-        "lenguaje": "desconocido",
-        "framework": "desconocido",
-        "orm": "ninguno",
-        "test_runner": "desconocido",
-        "bundler": "desconocido",
+        "runtime": "unknown",
+        "language": "unknown",
+        "framework": "unknown",
+        "orm": "none",
+        "test_runner": "unknown",
+        "bundler": "unknown",
     }
 
     # --- Runtime and language detection ---
@@ -939,44 +930,44 @@ def detect_stack(project_dir):
     if has_package_json:
         node_stack = dict(stack)
         node_stack["runtime"] = "node"
-        node_stack["lenguaje"] = "typescript" if has_tsconfig else "javascript"
+        node_stack["language"] = "typescript" if has_tsconfig else "javascript"
         _detect_node_details(project_dir, node_stack)
-        if has_other_strong_manifest and node_stack["framework"] == "desconocido":
+        if has_other_strong_manifest and node_stack["framework"] == "unknown":
             node_stack = None
 
     if node_stack is not None:
         stack.update(node_stack)
     elif has_pyproject or has_setup_py or has_requirements:
         stack["runtime"] = "python"
-        stack["lenguaje"] = "python"
+        stack["language"] = "python"
         _detect_python_details(project_dir, stack)
     elif has_cargo:
         stack["runtime"] = "rust"
-        stack["lenguaje"] = "rust"
+        stack["language"] = "rust"
     elif has_go_mod:
         stack["runtime"] = "go"
-        stack["lenguaje"] = "go"
+        stack["language"] = "go"
     elif has_gemfile:
         stack["runtime"] = "ruby"
-        stack["lenguaje"] = "ruby"
+        stack["language"] = "ruby"
     elif has_mix:
         stack["runtime"] = "elixir"
-        stack["lenguaje"] = "elixir"
+        stack["language"] = "elixir"
     elif has_pom or has_gradle:
         stack["runtime"] = "jvm"
-        stack["lenguaje"] = "kotlin" if _looks_like_kotlin_project(project_dir) else "java"
+        stack["language"] = "kotlin" if _looks_like_kotlin_project(project_dir) else "java"
         _detect_jvm_details(project_dir, stack)
     elif has_composer:
         stack["runtime"] = "php"
-        stack["lenguaje"] = "php"
+        stack["language"] = "php"
         _detect_php_details(project_dir, stack)
     elif has_dotnet:
         stack["runtime"] = "dotnet"
-        stack["lenguaje"] = "csharp"
+        stack["language"] = "csharp"
         _detect_dotnet_details(project_dir, stack)
     elif has_package_swift:
         stack["runtime"] = "swift"
-        stack["lenguaje"] = "swift"
+        stack["language"] = "swift"
         _detect_swift_details(project_dir, stack)
 
     return stack
@@ -1020,7 +1011,7 @@ def has_frontend(stack: dict) -> bool:
         ...     # Enable the visual style phase
         ...     pass
     """
-    raw_framework = str(stack.get("framework", "desconocido") or "desconocido").strip().lower()
+    raw_framework = str(stack.get("framework", "unknown") or "unknown").strip().lower()
     normalized_framework = _FRONTEND_FRAMEWORK_ALIASES.get(raw_framework, raw_framework)
     return normalized_framework in _FRONTEND_FRAMEWORKS
 
@@ -1198,7 +1189,7 @@ def _normalize_identifier(value: Any) -> Any:
 
 
 def _normalize_autonomy_value(value: Any) -> Any:
-    """Map variants such as 'autónomo' or 'semi autónomo' to the ASCII format."""
+    """Map variants such as 'Autonomous' or 'semi autonomous' to the canonical format."""
     if not isinstance(value, str):
         return value
 
@@ -1216,7 +1207,7 @@ def _normalize_autonomy_section(section: Dict[str, Any]) -> Dict[str, Any]:
         normalized_key = _normalize_identifier(raw_key)
         normalized_value = _normalize_autonomy_value(raw_value)
 
-        if normalized_key == "seguridad":
+        if normalized_key == "security":
             security_value = normalized_value
             continue
 
@@ -1247,19 +1238,16 @@ def _normalize_loaded_config(parsed: Dict[str, Any]) -> Dict[str, Any]:
     normalized: Dict[str, Any] = {}
 
     for raw_key, raw_value in parsed.items():
-        canonical_key = _TOP_LEVEL_KEY_ALIASES.get(
-            _normalize_identifier(raw_key),
-            raw_key,
-        )
+        canonical_key = raw_key
         normalized_key = _normalize_identifier(canonical_key)
 
-        if normalized_key == "autonomia" and isinstance(raw_value, dict):
-            normalized["autonomia"] = _normalize_autonomy_section(raw_value)
+        if normalized_key == "autonomy" and isinstance(raw_value, dict):
+            normalized["autonomy"] = _normalize_autonomy_section(raw_value)
             continue
 
-        if canonical_key == "agentes_opcionales" and isinstance(raw_value, dict):
+        if canonical_key == "optional_agents" and isinstance(raw_value, dict):
             known = set(get_optional_agent_names())
-            normalized["agentes_opcionales"] = {
+            normalized["optional_agents"] = {
                 name: bool(value)
                 for name, value in normalize_optional_agent_flags(raw_value).items()
                 if name in known
@@ -1451,7 +1439,7 @@ def _extract_notes(body):
     """
     Extract the content of the notes section from the Markdown body.
 
-    Find a heading (h1-h6) whose text contains 'Notas' and extract all
+    Find a heading (h1-h6) whose text contains 'Заметки' or 'Notes' and extract all
     content up to the next heading of the same level or to the end of the
     document.
 
@@ -1462,9 +1450,9 @@ def _extract_notes(body):
         str with the content of the notes section, or an empty string if
         no section with that heading exists.
     """
-    # Find a line that starts with # and contains "Notas".
+    # Find a line that starts with # and contains "Заметки" or "Notes".
     # Use [^\n]*? (lazy) to prevent excessive backtracking on long lines.
-    pattern = re.compile(r"^(#{1,6})\s+[^\n]*?[Nn]otas[^\n]*$", re.MULTILINE)
+    pattern = re.compile(r"^(#{1,6})\s+[^\n]*?(?:[Зз]аметки|[Nn]otes)[^\n]*$", re.MULTILINE)
     match = pattern.search(body)
     if not match:
         return ""
@@ -2035,7 +2023,7 @@ def suggest_optional_agents(project_dir, current_config=None):
     if current_config is None:
         current_config = copy.deepcopy(DEFAULT_CONFIG)
 
-    active = current_config.get("agentes_opcionales", {})
+    active = current_config.get("optional_agents", {})
     stack = detect_stack(project_dir)
     checks = _build_suggestion_checks(stack, project_dir)
 
