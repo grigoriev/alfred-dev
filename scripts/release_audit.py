@@ -1773,8 +1773,7 @@ def check_config_contracts() -> list[str]:
             "bundler": "vite",
         },
         "agentes_opcionales": {
-            "cto": True,
-            "cto": True,
+            "cto": False,
         },
         "memoria": {
             "enabled": True,

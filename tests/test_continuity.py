@@ -161,7 +161,8 @@ class TestContinuitySuggestions(unittest.TestCase):
         self.assertEqual(state["equipo_sesion"]["fuente"], "config_persistida")
         self.assertEqual(set(state["equipo_sesion"]["opcionales_activos"]), {"cto"})
         self.assertTrue(state["equipo_sesion"]["opcionales_activos"]["cto"])
-        self.assertIn("Опциональные последовательно: `cto`.", traceability)
+        # quick never runs CTO: it reviews only a finished feature.
+        self.assertNotIn("Опциональные последовательно: `cto`.", traceability)
 
     def test_active_state_has_priority_over_brownfield_map(self):
         with tempfile.TemporaryDirectory() as tmpdir:
