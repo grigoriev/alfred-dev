@@ -14,23 +14,8 @@ from core.prompt_route import classify_prompt, render_route_hint
 
 class TestPromptRoute(unittest.TestCase):
     def test_slash_commands_are_ignored(self):
-        self.assertIsNone(classify_prompt("/alfred-dev:fix el login"))
+        self.assertIsNone(classify_prompt("/alfred-dev:fix логин"))
         self.assertIsNone(classify_prompt("/compact"))
-
-    def test_classifies_common_spanish_phrases(self):
-        cases = {
-            "sigue donde lo dejé": "resume",
-            "el login peta con eñes": "fix",
-            "cambia el texto del botón": "quick",
-            "esto va a producción": "ship",
-            "qué decidimos de auth": "memory",
-            "mapea este repo": "map-codebase",
-            "audita la security": "audit",
-        }
-        for prompt, route in cases.items():
-            match = classify_prompt(prompt)
-            self.assertIsNotNone(match, prompt)
-            self.assertEqual(match["route"], route, prompt)
 
     def test_classifies_common_russian_phrases(self):
         cases = {
@@ -57,6 +42,15 @@ class TestPromptRoute(unittest.TestCase):
             "исследуй варианты кэширования": "spike",
             "сравни Drizzle и Prisma": "spike",
             "новая фича для подписок": "feature",
+            "где мы остановились вчера": "resume",
+            "закончим на сегодня": "pause",
+            "нужна ручная проверка": "uat",
+            "нужен взгляд со стороны": "cto",
+            "проверь безопасность кода": "audit",
+            "разберись в репозитории": "map-codebase",
+            "страница не грузится": "fix",
+            "как лучше хранить сессии": "discuss",
+            "реализуй экспорт отчётов": "feature",
             "добавь экспорт в CSV": "feature",
             "поменяй текст кнопки": "quick",
             "исправь опечатку в заголовке": "quick",
@@ -66,8 +60,8 @@ class TestPromptRoute(unittest.TestCase):
             self.assertIsNotNone(match, prompt)
             self.assertEqual(match["route"], route, prompt)
 
-    def test_cto_route_keywords_and_legacy_aliases(self):
-        for prompt in ("позови cto", "нужен технический директор", "пусть люциус посмотрит", "ask lucius"):
+    def test_cto_route_keywords(self):
+        for prompt in ("позови cto", "нужен технический директор", "нужно второе мнение"):
             match = classify_prompt(prompt)
             self.assertIsNotNone(match, prompt)
             self.assertEqual(match["route"], "cto", prompt)
@@ -80,29 +74,14 @@ class TestPromptRoute(unittest.TestCase):
 
     def test_short_or_empty_is_silent(self):
         self.assertIsNone(classify_prompt("ok"))
-        self.assertIsNone(classify_prompt("hola"))
+        self.assertIsNone(classify_prompt("ага"))
         self.assertIsNone(classify_prompt("   "))
         self.assertIsNone(classify_prompt("привет"))
 
     def test_hint_mentions_command(self):
-        match = classify_prompt("el endpoint falla con 500")
+        match = classify_prompt("эндпоинт падает с 500")
         self.assertIsNotNone(match)
         self.assertIn("/alfred-dev:fix", render_route_hint(match))
-
-    def test_hook_emits_additional_context(self):
-        script = os.path.join(os.path.dirname(__file__), "..", "hooks", "prompt-route.py")
-        result = subprocess.run(
-            [sys.executable, script],
-            input=json.dumps({"prompt": "el login peta"}),
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-        self.assertEqual(result.returncode, 0, msg=result.stderr)
-        payload = json.loads(result.stdout)
-        context = payload["hookSpecificOutput"]["additionalContext"]
-        self.assertEqual(payload["hookSpecificOutput"]["hookEventName"], "UserPromptSubmit")
-        self.assertIn("/alfred-dev:fix", context)
 
     def test_hook_emits_additional_context_for_russian(self):
         script = os.path.join(os.path.dirname(__file__), "..", "hooks", "prompt-route.py")
@@ -122,7 +101,7 @@ class TestPromptRoute(unittest.TestCase):
         script = os.path.join(os.path.dirname(__file__), "..", "hooks", "prompt-route.py")
         result = subprocess.run(
             [sys.executable, script],
-            input=json.dumps({"prompt": "hola"}),
+            input=json.dumps({"prompt": "привет"}),
             text=True,
             capture_output=True,
             check=False,

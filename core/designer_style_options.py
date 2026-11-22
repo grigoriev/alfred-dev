@@ -98,20 +98,20 @@ def _candidate_option_flavors(proposal: Dict[str, Any]) -> List[str]:
         "technical",
         _matches_any(
             text,
-            ["grafana", "datadog", "monitor", "tiempo real", "24/7", "semantico", "alerta", "observabilidad", "мониторинг", "реальном времени", "семантич", "алерт"],
+            ["grafana", "datadog", "monitor", "real-time", "24/7", "alert", "observability", "мониторинг", "реальном времени", "семантич", "алерт"],
         )
     )
-    add("editorial", _matches_any(text, ["editorial", "premium", "serif", "revista", "magazine", "lujo", "curado", "редакцион", "журнал", "премиал", "роскош"]))
+    add("editorial", _matches_any(text, ["editorial", "premium", "serif", "magazine", "luxury", "редакцион", "журнал", "премиал", "роскош"]))
     add(
         "minimal",
-        _matches_any(text, ["minimal", "limpio", "clean", "airead", "claridad", "linear", "notion", "attio", "whitespace", "минимал", "чист", "воздушн", "ясност"])
+        _matches_any(text, ["minimal", "clean", "linear", "notion", "attio", "whitespace", "минимал", "чист", "воздушн", "ясност"])
         or (
             luminance > 0.92
-            and _matches_any(text, ["saas", "moderno", "blanco", "ligero", "современ", "бел", "лёгк", "легк"])
+            and _matches_any(text, ["saas", "modern", "white", "light", "современ", "бел", "лёгк", "легк"])
         ),
     )
-    add("operational", _matches_any(text, ["dashboard", "operativ", "metric", "analit", "control", "panel", "enterprise", "tableau", "power bi", "дашборд", "операцион", "метрик", "аналитик", "контрол", "панел"]))
-    add("expressive", _matches_any(text, ["vibrante", "espacial", "futur", "expresiv", "bold", "impacto", "memorable", "ярк", "пространств", "футур", "выразительн", "смел", "запомина"]))
+    add("operational", _matches_any(text, ["dashboard", "metric", "analytic", "control", "panel", "enterprise", "tableau", "power bi", "дашборд", "операцион", "метрик", "аналитик", "контрол", "панел"]))
+    add("expressive", _matches_any(text, ["vibrant", "futur", "expressive", "bold", "impact", "memorable", "ярк", "пространств", "футур", "выразительн", "смел", "запомина"]))
     add("balanced", True)
 
     for flavor in ("operational", "minimal", "editorial", "technical", "expressive", "balanced"):

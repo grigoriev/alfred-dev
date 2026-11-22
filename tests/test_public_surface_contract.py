@@ -231,14 +231,6 @@ def _frontmatter_field_text(path: str, field: str) -> str:
     return ""
 
 
-def _extract_site_skill_names(relative_path: str):
-    text = _read(relative_path)
-    start = text.index("skills: {")
-    end = text.index("\n\n  // ----------------------------------------------------------------\n  // Infra", start)
-    section = text[start:end]
-    return set(re.findall(r"\{ name: '([^']+)'", section))
-
-
 def _is_supported_agent_model(model: str) -> bool:
     return model in AGENT_MODEL_ALIASES or AGENT_MODEL_ID_RE.fullmatch(model) is not None
 
@@ -293,10 +285,6 @@ def _is_known_agent_tool_name(tool_name: str) -> bool:
 
 def _is_known_permission_rule_name(tool_name: str) -> bool:
     return tool_name in CLAUDE_PERMISSION_RULE_NAMES or tool_name.startswith("mcp__")
-
-
-def _has_site() -> bool:
-    return os.path.exists(os.path.join(ROOT, "site", "package.json"))
 
 
 class TestRuntimeSurfaceCounts(unittest.TestCase):
@@ -881,79 +869,8 @@ class TestInstallSurfaceContracts(unittest.TestCase):
         self.assertIn("0.10.0", update_command)
         self.assertIn('echo \'{"version":2,"plugins":{}}\'', install_doc)
         self.assertNotIn("git clone --depth 1", install_doc)
-        self.assertNotIn("git (para la descarga del plugin)", _normalize(install_doc))
-        self.assertNotIn("git (para la descarga del plugin)", _normalize(readme))
         self.assertNotIn("0.4.7", install_doc)
         self.assertNotIn("os.replace", install_doc)
-        self.assertNotIn("actualizan `installed_plugins.json` con el nuevo sha y version", _normalize(install_doc))
-
-    def test_site_install_and_metadata_match_current_release_contract(self):
-        if not _has_site():
-            self.skipTest("The landing page lives in the Alfred-Astro branch")
-
-        plugin = _read_json(".claude-plugin/plugin.json")
-        es_site = _read("site/src/i18n/data.es.ts")
-        en_site = _read("site/src/i18n/data.en.ts")
-        changelog = _read("CHANGELOG.md")
-        landing_component = _read("site/src/components/BrutalistLandingPage.astro")
-        site_ui = _read("site/src/i18n/ui.ts")
-        changelog_modal = _read("site/src/components/ChangelogModal.astro")
-
-        expected_version = plugin["version"]
-        expected_display_name = plugin["displayName"]
-        self.assertIn("softwareVersion: data.footer.version.replace(/^v/i, '')", landing_component)
-        self.assertIn(f"version: 'v{expected_version}'", es_site)
-        self.assertIn(f"version: 'v{expected_version}'", en_site)
-        self.assertIn(f'displayName: "{expected_display_name}"', es_site)
-        self.assertIn(f'displayName: "{expected_display_name}"', en_site)
-        self.assertIn(f'displayName: "{expected_display_name}"', changelog)
-        self.assertIn(f"{expected_display_name} (alfred-dev)", es_site)
-        self.assertIn(f"{expected_display_name} (alfred-dev)", en_site)
-        self.assertIn(f"{expected_display_name} (alfred-dev)", changelog)
-
-        self.assertIn("Python 3.10+", es_site)
-        self.assertIn("Python 3.10+", en_site)
-        self.assertIn("/reload-plugins", es_site)
-        self.assertIn("/reload-plugins", en_site)
-        self.assertIn("Claude Code 2.1.183", es_site)
-        self.assertIn("Claude Code 2.1.183", en_site)
-        self.assertIn("plugins/skills/hooks/MCP", es_site)
-        self.assertIn("plugins/skills/hooks/MCP", en_site)
-        self.assertIn("plugins, skills, hooks y MCP", es_site)
-        self.assertIn("plugins, skills, hooks, and MCP", en_site)
-        self.assertIn("claude update", es_site)
-        self.assertIn("claude update", en_site)
-        self.assertNotIn("git, Python 3.10+", es_site)
-        self.assertNotIn("git, Python 3.10+", en_site)
-        self.assertNotIn("No necesita Python", es_site)
-        self.assertNotIn("Python not required", en_site)
-        self.assertNotIn("No hay requisito de versión mínima específica", es_site)
-        self.assertNotIn("There is no specific minimum version requirement", en_site)
-        self.assertNotIn("Cualquier versión de Claude Code", es_site)
-        self.assertNotIn("Any version of Claude Code", en_site)
-        self.assertIn("catalogo publicado de 62 skills", _normalize(es_site))
-        self.assertIn("published catalog of 62 skills", en_site)
-        self.assertIn("publica el catalogo completo", _normalize(es_site))
-        self.assertIn("publishes the full catalog", en_site)
-        self.assertIn("changelogHistoryNote", site_ui)
-        self.assertIn("historyNote", changelog_modal)
-
-    def test_site_skill_names_match_repository_catalog(self):
-        if not _has_site():
-            self.skipTest("The landing page lives in the Alfred-Astro branch")
-
-        repository_skill_names = {
-            _parse_frontmatter_fields(skill_path)["name"]
-            for skill_path in _iter_manifest_skill_files()
-        }
-        self.assertEqual(
-            _extract_site_skill_names("site/src/i18n/data.es.ts"),
-            repository_skill_names,
-        )
-        self.assertEqual(
-            _extract_site_skill_names("site/src/i18n/data.en.ts"),
-            repository_skill_names,
-        )
 
     def test_uninstall_surface_is_also_cli_first(self):
         uninstall_sh = _read("uninstall.sh")
@@ -974,10 +891,6 @@ class TestInstallSurfaceContracts(unittest.TestCase):
         self.assertIn("claude plugin uninstall alfred-dev@alfred-dev --scope user", _normalize(install_doc))
         self.assertIn("claude plugin marketplace remove alfred-dev --scope user", _normalize(install_doc))
         self.assertIn(_normalize("нативный CLI Claude Code"), _normalize(readme))
-        if _has_site():
-            site = _read("site/src/components/BrutalistLandingPage.astro")
-            self.assertIn("claude plugin uninstall alfred-dev@alfred-dev --scope user", site)
-            self.assertIn("claude plugin marketplace remove alfred-dev --scope user", site)
 
 class TestOptionalAgentsContracts(unittest.TestCase):
     def test_config_and_composition_include_nine_optional_agents(self):
@@ -1004,31 +917,6 @@ class TestOptionalAgentsContracts(unittest.TestCase):
         self.assertIn("`product-owner` решает, **что** строить и **зачем**", alfred)
         self.assertIn("`architect` решает, **как** это реализуется технически", alfred)
         self.assertIn("`alfred`** решает, **когда** вмешивается каждый", agents_readme)
-
-class TestLandingSurfaceContracts(unittest.TestCase):
-    def test_spanish_landing_uses_current_counts(self):
-        if not _has_site():
-            self.skipTest("The landing page lives in the Alfred-Astro branch")
-
-        es = _read("site/src/i18n/data.es.ts")
-        self.assertIn("catalogo publicado de 62 skills", _normalize(es))
-        self.assertIn("62 skills en 15 dominios", es)
-        self.assertIn("{ number: 62, label: 'Skills' }", es)
-        self.assertIn("Son 9 agents especializados", es)
-        self.assertIn("19 agents. catalogo publicado de 62 skills. 13 hooks. 25 comandos namespaced + /alfred.", _normalize(es))
-        self.assertIn("CTO", es)
-
-    def test_english_landing_uses_current_counts(self):
-        if not _has_site():
-            self.skipTest("The landing page lives in the Alfred-Astro branch")
-
-        en = _read("site/src/i18n/data.en.ts")
-        self.assertIn("published catalog of 62 skills", en)
-        self.assertIn("62 skills across 15 domains", en)
-        self.assertIn("{ number: 62, label: 'Skills' }", en)
-        self.assertIn("They are 9 specialised agents", en)
-        self.assertIn("19 agents. Published catalog of 62 skills. 13 hooks. 25 namespaced commands + /alfred.", en)
-        self.assertIn("CTO", en)
 
 
 if __name__ == "__main__":

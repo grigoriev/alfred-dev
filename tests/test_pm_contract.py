@@ -54,15 +54,6 @@ class TestPmCommandWrappers(unittest.TestCase):
         self.assertIn('python3 .claude/alfred-continuity.py in-progress "$PWD"', command)
         self.assertIn("docs/project/kanban/in-progress.md", command)
 
-    def test_validate_uses_helper(self):
-        self.skipTest("validate is merged into /alfred-dev:progress")
-        command = _read("commands/validate.md")
-        self.assertIn('allow-stop-once "$PWD" --command "/alfred-dev:validate"', command)
-        self.assertIn('python3 .claude/alfred-continuity.py validate "$PWD"', command)
-        self.assertIn(".claude/alfred-github-sync.json", command)
-        self.assertIn("No añadas una segunda capa de resumen", command)
-        self.assertIn("`Resumen`, `Checks`, `Avisos`, `Errores`", command)
-
     def test_discuss_uses_helper_without_reopening_the_interview(self):
         command = _read("commands/discuss.md")
         self.assertIn('python3 .claude/alfred-continuity.py discuss "$PWD" --raw "$ARGUMENTS"', command)

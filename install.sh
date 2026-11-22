@@ -22,7 +22,7 @@ set -euo pipefail
 
 REPO="grigoriev/alfred-dev"
 PLUGIN_NAME="alfred-dev"
-VERSION="0.8.0"
+VERSION="0.8.1"
 
 # -- Colors -----------------------------------------------------------------
 
