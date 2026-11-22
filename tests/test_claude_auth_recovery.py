@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests del diagnostico humano de auth de Claude CLI."""
+"""Tests for the human-readable Claude CLI auth diagnosis."""
 
 import contextlib
 import importlib.util
@@ -26,7 +26,7 @@ def _load_module():
 def _blocked_oauth_preflight():
     return {
         "status": "blocked_auth",
-        "reason": "Claude CLI devolvio 401 Invalid authentication credentials.",
+        "reason": "Claude CLI returned 401 Invalid authentication credentials.",
         "returncode": 1,
         "api_error_status": 401,
         "auth_status": {
@@ -42,7 +42,7 @@ def _blocked_oauth_preflight():
         },
         "diagnosis": {
             "code": "first_party_oauth_token_rejected",
-            "summary": "OAuth first-party rechazado.",
+            "summary": "First-party OAuth rejected.",
         },
     }
 

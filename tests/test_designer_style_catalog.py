@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para el catalogo visual canónico de Designer."""
+"""Tests for the canonical Designer visual catalog."""
 
 import unittest
 

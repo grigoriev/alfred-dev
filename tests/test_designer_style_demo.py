@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para la galeria de demos visuales de Designer."""
+"""Tests for the Designer visual demo gallery."""
 
 import json
 import os

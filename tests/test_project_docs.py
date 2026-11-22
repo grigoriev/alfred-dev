@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contrato de documentación viva del proyecto."""
+"""Contract for the living project documentation."""
 
 import os
 import sys
@@ -43,10 +43,10 @@ class TestProjectDocs(unittest.TestCase):
 
             path = os.path.join(tmpdir, "docs/project/architecture.md")
             with open(path, "w", encoding="utf-8") as handle:
-                handle.write(f"# Arquitectura\n\n{FILLED_MARKER}\n\nDiagrama real.\n")
+                handle.write(f"# Architecture\n\n{FILLED_MARKER}\n\nReal diagram.\n")
             threat = os.path.join(tmpdir, "docs/project/threat-model.md")
             with open(threat, "w", encoding="utf-8") as handle:
-                handle.write(f"# Modelo\n\n{FILLED_MARKER}\n\nSTRIDE del login.\n")
+                handle.write(f"# Model\n\n{FILLED_MARKER}\n\nSTRIDE for login.\n")
 
             passed = check_project_docs(tmpdir, "feature", "arquitectura")
             self.assertTrue(passed["passed"], passed)
@@ -59,12 +59,12 @@ class TestProjectDocs(unittest.TestCase):
 
     def test_next_adr_increments(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            first = scaffold_adr(tmpdir, "Elegir SQLite")
+            first = scaffold_adr(tmpdir, "Choose SQLite")
             self.assertTrue(first["created"])
             self.assertEqual(first["number"], 1)
             self.assertTrue(os.path.isfile(os.path.join(tmpdir, first["path"])))
             self.assertEqual(next_adr_number(tmpdir), 2)
-            second = scaffold_adr(tmpdir, "Auth por sesión")
+            second = scaffold_adr(tmpdir, "Session auth")
             self.assertEqual(second["number"], 2)
 
     def test_adr_slug_keeps_cyrillic_title(self):
@@ -80,7 +80,7 @@ class TestProjectDocs(unittest.TestCase):
                 "w",
                 encoding="utf-8",
             ) as handle:
-                handle.write("# Compliance\n\nRGPD no aplica: CLI sin datos personales.\n")
+                handle.write("# Compliance\n\nGDPR does not apply: CLI with no personal data.\n")
             ensure_project_docs(tmpdir)
             result = check_project_docs(tmpdir, "feature", "calidad")
             self.assertTrue(result["passed"], result)

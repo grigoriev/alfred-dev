@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests del preflight externo seguro de release."""
+"""Tests for the safe external release preflight."""
 
 import importlib.util
 import json

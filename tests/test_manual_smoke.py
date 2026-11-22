@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests del runner de smoke manual humano."""
+"""Tests for the human manual smoke runner."""
 
 import importlib.util
 import contextlib
@@ -378,7 +378,7 @@ class TestManualSmokeRunner(unittest.TestCase):
         self.assertNotIn("orgName", result["auth_status"])
 
     def test_auth_preflight_budget_allows_cold_prompt_cache(self):
-        """El preflight no debe fallar en frio por un presupuesto demasiado bajo."""
+        """The preflight must not fail on a cold start because of a budget that is too low."""
         manual_smoke = _load_manual_smoke_module()
         original_run = manual_smoke.subprocess.run
 
@@ -562,7 +562,7 @@ class TestManualSmokeRunner(unittest.TestCase):
             }
 
         def fake_run_case(*args, **kwargs):
-            raise AssertionError("_run_case no debe ejecutarse si el preflight bloquea")
+            raise AssertionError("_run_case must not run when the preflight blocks")
 
         output = io.StringIO()
         try:
@@ -587,7 +587,7 @@ class TestManualSmokeRunner(unittest.TestCase):
         def fake_preflight(timeout=45):
             return {
                 "status": "ok",
-                "reason": "Claude CLI pudo completar una llamada minima.",
+                "reason": "Claude CLI completed a minimal call.",
                 "duration_ms": 1,
                 "returncode": 0,
                 "api_error_status": None,
@@ -597,7 +597,7 @@ class TestManualSmokeRunner(unittest.TestCase):
             }
 
         def fake_run_case(*args, **kwargs):
-            raise AssertionError("_run_case no debe ejecutarse en --preflight-only")
+            raise AssertionError("_run_case must not run in --preflight-only")
 
         output = io.StringIO()
         try:
@@ -633,7 +633,7 @@ class TestManualSmokeRunner(unittest.TestCase):
             }
 
         def fake_run_case(*args, **kwargs):
-            raise AssertionError("_run_case no debe ejecutarse si el preflight bloquea")
+            raise AssertionError("_run_case must not run when the preflight blocks")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "manual-smoke.json"
@@ -675,7 +675,7 @@ class TestManualSmokeRunner(unittest.TestCase):
         manual_smoke = _load_manual_smoke_module()
         payload = {
             "is_error": False,
-            "result": "Puedes ejecutar `/alfred feature` para seguir.",
+            "result": "You can run `/alfred feature` to continue.",
         }
 
         status, reason = manual_smoke._result_status(payload, json.dumps(payload), "", 0)

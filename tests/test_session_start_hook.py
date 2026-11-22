@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Tests de contrato para el hook de SessionStart.
+"""Contract tests for the SessionStart hook.
 
-Protegen el contexto operativo que Alfred inyecta al arrancar en Claude Code.
+They protect the operational context that Alfred injects when Claude Code starts.
 """
 
 import json
@@ -158,7 +158,7 @@ class TestSessionBootstrapRuntime(unittest.TestCase):
             os.makedirs(claude_dir, exist_ok=True)
             local_config = os.path.join(claude_dir, "alfred-dev.local.md")
             with open(local_config, "w", encoding="utf-8") as fh:
-                fh.write("# Notas\n\nmemoria:\n  enabled: true\n")
+                fh.write("# Notes\n\nmemoria:\n  enabled: true\n")
 
             result = subprocess.run(
                 [script_path],
@@ -344,7 +344,7 @@ class TestSessionStartRuntime(unittest.TestCase):
             )
 
     def test_session_start_uses_canonical_sync_to_native_config(self):
-        self.skipTest("SessionStart ya no sincroniza memoria nativa; lo hace el helper si se pide.")
+        self.skipTest("SessionStart no longer syncs native memory; the helper does it on request.")
 
     def _disabled_session_start_uses_canonical_sync_to_native_config(self):
         script_path = os.path.join(_PROJECT_ROOT, "hooks", "session-start.sh")
@@ -363,15 +363,15 @@ class TestSessionStartRuntime(unittest.TestCase):
                     "  enabled: true\n"
                     "  sync_to_native: true\n"
                     "---\n\n"
-                    "# Notas\n\n"
+                    "# Notes\n\n"
                     "sync_to_native: false\n"
                 )
 
             db = MemoryDB(os.path.join(claude_dir, "alfred-memory.db"))
-            iteration_id = db.start_iteration("feature", "Contexto sync")
+            iteration_id = db.start_iteration("feature", "Sync context")
             db.log_decision(
-                title="Mantener sync nativa",
-                chosen="Sí",
+                title="Keep native sync",
+                chosen="Yes",
                 iteration_id=iteration_id,
             )
             db.complete_iteration(iteration_id)
@@ -396,11 +396,11 @@ class TestSessionStartRuntime(unittest.TestCase):
             self.assertIsNotNone(memory_dir)
             self.assertTrue(
                 any(name.endswith(".md") for name in os.listdir(memory_dir)),
-                msg=f"No se generaron memorias nativas en {memory_dir}",
+                msg=f"No native memories were generated in {memory_dir}",
             )
 
     def test_session_start_falls_back_to_project_decisions_when_active_iteration_is_empty(self):
-        self.skipTest("SessionStart ya no inyecta el resumen de decisiones de SQLite.")
+        self.skipTest("SessionStart no longer injects the SQLite decision summary.")
 
     def _disabled_session_start_falls_back_to_project_decisions_when_active_iteration_is_empty(self):
         script_path = os.path.join(_PROJECT_ROOT, "hooks", "session-start.sh")
@@ -416,14 +416,14 @@ class TestSessionStartRuntime(unittest.TestCase):
                 fh.write("---\nmemoria:\n  enabled: true\n---\n")
 
             db = MemoryDB(os.path.join(claude_dir, "alfred-memory.db"))
-            feature_id = db.start_iteration("feature", "Decisión histórica")
+            feature_id = db.start_iteration("feature", "Historical decision")
             db.log_decision(
-                title="Usar API estable",
+                title="Use the stable API",
                 chosen="Responses API",
                 iteration_id=feature_id,
             )
             db.complete_iteration(feature_id)
-            db.start_iteration("session", "Sesión vacía actual")
+            db.start_iteration("session", "Current empty session")
             db.close()
 
             result = subprocess.run(
@@ -438,7 +438,7 @@ class TestSessionStartRuntime(unittest.TestCase):
             payload = json.loads(result.stdout)
             additional_context = payload["hookSpecificOutput"]["additionalContext"]
             self.assertIn("La iteracion activa aun no tiene decisiones", additional_context)
-            self.assertIn("Usar API estable", additional_context)
+            self.assertIn("Use the stable API", additional_context)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests del punto de entrada hooks/evidence-guard.py."""
+"""Tests for the hooks/evidence-guard.py entry point."""
 
 import importlib.util
 import json
@@ -23,7 +23,7 @@ def _load_evidence_guard():
 
 
 class TestEvidenceGuardMain(unittest.TestCase):
-    """Verifica el comportamiento del hook PostToolUse."""
+    """Verify the behavior of the PostToolUse hook."""
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()

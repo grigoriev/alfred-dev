@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke tests del instalador bash sin tocar la instalacion real."""
+"""Smoke tests for the bash installer that do not touch the real installation."""
 
 import json
 import os
@@ -209,14 +209,14 @@ class TestInstallSh(unittest.TestCase):
                         cat > "$ALIAS_SKILL" <<'EOF'
                     ---
                     name: alfred
-                    description: Alias global /alfred
+                    description: Global /alfred alias
                     disable-model-invocation: true
                     user-invocable: false
                     ---
 
-                    Marcador de instalacion: Alfred Dev global alias.
+                    Install marker: Alfred Dev global alias.
 
-                    Usa el contrato de Alfred Dev.
+                    Use the Alfred Dev contract.
                     EOF
                         ;;
                       marketplace)

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Tests de contrato para los prompts de audit y SonarQube.
+"""Contract tests for the audit and SonarQube prompts.
 
-Estos tests protegen comportamiento definido en Markdown. Como los commands y
-skills del plugin son prompts ejecutables por Claude Code, sus instrucciones
-forman parte de la logica del sistema y se verifican como contrato textual.
+These tests protect behavior defined in Markdown. The plugin commands and
+skills are prompts that Claude Code executes, so their instructions are part
+of the system logic and are checked as a text contract.
 """
 
 import os

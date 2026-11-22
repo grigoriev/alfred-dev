@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contratos textuales de /alfred-dev:memory-ui."""
+"""Text contracts for /alfred-dev:memory-ui."""
 
 import json
 import os

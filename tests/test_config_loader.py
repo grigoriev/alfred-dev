@@ -48,7 +48,7 @@ from core.optional_agents import (
 
 class TestLoadConfig(unittest.TestCase):
     def test_returns_defaults_when_no_file(self):
-        config = load_config("/ruta/que/no/existe")
+        config = load_config("/path/that/does/not/exist")
         self.assertEqual(
             config["autonomia"],
             {
@@ -77,11 +77,11 @@ class TestLoadConfig(unittest.TestCase):
 
     def test_extracts_notes_section(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-            f.write("---\nautonomia:\n  producto: interactivo\n---\n## Notas\nPreferir Hono sobre Express.\n")
+            f.write("---\nautonomia:\n  producto: interactivo\n---\n## Notas\nPrefer Hono over Express.\n")
             f.flush()
             config = load_config(f.name)
         os.unlink(f.name)
-        self.assertIn("Preferir Hono", config["notas"])
+        self.assertIn("Prefer Hono", config["notas"])
 
     def test_accepts_accented_autonomia_section_name(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
@@ -148,7 +148,7 @@ class TestLoadConfig(unittest.TestCase):
 
     def test_is_autopilot_configured_checks_all_phases(self):
         self.assertTrue(is_autopilot_configured(DEFAULT_CONFIG))
-        config = load_config("/ruta/que/no/existe")
+        config = load_config("/path/that/does/not/exist")
         config["autonomia"]["calidad"] = "interactivo"
         self.assertFalse(is_autopilot_configured(config))
 
@@ -162,7 +162,7 @@ class TestLoadConfig(unittest.TestCase):
             self.assertTrue(is_autopilot_enabled_for_project(tmpdir))
 
     def test_get_active_optional_agents_returns_enabled_agents_in_catalog_order(self):
-        config = load_config("/ruta/que/no/existe")
+        config = load_config("/path/that/does/not/exist")
         config["agentes_opcionales"]["cto"] = True
         self.assertEqual(
             get_active_optional_agents(config),
@@ -170,11 +170,11 @@ class TestLoadConfig(unittest.TestCase):
         )
 
     def test_build_equipo_sesion_from_config_returns_none_without_runtime_flags(self):
-        config = load_config("/ruta/que/no/existe")
+        config = load_config("/path/that/does/not/exist")
         self.assertIsNone(build_equipo_sesion_from_config(config))
 
     def test_build_equipo_sesion_from_config_preserves_catalog_and_memory(self):
-        config = load_config("/ruta/que/no/existe")
+        config = load_config("/path/that/does/not/exist")
         config["agentes_opcionales"]["cto"] = True
         config["memoria"]["enabled"] = True
 
@@ -235,15 +235,15 @@ class TestLoadConfig(unittest.TestCase):
         self.assertTrue(equipo["infra"]["memoria"])
 
     def test_render_config_markdown_serializes_canonical_frontmatter_and_notes(self):
-        config = load_config("/ruta/que/no/existe")
+        config = load_config("/path/that/does/not/exist")
         config["agentes_opcionales"]["cto"] = True
         config["personalidad"]["idioma"] = "es"
-        content = render_config_markdown(config, notes="Preferir Netlify sobre Vercel.")
+        content = render_config_markdown(config, notes="Prefer Netlify over Vercel.")
 
         self.assertTrue(content.startswith("---\nautonomia:\n"))
         self.assertIn("cto: true", content)
         self.assertIn("## Notas", content)
-        self.assertIn("Preferir Netlify sobre Vercel.", content)
+        self.assertIn("Prefer Netlify over Vercel.", content)
         self.assertNotIn("\nnotas:", content)
 
     def test_save_config_roundtrips_with_load_config(self):
@@ -251,11 +251,11 @@ class TestLoadConfig(unittest.TestCase):
             path = f.name
 
         try:
-            config = load_config("/ruta/que/no/existe")
+            config = load_config("/path/that/does/not/exist")
             config["autonomia"]["calidad"] = "interactivo"
             config["agentes_opcionales"]["cto"] = True
             config["memoria"]["enabled"] = True
-            save_config(path, config, notes="Revisar copys antes de publicar.")
+            save_config(path, config, notes="Review the copy before publishing.")
 
             reloaded = load_config(path)
         finally:
@@ -264,23 +264,23 @@ class TestLoadConfig(unittest.TestCase):
         self.assertEqual(reloaded["autonomia"]["calidad"], "interactivo")
         self.assertTrue(reloaded["agentes_opcionales"]["cto"])
         self.assertTrue(reloaded["memoria"]["enabled"])
-        self.assertIn("Revisar copys", reloaded["notas"])
+        self.assertIn("Review the copy", reloaded["notas"])
 
     def test_save_project_config_writes_canonical_local_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            config = load_config("/ruta/que/no/existe")
+            config = load_config("/path/that/does/not/exist")
             config["agentes_opcionales"]["cto"] = True
 
             path = save_project_config(
                 tmpdir,
                 config,
-                notes="Mantener el tono cercano.",
+                notes="Keep the tone friendly.",
             )
             reloaded = load_config(path)
 
         self.assertTrue(path.endswith(os.path.join(".claude", "alfred-dev.local.md")))
         self.assertTrue(reloaded["agentes_opcionales"]["cto"])
-        self.assertIn("tono cercano", reloaded["notas"])
+        self.assertIn("tone friendly", reloaded["notas"])
 
     def test_ensure_bootstrap_local_config_creates_minimal_canonical_file(self):
         with tempfile.NamedTemporaryFile(delete=False) as f:
@@ -330,7 +330,7 @@ class TestLoadConfig(unittest.TestCase):
         self.assertTrue(reloaded["memoria"]["enabled"])
 
     def test_build_config_section_summaries_describe_effective_state(self):
-        config = load_config("/ruta/que/no/existe")
+        config = load_config("/path/that/does/not/exist")
         config["autonomia"]["producto"] = "interactivo"
         config["autonomia"]["calidad"] = "semi-autonomo"
         config["agentes_opcionales"]["cto"] = True
@@ -370,7 +370,7 @@ class TestLoadConfig(unittest.TestCase):
                     },
                     f,
                 )
-            config = load_config("/ruta/que/no/existe")
+            config = load_config("/path/that/does/not/exist")
             config["agentes_opcionales"]["cto"] = True
             menu = build_config_section_menu(config, project_dir=tmpdir)
 
@@ -399,7 +399,7 @@ class TestLoadConfig(unittest.TestCase):
         self.assertIn("CTO", agents_option["description"])
 
     def test_apply_config_section_update_normalizes_and_preserves_rest(self):
-        config = load_config("/ruta/que/no/existe")
+        config = load_config("/path/that/does/not/exist")
         config["memoria"]["enabled"] = True
 
         updated = apply_config_section_update(
@@ -417,7 +417,7 @@ class TestLoadConfig(unittest.TestCase):
         self.assertTrue(updated["memoria"]["enabled"])
 
     def test_apply_config_section_update_keeps_optional_catalog_complete(self):
-        config = load_config("/ruta/que/no/existe")
+        config = load_config("/path/that/does/not/exist")
 
         updated = apply_config_section_update(
             config,
@@ -472,7 +472,7 @@ class TestLoadConfig(unittest.TestCase):
 
         for section_name, patch in updates.items():
             with self.subTest(section=section_name):
-                base_config = load_config("/ruta/que/no/existe")
+                base_config = load_config("/path/that/does/not/exist")
                 preview = build_config_section_change_preview(
                     base_config,
                     section_name,
@@ -496,7 +496,7 @@ class TestLoadConfig(unittest.TestCase):
                         "  enabled: false\n"
                         "---\n\n"
                         "## Notas\n\n"
-                        "Nota estable.\n"
+                        "Stable note.\n"
                     )
                     path = f.name
 
@@ -514,10 +514,10 @@ class TestLoadConfig(unittest.TestCase):
                 self.assertEqual(persisted_preview["section"], section_name)
                 for key, value in patch.items():
                     self.assertEqual(reloaded[section_name][key], value)
-                self.assertIn("Nota estable", reloaded["notas"])
+                self.assertIn("Stable note", reloaded["notas"])
 
     def test_build_config_section_change_preview_reports_before_and_after(self):
-        config = load_config("/ruta/que/no/existe")
+        config = load_config("/path/that/does/not/exist")
         preview = build_config_section_change_preview(
             config,
             "memoria",
@@ -531,7 +531,7 @@ class TestLoadConfig(unittest.TestCase):
         self.assertTrue(preview["updated_config"]["memoria"]["enabled"])
 
     def test_build_config_section_change_preview_detects_noop_updates(self):
-        config = load_config("/ruta/que/no/existe")
+        config = load_config("/path/that/does/not/exist")
         preview = build_config_section_change_preview(
             config,
             "integraciones",
@@ -552,7 +552,7 @@ class TestLoadConfig(unittest.TestCase):
                 "  enabled: false\n"
                 "---\n\n"
                 "## Notas\n\n"
-                "Mantener tono cercano.\n"
+                "Keep a friendly tone.\n"
             )
             path = f.name
 
@@ -569,7 +569,7 @@ class TestLoadConfig(unittest.TestCase):
 
         self.assertTrue(preview["changed"])
         self.assertTrue(reloaded["memoria"]["enabled"])
-        self.assertIn("Mantener tono cercano", reloaded["notas"])
+        self.assertIn("Keep a friendly tone", reloaded["notas"])
 
     def test_update_project_config_section_writes_project_local_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:

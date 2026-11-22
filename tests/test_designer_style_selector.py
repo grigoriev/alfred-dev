@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para las pantallas guiadas del selector de Designer."""
+"""Tests for the guided Designer selector screens."""
 
 import os
 import shutil

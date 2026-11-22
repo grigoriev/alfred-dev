@@ -64,8 +64,8 @@ class TestManualReviewGate(unittest.TestCase):
                 case["case_id"]: {
                     "approved": True,
                     "notes": (
-                        f"Revisado {case['case_id']}: respuesta coherente, "
-                        "honesta y ajustada al contrato probado."
+                        f"Reviewed {case['case_id']}: coherent, honest answer "
+                        "that fits the tested contract."
                     ),
                     "prompt": case["prompt"],
                     "expected": case["expected"],
@@ -130,7 +130,7 @@ class TestManualReviewGate(unittest.TestCase):
         def fake_auth_preflight():
             return {
                 "status": "blocked_auth",
-                "reason": "Claude CLI devolvio 401 Invalid authentication credentials.",
+                "reason": "Claude CLI returned 401 Invalid authentication credentials.",
                 "diagnosis": {"code": "first_party_oauth_token_rejected"},
             }
 
@@ -273,7 +273,7 @@ class TestManualReviewGate(unittest.TestCase):
     def test_review_gate_rejects_repeated_human_notes(self):
         gate = _load_module(GATE_PATH, "manual_review_gate")
         evidence, review, case_ids = self._payloads()
-        repeated = "Revisado manualmente: respuesta honesta y coherente con el contrato probado."
+        repeated = "Reviewed by hand: honest answer, coherent with the tested contract."
         review["cases"][case_ids[0]]["notes"] = repeated
         review["cases"][case_ids[1]]["notes"] = repeated
 
@@ -399,7 +399,7 @@ class TestManualReviewGate(unittest.TestCase):
         github_token = "ghp_" + ("A" * 36)
 
         def mutate(_evidence, review, case_ids):
-            review["cases"][case_ids[0]]["notes"] = f"probado con {github_token}"
+            review["cases"][case_ids[0]]["notes"] = f"tested with {github_token}"
 
         self._assert_rejects_evidence(
             mutate,
@@ -473,7 +473,7 @@ class TestManualReviewGate(unittest.TestCase):
     def test_review_gate_rejects_stale_review_case_metadata(self):
         gate = _load_module(GATE_PATH, "manual_review_gate")
         evidence, review, case_ids = self._payloads()
-        review["cases"][case_ids[0]]["expected"] = "Criterio viejo que no toca"
+        review["cases"][case_ids[0]]["expected"] = "Old criterion that does not apply"
 
         with tempfile.TemporaryDirectory() as tmpdir:
             evidence_path = Path(tmpdir) / "evidence.json"

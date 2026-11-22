@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke tests del desinstalador bash sin tocar la instalacion real."""
+"""Smoke tests for the bash uninstaller that do not touch the real installation."""
 
 import json
 import os
@@ -41,12 +41,12 @@ class TestUninstallSh(unittest.TestCase):
             marketplace_dir.mkdir(parents=True, exist_ok=True)
             global_alias.parent.mkdir(parents=True, exist_ok=True)
             global_alias.write_text(
-                "Marcador de instalacion: Alfred Dev global alias.\n",
+                "Install marker: Alfred Dev global alias.\n",
                 encoding="utf-8",
             )
             global_command_alias.parent.mkdir(parents=True, exist_ok=True)
             global_command_alias.write_text(
-                "Marcador de instalacion: Alfred Dev global alias.\n",
+                "Install marker: Alfred Dev global alias.\n",
                 encoding="utf-8",
             )
 
@@ -128,8 +128,8 @@ class TestUninstallPs1(unittest.TestCase):
         text = (PROJECT_ROOT / "uninstall.ps1").read_text(encoding="utf-8")
         self.assertIsNone(
             re.search(r"if\s*\(\s*Test-Path\b[^\n]*\s-and\b", text),
-            "PowerShell trata `if (Test-Path ... -and` como parametros de Test-Path. "
-            "Envuelve Test-Path entre parentesis o extrae un helper.",
+            "PowerShell treats `if (Test-Path ... -and` as Test-Path parameters. "
+            "Wrap Test-Path in parentheses or extract a helper.",
         )
         self.assertIn("function Test-EmptyDirectory", text)
         self.assertIn("Глобальный alias /alfred удалён", text)
@@ -143,7 +143,7 @@ class TestUninstallPs1(unittest.TestCase):
             self.assertEqual(
                 bad,
                 [],
-                f"{name}: PowerShell lee $var: como ambito. Usa ${{var}}.",
+                f"{name}: PowerShell reads $var: as a scope. Use ${{var}}.",
             )
 
 

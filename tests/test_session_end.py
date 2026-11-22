@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SessionEnd escribe el cierre si hubo trabajo."""
+"""SessionEnd writes the closing summary if there was work."""
 
 import json
 import os
@@ -29,7 +29,7 @@ class TestSessionEndCierre(unittest.TestCase):
                 json.dump(
                     {
                         "comando": "quick",
-                        "descripcion": "cambia el CTA",
+                        "descripcion": "change the CTA",
                         "fase_actual": "validacion_rapida",
                         "fase_numero": 1,
                     },
@@ -39,7 +39,7 @@ class TestSessionEndCierre(unittest.TestCase):
             self.assertIsNotNone(path)
             text = open(path, encoding="utf-8").read()
             self.assertIn("Итог Alfred", text)
-            self.assertIn("cambia el CTA", text)
+            self.assertIn("change the CTA", text)
 
     def test_hook_exits_zero(self):
         script = os.path.join(os.path.dirname(__file__), "..", "hooks", "session-end.py")

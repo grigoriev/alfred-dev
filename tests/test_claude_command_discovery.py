@@ -26,8 +26,8 @@ class TestClaudeCommandDiscovery(unittest.TestCase):
         raw_output = (
             "\x1b[?25l/alfred\r\n"
             "/alfred        (Alfred Dev) Alias global /alfred para abrir el asistente contextual\r\n"
-            "/alfred-dev:fix        (Alfred Dev) Correccion de bugs\r\n"
-            "/alfred-dev:help       (Alfred Dev) Muestra los comandos disponibles\r\n"
+            "/alfred-dev:fix        (Alfred Dev) Bug fixes\r\n"
+            "/alfred-dev:help       (Alfred Dev) Shows the available commands\r\n"
         )
 
         analysis = discovery.analyze_discovery_output(raw_output)
@@ -57,7 +57,7 @@ class TestClaudeCommandDiscovery(unittest.TestCase):
             "/alfred\r\n"
             "/alfred        (Alfred Dev) Alias global /alfred para abrir el asistente contextual\r\n"
             "/alfred        Alias global /alfred para abrir el asistente contextual\r\n"
-            "/alfred-dev:help       (Alfred Dev) Muestra los comandos disponibles\r\n"
+            "/alfred-dev:help       (Alfred Dev) Shows the available commands\r\n"
         )
 
         analysis = discovery.analyze_discovery_output(raw_output)

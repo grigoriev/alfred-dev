@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para el generador de informes de sesion."""
+"""Tests for the session report generator."""
 
 import json
 import os
@@ -24,7 +24,7 @@ from core.session_report import (
 
 
 class TestSectionPhases(unittest.TestCase):
-    """Verifica la generacion de la seccion de fases."""
+    """Check the generation of the phases section."""
 
     def test_no_phases(self):
         session = {"fases_completadas": []}
@@ -47,7 +47,7 @@ class TestSectionPhases(unittest.TestCase):
 
     def test_completed_flow(self):
         session = {
-            "fases_completadas": [{"nombre": "unica", "resultado": "aprobado"}],
+            "fases_completadas": [{"nombre": "single", "resultado": "aprobado"}],
             "fase_actual": "completado",
         }
         result = _section_phases(session)
@@ -58,7 +58,7 @@ class TestSectionPhases(unittest.TestCase):
             "fases_completadas": [
                 {
                     "nombre": "producto | visual\nfinal",
-                    "resultado": "aprobado\ncon matiz",
+                    "resultado": "aprobado\nwith caveat",
                     "artefactos": ["docs/style|direction.md", "docs/\nbrief.md"],
                 }
             ],
@@ -66,12 +66,12 @@ class TestSectionPhases(unittest.TestCase):
         }
         result = _section_phases(session)
         self.assertIn("producto \\| visual final", result)
-        self.assertIn("aprobado con matiz", result)
+        self.assertIn("aprobado with caveat", result)
         self.assertIn("docs/style\\|direction.md, docs/ brief.md", result)
 
 
 class TestSectionEvidence(unittest.TestCase):
-    """Verifica la generacion de la seccion de evidencia."""
+    """Check the generation of the evidence section."""
 
     def test_no_evidence_data(self):
         result = _section_evidence(None)
@@ -126,7 +126,7 @@ class TestSectionEvidence(unittest.TestCase):
 
 
 class TestSectionTeam(unittest.TestCase):
-    """Verifica la generacion de la seccion de equipo."""
+    """Check the generation of the team section."""
 
     def test_no_team(self):
         session = {}
@@ -160,7 +160,7 @@ class TestSectionTeam(unittest.TestCase):
 
 
 class TestSectionArtifacts(unittest.TestCase):
-    """Verifica la generacion de la seccion de artefactos."""
+    """Check the generation of the artifacts section."""
 
     def test_no_artifacts(self):
         result = _section_artifacts({"artefactos": []})
@@ -177,7 +177,7 @@ class TestSectionArtifacts(unittest.TestCase):
 
 
 class TestEstimateDuration(unittest.TestCase):
-    """Verifica la estimacion de duracion."""
+    """Check the duration estimate."""
 
     def test_missing_timestamps(self):
         result = _estimate_duration({})
@@ -217,7 +217,7 @@ class TestEstimateDuration(unittest.TestCase):
 
 
 class TestGenerateReport(unittest.TestCase):
-    """Verifica la generacion completa del informe."""
+    """Check the full report generation."""
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
@@ -229,7 +229,7 @@ class TestGenerateReport(unittest.TestCase):
     def test_generates_file(self):
         session = {
             "comando": "feature",
-            "descripcion": "Login con OAuth",
+            "descripcion": "Login with OAuth",
             "fase_actual": "completado",
             "fases_completadas": [
                 {"nombre": "producto", "resultado": "aprobado"},
@@ -245,14 +245,14 @@ class TestGenerateReport(unittest.TestCase):
             content = f.read()
 
         self.assertIn("feature", content)
-        self.assertIn("Login con OAuth", content)
+        self.assertIn("Login with OAuth", content)
         self.assertIn("producto", content)
         self.assertIn("prd.md", content)
 
     def test_report_in_correct_directory(self):
         session = {
             "comando": "fix",
-            "descripcion": "Bug critico",
+            "descripcion": "Critical bug",
             "fase_actual": "completado",
             "fases_completadas": [],
             "artefactos": [],
@@ -265,7 +265,7 @@ class TestGenerateReport(unittest.TestCase):
 
 
 class TestFilenameSanitization(unittest.TestCase):
-    """Verifica que el nombre del comando se sanitiza en el fichero."""
+    """Check that the command name is sanitized in the file name."""
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
@@ -275,10 +275,10 @@ class TestFilenameSanitization(unittest.TestCase):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_path_traversal_sanitized(self):
-        """Un comando con caracteres de path traversal no escapa del directorio."""
+        """A command with path traversal characters does not escape the directory."""
         session = {
             "comando": "../../etc/passwd",
-            "descripcion": "Intento de path traversal",
+            "descripcion": "Path traversal attempt",
             "fase_actual": "completado",
             "fases_completadas": [],
             "artefactos": [],
@@ -286,18 +286,18 @@ class TestFilenameSanitization(unittest.TestCase):
             "actualizado_en": "2026-03-13T10:05:00+00:00",
         }
         report_path = generate_report(session, project_dir=self.tmpdir)
-        # El fichero debe estar dentro de docs/alfred-reports/
+        # The file must be inside docs/alfred-reports/
         self.assertIn("docs/alfred-reports", report_path)
-        # No debe contener ".." en el nombre del fichero
+        # The file name must not contain ".."
         filename = os.path.basename(report_path)
         self.assertNotIn("..", filename)
         self.assertTrue(os.path.isfile(report_path))
 
     def test_special_chars_sanitized(self):
-        """Los caracteres especiales en el comando se reemplazan por _."""
+        """Special characters in the command are replaced with _."""
         session = {
             "comando": "feat/login & rm -rf",
-            "descripcion": "Comando con chars raros",
+            "descripcion": "Command with odd chars",
             "fase_actual": "completado",
             "fases_completadas": [],
             "artefactos": [],
@@ -312,7 +312,7 @@ class TestFilenameSanitization(unittest.TestCase):
 
 
 class TestSectionMode(unittest.TestCase):
-    """Verifica la seccion de modo de sesion."""
+    """Check the session mode section."""
 
     def test_autopilot(self):
         session = {"autopilot": True}
@@ -326,7 +326,7 @@ class TestSectionMode(unittest.TestCase):
 
 
 class TestSectionIterations(unittest.TestCase):
-    """Verifica la seccion de iteraciones por fase."""
+    """Check the iterations-per-phase section."""
 
     def test_with_iterations(self):
         session = {
@@ -359,7 +359,7 @@ class TestSectionIterations(unittest.TestCase):
 
 
 class TestGenerateReportExtended(unittest.TestCase):
-    """Tests para las funcionalidades nuevas de generate_report."""
+    """Tests for the new generate_report features."""
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
@@ -369,7 +369,7 @@ class TestGenerateReportExtended(unittest.TestCase):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_dynamic_version_from_plugin_json(self):
-        """El informe lee la version de plugin.json de forma dinamica."""
+        """The report reads the version from plugin.json at runtime."""
         import json as _json
         plugin_path = os.path.join(
             os.path.dirname(__file__), "..", ".claude-plugin", "plugin.json"
@@ -394,7 +394,7 @@ class TestGenerateReportExtended(unittest.TestCase):
     def test_interrupted_report(self):
         session = {
             "comando": "feature",
-            "descripcion": "Test interrumpido",
+            "descripcion": "Interrupted test",
             "fase_actual": "desarrollo",
             "fases_completadas": [],
             "artefactos": [],
@@ -411,7 +411,7 @@ class TestGenerateReportExtended(unittest.TestCase):
     def test_header_fields_are_single_line(self):
         session = {
             "comando": "feature\nwith noise",
-            "descripcion": "Linea 1\n\nLinea 2",
+            "descripcion": "Line 1\n\nLine 2",
             "fase_actual": "completado",
             "fases_completadas": [],
             "artefactos": [],
@@ -422,7 +422,7 @@ class TestGenerateReportExtended(unittest.TestCase):
         with open(report_path, encoding="utf-8") as f:
             content = f.read()
         self.assertIn("# Отчёт о сессии: feature with noise", content)
-        self.assertIn("**Описание:** Linea 1 Linea 2", content)
+        self.assertIn("**Описание:** Line 1 Line 2", content)
 
     def test_filenames_do_not_collide_within_same_second(self):
         class SequencedDateTime(datetime):
@@ -440,7 +440,7 @@ class TestGenerateReportExtended(unittest.TestCase):
 
         session = {
             "comando": "feature",
-            "descripcion": "colision",
+            "descripcion": "collision",
             "fase_actual": "completado",
             "fases_completadas": [],
             "artefactos": [],
@@ -458,7 +458,7 @@ class TestGenerateReportExtended(unittest.TestCase):
     def test_completed_report_without_uat_recommends_verify(self):
         session = {
             "comando": "feature",
-            "descripcion": "Login con OAuth",
+            "descripcion": "Login with OAuth",
             "fase_actual": "completado",
             "fases_completadas": [
                 {
@@ -492,7 +492,7 @@ class TestGenerateReportExtended(unittest.TestCase):
         os.makedirs(os.path.join(self.tmpdir, ".claude"), exist_ok=True)
         session = {
             "comando": "feature",
-            "descripcion": "Login con OAuth",
+            "descripcion": "Login with OAuth",
             "fase_actual": "completado",
             "fases_completadas": [
                 {
@@ -529,7 +529,7 @@ class TestGenerateReportExtended(unittest.TestCase):
         os.makedirs(os.path.join(self.tmpdir, ".claude"), exist_ok=True)
         session = {
             "comando": "fix",
-            "descripcion": "Corregir checkout",
+            "descripcion": "Fix checkout",
             "fase_actual": "completado",
             "fases_completadas": [
                 {
@@ -546,7 +546,7 @@ class TestGenerateReportExtended(unittest.TestCase):
             "target_id": "session:fix:2026-03-14T10:25:00+00:00",
             "status": "rejected",
             "updated_at": "2026-03-14T10:30:00+00:00",
-            "notes": "El caso borde de cupones sigue fallando",
+            "notes": "The coupon edge case still fails",
         }
         with open(
             os.path.join(self.tmpdir, ".claude", "alfred-uat.json"), "w", encoding="utf-8"
@@ -557,14 +557,14 @@ class TestGenerateReportExtended(unittest.TestCase):
         with open(report_path, encoding="utf-8") as f:
             content = f.read()
 
-        self.assertIn("- Проверка/UAT: отклонена. UAT отклонена. El caso borde de cupones sigue fallando", content)
+        self.assertIn("- Проверка/UAT: отклонена. UAT отклонена. The coupon edge case still fails", content)
         self.assertIn("- Фокус: Продолжить после закрытия процесса", content)
         self.assertIn("Команда: `/alfred`", content)
 
     def test_interrupted_report_uses_structured_resume_guidance(self):
         session = {
             "comando": "feature",
-            "descripcion": "Checkout nuevo",
+            "descripcion": "New checkout",
             "fase_actual": "arquitectura",
             "fases_completadas": [],
             "artefactos": [],
@@ -586,28 +586,28 @@ class TestGenerateReportExtended(unittest.TestCase):
 
         os.makedirs(os.path.join(self.tmpdir, ".claude"), exist_ok=True)
         db = MemoryDB(os.path.join(self.tmpdir, ".claude", "alfred-memory.db"))
-        other_iteration = db.start_iteration("feature", "Otra iniciativa")
+        other_iteration = db.start_iteration("feature", "Another initiative")
         db.log_decision(
-            title="No mezclar esta decision",
-            chosen="No debería salir",
-            rationale="Pertenece a otra sesión",
+            title="Do not mix this decision",
+            chosen="Must not appear",
+            rationale="Belongs to another session",
             iteration_id=other_iteration,
             phase="producto",
         )
         db.complete_iteration(other_iteration)
 
-        iteration_id = db.start_iteration("feature", "Login con OAuth")
+        iteration_id = db.start_iteration("feature", "Login with OAuth")
         db.log_decision(
-            title="Usar provider OAuth existente",
-            chosen="Reutilizar el provider corporativo",
-            rationale="Reduce riesgo y acelera la salida",
+            title="Use the existing OAuth provider",
+            chosen="Reuse the corporate provider",
+            rationale="Reduces risk and speeds up release",
             iteration_id=iteration_id,
             phase="arquitectura",
         )
         db.log_decision(
-            title="Cerrar el fallback visual antiguo",
-            chosen="Eliminar el botón legacy del login",
-            rationale="Evita caminos muertos en la UI",
+            title="Close the old visual fallback",
+            chosen="Remove the legacy login button",
+            rationale="Avoids dead paths in the UI",
             iteration_id=iteration_id,
             phase="desarrollo",
         )
@@ -616,7 +616,7 @@ class TestGenerateReportExtended(unittest.TestCase):
 
         session = {
             "comando": "feature",
-            "descripcion": "Login con OAuth",
+            "descripcion": "Login with OAuth",
             "fase_actual": "completado",
             "fases_completadas": [
                 {
@@ -636,10 +636,10 @@ class TestGenerateReportExtended(unittest.TestCase):
 
         self.assertIn("- Решений в памяти, связанных с сессией: 2.", content)
         self.assertIn("## Ключевые решения", content)
-        self.assertIn("Usar provider OAuth existente", content)
-        self.assertIn("Reutilizar el provider corporativo", content)
-        self.assertIn("Cerrar el fallback visual antiguo", content)
-        self.assertNotIn("No mezclar esta decision", content)
+        self.assertIn("Use the existing OAuth provider", content)
+        self.assertIn("Reuse the corporate provider", content)
+        self.assertIn("Close the old visual fallback", content)
+        self.assertNotIn("Do not mix this decision", content)
 
 
 if __name__ == "__main__":

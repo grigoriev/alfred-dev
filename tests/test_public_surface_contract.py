@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Contratos de superficie publica para evitar desalineaciones de release.
+"""Public surface contracts that prevent release drift.
 
-Estos tests verifican que los numeros y claims principales del plugin
-(agentes, comandos, skills, dominios, fases y requisitos de instalacion)
-coincidan entre el estado real del repo y la documentacion/manifiestos
-que se publican al usuario.
+These tests check that the main plugin numbers and claims (agents,
+commands, skills, domains, phases and install requirements) match between
+the real repo state and the docs and manifests published to the user.
 """
 
 from collections import Counter
@@ -317,7 +316,7 @@ class TestRuntimeSurfaceCounts(unittest.TestCase):
             absolute = os.path.join(ROOT, relative_path.lstrip("./"))
             self.assertTrue(
                 os.path.exists(absolute),
-                f"No existe el recurso declarado en plugin.json: {relative_path}",
+                f"Resource declared in plugin.json does not exist: {relative_path}",
             )
         self.assertTrue(os.path.exists(os.path.join(ROOT, ".mcp.json")))
         mcp = _read_json(".mcp.json")
@@ -333,15 +332,15 @@ class TestRuntimeSurfaceCounts(unittest.TestCase):
             unknown = set(frontmatter) - SKILL_SUPPORTED_FIELDS
             self.assertFalse(
                 unknown,
-                f"Campos de frontmatter de skill no soportados en {skill_path}: {unknown}",
+                f"Unsupported skill frontmatter fields in {skill_path}: {unknown}",
             )
             self.assertTrue(
                 frontmatter.get("name"),
-                f"Falta `name` en el frontmatter de {skill_path}",
+                f"Missing `name` in the frontmatter of {skill_path}",
             )
             self.assertTrue(
                 frontmatter.get("description"),
-                f"Falta `description` en el frontmatter de {skill_path}",
+                f"Missing `description` in the frontmatter of {skill_path}",
             )
             listing_text_length = len(
                 _frontmatter_field_text(skill_path, "description")
@@ -350,13 +349,13 @@ class TestRuntimeSurfaceCounts(unittest.TestCase):
             self.assertLessEqual(
                 listing_text_length,
                 SKILL_LISTING_TEXT_LIMIT,
-                f"description + when_to_use excede el limite de listing de Claude Code en {skill_path}: {listing_text_length}",
+                f"description + when_to_use exceeds the Claude Code listing limit in {skill_path}: {listing_text_length}",
             )
             expected_name = os.path.basename(os.path.dirname(skill_path))
             self.assertEqual(
                 frontmatter.get("name"),
                 expected_name,
-                f"El name del skill debe coincidir con su directorio en {skill_path}",
+                f"The skill name must match its directory in {skill_path}",
             )
             for boolean_field in SKILL_BOOLEAN_FIELDS:
                 value = frontmatter.get(boolean_field)
@@ -364,40 +363,40 @@ class TestRuntimeSurfaceCounts(unittest.TestCase):
                     self.assertIn(
                         value.lower(),
                         SKILL_BOOLEAN_VALUES,
-                        f"{boolean_field} debe ser booleano en {skill_path}: {value}",
+                        f"{boolean_field} must be a boolean in {skill_path}: {value}",
                     )
             model = frontmatter.get("model")
             if model:
                 self.assertTrue(
                     _is_supported_agent_model(model),
-                    f"Modelo de skill no soportado por Claude Code actual en {skill_path}: {model}",
+                    f"Skill model not supported by current Claude Code in {skill_path}: {model}",
                 )
             effort = frontmatter.get("effort")
             if effort:
                 self.assertIn(
                     effort,
                     SKILL_EFFORT_VALUES,
-                    f"Effort de skill no soportado por Claude Code actual en {skill_path}: {effort}",
+                    f"Skill effort not supported by current Claude Code in {skill_path}: {effort}",
                 )
             context = frontmatter.get("context")
             if context:
                 self.assertIn(
                     context,
                     SKILL_CONTEXT_VALUES,
-                    f"Context de skill no soportado por Claude Code actual en {skill_path}: {context}",
+                    f"Skill context not supported by current Claude Code in {skill_path}: {context}",
                 )
             if frontmatter.get("agent"):
                 self.assertEqual(
                     context,
                     "fork",
-                    f"El campo agent solo debe usarse con context: fork en {skill_path}",
+                    f"Use the agent field only with context: fork in {skill_path}",
                 )
             shell = frontmatter.get("shell")
             if shell:
                 self.assertIn(
                     shell,
                     SKILL_SHELL_VALUES,
-                    f"Shell de skill no soportado por Claude Code actual en {skill_path}: {shell}",
+                    f"Skill shell not supported by current Claude Code in {skill_path}: {shell}",
                 )
             for tools_field in ("allowed-tools", "disallowed-tools"):
                 unknown_tools = [
@@ -409,13 +408,13 @@ class TestRuntimeSurfaceCounts(unittest.TestCase):
                 ]
                 self.assertFalse(
                     unknown_tools,
-                    f"{tools_field} de skill declara herramientas desconocidas en {skill_path}: {unknown_tools}",
+                    f"Skill {tools_field} declares unknown tools in {skill_path}: {unknown_tools}",
                 )
             skill_names.setdefault(frontmatter["name"], []).append(skill_path)
         duplicated = {
             name: paths for name, paths in skill_names.items() if len(paths) > 1
         }
-        self.assertFalse(duplicated, f"Skills con name duplicado: {duplicated}")
+        self.assertFalse(duplicated, f"Skills with a duplicate name: {duplicated}")
 
     def test_published_commands_have_current_frontmatter_fields(self):
         for command_path in _iter_manifest_command_files():
@@ -423,17 +422,17 @@ class TestRuntimeSurfaceCounts(unittest.TestCase):
             unknown = set(frontmatter) - COMMAND_SUPPORTED_FIELDS
             self.assertFalse(
                 unknown,
-                f"Campos de frontmatter de comando no soportados en {command_path}: {unknown}",
+                f"Unsupported command frontmatter fields in {command_path}: {unknown}",
             )
             self.assertTrue(
                 frontmatter.get("description"),
-                f"Falta `description` en el frontmatter de {command_path}",
+                f"Missing `description` in the frontmatter of {command_path}",
             )
             model = frontmatter.get("model")
             if model:
                 self.assertTrue(
                     _is_supported_agent_model(model),
-                    f"Modelo de comando no soportado por Claude Code actual en {command_path}: {model}",
+                    f"Command model not supported by current Claude Code in {command_path}: {model}",
                 )
             for tools_field in ("allowed-tools", "disallowed-tools"):
                 unknown_tools = [
@@ -445,7 +444,7 @@ class TestRuntimeSurfaceCounts(unittest.TestCase):
                 ]
                 self.assertFalse(
                     unknown_tools,
-                    f"{tools_field} de comando declara herramientas desconocidas en {command_path}: {unknown_tools}",
+                    f"Command {tools_field} declares unknown tools in {command_path}: {unknown_tools}",
                 )
 
     def test_plugin_agent_frontmatter_avoids_fields_ignored_by_claude_plugins(self):
@@ -473,33 +472,33 @@ class TestRuntimeSurfaceCounts(unittest.TestCase):
             field_names = set(frontmatter)
             self.assertTrue(
                 {"name", "description", "model"}.issubset(field_names),
-                f"El agente {agent_path} debe declarar name, description y model",
+                f"Agent {agent_path} must declare name, description and model",
             )
             self.assertFalse(
                 field_names & ignored_by_plugin_agents,
-                f"Claude ignora estos campos en agentes de plugin: {agent_path}",
+                f"Claude ignores these fields in plugin agents: {agent_path}",
             )
             self.assertFalse(
                 field_names - supported - ignored_by_plugin_agents,
-                f"Campos de frontmatter no soportados en {agent_path}",
+                f"Unsupported frontmatter fields in {agent_path}",
             )
             model = frontmatter["model"]
             model_counts[model] += 1
             self.assertTrue(
                 _is_supported_agent_model(model),
-                f"Modelo no soportado por Claude Code actual en {agent_path}: {model}",
+                f"Model not supported by current Claude Code in {agent_path}: {model}",
             )
             color = frontmatter.get("color")
-            self.assertTrue(color, f"El agente {agent_path} debe declarar color")
+            self.assertTrue(color, f"Agent {agent_path} must declare a color")
             self.assertIn(
                 color,
                 AGENT_COLOR_VALUES,
-                f"Color no soportado por Claude Code actual en {agent_path}: {color}",
+                f"Color not supported by current Claude Code in {agent_path}: {color}",
             )
             self.assertFalse(
                 _frontmatter_tool_names(frontmatter.get("tools", ""))
                 & SUBAGENT_UNAVAILABLE_TOOLS,
-                f"El agente {agent_path} lista herramientas no disponibles en subagentes",
+                f"Agent {agent_path} lists tools that are not available in subagents",
             )
             unknown_tools = [
                 tool_name
@@ -508,12 +507,12 @@ class TestRuntimeSurfaceCounts(unittest.TestCase):
             ]
             self.assertFalse(
                 unknown_tools,
-                f"El agente {agent_path} lista herramientas desconocidas: {unknown_tools}",
+                f"Agent {agent_path} lists unknown tools: {unknown_tools}",
             )
             agent_text = _read(os.path.relpath(agent_path, ROOT))
             self.assertFalse(
                 [tool for tool in SUBAGENT_UNAVAILABLE_TOOLS if tool in agent_text],
-                f"El agente {agent_path} instruye herramientas no disponibles en subagentes",
+                f"Agent {agent_path} instructs tools that are not available in subagents",
             )
 
         self.assertEqual(model_counts, ALFRED_AGENT_MODEL_POLICY)
@@ -531,7 +530,7 @@ class TestRuntimeSurfaceCounts(unittest.TestCase):
             self.assertEqual(
                 frontmatter.get("disable-model-invocation"),
                 "true",
-                f"El skill manual {relative_path} debe mantener disable-model-invocation: true",
+                f"Manual skill {relative_path} must keep disable-model-invocation: true",
             )
 
     def test_alfred_is_a_published_plugin_command(self):
@@ -590,17 +589,17 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
             absolute_doc = os.path.join(ROOT, public_doc)
             self.assertTrue(
                 os.path.exists(absolute_doc),
-                f"Falta la ficha pública del agente {agent_name}: {public_doc}",
+                f"Missing public page for agent {agent_name}: {public_doc}",
             )
             self.assertIn(
                 f"agents/{agent_name}.md",
                 docs_readme,
-                f"docs/README.md no enlaza la ficha pública de {agent_name}",
+                f"docs/README.md does not link the public page of {agent_name}",
             )
             self.assertIn(
                 f"[{agent_name}.md]({agent_name}.md)",
                 agents_index,
-                f"docs/agents/README.md no enlaza la ficha pública de {agent_name}",
+                f"docs/agents/README.md does not link the public page of {agent_name}",
             )
 
     def test_feature_docs_protect_designer_phase(self):
@@ -890,7 +889,7 @@ class TestInstallSurfaceContracts(unittest.TestCase):
 
     def test_site_install_and_metadata_match_current_release_contract(self):
         if not _has_site():
-            self.skipTest("La landing vive en la rama Alfred-Astro")
+            self.skipTest("The landing page lives in the Alfred-Astro branch")
 
         plugin = _read_json(".claude-plugin/plugin.json")
         es_site = _read("site/src/i18n/data.es.ts")
@@ -941,7 +940,7 @@ class TestInstallSurfaceContracts(unittest.TestCase):
 
     def test_site_skill_names_match_repository_catalog(self):
         if not _has_site():
-            self.skipTest("La landing vive en la rama Alfred-Astro")
+            self.skipTest("The landing page lives in the Alfred-Astro branch")
 
         repository_skill_names = {
             _parse_frontmatter_fields(skill_path)["name"]
@@ -992,7 +991,7 @@ class TestOptionalAgentsContracts(unittest.TestCase):
         self.assertIn("build_optional_agent_group_menus()", configuration)
 
     def test_copywriter_doc_does_not_overpromise_automatic_quality_integration(self):
-        self.skipTest("copywriter ya no es agente del plugin")
+        self.skipTest("copywriter is no longer a plugin agent")
         copywriter = _read("docs/agents/copywriter.md")
         self.assertIn(
             "Durante `feature:documentacion`, `ship:documentacion` o una ejecución acotada con copy visible",
@@ -1002,7 +1001,7 @@ class TestOptionalAgentsContracts(unittest.TestCase):
         self.assertNotIn("Ficheros de internacionalizacion o localizacion", copywriter)
 
     def test_content_optional_docs_keep_runtime_boundaries_clear(self):
-        self.skipTest("agentes de contenido eliminados")
+        self.skipTest("content agents were removed")
         composition = _read("commands/_composicion.md")
         seo = _read("docs/agents/seo-specialist.md")
         ux = _read("docs/agents/ux-reviewer.md")
@@ -1018,7 +1017,7 @@ class TestOptionalAgentsContracts(unittest.TestCase):
         self.assertIn("No decide indexación", i18n)
 
     def test_technical_optional_docs_keep_runtime_boundaries_clear(self):
-        self.skipTest("opcionales tecnicos eliminados; solo queda cto")
+        self.skipTest("optional technical agents were removed; only cto remains")
         composition = _read("commands/_composicion.md")
         data = _read("docs/agents/data-engineer.md")
         performance = _read("docs/agents/performance-engineer.md")
@@ -1044,7 +1043,7 @@ class TestOptionalAgentsContracts(unittest.TestCase):
         self.assertIn("performance-engineer, quizá data-engineer", configuration)
 
     def test_project_manager_doc_keeps_operational_boundary_clear(self):
-        self.skipTest("project-manager ya no es agente; SonIA queda como artefactos")
+        self.skipTest("project-manager is no longer an agent; SonIA remains as artifacts")
         sonia = _read("docs/agents/project-manager.md")
         agents_readme = _read("docs/agents/README.md")
         architecture = _read("docs/architecture.md")
@@ -1074,7 +1073,7 @@ class TestOptionalAgentsContracts(unittest.TestCase):
 class TestLandingSurfaceContracts(unittest.TestCase):
     def test_spanish_landing_uses_current_counts(self):
         if not _has_site():
-            self.skipTest("La landing vive en la rama Alfred-Astro")
+            self.skipTest("The landing page lives in the Alfred-Astro branch")
 
         es = _read("site/src/i18n/data.es.ts")
         self.assertIn("catalogo publicado de 62 skills", _normalize(es))
@@ -1086,7 +1085,7 @@ class TestLandingSurfaceContracts(unittest.TestCase):
 
     def test_english_landing_uses_current_counts(self):
         if not _has_site():
-            self.skipTest("La landing vive en la rama Alfred-Astro")
+            self.skipTest("The landing page lives in the Alfred-Astro branch")
 
         en = _read("site/src/i18n/data.en.ts")
         self.assertIn("published catalog of 62 skills", en)

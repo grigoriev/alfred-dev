@@ -30,7 +30,7 @@ class TestManualReviewReport(unittest.TestCase):
             "plugin_surface": {"sha256": "abc123", "file_count": 1},
             "auth_preflight": {
                 "status": "ok",
-                "reason": "Claude CLI pudo completar una llamada minima.",
+                "reason": "Claude CLI completed a minimal call.",
                 "auth_status": {"claude_version": "2.1.183 (Claude Code)"},
             },
             "counts": {
@@ -47,7 +47,7 @@ class TestManualReviewReport(unittest.TestCase):
                     "returncode": 0,
                     "api_error_status": None,
                     "total_cost_usd": 0.25,
-                    "response_preview": "Quick preparado sin sorpresas.",
+                    "response_preview": "Quick is ready with no surprises.",
                     "stderr_preview": "",
                 },
                 {
@@ -58,7 +58,7 @@ class TestManualReviewReport(unittest.TestCase):
                     "api_error_status": None,
                     "total_cost_usd": 1.51,
                     "response_preview": "Reached maximum budget sk-ant-" + ("a" * 24),
-                    "stderr_preview": "Traceback de prueba",
+                    "stderr_preview": "Test traceback",
                 },
             ],
         }
@@ -106,7 +106,7 @@ class TestManualReviewReport(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             evidence_path = Path(tmpdir) / "evidence.json"
             review_path = Path(tmpdir) / "review.json"
-            review = {"approved": False, "reviewer": "persona revisora"}
+            review = {"approved": False, "reviewer": "test reviewer"}
             evidence_path.write_text(json.dumps(self._evidence()), encoding="utf-8")
             review_path.write_text(json.dumps(review), encoding="utf-8")
 
@@ -115,7 +115,7 @@ class TestManualReviewReport(unittest.TestCase):
 
         self.assertEqual(after, review)
         self.assertIn("Review approved: `False`", markdown)
-        self.assertIn("Reviewer: `persona revisora`", markdown)
+        self.assertIn("Reviewer: `test reviewer`", markdown)
 
     def test_report_flags_generic_and_repeated_human_notes(self):
         report = _load_report_module()
@@ -127,7 +127,7 @@ class TestManualReviewReport(unittest.TestCase):
                 json.dumps(
                     {
                         "approved": False,
-                        "reviewer": "persona revisora",
+                        "reviewer": "test reviewer",
                         "cases": {
                             "quick-cta": {"approved": True, "notes": "ok"},
                             "feature-login": {"approved": True, "notes": "ok"},
@@ -155,15 +155,15 @@ class TestManualReviewReport(unittest.TestCase):
                 json.dumps(
                     {
                         "approved": False,
-                        "reviewer": "persona revisora",
+                        "reviewer": "test reviewer",
                         "cases": {
                             "quick-cta": {
                                 "approved": True,
-                                "notes": "Quick CTA revisado: respuesta util, honesta y acotada al contrato.",
+                                "notes": "Quick CTA reviewed: useful, honest answer that stays within the contract.",
                             },
                             "feature-login": {
                                 "approved": True,
-                                "notes": "Feature login revisada: el fallo queda visible y bloquea publicacion.",
+                                "notes": "Feature login reviewed: the failure stays visible and blocks the release.",
                             },
                         },
                     }

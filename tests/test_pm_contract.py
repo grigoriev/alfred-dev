@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contratos para la capa PM 0.4.5 inspirada en CCPM."""
+"""Contracts for the PM 0.4.5 layer inspired by CCPM."""
 
 import json
 import os
@@ -34,28 +34,28 @@ class TestAlfredRoutingKnowsPmCommands(unittest.TestCase):
 
 class TestPmCommandWrappers(unittest.TestCase):
     def test_standup_uses_helper(self):
-        self.skipTest("standup absorbido por /alfred-dev:progress")
+        self.skipTest("standup is merged into /alfred-dev:progress")
         command = _read("commands/standup.md")
         self.assertIn('allow-stop-once "$PWD" --command "/alfred-dev:standup"', command)
         self.assertIn('python3 .claude/alfred-continuity.py standup "$PWD"', command)
         self.assertIn("NO uses `AskUserQuestion`", command)
 
     def test_blocked_uses_helper(self):
-        self.skipTest("blocked absorbido por /alfred-dev:progress")
+        self.skipTest("blocked is merged into /alfred-dev:progress")
         command = _read("commands/blocked.md")
         self.assertIn('allow-stop-once "$PWD" --command "/alfred-dev:blocked"', command)
         self.assertIn('python3 .claude/alfred-continuity.py blocked "$PWD"', command)
         self.assertIn("docs/project/kanban/blocked.md", command)
 
     def test_in_progress_uses_helper(self):
-        self.skipTest("in-progress absorbido por /alfred-dev:progress")
+        self.skipTest("in-progress is merged into /alfred-dev:progress")
         command = _read("commands/in-progress.md")
         self.assertIn('allow-stop-once "$PWD" --command "/alfred-dev:in-progress"', command)
         self.assertIn('python3 .claude/alfred-continuity.py in-progress "$PWD"', command)
         self.assertIn("docs/project/kanban/in-progress.md", command)
 
     def test_validate_uses_helper(self):
-        self.skipTest("validate absorbido por /alfred-dev:progress")
+        self.skipTest("validate is merged into /alfred-dev:progress")
         command = _read("commands/validate.md")
         self.assertIn('allow-stop-once "$PWD" --command "/alfred-dev:validate"', command)
         self.assertIn('python3 .claude/alfred-continuity.py validate "$PWD"', command)

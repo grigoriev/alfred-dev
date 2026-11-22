@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests del verificador de auditoria de release."""
+"""Tests for the release audit checker."""
 
 import importlib.util
 import os
@@ -33,16 +33,16 @@ def _load_manual_smoke_module():
 class TestReleaseAuditScript(unittest.TestCase):
     def _skip_without_site(self):
         if not (Path(ROOT) / "site" / "package.json").is_file():
-            self.skipTest("La landing vive en la rama Alfred-Astro")
+            self.skipTest("The landing page lives in the Alfred-Astro branch")
 
     def test_default_release_audit_passes_local_contracts(self):
-        """El modo por defecto no depende de red ni de la CLI de Claude."""
+        """The default mode does not depend on the network or the Claude CLI."""
         release_audit = _load_release_audit_module()
 
         self.assertEqual(release_audit.main([]), 0)
 
     def test_version_scan_ignores_generated_manual_evidence(self):
-        """Las evidencias manuales ignoradas no son superficie viva de release."""
+        """Ignored manual evidence is not live release surface."""
         release_audit = _load_release_audit_module()
         json_artifact = Path(release_audit.ROOT) / "docs" / "manual-smoke-ignore-test.json"
         md_artifact = Path(release_audit.ROOT) / "docs" / "manual-smoke-ignore-test.md"
@@ -63,7 +63,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn(f"no leftovers of {release_audit.OLD_VERSION}", result)
 
     def test_inventory_keeps_composition_helper_internal(self):
-        """_composicion se empaqueta como recurso, no como comando publico."""
+        """_composicion is packaged as a resource, not as a public command."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_inventory()
@@ -83,7 +83,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("manifest without unaudited components", result)
 
     def test_inventory_rejects_manifest_components_without_release_gate(self):
-        """Los componentes estructurales deben tener gate antes de declararse."""
+        """Structural components must have a gate before they are declared."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -116,7 +116,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("LSP gate", message)
 
     def test_inventory_rejects_experimental_components_without_release_gate(self):
-        """Themes/monitors experimentales no deben colarse sin pruebas dedicadas."""
+        """Experimental themes/monitors must not slip in without dedicated tests."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -142,7 +142,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("experimental.themes", message)
 
     def test_inventory_rejects_marketplace_component_supplements(self):
-        """El marketplace de Alfred no debe alterar el inventario probado en plugin.json."""
+        """The Alfred marketplace must not change the inventory tested in plugin.json."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -169,7 +169,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("mcpServers", message)
 
     def test_inventory_rejects_marketplace_strict_false_or_enablement_override(self):
-        """strict=false/defaultEnabled cambiarian la autoridad del plugin auditado."""
+        """strict=false/defaultEnabled would change the authority of the audited plugin."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -195,7 +195,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("defaultEnabled", message)
 
     def test_inventory_rejects_marketplace_duplicate_plugin_entries(self):
-        """La auditoria 0.6.0 asume una sola entrada alfred-dev en marketplace local."""
+        """The 0.6.0 audit assumes a single alfred-dev entry in the local marketplace."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -216,7 +216,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("exactly one entry", str(context.exception))
 
     def test_inventory_rejects_generic_skills_manifest_for_root_marketplace(self):
-        """El marketplace root debe publicar los dominios de skills explícitos."""
+        """The marketplace root must publish the explicit skill domains."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -237,7 +237,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("plugin.json must not list skills", str(context.exception))
 
     def test_inventory_rejects_manifest_component_path_without_dot_slash(self):
-        """Claude resuelve paths de componentes relativos al root; usamos ./ explícito."""
+        """Claude resolves component paths relative to the root; we use an explicit ./."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -260,7 +260,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("must start with ./", str(context.exception))
 
     def test_inventory_rejects_manifest_component_absolute_path(self):
-        """El paquete instalado no puede depender de rutas absolutas del dev host."""
+        """The installed package must not depend on absolute paths of the dev host."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -282,7 +282,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("must not be absolute", str(context.exception))
 
     def test_inventory_rejects_manifest_component_traversal(self):
-        """Los componentes declarados no deben apuntar fuera del plugin con ..."""
+        """Declared components must not point outside the plugin with ..."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -306,7 +306,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("resolves outside the plugin root", message)
 
     def test_inventory_rejects_duplicate_manifest_component_paths(self):
-        """Las rutas duplicadas inflan el inventario y hacen ambigua la auditoria."""
+        """Duplicate paths inflate the inventory and make the audit ambiguous."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -328,7 +328,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("duplicates a manifest path", str(context.exception))
 
     def test_inventory_rejects_marketplace_display_name_drift(self):
-        """La UI humana debe mantener el mismo displayName en manifest y marketplace."""
+        """The human UI must keep the same displayName in the manifest and the marketplace."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -349,7 +349,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("human displayName", str(context.exception))
 
     def test_inventory_rejects_marketplace_version_duplication(self):
-        """La version canonica vive en plugin.json, no duplicada en marketplace."""
+        """The canonical version lives in plugin.json, not duplicated in the marketplace."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -370,7 +370,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("must not duplicate version", str(context.exception))
 
     def test_inventory_rejects_marketplace_source_escaping_root(self):
-        """El source relativo del marketplace no debe apuntar fuera del root."""
+        """The relative marketplace source must not point outside the root."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -391,7 +391,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("must not escape the root", str(context.exception))
 
     def test_inventory_rejects_unsupported_skill_frontmatter_field(self):
-        """Los SKILL.md no deben usar campos de frontmatter que Claude Code no documenta."""
+        """SKILL.md files must not use frontmatter fields that Claude Code does not document."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -416,7 +416,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("unsupported-field", str(context.exception))
 
     def test_inventory_rejects_skill_name_different_from_directory(self):
-        """El name del skill debe quedar estable y coincidir con la ruta invocable."""
+        """The skill name must stay stable and match the invocable path."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -438,7 +438,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("refactor-code", str(context.exception))
 
     def test_inventory_rejects_invalid_skill_boolean_value(self):
-        """Los booleanos de SKILL.md deben usar valores que Claude entienda."""
+        """SKILL.md booleans must use values that Claude understands."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -464,7 +464,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("maybe", str(context.exception))
 
     def test_inventory_rejects_skill_listing_text_over_claude_limit(self):
-        """Claude trunca description + when_to_use por encima de 1536 chars."""
+        """Claude truncates description + when_to_use above 1536 chars."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
         long_description = "a" * (release_audit.SKILL_LISTING_TEXT_LIMIT + 1)
@@ -492,7 +492,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn(str(release_audit.SKILL_LISTING_TEXT_LIMIT + 1), str(context.exception))
 
     def test_inventory_rejects_invalid_skill_effort_value(self):
-        """Los effort de skills deben seguir el set documentado por Claude Code."""
+        """Skill effort values must follow the set that Claude Code documents."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -514,7 +514,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("enormous", str(context.exception))
 
     def test_inventory_rejects_unknown_skill_allowed_tool_name(self):
-        """Los permisos de SKILL.md deben nombrar herramientas reales."""
+        """SKILL.md permissions must name real tools."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -540,7 +540,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("Browser", str(context.exception))
 
     def test_inventory_rejects_unsupported_agent_model(self):
-        """Los agentes no deben usar valores de model fuera del contrato actual."""
+        """Agents must not use model values outside the current contract."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -561,7 +561,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("llama", str(context.exception))
 
     def test_inventory_rejects_supported_agent_model_when_release_policy_drifts(self):
-        """Un alias válido de Claude también debe actualizar la política/documentación."""
+        """A valid Claude alias must also update the policy/docs."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -582,7 +582,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("haiku", str(context.exception))
 
     def test_inventory_rejects_unsupported_agent_color(self):
-        """Los colores de subagentes deben seguir el set documentado por Claude Code."""
+        """Subagent colors must follow the set that Claude Code documents."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -603,7 +603,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("magenta", str(context.exception))
 
     def test_inventory_rejects_unavailable_subagent_tool(self):
-        """Los agentes de plugin no deben listar herramientas que Claude no da a subagentes."""
+        """Plugin agents must not list tools that Claude does not give to subagents."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -628,7 +628,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("AskUserQuestion", str(context.exception))
 
     def test_inventory_rejects_unknown_agent_tool_name(self):
-        """Los tools de agentes deben usar nombres reales de Claude Code o patrones MCP."""
+        """Agent tools must use real Claude Code names or MCP patterns."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -653,7 +653,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("Browser", str(context.exception))
 
     def test_continuity_smoke_covers_human_operational_helpers(self):
-        """El smoke operativo recorre helpers reales en un fixture temporal."""
+        """The operational smoke runs real helpers in a temporary fixture."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_continuity_smoke()
@@ -666,7 +666,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         )
 
     def test_mcp_tools_smoke_invokes_all_memory_tools(self):
-        """El smoke MCP no se limita a tools/list: invoca las 15 tools."""
+        """The MCP smoke does not stop at tools/list: it calls all 15 tools."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_mcp_tools_smoke()
@@ -678,7 +678,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("MCP paths bounded to the project", result)
 
     def test_external_contracts_cover_human_permission_boundaries(self):
-        """Docker, GitHub, CTO y deploy deben tener límites humanos claros."""
+        """Docker, GitHub, CTO and deploy must have clear human limits."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_external_contracts()
@@ -688,7 +688,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("ship keeps deploy behind a human gate", result)
 
     def test_command_catalog_is_exhaustive_and_deduplicated(self):
-        """La ayuda y arquitectura deben reflejar todos los comandos publicados."""
+        """Help and architecture docs must show all published commands."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_command_catalog()
@@ -699,7 +699,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("command model validated against current Claude Code", result)
 
     def test_command_catalog_rejects_unsupported_frontmatter_field(self):
-        """Los slash commands no deben usar campos de frontmatter que Claude ignore."""
+        """Slash commands must not use frontmatter fields that Claude ignores."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -720,7 +720,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("unknown-field", str(context.exception))
 
     def test_command_catalog_rejects_skill_only_frontmatter_field(self):
-        """Los comandos no deben aceptar campos que solo pertenecen a SKILL.md."""
+        """Commands must not accept fields that belong only to SKILL.md."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -729,7 +729,7 @@ class TestReleaseAuditScript(unittest.TestCase):
             if path == "commands/quick.md":
                 return text.replace(
                     "description:",
-                    "when_to_use: solo para skills\ndescription:",
+                    "when_to_use: only for skills\ndescription:",
                     1,
                 )
             return text
@@ -745,7 +745,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("when_to_use", str(context.exception))
 
     def test_command_catalog_rejects_unknown_allowed_tool(self):
-        """Los permisos de slash commands deben nombrar herramientas reales."""
+        """Slash command permissions must name real tools."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -770,7 +770,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("Browser", str(context.exception))
 
     def test_command_catalog_rejects_unknown_allowed_tool_in_yaml_list(self):
-        """Las listas YAML de tools en commands se validan igual que los valores inline."""
+        """YAML tool lists in commands are validated the same way as inline values."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -795,7 +795,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("Browser", str(context.exception))
 
     def test_command_catalog_rejects_unsupported_command_model(self):
-        """El model opcional de commands debe usar alias/ID aceptado por Claude Code."""
+        """The optional command model must use an alias/ID that Claude Code accepts."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -820,7 +820,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("llama", str(context.exception))
 
     def test_command_execution_contracts_cover_all_public_commands(self):
-        """Los comandos publicados deben conservar argumentos, helpers y cierres."""
+        """Published commands must keep their arguments, helpers and closings."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_command_execution_contracts()
@@ -833,7 +833,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("autopilot via config/state without phantom public flag", result)
 
     def test_command_execution_contracts_reject_unconditional_free_gates(self):
-        """Las gates libres no deben declarar aprobacion sin evidencia."""
+        """Free gates must not declare approval without evidence."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -857,7 +857,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("unconditional approval", str(context.exception))
 
     def test_public_claims_do_not_drift_from_current_inventory(self):
-        """README, web, arquitectura y agentes no deben prometer contadores viejos."""
+        """README, web, architecture and agent docs must not promise old counters."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_public_claims()
@@ -870,7 +870,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("CTO does not pin an obsolete Codex CLI model", result)
 
     def test_public_claims_reject_absolute_gate_language(self):
-        """La superficie publica no debe prometer gates absolutas sin matiz."""
+        """The public surface must not promise absolute gates without nuance."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -890,7 +890,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("No hay excepciones", str(context.exception))
 
     def test_public_claims_reject_russian_absolute_gate_language(self):
-        """El README ruso tampoco debe prometer gates absolutas sin matiz."""
+        """The Russian README must not promise absolute gates without nuance either."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -910,7 +910,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("Исключений нет", str(context.exception))
 
     def test_public_claims_reject_llm_determinism_overclaim(self):
-        """La docs de agentes no debe prometer determinismo de modelo."""
+        """The agent docs must not promise model determinism."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -933,7 +933,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("previsible y reproducible", str(context.exception))
 
     def test_public_claims_reject_absolute_quality_overclaims(self):
-        """TDD, seguridad, UX e i18n deben prometer evidencia, no garantias totales."""
+        """TDD, security, UX and i18n must promise evidence, not total guarantees."""
         cases = [
             (
                 "docs/flows.md",
@@ -1008,7 +1008,7 @@ class TestReleaseAuditScript(unittest.TestCase):
                 self.assertIn(expected_fragment, str(context.exception))
 
     def test_public_claims_reject_agent_manifest_drift(self):
-        """Los docs no pueden volver a decir que plugin.json declara agents."""
+        """The docs must not say again that plugin.json declares agents."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1031,7 +1031,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("plugin.json", str(context.exception))
 
     def test_public_claims_reject_stale_core_counter_on_landing(self):
-        """La landing no debe volver al contador congelado de seis modulos core."""
+        """The landing page must not go back to the frozen counter of six core modules."""
         self._skip_without_site()
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
@@ -1052,7 +1052,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("6 core modules", str(context.exception))
 
     def test_public_claims_reject_sonarqube_without_confirmation_claim(self):
-        """SonarQube/Docker no debe prometer ejecucion sin confirmacion humana."""
+        """SonarQube/Docker must not promise execution without human confirmation."""
         self._skip_without_site()
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
@@ -1076,7 +1076,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("without asking the user for confirmation", str(context.exception))
 
     def test_public_claims_reject_sonarqube_end_to_end_docker_claim(self):
-        """La landing no debe afirmar SonarQube Docker real sin evidencia externa."""
+        """The landing page must not claim real SonarQube Docker without external evidence."""
         self._skip_without_site()
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
@@ -1097,7 +1097,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("Verified end-to-end with Docker", str(context.exception))
 
     def test_public_claims_reject_changelog_docker_without_prompt_claim(self):
-        """El changelog publico no debe reintroducir Docker sin confirmacion."""
+        """The public changelog must not bring back Docker without confirmation."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1117,7 +1117,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("sin prompt de confirmación al usuario", str(context.exception))
 
     def test_public_claims_reject_stale_manual_matrix_option_count(self):
-        """El changelog no debe quedarse con el conteo antiguo de opciones manuales."""
+        """The changelog must not keep the old count of manual options."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1142,7 +1142,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("4 runtime-контракта", str(context.exception))
 
     def test_public_claims_reject_keyword_based_dynamic_composition(self):
-        """La composición dinámica publica no debe prometer matching por keywords."""
+        """The public dynamic composition must not promise keyword matching."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1162,7 +1162,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("keywords contextuales", str(context.exception))
 
     def test_public_claims_reject_manual_only_skill_drift(self):
-        """Los skills delicados no deben volver a activacion automatica."""
+        """Sensitive skills must not go back to automatic activation."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1183,7 +1183,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("explicit manual activation", str(context.exception))
 
     def test_config_contracts_cover_all_public_sections(self):
-        """El comando config debe exponer las 7 secciones reales del runtime."""
+        """The config command must show the 7 real runtime sections."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_config_contracts()
@@ -1195,7 +1195,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("AskUserQuestion config/optional uses current questions[] and multiSelect", result)
 
     def test_config_contracts_reject_obsolete_ask_user_question_examples(self):
-        """Los ejemplos de AskUserQuestion deben usar el schema actual."""
+        """AskUserQuestion examples must use the current schema."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1237,7 +1237,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("multiSelect: false", str(context.exception))
 
     def test_flow_gate_claims_cover_designer_and_autopilot_boundaries(self):
-        """Los claims de Designer, gates y autopilot deben ejercitar orquestador real."""
+        """Designer, gate and autopilot claims must exercise the real orchestrator."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_flow_gate_claims()
@@ -1248,7 +1248,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("autopilot does not skip automatic gates or human deploy", result)
 
     def test_flow_gate_claims_reject_lax_free_gate_docs(self):
-        """Las docs no deben volver a convertir gate libre en aprobacion ceremonial."""
+        """The docs must not turn a free gate into a ceremonial approval again."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1273,7 +1273,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("free gate", str(context.exception))
 
     def test_hook_contracts_keep_exec_form_and_fail_closed_guards(self):
-        """Los hooks deben usar exec form y conservar bloqueos exit 2."""
+        """Hooks must use exec form and keep exit 2 blocks."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_hook_contracts()
@@ -1290,7 +1290,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("hook docs use current decision/hookSpecificOutput", result)
 
     def test_hook_contracts_reject_if_on_non_tool_event(self):
-        """Claude solo evalúa if en eventos de herramienta."""
+        """Claude evaluates if only on tool events."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -1323,7 +1323,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("UserPromptSubmit", str(context.exception))
 
     def test_hook_contracts_reject_matcher_on_event_that_ignores_it(self):
-        """Claude ignora matcher en algunos eventos; no debemos dar falsa precision."""
+        """Claude ignores matcher on some events; we must not give false precision."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -1350,7 +1350,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("UserPromptSubmit", str(context.exception))
 
     def test_hook_contracts_reject_user_prompt_expansion_event(self):
-        """0.7.0 no publica UserPromptExpansion; un evento extra desalinearia el inventario."""
+        """0.7.0 does not publish UserPromptExpansion; an extra event would break the inventory."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -1374,7 +1374,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("UserPromptExpansion", str(context.exception))
 
     def test_hook_contracts_require_session_start(self):
-        """SessionStart sigue siendo evento obligatorio del plugin."""
+        """SessionStart stays a required plugin event."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -1398,7 +1398,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("SessionStart", str(context.exception))
 
     def test_hook_contracts_reject_slow_sync_hooks(self):
-        """Los hooks síncronos deben tener timeout explicito y conservador."""
+        """Synchronous hooks must have an explicit, conservative timeout."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -1431,7 +1431,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("activity-capture.py", str(context.exception))
 
     def test_hook_contracts_reject_sync_hooks_without_timeout(self):
-        """Un hook síncrono sin timeout puede dejar la sesión bloqueada."""
+        """A synchronous hook without a timeout can block the session."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -1464,7 +1464,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("activity-capture.py", str(context.exception))
 
     def test_hook_contracts_reject_boolean_sync_timeout(self):
-        """Un timeout booleano no es un entero valido para hooks."""
+        """A boolean timeout is not a valid integer for hooks."""
         release_audit = _load_release_audit_module()
         original_json = release_audit._json
 
@@ -1497,7 +1497,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("activity-capture.py", str(context.exception))
 
     def test_hook_contracts_reject_spanish_decision_key_in_docs(self):
-        """La doc de hooks no debe enseñar claves JSON que Claude Code no entiende."""
+        """The hooks doc must not teach JSON keys that Claude Code does not understand."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1517,7 +1517,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("decisión", str(context.exception))
 
     def test_hook_contracts_reject_nested_event_specific_hook_output_docs(self):
-        """La doc no debe enseñar hookSpecificOutput.<Evento>.additionalContext."""
+        """The doc must not teach hookSpecificOutput.<Event>.additionalContext."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1539,7 +1539,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("PreCompact", message)
 
     def test_packaging_contracts_exclude_local_artifacts(self):
-        """El paquete seco no debe incluir caches, sesiones locales ni tests."""
+        """The dry package must not include caches, local sessions or tests."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_packaging_contracts()
@@ -1553,12 +1553,12 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("package contains the Designer visual runtime", result)
 
     def test_packaging_contracts_reject_publishable_symlink_problem(self):
-        """El gate de empaquetado debe fallar si el escaneo de symlinks detecta problemas."""
+        """The packaging gate must fail when the symlink scan finds problems."""
         release_audit = _load_release_audit_module()
         original_symlink_scan = release_audit._publishable_symlink_problems
 
         release_audit._publishable_symlink_problems = lambda: [
-            "templates/external.md es un symlink fuera del plugin: '../external.md'"
+            "templates/external.md is a symlink outside the plugin: '../external.md'"
         ]
         try:
             with self.assertRaises(release_audit.AuditError) as context:
@@ -1570,7 +1570,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("templates/external.md", str(context.exception))
 
     def test_publishable_symlink_scan_rejects_external_target(self):
-        """Claude salta symlinks fuera del plugin al copiar a cache; no pueden ser superficie."""
+        """Claude skips symlinks outside the plugin when it copies to cache; they cannot be surface."""
         release_audit = _load_release_audit_module()
         original_root = release_audit.ROOT
         original_roots = release_audit.PUBLISHABLE_SYMLINK_ROOTS
@@ -1592,7 +1592,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertTrue(any("symlink outside the plugin" in problem for problem in problems), problems)
 
     def test_publishable_symlink_scan_rejects_broken_link(self):
-        """Un symlink roto puede pasar desapercibido hasta instalación; se bloquea antes."""
+        """A broken symlink can go unnoticed until install; it is blocked before."""
         release_audit = _load_release_audit_module()
         original_root = release_audit.ROOT
         original_roots = release_audit.PUBLISHABLE_SYMLINK_ROOTS
@@ -1612,7 +1612,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertTrue(any("broken symlink" in problem for problem in problems), problems)
 
     def test_packaging_contracts_reject_crupier_artifacts(self):
-        """El paquete seco no debe arrastrar auditorias locales de .crupier."""
+        """The dry package must not carry local .crupier audits."""
         release_audit = _load_release_audit_module()
         original_pack = release_audit._npm_pack_dry_run_package
         base_package = original_pack()
@@ -1631,7 +1631,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn(".crupier/audits/project_doctor.json", str(context.exception))
 
     def test_packaging_contracts_reject_missing_template(self):
-        """Las plantillas citadas por agentes y skills son superficie publicable."""
+        """Templates that agents and skills cite are publishable surface."""
         release_audit = _load_release_audit_module()
         original_pack = release_audit._npm_pack_dry_run_package
         base_package = original_pack()
@@ -1652,7 +1652,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("templates/prd.md", str(context.exception))
 
     def test_packaging_contracts_reject_missing_designer_visual_runtime(self):
-        """El companion visual de Designer debe viajar en el paquete instalable."""
+        """The Designer visual companion must ship in the installable package."""
         release_audit = _load_release_audit_module()
         original_pack = release_audit._npm_pack_dry_run_package
         base_package = original_pack()
@@ -1673,7 +1673,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("visual/scripts/start-server.sh", str(context.exception))
 
     def test_published_package_secret_scan_uses_canonical_patterns(self):
-        """El artefacto publicable no debe contener patrones reales de secretos."""
+        """The publishable artifact must not contain real secret patterns."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_published_secret_scan()
@@ -1681,7 +1681,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("publishable package without real secret patterns", result)
 
     def test_install_update_contracts_use_explicit_safe_scopes(self):
-        """Install/update deben usar scopes explícitos y mantener gate humana."""
+        """Install/update must use explicit scopes and keep a human gate."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_install_update_contracts()
@@ -1694,7 +1694,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("update keeps semver and human menu, normalizes to user scope and documents reload/restart", result)
 
     def test_install_update_contracts_reject_new_stateful_cli_without_user_scope(self):
-        """El gate debe detectar rutas nuevas aunque los comandos canonicos existan."""
+        """The gate must detect new paths even when the canonical commands exist."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1715,7 +1715,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("install.sh", str(context.exception))
 
     def test_human_contracts_cover_questions_uat_and_honesty(self):
-        """El release no puede perder menus humanos ni antifingimiento."""
+        """The release must not lose human menus or anti-pretense checks."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_human_contracts()
@@ -1725,7 +1725,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("anti-pretending centralized in commands and the Alfred agent", result)
 
     def test_audit_docs_require_manual_matrix_for_all_public_commands(self):
-        """La matriz manual debe cubrir comandos y opciones publicas."""
+        """The manual matrix must cover public commands and options."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_audit_docs()
@@ -1762,7 +1762,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("human review runbook documents criteria and blockers", result)
 
     def test_audit_docs_require_safe_external_preflight_runner(self):
-        """Los pendientes externos deben tener evidencia sin efectos por defecto."""
+        """Pending external items must have evidence without side effects by default."""
         release_audit = _load_release_audit_module()
         package = release_audit._json("package.json")
 
@@ -1777,7 +1777,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("docs/external-live-smoke*.json", release_audit._read(".npmignore"))
 
     def test_audit_docs_reject_prepare_without_evidence_generation(self):
-        """La preparación debe escribir evidencia antes de que exista revisión humana."""
+        """Preparation must write evidence before a human review exists."""
         release_audit = _load_release_audit_module()
         package = release_audit._json("package.json")
         original_json = release_audit._json
@@ -1805,7 +1805,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("release:audit:manual:evidence", str(context.exception))
 
     def test_audit_docs_reject_manual_evidence_missing_from_gitignore_or_npmignore(self):
-        """Los JSON de evidencia manual no deben aparecer en git ni en npm pack."""
+        """Manual evidence JSON files must not appear in git or in npm pack."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1840,7 +1840,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("docs/manual-smoke*.json", str(context.exception))
 
     def test_audit_docs_reject_manual_reports_missing_from_gitignore_or_npmignore(self):
-        """Los reportes Markdown de evidencia manual tampoco deben empaquetarse."""
+        """Manual evidence Markdown reports must not be packaged either."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1860,7 +1860,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("docs/manual-smoke*.md", str(context.exception))
 
     def test_audit_docs_reject_project_state_missing_from_gitignore_or_npmignore(self):
-        """Los artefactos operativos docs/project/ no forman parte del release."""
+        """Operational artifacts in docs/project/ are not part of the release."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1910,7 +1910,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("docs/manual-smoke*.md", str(context.exception))
 
     def test_audit_docs_reject_stale_plugin_details_display_name(self):
-        """La pagina viva debe documentar el displayName visible en Claude Code."""
+        """The live page must document the displayName visible in Claude Code."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1933,7 +1933,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("human displayName", str(context.exception))
 
     def test_audit_docs_reject_frozen_plugin_surface_hash(self):
-        """docs/release.md no debe congelar plugin_surface.sha256 de una run concreta."""
+        """docs/release.md must not freeze plugin_surface.sha256 from a specific run."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1953,7 +1953,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("must not freeze plugin_surface.sha256", str(context.exception))
 
     def test_audit_docs_reject_architecture_claiming_all_hooks_have_matcher(self):
-        """La arquitectura no debe prometer matcher universal en hooks."""
+        """The architecture doc must not promise a universal matcher in hooks."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -1977,7 +1977,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("`matcher` необязателен", str(context.exception))
 
     def test_audit_docs_reject_precompact_ignored_matcher_claim(self):
-        """PreCompact soporta matcher; Alfred lo omite para cubrir manual y auto."""
+        """PreCompact supports matcher; Alfred omits it to cover manual and auto."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -2000,7 +2000,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("PreCompact ignores matcher", str(context.exception))
 
     def test_argument_hint_commands_are_covered_by_manual_options(self):
-        """Todo comando con argument-hint/$ARGUMENTS debe tener opcion manual."""
+        """Every command with argument-hint/$ARGUMENTS must have a manual option."""
         release_audit = _load_release_audit_module()
         manual_smoke = _load_manual_smoke_module()
 
@@ -2033,7 +2033,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertEqual(sorted(argument_commands - option_commands), [])
 
     def test_new_argument_hint_without_manual_option_is_rejected(self):
-        """Si un comando nuevo acepta argumentos, la matriz manual debe crecer."""
+        """If a new command accepts arguments, the manual matrix must grow."""
         release_audit = _load_release_audit_module()
         original_read = release_audit._read
 
@@ -2059,7 +2059,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("pause", str(context.exception))
 
     def test_option_contract_shape_rejects_typos(self):
-        """Los IDs de opciones deben apuntar a comandos reales y config exacta."""
+        """Option IDs must point to real commands and exact config."""
         release_audit = _load_release_audit_module()
         manual_smoke = _load_manual_smoke_module()
 
@@ -2081,7 +2081,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("config:fantasma", message)
 
     def test_option_contract_shape_requires_explicit_cto_all_scope(self):
-        """CTO debe probar --scope all explicito, no solo el default all."""
+        """CTO must test an explicit --scope all, not only the default all."""
         release_audit = _load_release_audit_module()
         manual_smoke = _load_manual_smoke_module()
 
@@ -2101,7 +2101,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("cto:scope-all", str(context.exception))
 
     def test_option_contract_shape_requires_human_permission_menus(self):
-        """Los menus AskUserQuestion de permisos/gates son opciones publicas."""
+        """AskUserQuestion menus for permissions/gates are public options."""
         release_audit = _load_release_audit_module()
         manual_smoke = _load_manual_smoke_module()
 
@@ -2121,7 +2121,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("audit:sonarqube-docker-install-menu", str(context.exception))
 
     def test_runtime_contract_shape_rejects_typos(self):
-        """Los contratos runtime deben apuntar a /update y scopes conocidos."""
+        """Runtime contracts must point to /update and known scopes."""
         release_audit = _load_release_audit_module()
         manual_smoke = _load_manual_smoke_module()
 
@@ -2143,14 +2143,14 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("scope-worktree", message)
 
     def test_case_contract_links_reject_wrong_command_case(self):
-        """Una opcion cubierta por un caso de otro comando no debe pasar."""
+        """An option covered by a case of another command must not pass."""
         release_audit = _load_release_audit_module()
         manual_smoke = _load_manual_smoke_module()
 
         bad_option_case = manual_smoke.ManualCase(
             "wrong-option",
             "/alfred-dev:help",
-            "No debe cubrir CTO.",
+            "Must not cover CTO.",
             commands=("help",),
             option_keys=("cto:scope-tests",),
         )
@@ -2162,7 +2162,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         bad_runtime_case = manual_smoke.ManualCase(
             "wrong-runtime",
             "/alfred-dev:status",
-            "No debe cubrir update.",
+            "Must not cover update.",
             commands=("status",),
             runtime_keys=("update:scope-local-to-user",),
         )
@@ -2177,14 +2177,14 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("update:scope-local-to-user", str(runtime_context.exception))
 
     def test_case_prompt_must_invoke_declared_command(self):
-        """El prompt real del caso debe usar el slash command declarado."""
+        """The real case prompt must use the declared slash command."""
         release_audit = _load_release_audit_module()
         manual_smoke = _load_manual_smoke_module()
 
         wrong_prompt_case = manual_smoke.ManualCase(
             "wrong-prompt",
             "/alfred-dev:help",
-            "No debe declarar CTO si el prompt ejecuta help.",
+            "Must not declare CTO when the prompt runs help.",
             commands=("cto",),
             option_keys=("cto:scope-tests",),
         )
@@ -2199,14 +2199,14 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("help", message)
 
     def test_case_prompt_accepts_global_alfred_alias_for_alfred_command(self):
-        """El alias /alfred cubre el contrato manual del comando contextual."""
+        """The /alfred alias covers the manual contract of the contextual command."""
         release_audit = _load_release_audit_module()
         manual_smoke = _load_manual_smoke_module()
 
         alias_case = manual_smoke.ManualCase(
             "alfred-alias",
             "/alfred que toca hacer ahora?",
-            "Debe aceptar el alias corto como invocacion de Alfred.",
+            "Must accept the short alias as an Alfred call.",
             commands=("alfred",),
             option_keys=("alfred:optional-prompt",),
         )
@@ -2215,7 +2215,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         release_audit._validate_manual_case_contract_links(fake_manual_smoke)
 
     def test_installed_cache_freshness_detects_worktree_drift(self):
-        """El smoke Claude no debe aceptar una cache instalada stale."""
+        """The Claude smoke must not accept a stale installed cache."""
         release_audit = _load_release_audit_module()
         original_installed = release_audit.INSTALLED_PLUGIN_DIR
         freshness_files = set(release_audit._iter_installed_cache_freshness_files())

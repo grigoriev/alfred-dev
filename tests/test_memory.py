@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Tests para el modulo de memoria persistente (core/memory.py).
+Tests for the persistent memory module (core/memory.py).
 
-Cobertura completa de:
-- Creacion de la base de datos y esquema (tablas, indices, WAL, FK, FTS5, permisos).
-- Operaciones CRUD sobre iteraciones, decisiones, commits y eventos.
-- Sanitizacion de contenido sensible.
-- Busqueda textual (FTS5 y fallback LIKE).
-- Cronologia de eventos y estadisticas.
-- Purga de eventos antiguos.
+Full coverage of:
+- Database and schema creation (tables, indexes, WAL, FK, FTS5, permissions).
+- CRUD operations on iterations, decisions, commits and events.
+- Sanitization of sensitive content.
+- Text search (FTS5 and LIKE fallback).
+- Event timeline and statistics.
+- Purge of old events.
 """
 
 import json
@@ -27,7 +27,7 @@ from core.memory import MemoryDB, sanitize_content
 
 
 class TestMemoryDBCreation(unittest.TestCase):
-    """Verifica que la base de datos se crea correctamente con el esquema esperado."""
+    """Check that the database is created correctly with the expected schema."""
 
     def setUp(self):
         self._tmpfile = tempfile.NamedTemporaryFile(
@@ -39,14 +39,14 @@ class TestMemoryDBCreation(unittest.TestCase):
 
     def tearDown(self):
         self.db.close()
-        # Limpiar ficheros SQLite (principal + WAL + shm)
+        # Clean up SQLite files (main + WAL + shm)
         for suffix in ("", "-wal", "-shm"):
             path = self._db_path + suffix
             if os.path.exists(path):
                 os.unlink(path)
 
     def test_all_tables_exist(self):
-        """Las 6 tablas del esquema deben existir tras la creacion."""
+        """The 6 schema tables must exist after creation."""
         conn = sqlite3.connect(self._db_path)
         cursor = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' "
@@ -57,12 +57,12 @@ class TestMemoryDBCreation(unittest.TestCase):
 
         expected = {"meta", "iterations", "decisions", "commits",
                     "commit_links", "events", "decision_links"}
-        # FTS5 puede anadir tablas adicionales; solo verificamos las basicas
+        # FTS5 can add more tables; check only the basic ones
         self.assertTrue(expected.issubset(tables),
-                        f"Faltan tablas: {expected - tables}")
+                        f"Missing tables: {expected - tables}")
 
     def test_schema_version_registered(self):
-        """La version del esquema debe quedar registrada en meta."""
+        """The schema version must be recorded in meta."""
         conn = sqlite3.connect(self._db_path)
         row = conn.execute(
             "SELECT value FROM meta WHERE key = 'schema_version'"
@@ -73,7 +73,7 @@ class TestMemoryDBCreation(unittest.TestCase):
         self.assertEqual(row[0], "4")
 
     def test_wal_mode_active(self):
-        """El modo WAL debe estar activado para mejor concurrencia."""
+        """WAL mode must be on for better concurrency."""
         conn = sqlite3.connect(self._db_path)
         row = conn.execute("PRAGMA journal_mode").fetchone()
         conn.close()
@@ -81,17 +81,17 @@ class TestMemoryDBCreation(unittest.TestCase):
         self.assertEqual(row[0], "wal")
 
     def test_foreign_keys_enabled(self):
-        """Las foreign keys deben estar habilitadas en la conexion de MemoryDB.
+        """Foreign keys must be on in the MemoryDB connection.
 
-        PRAGMA foreign_keys es un ajuste por conexion, no a nivel de fichero.
-        Por eso se verifica contra la conexion interna del objeto, no contra
-        una conexion nueva.
+        PRAGMA foreign_keys is a per-connection setting, not a file setting.
+        So the test checks the internal connection of the object, not a
+        new connection.
         """
         row = self.db._conn.execute("PRAGMA foreign_keys").fetchone()
         self.assertEqual(row[0], 1)
 
     def test_fts5_detection(self):
-        """La deteccion de FTS5 debe registrarse en meta."""
+        """FTS5 detection must be recorded in meta."""
         conn = sqlite3.connect(self._db_path)
         row = conn.execute(
             "SELECT value FROM meta WHERE key = 'fts_enabled'"
@@ -102,13 +102,13 @@ class TestMemoryDBCreation(unittest.TestCase):
         self.assertIn(row[0], ("0", "1"))
 
     def test_fts_enabled_property(self):
-        """La propiedad fts_enabled debe ser coherente con la deteccion."""
+        """The fts_enabled property must match the detection."""
         self.assertIsInstance(self.db.fts_enabled, bool)
 
     def test_fts_content_version_registered_when_enabled(self):
-        """Si FTS5 esta activo, debe registrarse la version del contenido indexado."""
+        """If FTS5 is on, the indexed content version must be recorded."""
         if not self.db.fts_enabled:
-            self.skipTest("FTS5 no disponible en este entorno.")
+            self.skipTest("FTS5 is not available in this environment.")
 
         conn = sqlite3.connect(self._db_path)
         row = conn.execute(
@@ -120,15 +120,15 @@ class TestMemoryDBCreation(unittest.TestCase):
         self.assertEqual(row[0], "2")
 
     def test_file_permissions_0600(self):
-        """El fichero de la DB debe tener permisos 0600 (solo propietario)."""
+        """The DB file must have 0600 permissions (owner only)."""
         mode = os.stat(self._db_path).st_mode
-        # Extraer solo los bits de permisos (ultimos 9 bits)
+        # Extract only the permission bits (last 9 bits)
         perms = stat.S_IMODE(mode)
         self.assertEqual(perms, 0o600,
-                         f"Permisos esperados 0600, obtenidos {oct(perms)}")
+                         f"Expected permissions 0600, got {oct(perms)}")
 
     def test_indices_exist(self):
-        """Los 8 indices definidos en el esquema deben existir."""
+        """The 8 indexes defined in the schema must exist."""
         conn = sqlite3.connect(self._db_path)
         cursor = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='index' "
@@ -148,7 +148,7 @@ class TestMemoryDBCreation(unittest.TestCase):
         self.assertEqual(expected, indices)
 
     def test_created_at_registered(self):
-        """La fecha de creacion debe quedar registrada en meta."""
+        """The creation date must be recorded in meta."""
         conn = sqlite3.connect(self._db_path)
         row = conn.execute(
             "SELECT value FROM meta WHERE key = 'created_at'"
@@ -156,11 +156,11 @@ class TestMemoryDBCreation(unittest.TestCase):
         conn.close()
 
         self.assertIsNotNone(row)
-        # Debe ser una fecha ISO 8601
+        # Must be an ISO 8601 date
         self.assertIn("T", row[0])
 
     def test_creates_parent_directory(self):
-        """Si el directorio padre no existe, MemoryDB lo crea."""
+        """If the parent directory does not exist, MemoryDB creates it."""
         nested_path = os.path.join(
             tempfile.mkdtemp(), "subdir", "deep", "test.db"
         )
@@ -169,7 +169,7 @@ class TestMemoryDBCreation(unittest.TestCase):
             db.close()
             self.assertTrue(os.path.exists(nested_path))
         finally:
-            # Limpieza
+            # Cleanup
             for suffix in ("", "-wal", "-shm"):
                 path = nested_path + suffix
                 if os.path.exists(path):
@@ -177,7 +177,7 @@ class TestMemoryDBCreation(unittest.TestCase):
 
 
 class TestIterations(unittest.TestCase):
-    """Tests de CRUD sobre iteraciones."""
+    """CRUD tests for iterations."""
 
     def setUp(self):
         self._tmpfile = tempfile.NamedTemporaryFile(
@@ -195,30 +195,30 @@ class TestIterations(unittest.TestCase):
                 os.unlink(path)
 
     def test_start_iteration_returns_id(self):
-        """start_iteration debe devolver el ID de la nueva iteracion."""
-        iter_id = self.db.start_iteration("feature", "Login con OAuth")
+        """start_iteration must return the ID of the new iteration."""
+        iter_id = self.db.start_iteration("feature", "Login with OAuth")
         self.assertIsInstance(iter_id, int)
         self.assertGreater(iter_id, 0)
 
     def test_get_iteration(self):
-        """get_iteration debe devolver los datos de la iteracion."""
-        iter_id = self.db.start_iteration("fix", "Error en el formulario")
+        """get_iteration must return the iteration data."""
+        iter_id = self.db.start_iteration("fix", "Form error")
         iteration = self.db.get_iteration(iter_id)
 
         self.assertIsNotNone(iteration)
         self.assertEqual(iteration["command"], "fix")
-        self.assertEqual(iteration["description"], "Error en el formulario")
+        self.assertEqual(iteration["description"], "Form error")
         self.assertEqual(iteration["status"], "active")
         self.assertIsNotNone(iteration["started_at"])
         self.assertIsNone(iteration["completed_at"])
 
     def test_get_nonexistent_iteration_returns_none(self):
-        """Consultar una iteracion inexistente debe devolver None."""
+        """A query for a missing iteration must return None."""
         self.assertIsNone(self.db.get_iteration(9999))
 
     def test_complete_iteration(self):
-        """complete_iteration debe marcar la iteracion como completada."""
-        iter_id = self.db.start_iteration("spike", "Evaluar framework X")
+        """complete_iteration must mark the iteration as completed."""
+        iter_id = self.db.start_iteration("spike", "Evaluate framework X")
         self.db.complete_iteration(iter_id)
         iteration = self.db.get_iteration(iter_id)
 
@@ -226,43 +226,43 @@ class TestIterations(unittest.TestCase):
         self.assertIsNotNone(iteration["completed_at"])
 
     def test_abandon_iteration(self):
-        """Se puede abandonar una iteracion con status 'abandoned'."""
-        iter_id = self.db.start_iteration("feature", "Funcionalidad cancelada")
+        """An iteration can be abandoned with status 'abandoned'."""
+        iter_id = self.db.start_iteration("feature", "Cancelled feature")
         self.db.complete_iteration(iter_id, status="abandoned")
         iteration = self.db.get_iteration(iter_id)
 
         self.assertEqual(iteration["status"], "abandoned")
 
     def test_get_active_iteration(self):
-        """get_active_iteration debe devolver la iteracion activa."""
-        iter_id = self.db.start_iteration("feature", "Tarea activa")
+        """get_active_iteration must return the active iteration."""
+        iter_id = self.db.start_iteration("feature", "Active task")
         active = self.db.get_active_iteration()
 
         self.assertIsNotNone(active)
         self.assertEqual(active["id"], iter_id)
 
     def test_get_active_iteration_returns_none_when_none_active(self):
-        """Si no hay iteracion activa, get_active_iteration devuelve None."""
+        """If there is no active iteration, get_active_iteration returns None."""
         self.assertIsNone(self.db.get_active_iteration())
 
     def test_get_active_iteration_after_completion(self):
-        """Tras completar, get_active_iteration no devuelve la completada."""
-        iter_id = self.db.start_iteration("fix", "Bug resuelto")
+        """After completion, get_active_iteration does not return the completed one."""
+        iter_id = self.db.start_iteration("fix", "Fixed bug")
         self.db.complete_iteration(iter_id)
 
         self.assertIsNone(self.db.get_active_iteration())
 
     def test_latest_active_iteration_wins(self):
-        """Si hay varias activas, se devuelve la mas reciente."""
-        self.db.start_iteration("feature", "Primera")
-        iter_id2 = self.db.start_iteration("feature", "Segunda")
+        """If several are active, the most recent one is returned."""
+        self.db.start_iteration("feature", "First")
+        iter_id2 = self.db.start_iteration("feature", "Second")
         active = self.db.get_active_iteration()
 
         self.assertEqual(active["id"], iter_id2)
 
 
 class TestDecisions(unittest.TestCase):
-    """Tests de CRUD sobre decisiones."""
+    """CRUD tests for decisions."""
 
     def setUp(self):
         self._tmpfile = tempfile.NamedTemporaryFile(
@@ -280,28 +280,28 @@ class TestDecisions(unittest.TestCase):
                 os.unlink(path)
 
     def test_log_decision_returns_id(self):
-        """log_decision debe devolver el ID de la nueva decision."""
+        """log_decision must return the ID of the new decision."""
         dec_id = self.db.log_decision(
-            title="Elegir base de datos",
+            title="Choose a database",
             chosen="SQLite",
-            context="Necesitamos persistencia local",
+            context="We need local persistence",
         )
         self.assertIsInstance(dec_id, int)
         self.assertGreater(dec_id, 0)
 
     def test_get_decisions(self):
-        """get_decisions debe devolver las decisiones registradas."""
-        self.db.log_decision(title="Decision A", chosen="Opcion 1")
-        self.db.log_decision(title="Decision B", chosen="Opcion 2")
+        """get_decisions must return the recorded decisions."""
+        self.db.log_decision(title="Decision A", chosen="Option 1")
+        self.db.log_decision(title="Decision B", chosen="Option 2")
 
         decisions = self.db.get_decisions()
         self.assertEqual(len(decisions), 2)
 
     def test_decision_auto_links_to_active_iteration(self):
-        """Sin iteration_id, la decision se vincula a la iteracion activa."""
-        iter_id = self.db.start_iteration("feature", "Modulo de memoria")
+        """Without iteration_id, the decision links to the active iteration."""
+        iter_id = self.db.start_iteration("feature", "Memory module")
         dec_id = self.db.log_decision(
-            title="Elegir motor de busqueda",
+            title="Choose a search engine",
             chosen="FTS5",
         )
 
@@ -310,23 +310,23 @@ class TestDecisions(unittest.TestCase):
         self.assertEqual(decisions[0]["id"], dec_id)
 
     def test_decision_without_active_iteration(self):
-        """Sin iteracion activa, la decision se registra con iteration_id=None."""
+        """Without an active iteration, the decision is recorded with iteration_id=None."""
         dec_id = self.db.log_decision(
-            title="Decision huerfana",
-            chosen="Alguna opcion",
+            title="Orphan decision",
+            chosen="Some option",
         )
         decisions = self.db.get_decisions()
         self.assertEqual(len(decisions), 1)
         self.assertIsNone(decisions[0]["iteration_id"])
 
     def test_decision_with_all_fields(self):
-        """Registrar una decision con todos los campos opcionales."""
+        """Record a decision with all optional fields."""
         dec_id = self.db.log_decision(
             title="Framework web",
             chosen="FastAPI",
-            context="Necesitamos un API REST",
+            context="We need a REST API",
             alternatives=["Django", "Flask"],
-            rationale="Mejor rendimiento y tipado",
+            rationale="Better performance and typing",
             impact="high",
             phase="arquitectura",
         )
@@ -338,17 +338,17 @@ class TestDecisions(unittest.TestCase):
         self.assertEqual(d["impact"], "high")
         self.assertEqual(d["phase"], "arquitectura")
 
-        # Las alternativas se almacenan como JSON
+        # Alternatives are stored as JSON
         alts = json.loads(d["alternatives"])
         self.assertEqual(alts, ["Django", "Flask"])
 
     def test_get_decisions_filtered_by_iteration(self):
-        """get_decisions con iteration_id filtra correctamente."""
-        iter1 = self.db.start_iteration("feature", "Primera")
+        """get_decisions with iteration_id filters correctly."""
+        iter1 = self.db.start_iteration("feature", "First")
         self.db.log_decision(title="Dec iter 1", chosen="A")
         self.db.complete_iteration(iter1)
 
-        iter2 = self.db.start_iteration("fix", "Segunda")
+        iter2 = self.db.start_iteration("fix", "Second")
         self.db.log_decision(title="Dec iter 2", chosen="B")
 
         decs_iter1 = self.db.get_decisions(iteration_id=iter1)
@@ -361,7 +361,7 @@ class TestDecisions(unittest.TestCase):
 
 
 class TestCommits(unittest.TestCase):
-    """Tests de CRUD sobre commits."""
+    """CRUD tests for commits."""
 
     def setUp(self):
         self._tmpfile = tempfile.NamedTemporaryFile(
@@ -379,29 +379,29 @@ class TestCommits(unittest.TestCase):
                 os.unlink(path)
 
     def test_log_commit_returns_id(self):
-        """log_commit debe devolver el ID del nuevo commit."""
+        """log_commit must return the ID of the new commit."""
         commit_id = self.db.log_commit(
             sha="abc123def456",
-            message="feat: nuevo modulo",
+            message="feat: new module",
         )
         self.assertIsInstance(commit_id, int)
         self.assertGreater(commit_id, 0)
 
     def test_duplicate_sha_returns_none(self):
-        """Registrar un commit con el mismo SHA devuelve None (idempotencia)."""
-        self.db.log_commit(sha="abc123def456", message="primer registro")
-        result = self.db.log_commit(sha="abc123def456", message="duplicado")
+        """Recording a commit with the same SHA returns None (idempotency)."""
+        self.db.log_commit(sha="abc123def456", message="first record")
+        result = self.db.log_commit(sha="abc123def456", message="duplicate")
         self.assertIsNone(result)
 
     def test_commit_auto_links_to_active_iteration(self):
-        """Sin iteration_id, el commit se vincula a la iteracion activa."""
-        iter_id = self.db.start_iteration("feature", "Modulo X")
+        """Without iteration_id, the commit links to the active iteration."""
+        iter_id = self.db.start_iteration("feature", "Module X")
         commit_id = self.db.log_commit(
             sha="commit1sha",
-            message="feat: implementar X",
+            message="feat: implement X",
         )
 
-        # Verificar via SQL directo
+        # Check with direct SQL
         conn = sqlite3.connect(self._db_path)
         row = conn.execute(
             "SELECT iteration_id FROM commits WHERE id = ?", (commit_id,)
@@ -411,11 +411,11 @@ class TestCommits(unittest.TestCase):
         self.assertEqual(row[0], iter_id)
 
     def test_log_commit_with_full_metadata(self):
-        """Registrar un commit con todos los campos de metadata."""
+        """Record a commit with all metadata fields."""
         commit_id = self.db.log_commit(
             sha="full_meta_sha",
-            message="refactor: simplificar logica",
-            author="dev@ejemplo.com",
+            message="refactor: simplify logic",
+            author="dev@example.com",
             files_changed=5,
             insertions=120,
             deletions=80,
@@ -423,11 +423,11 @@ class TestCommits(unittest.TestCase):
         self.assertIsNotNone(commit_id)
 
     def test_log_commit_preserves_explicit_committed_at(self):
-        """Si se pasa committed_at, debe persistirse esa fecha real."""
+        """If committed_at is passed, that real date must be stored."""
         committed_at = "2024-01-02T03:04:05+00:00"
         commit_id = self.db.log_commit(
             sha="dated_meta_sha",
-            message="feat: historico",
+            message="feat: historical",
             committed_at=committed_at,
         )
 
@@ -441,11 +441,11 @@ class TestCommits(unittest.TestCase):
         self.assertEqual(row[0], committed_at)
 
     def test_log_commit_can_skip_auto_link_to_active_iteration(self):
-        """Los imports historicos no deben colgarse de la iteracion activa."""
-        self.db.start_iteration("feature", "Sesion activa")
+        """Historical imports must not attach to the active iteration."""
+        self.db.start_iteration("feature", "Active session")
         commit_id = self.db.log_commit(
             sha="historical_sha",
-            message="feat: commit historico",
+            message="feat: historical commit",
             auto_link_iteration=False,
         )
 
@@ -459,18 +459,18 @@ class TestCommits(unittest.TestCase):
         self.assertIsNone(row[0])
 
     def test_link_commit_decision(self):
-        """link_commit_decision debe crear la vinculacion correctamente."""
+        """link_commit_decision must create the link correctly."""
         dec_id = self.db.log_decision(
-            title="Usar SQLite", chosen="SQLite"
+            title="Use SQLite", chosen="SQLite"
         )
         commit_id = self.db.log_commit(
             sha="linked_sha_123",
-            message="feat: implementar SQLite",
+            message="feat: implement SQLite",
         )
-        # No debe lanzar excepcion
+        # Must not raise an exception
         self.db.link_commit_decision(commit_id, dec_id, "implements")
 
-        # Verificar via SQL directo
+        # Check with direct SQL
         conn = sqlite3.connect(self._db_path)
         row = conn.execute(
             "SELECT * FROM commit_links WHERE commit_id = ? AND decision_id = ?",
@@ -481,46 +481,45 @@ class TestCommits(unittest.TestCase):
         self.assertIsNotNone(row)
 
     def test_link_commit_decision_duplicate_ignored(self):
-        """Vincular el mismo commit con la misma decision dos veces no falla."""
+        """Linking the same commit to the same decision twice does not fail."""
         dec_id = self.db.log_decision(title="Dec", chosen="X")
         commit_id = self.db.log_commit(sha="dup_link_sha", message="msg")
 
         self.db.link_commit_decision(commit_id, dec_id)
-        # Segunda vez: no debe lanzar excepcion
+        # Second time: must not raise an exception
         self.db.link_commit_decision(commit_id, dec_id)
 
 
 class TestSanitization(unittest.TestCase):
     """
-    Tests de sanitizacion de contenido sensible.
+    Tests for sanitization of sensitive content.
 
-    Los valores de test se construyen en tiempo de ejecucion concatenando
-    componentes para evitar que el hook de seguridad los detecte en el
-    codigo fuente del test.
+    The test values are built at runtime from concatenated parts, so the
+    security hook does not detect them in the test source code.
     """
 
     def test_none_returns_none(self):
-        """sanitize_content(None) debe devolver None."""
+        """sanitize_content(None) must return None."""
         self.assertIsNone(sanitize_content(None))
 
     def test_clean_text_unchanged(self):
-        """Texto sin secretos debe pasar sin modificaciones."""
-        text = "Este texto no contiene ningun secreto"
+        """Text without secrets must pass unchanged."""
+        text = "This text contains no secret"
         self.assertEqual(sanitize_content(text), text)
 
     def test_aws_key_redacted(self):
-        """Las claves AWS (patron AKIA...) deben redactarse."""
-        # Se construye la clave ficticia en runtime para no activar el hook
+        """AWS keys (pattern AKIA...) must be redacted."""
+        # Build the fake key at runtime so the hook does not fire
         fake_key = "AKIA" + "TESTMEMORYDB1234"
-        text = f"La clave es {fake_key} en este texto"
+        text = f"The key is {fake_key} in this text"
         result = sanitize_content(text)
 
         self.assertNotIn(fake_key, result)
         self.assertIn("[REDACTED:AWS_KEY]", result)
 
     def test_jwt_redacted(self):
-        """Los tokens JWT deben redactarse."""
-        # Construir un JWT ficticio con las 3 partes separadas por punto
+        """JWT tokens must be redacted."""
+        # Build a fake JWT with 3 parts separated by dots
         header = "eyJhbGciOiJI" + "UzI1NiIsInR5"
         payload = "eyJzdWIiOiIx" + "MjM0NTY3ODkw"
         signature = "SflKxwRJSM" + "eKKF2QT4fwp"
@@ -532,30 +531,30 @@ class TestSanitization(unittest.TestCase):
         self.assertIn("[REDACTED:JWT]", result)
 
     def test_sk_key_redacted(self):
-        """Las claves con prefijo sk- deben redactarse."""
-        # 20+ caracteres alfanumericos tras sk-
+        """Keys with the sk- prefix must be redacted."""
+        # 20+ alphanumeric characters after sk-
         fake_sk = "sk-" + "a" * 25
-        text = f"Clave: {fake_sk}"
+        text = f"Key: {fake_sk}"
         result = sanitize_content(text)
 
         self.assertNotIn(fake_sk, result)
         self.assertIn("[REDACTED:SK_KEY]", result)
 
     def test_private_key_header_redacted(self):
-        """Las cabeceras de clave privada PEM deben redactarse."""
+        """PEM private key headers must be redacted."""
         pem = "-----BEGIN " + "PRIVATE KEY-----"
-        text = f"Certificado: {pem}"
+        text = f"Certificate: {pem}"
         result = sanitize_content(text)
 
         self.assertNotIn(pem, result)
         self.assertIn("[REDACTED:PRIVATE_KEY]", result)
 
     def test_connection_string_redacted(self):
-        """Las cadenas de conexion con credenciales deben redactarse."""
-        # Se construye en partes para evitar el hook
+        """Connection strings with credentials must be redacted."""
+        # Build it in parts to avoid the hook
         proto = "postgres" + "ql"
-        creds = "usuario" + ":contrasena_larga"
-        host = "servidor" + ".ejemplo.com"
+        creds = "username" + ":long_password"
+        host = "server" + ".example.com"
         conn_str = f"{proto}://{creds}@{host}/db"
         text = f"DB: {conn_str}"
         result = sanitize_content(text)
@@ -563,14 +562,14 @@ class TestSanitization(unittest.TestCase):
         self.assertIn("[REDACTED:CONNECTION_STRING]", result)
 
     def test_short_credential_connection_string_redacted(self):
-        """Las DSN con credenciales cortas tambien deben redactarse."""
+        """DSNs with short credentials must also be redacted."""
         conn_str = "postgres://user:pass@example.com/db"
         result = sanitize_content(f"DB: {conn_str}")
 
         self.assertIn("[REDACTED:CONNECTION_STRING]", result)
 
     def test_multiple_secrets_all_redacted(self):
-        """Si hay varios secretos en el mismo texto, todos se redactan."""
+        """If one text has several secrets, all of them are redacted."""
         fake_aws = "AKIA" + "MULTITEST12345678"
         fake_sk = "sk-" + "b" * 25
         text = f"AWS: {fake_aws}, SK: {fake_sk}"
@@ -582,7 +581,7 @@ class TestSanitization(unittest.TestCase):
         self.assertIn("[REDACTED:SK_KEY]", result)
 
     def test_sanitization_in_decision(self):
-        """Los campos de decisiones se sanitizan al persistir."""
+        """Decision fields are sanitized when stored."""
         tmpfile = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         db_path = tmpfile.name
         tmpfile.close()
@@ -591,8 +590,8 @@ class TestSanitization(unittest.TestCase):
             db = MemoryDB(db_path)
             fake_key = "AKIA" + "DECISIONTEST1234"
             db.log_decision(
-                title="Configurar acceso",
-                chosen=f"Usar clave {fake_key}",
+                title="Configure access",
+                chosen=f"Use key {fake_key}",
             )
             decisions = db.get_decisions()
             db.close()
@@ -607,7 +606,7 @@ class TestSanitization(unittest.TestCase):
 
 
 class TestSearch(unittest.TestCase):
-    """Tests de busqueda textual."""
+    """Text search tests."""
 
     def setUp(self):
         self._tmpfile = tempfile.NamedTemporaryFile(
@@ -617,22 +616,22 @@ class TestSearch(unittest.TestCase):
         self._tmpfile.close()
         self.db = MemoryDB(self._db_path)
 
-        # Poblar con datos de prueba
-        self.iter_id = self.db.start_iteration("feature", "Sistema de pagos")
+        # Populate with test data
+        self.iter_id = self.db.start_iteration("feature", "Payment system")
         self.db.log_decision(
-            title="Pasarela de pago",
+            title="Payment gateway",
             chosen="Stripe",
-            context="Necesitamos cobrar suscripciones",
-            rationale="Buena documentacion y soporte en Europa",
+            context="We need to charge subscriptions",
+            rationale="Good documentation and support in Europe",
         )
         self.db.log_decision(
-            title="Base de datos",
+            title="Database",
             chosen="PostgreSQL",
-            context="Persistencia relacional",
+            context="Relational persistence",
         )
         self.db.log_commit(
             sha="search_test_sha1",
-            message="feat: integrar Stripe como pasarela de pagos",
+            message="feat: integrate Stripe as payment gateway",
         )
 
     def tearDown(self):
@@ -643,29 +642,29 @@ class TestSearch(unittest.TestCase):
                 os.unlink(path)
 
     def test_search_finds_decision_by_title(self):
-        """La busqueda debe encontrar decisiones por titulo."""
-        results = self.db.search("Pasarela")
+        """Search must find decisions by title."""
+        results = self.db.search("gateway")
         self.assertGreater(len(results), 0)
 
-        # Al menos uno de los resultados debe ser la decision de pasarela
+        # At least one result must be the gateway decision
         titles = [r.get("title", "") for r in results]
         self.assertTrue(
-            any("Pasarela" in t for t in titles),
-            f"No se encontro 'Pasarela' en: {titles}"
+            any("gateway" in t for t in titles),
+            f"'gateway' not found in: {titles}"
         )
 
     def test_search_finds_commit_by_message(self):
-        """La busqueda debe encontrar commits por mensaje."""
+        """Search must find commits by message."""
         results = self.db.search("Stripe")
         self.assertGreater(len(results), 0)
 
-        # Debe haber al menos un resultado de tipo commit o decision
+        # There must be at least one commit or decision result
         source_types = [r["source_type"] for r in results]
-        # Stripe aparece en la decision y en el commit
+        # Stripe appears in the decision and in the commit
         self.assertTrue(len(source_types) > 0)
 
     def test_search_finds_commit_by_changed_file(self):
-        """La busqueda debe encontrar commits por rutas dentro de files."""
+        """Search must find commits by paths in files."""
         self.db.log_commit(
             sha="search_test_sha2",
             message="feat: refactor auth callback",
@@ -680,11 +679,11 @@ class TestSearch(unittest.TestCase):
         )
 
     def test_search_prioritizes_primary_match_over_secondary_mentions(self):
-        """Un match en titulo/mensaje debe ganar a una mención lateral."""
+        """A match in the title or message must beat a side mention."""
         self.db.log_decision(
-            title="Infra compartida",
+            title="Shared infra",
             chosen="Redis",
-            rationale="Necesitamos una cache rollback ordenada para pruebas.",
+            rationale="We need an ordered cache rollback for tests.",
         )
         self.db.log_commit(
             sha="search_test_sha3",
@@ -697,12 +696,12 @@ class TestSearch(unittest.TestCase):
         self.assertEqual(results[0]["message"], "feat: cache rollback")
 
     def test_search_like_fallback_uses_same_relevance_rules(self):
-        """El fallback LIKE no debe sesgar decisiones por delante de commits."""
+        """The LIKE fallback must not rank decisions ahead of commits."""
         self.db._fts_enabled = False
         self.db.log_decision(
-            title="Infra compartida",
+            title="Shared infra",
             chosen="Redis",
-            rationale="Necesitamos una cache rollback ordenada para pruebas.",
+            rationale="We need an ordered cache rollback for tests.",
         )
         self.db.log_commit(
             sha="search_test_sha4",
@@ -717,9 +716,9 @@ class TestSearch(unittest.TestCase):
         self.assertTrue(any(r["source_type"] == "commit" for r in file_results))
 
     def test_fts_index_includes_commit_files_and_event_summary(self):
-        """FTS debe indexar rutas de ficheros y summaries de eventos."""
+        """FTS must index file paths and event summaries."""
         if not self.db.fts_enabled:
-            self.skipTest("FTS5 no disponible en este entorno.")
+            self.skipTest("FTS5 is not available in this environment.")
 
         self.db.log_commit(
             sha="search_test_sha5",
@@ -745,35 +744,35 @@ class TestSearch(unittest.TestCase):
         self.assertIn("rollout freeze approved", event_row[0])
 
     def test_search_no_results(self):
-        """Buscar un termino inexistente devuelve lista vacia."""
-        results = self.db.search("blockchain_cuantico_inexistente")
+        """A search for a missing term returns an empty list."""
+        results = self.db.search("nonexistent_quantum_blockchain")
         self.assertEqual(len(results), 0)
 
     def test_search_with_iteration_filter(self):
-        """La busqueda filtrada por iteracion solo devuelve resultados de esa."""
-        # Crear otra iteracion con datos diferentes
+        """A search filtered by iteration returns only results from that iteration."""
+        # Create another iteration with different data
         self.db.complete_iteration(self.iter_id)
-        iter2 = self.db.start_iteration("fix", "Otra cosa")
-        self.db.log_decision(title="Otra decision", chosen="Otra opcion")
+        iter2 = self.db.start_iteration("fix", "Something else")
+        self.db.log_decision(title="Another decision", chosen="Another option")
 
-        results = self.db.search("Pasarela", iteration_id=iter2)
+        results = self.db.search("gateway", iteration_id=iter2)
         self.assertEqual(len(results), 0)
 
     def test_search_respects_limit(self):
-        """La busqueda respeta el parametro limit."""
-        # Insertar muchas decisiones con el mismo termino
+        """Search respects the limit parameter."""
+        # Insert many decisions with the same term
         for i in range(10):
             self.db.log_decision(
-                title=f"Optimizacion numero {i}",
-                chosen="Cachear",
+                title=f"Optimization number {i}",
+                chosen="Cache it",
             )
 
-        results = self.db.search("Optimizacion", limit=3)
+        results = self.db.search("Optimization", limit=3)
         self.assertLessEqual(len(results), 3)
 
 
 class TestEvents(unittest.TestCase):
-    """Tests de CRUD sobre eventos."""
+    """CRUD tests for events."""
 
     def setUp(self):
         self._tmpfile = tempfile.NamedTemporaryFile(
@@ -791,7 +790,7 @@ class TestEvents(unittest.TestCase):
                 os.unlink(path)
 
     def test_log_event_returns_id(self):
-        """log_event debe devolver el ID del nuevo evento."""
+        """log_event must return the ID of the new event."""
         iter_id = self.db.start_iteration("feature", "Test")
         event_id = self.db.log_event(
             event_type="phase_completed",
@@ -802,7 +801,7 @@ class TestEvents(unittest.TestCase):
         self.assertGreater(event_id, 0)
 
     def test_log_event_with_payload(self):
-        """Los eventos pueden incluir payload JSON."""
+        """Events can include a JSON payload."""
         iter_id = self.db.start_iteration("feature", "Test")
         self.db.log_event(
             event_type="gate_passed",
@@ -818,7 +817,7 @@ class TestEvents(unittest.TestCase):
         self.assertTrue(payload["tests_ok"])
 
     def test_log_event_sanitizes_nested_payload_secrets(self):
-        """Los secretos dentro de payloads anidados no deben quedar en SQLite."""
+        """Secrets inside nested payloads must not stay in SQLite."""
         iter_id = self.db.start_iteration("feature", "Test")
         fake_sk = "sk-" + "c" * 25
         self.db.log_event(
@@ -838,7 +837,7 @@ class TestEvents(unittest.TestCase):
         self.assertIn("[REDACTED:SK_KEY]", serialized)
 
     def test_event_auto_links_to_active_iteration(self):
-        """Sin iteration_id, el evento se vincula a la iteracion activa."""
+        """Without iteration_id, the event links to the active iteration."""
         iter_id = self.db.start_iteration("feature", "Auto-link")
         self.db.log_event(event_type="phase_completed", phase="producto")
 
@@ -847,8 +846,8 @@ class TestEvents(unittest.TestCase):
         self.assertEqual(timeline[0]["iteration_id"], iter_id)
 
     def test_get_timeline_ordered_chronologically(self):
-        """get_timeline devuelve eventos en orden cronologico ascendente."""
-        iter_id = self.db.start_iteration("feature", "Cronologia")
+        """get_timeline returns events in ascending chronological order."""
+        iter_id = self.db.start_iteration("feature", "Timeline")
 
         self.db.log_event(
             event_type="phase_completed", phase="producto",
@@ -870,16 +869,16 @@ class TestEvents(unittest.TestCase):
         self.assertEqual(timeline[2]["phase"], "desarrollo")
 
     def test_get_timeline_empty_for_nonexistent_iteration(self):
-        """get_timeline con iteracion inexistente devuelve lista vacia."""
+        """get_timeline for a missing iteration returns an empty list."""
         timeline = self.db.get_timeline(9999)
         self.assertEqual(len(timeline), 0)
 
     def test_purge_old_events(self):
-        """purge_old_events elimina eventos anteriores a la ventana."""
-        iter_id = self.db.start_iteration("feature", "Purga")
+        """purge_old_events deletes events older than the window."""
+        iter_id = self.db.start_iteration("feature", "Purge")
 
-        # Insertar un evento con fecha antigua directamente en la DB
-        # para poder probarlo sin esperar dias reales
+        # Insert an event with an old date directly into the DB,
+        # so the test does not wait real days
         conn = sqlite3.connect(self._db_path)
         conn.execute(
             "INSERT INTO events (iteration_id, event_type, phase, created_at) "
@@ -889,13 +888,13 @@ class TestEvents(unittest.TestCase):
         conn.commit()
         conn.close()
 
-        # Insertar un evento reciente via la API
+        # Insert a recent event through the API
         self.db.log_event(
             event_type="phase_completed", phase="desarrollo",
             iteration_id=iter_id,
         )
 
-        # Purgar con retencion de 30 dias: solo el antiguo debe eliminarse
+        # Purge with 30-day retention: only the old one must be deleted
         deleted = self.db.purge_old_events(retention_days=30)
         self.assertEqual(deleted, 1)
 
@@ -904,8 +903,8 @@ class TestEvents(unittest.TestCase):
         self.assertEqual(timeline[0]["phase"], "desarrollo")
 
     def test_purge_does_not_delete_recent_events(self):
-        """purge_old_events no elimina eventos recientes."""
-        iter_id = self.db.start_iteration("feature", "Recientes")
+        """purge_old_events does not delete recent events."""
+        iter_id = self.db.start_iteration("feature", "Recent")
         self.db.log_event(
             event_type="phase_completed", phase="producto",
             iteration_id=iter_id,
@@ -915,7 +914,7 @@ class TestEvents(unittest.TestCase):
         self.assertEqual(deleted, 0)
 
     def test_count_events_supports_iteration_filters_without_truncation(self):
-        """count_events debe devolver el total real, no una ventana parcial."""
+        """count_events must return the real total, not a partial window."""
         iter_a = self.db.start_iteration("feature", "A")
         self.db.complete_iteration(iter_a)
         iter_b = self.db.start_iteration("feature", "B")
@@ -933,7 +932,7 @@ class TestEvents(unittest.TestCase):
 
 
 class TestStats(unittest.TestCase):
-    """Tests de estadisticas generales."""
+    """Tests for general statistics."""
 
     def setUp(self):
         self._tmpfile = tempfile.NamedTemporaryFile(
@@ -951,7 +950,7 @@ class TestStats(unittest.TestCase):
                 os.unlink(path)
 
     def test_stats_empty_db(self):
-        """En una DB vacia, los contadores deben ser 0."""
+        """In an empty DB, the counters must be 0."""
         stats = self.db.get_stats()
 
         self.assertEqual(stats["total_iterations"], 0)
@@ -960,7 +959,7 @@ class TestStats(unittest.TestCase):
         self.assertEqual(stats["total_events"], 0)
 
     def test_stats_with_data(self):
-        """Los contadores deben reflejar los datos insertados."""
+        """The counters must reflect the inserted data."""
         self.db.start_iteration("feature", "Test stats")
         self.db.log_decision(title="Dec 1", chosen="A")
         self.db.log_decision(title="Dec 2", chosen="B")
@@ -975,7 +974,7 @@ class TestStats(unittest.TestCase):
         self.assertEqual(stats["total_events"], 1)
 
     def test_stats_includes_metadata(self):
-        """Las estadisticas incluyen metadatos de la tabla meta."""
+        """The statistics include metadata from the meta table."""
         stats = self.db.get_stats()
 
         self.assertIn("schema_version", stats)
@@ -984,14 +983,14 @@ class TestStats(unittest.TestCase):
         self.assertIn("created_at", stats)
 
     def test_stats_fts_coherent_with_property(self):
-        """El campo fts_enabled en stats es coherente con la propiedad."""
+        """The fts_enabled field in stats matches the property."""
         stats = self.db.get_stats()
         expected = "1" if self.db.fts_enabled else "0"
         self.assertEqual(stats["fts_enabled"], expected)
 
 
 class TestReopen(unittest.TestCase):
-    """Tests de reapertura de la base de datos (persistencia entre sesiones)."""
+    """Tests for reopening the database (persistence across sessions)."""
 
     def setUp(self):
         self._tmpfile = tempfile.NamedTemporaryFile(
@@ -1007,13 +1006,13 @@ class TestReopen(unittest.TestCase):
                 os.unlink(path)
 
     def test_data_persists_after_close_and_reopen(self):
-        """Los datos deben persistir tras cerrar y reabrir la DB."""
+        """Data must persist after the DB is closed and reopened."""
         db = MemoryDB(self._db_path)
-        iter_id = db.start_iteration("feature", "Persistencia")
-        db.log_decision(title="Decision persistente", chosen="SQLite")
+        iter_id = db.start_iteration("feature", "Persistence")
+        db.log_decision(title="Persistent decision", chosen="SQLite")
         db.close()
 
-        # Reabrir
+        # Reopen
         db2 = MemoryDB(self._db_path)
         iteration = db2.get_iteration(iter_id)
         decisions = db2.get_decisions()
@@ -1022,10 +1021,10 @@ class TestReopen(unittest.TestCase):
         self.assertIsNotNone(iteration)
         self.assertEqual(iteration["command"], "feature")
         self.assertEqual(len(decisions), 1)
-        self.assertEqual(decisions[0]["title"], "Decision persistente")
+        self.assertEqual(decisions[0]["title"], "Persistent decision")
 
     def test_schema_not_duplicated_on_reopen(self):
-        """Reabrir la DB no debe duplicar la version del esquema."""
+        """Reopening the DB must not duplicate the schema version."""
         db = MemoryDB(self._db_path)
         db.close()
 
@@ -1037,9 +1036,9 @@ class TestReopen(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# SQL del esquema v1 (sin tags, status, files ni decision_links).
-# Se usa en los tests de migracion para crear una DB que simule la version
-# anterior y verificar que _run_migrations la transforma correctamente.
+# SQL of schema v1 (no tags, status, files or decision_links).
+# The migration tests use it to create a DB that simulates the earlier
+# version and to check that _run_migrations converts it correctly.
 # ---------------------------------------------------------------------------
 
 _V1_SCHEMA_SQL = """
@@ -1098,13 +1097,13 @@ CREATE TABLE IF NOT EXISTS events (
 
 
 def _create_v1_db(db_path: str) -> None:
-    """Crea una base de datos con esquema v1 para tests de migracion.
+    """Create a database with schema v1 for migration tests.
 
-    Ejecuta el SQL del esquema original (sin las columnas ni tablas
-    anadidas en v2) e inserta la version 1 en la tabla meta.
+    Run the SQL of the original schema (without the columns and tables
+    added in v2) and insert version 1 into the meta table.
 
     Args:
-        db_path: ruta al fichero SQLite a crear.
+        db_path: path to the SQLite file to create.
     """
     conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA journal_mode=WAL")
@@ -1118,12 +1117,12 @@ def _create_v1_db(db_path: str) -> None:
 
 
 class TestSchemaMigration(unittest.TestCase):
-    """Verifica que el mecanismo de migracion de esquema funciona correctamente.
+    """Check that the schema migration works correctly.
 
-    Cada test que necesita una DB v1 la crea manualmente con el esquema
-    original (6 tablas, sin las columnas tags/status/files ni la tabla
-    decision_links) y despues abre la DB con MemoryDB para forzar la
-    migracion.
+    Each test that needs a v1 DB creates it by hand with the original
+    schema (6 tables, without the tags/status/files columns and without
+    the decision_links table). Then it opens the DB with MemoryDB to force
+    the migration.
     """
 
     def setUp(self):
@@ -1134,14 +1133,14 @@ class TestSchemaMigration(unittest.TestCase):
         self._tmpfile.close()
 
     def tearDown(self):
-        # Limpiar ficheros SQLite (principal + WAL + shm + backup)
+        # Clean up SQLite files (main + WAL + shm + backup)
         for suffix in ("", "-wal", "-shm", ".bak"):
             path = self._db_path + suffix
             if os.path.exists(path):
                 os.unlink(path)
 
     def test_new_db_gets_latest_schema_version(self):
-        """Una DB nueva debe crearse directamente con la ultima version."""
+        """A new DB must be created directly with the latest version."""
         db = MemoryDB(self._db_path)
         stats = db.get_stats()
         db.close()
@@ -1149,7 +1148,7 @@ class TestSchemaMigration(unittest.TestCase):
         self.assertEqual(stats["schema_version"], "4")
 
     def test_v1_db_migrates_to_v3(self):
-        """Una DB con esquema v1 debe migrar automaticamente a v4 al abrirla."""
+        """A DB with schema v1 must migrate to v4 automatically when opened."""
         _create_v1_db(self._db_path)
 
         db = MemoryDB(self._db_path)
@@ -1159,7 +1158,7 @@ class TestSchemaMigration(unittest.TestCase):
         self.assertEqual(stats["schema_version"], "4")
 
     def test_migration_creates_backup(self):
-        """Al migrar, se debe crear una copia de seguridad (.bak) del fichero."""
+        """A migration must create a backup copy (.bak) of the file."""
         _create_v1_db(self._db_path)
 
         db = MemoryDB(self._db_path)
@@ -1168,16 +1167,16 @@ class TestSchemaMigration(unittest.TestCase):
         bak_path = self._db_path + ".bak"
         self.assertTrue(
             os.path.exists(bak_path),
-            f"No se encontro el fichero de backup en {bak_path}"
+            f"Backup file not found at {bak_path}"
         )
 
     def test_migration_adds_tags_column(self):
-        """Tras migrar de v1, la tabla decisions debe tener la columna tags."""
+        """After migration from v1, the decisions table must have the tags column."""
         _create_v1_db(self._db_path)
 
         db = MemoryDB(self._db_path)
 
-        # Verificar que se puede insertar un registro con la columna tags
+        # Check that a record with the tags column can be inserted
         db._conn.execute(
             "INSERT INTO decisions "
             "(title, chosen, tags, status, decided_at) "
@@ -1194,7 +1193,7 @@ class TestSchemaMigration(unittest.TestCase):
         self.assertEqual(row[0], '["tag1"]')
 
     def test_migration_creates_decision_links_table(self):
-        """Tras migrar de v1, la tabla decision_links debe existir."""
+        """After migration from v1, the decision_links table must exist."""
         _create_v1_db(self._db_path)
 
         db = MemoryDB(self._db_path)
@@ -1207,16 +1206,15 @@ class TestSchemaMigration(unittest.TestCase):
 
         self.assertIsNotNone(
             row,
-            "La tabla decision_links no se encontro en sqlite_master"
+            "The decision_links table was not found in sqlite_master"
         )
 
 
 class TestDecisionTagsAndStatus(unittest.TestCase):
-    """Tests de etiquetas y estado en decisiones.
+    """Tests for tags and status on decisions.
 
-    Verifican que las etiquetas se almacenan como JSON, que el estado
-    se puede actualizar con valores validos y que los valores por defecto
-    son correctos.
+    They check that tags are stored as JSON, that the status can be
+    updated with valid values and that the defaults are correct.
     """
 
     def setUp(self):
@@ -1235,23 +1233,23 @@ class TestDecisionTagsAndStatus(unittest.TestCase):
                 os.unlink(path)
 
     def test_log_decision_with_tags(self):
-        """Las etiquetas proporcionadas se almacenan como JSON en la columna tags."""
+        """The given tags are stored as JSON in the tags column."""
         dec_id = self.db.log_decision(
-            title="Decision con etiquetas",
-            chosen="Opcion A",
-            tags=["arquitectura", "rendimiento"],
+            title="Decision with tags",
+            chosen="Option A",
+            tags=["architecture", "performance"],
         )
         decisions = self.db.get_decisions()
         d = decisions[0]
 
         tags = json.loads(d["tags"])
-        self.assertEqual(tags, ["arquitectura", "rendimiento"])
+        self.assertEqual(tags, ["architecture", "performance"])
 
     def test_log_decision_without_tags_defaults_empty(self):
-        """Sin etiquetas, la columna tags contiene una lista JSON vacia."""
+        """Without tags, the tags column contains an empty JSON list."""
         dec_id = self.db.log_decision(
-            title="Decision sin etiquetas",
-            chosen="Opcion B",
+            title="Decision without tags",
+            chosen="Option B",
         )
         decisions = self.db.get_decisions()
         d = decisions[0]
@@ -1260,10 +1258,10 @@ class TestDecisionTagsAndStatus(unittest.TestCase):
         self.assertEqual(tags, [])
 
     def test_add_decision_tags(self):
-        """add_decision_tags anade etiquetas sin duplicar las existentes."""
+        """add_decision_tags adds tags without duplicating existing ones."""
         dec_id = self.db.log_decision(
-            title="Decision para etiquetar",
-            chosen="Opcion C",
+            title="Decision to tag",
+            chosen="Option C",
             tags=["frontend"],
         )
         self.db.add_decision_tags(dec_id, ["backend", "frontend", "api"])
@@ -1271,14 +1269,14 @@ class TestDecisionTagsAndStatus(unittest.TestCase):
         decisions = self.db.get_decisions()
         tags = json.loads(decisions[0]["tags"])
 
-        # frontend no debe duplicarse; el orden conserva la insercion
+        # frontend must not be duplicated; the order keeps the insertion order
         self.assertEqual(tags, ["frontend", "backend", "api"])
 
     def test_update_decision_status(self):
-        """update_decision_status cambia el estado correctamente."""
+        """update_decision_status changes the status correctly."""
         dec_id = self.db.log_decision(
-            title="Decision a reemplazar",
-            chosen="Opcion vieja",
+            title="Decision to replace",
+            chosen="Old option",
         )
         self.db.update_decision_status(dec_id, "superseded")
 
@@ -1286,29 +1284,29 @@ class TestDecisionTagsAndStatus(unittest.TestCase):
         self.assertEqual(decisions[0]["status"], "superseded")
 
     def test_update_decision_status_invalid(self):
-        """Un estado no valido debe lanzar ValueError."""
+        """An invalid status must raise ValueError."""
         dec_id = self.db.log_decision(
-            title="Decision con estado invalido",
-            chosen="Algo",
+            title="Decision with invalid status",
+            chosen="Something",
         )
         with self.assertRaises(ValueError):
             self.db.update_decision_status(dec_id, "invalid")
 
     def test_decision_default_status_active(self):
-        """El estado por defecto de una decision nueva es 'active'."""
+        """The default status of a new decision is 'active'."""
         dec_id = self.db.log_decision(
-            title="Decision nueva",
-            chosen="Lo que sea",
+            title="New decision",
+            chosen="Anything",
         )
         decisions = self.db.get_decisions()
         self.assertEqual(decisions[0]["status"], "active")
 
 
 class TestDecisionLinks(unittest.TestCase):
-    """Tests de relaciones entre decisiones.
+    """Tests for links between decisions.
 
-    Verifican que se pueden crear relaciones dirigidas entre decisiones,
-    que la idempotencia funciona y que la busqueda es bidireccional.
+    They check that directed links between decisions can be created,
+    that idempotency works and that lookup works in both directions.
     """
 
     def setUp(self):
@@ -1327,9 +1325,9 @@ class TestDecisionLinks(unittest.TestCase):
                 os.unlink(path)
 
     def test_link_decisions(self):
-        """link_decisions crea la relacion y get_decision_links la devuelve."""
-        dec1 = self.db.log_decision(title="Decision origen", chosen="A")
-        dec2 = self.db.log_decision(title="Decision destino", chosen="B")
+        """link_decisions creates the link and get_decision_links returns it."""
+        dec1 = self.db.log_decision(title="Source decision", chosen="A")
+        dec2 = self.db.log_decision(title="Target decision", chosen="B")
 
         self.db.link_decisions(dec1, dec2, "supersedes")
         links = self.db.get_decision_links(dec1)
@@ -1341,43 +1339,42 @@ class TestDecisionLinks(unittest.TestCase):
         self.assertIn("created_at", links[0])
 
     def test_link_decisions_duplicate_ignored(self):
-        """Crear la misma relacion dos veces no lanza excepcion."""
+        """Creating the same link twice does not raise an exception."""
         dec1 = self.db.log_decision(title="Dec A", chosen="X")
         dec2 = self.db.log_decision(title="Dec B", chosen="Y")
 
         self.db.link_decisions(dec1, dec2, "relates")
-        # Segunda vez: no debe fallar
+        # Second time: must not fail
         self.db.link_decisions(dec1, dec2, "relates")
 
         links = self.db.get_decision_links(dec1)
         self.assertEqual(len(links), 1)
 
     def test_get_decision_links_bidirectional(self):
-        """get_decision_links devuelve resultados al buscar desde el target."""
-        dec1 = self.db.log_decision(title="Origen", chosen="A")
-        dec2 = self.db.log_decision(title="Destino", chosen="B")
+        """get_decision_links returns results when looked up from the target."""
+        dec1 = self.db.log_decision(title="Source", chosen="A")
+        dec2 = self.db.log_decision(title="Target", chosen="B")
 
         self.db.link_decisions(dec1, dec2, "depends_on")
 
-        # Buscar desde el target (dec2) tambien devuelve la relacion
+        # A lookup from the target (dec2) also returns the link
         links_from_target = self.db.get_decision_links(dec2)
         self.assertEqual(len(links_from_target), 1)
         self.assertEqual(links_from_target[0]["source_id"], dec1)
         self.assertEqual(links_from_target[0]["target_id"], dec2)
 
     def test_get_decision_links_empty(self):
-        """Sin enlaces, get_decision_links devuelve lista vacia."""
-        dec = self.db.log_decision(title="Solitaria", chosen="Z")
+        """Without links, get_decision_links returns an empty list."""
+        dec = self.db.log_decision(title="Lonely", chosen="Z")
         links = self.db.get_decision_links(dec)
         self.assertEqual(links, [])
 
 
 class TestSearchFilters(unittest.TestCase):
-    """Tests de los filtros avanzados de busqueda (since, until, tags, status).
+    """Tests for the advanced search filters (since, until, tags, status).
 
-    Verifican que los metodos search() y get_decisions() aplican
-    correctamente los filtros de fecha, etiquetas y estado sobre los
-    resultados devueltos.
+    They check that search() and get_decisions() apply the date, tag
+    and status filters correctly to the returned results.
     """
 
     def setUp(self):
@@ -1396,18 +1393,18 @@ class TestSearchFilters(unittest.TestCase):
                 os.unlink(path)
 
     def test_search_with_since_filter(self):
-        """since excluye resultados con fecha anterior al umbral."""
-        # Crear dos decisiones con el mismo termino para que aparezcan
+        """since excludes results dated before the threshold."""
+        # Create two decisions with the same term so both appear
         dec_old = self.db.log_decision(
-            title="Optimizacion antigua",
+            title="Optimization old",
             chosen="Cache LRU",
         )
         dec_new = self.db.log_decision(
-            title="Optimizacion reciente",
-            chosen="Cache distribuida",
+            title="Optimization recent",
+            chosen="Distributed cache",
         )
 
-        # Forzar la fecha de la primera decision a 2025-01-01 via SQL directo
+        # Force the date of the first decision to 2025-01-01 with direct SQL
         conn = sqlite3.connect(self._db_path)
         conn.execute(
             "UPDATE decisions SET decided_at = ? WHERE id = ?",
@@ -1416,27 +1413,27 @@ class TestSearchFilters(unittest.TestCase):
         conn.commit()
         conn.close()
 
-        results = self.db.search("Optimizacion", since="2026-01-01")
+        results = self.db.search("Optimization", since="2026-01-01")
         titles = [r.get("title", "") for r in results]
 
-        self.assertNotIn("Optimizacion antigua", titles)
+        self.assertNotIn("Optimization old", titles)
         self.assertTrue(
-            any("Optimizacion reciente" in t for t in titles),
-            f"La decision reciente deberia aparecer, resultados: {titles}",
+            any("Optimization recent" in t for t in titles),
+            f"The recent decision must appear, results: {titles}",
         )
 
     def test_search_with_until_filter(self):
-        """until excluye resultados con fecha posterior al umbral."""
+        """until excludes results dated after the threshold."""
         dec_old = self.db.log_decision(
-            title="Migracion antigua",
+            title="Migration old",
             chosen="PostgreSQL 14",
         )
         dec_new = self.db.log_decision(
-            title="Migracion reciente",
+            title="Migration recent",
             chosen="PostgreSQL 16",
         )
 
-        # Forzar la fecha de la primera decision a 2025-01-01
+        # Force the date of the first decision to 2025-01-01
         conn = sqlite3.connect(self._db_path)
         conn.execute(
             "UPDATE decisions SET decided_at = ? WHERE id = ?",
@@ -1445,101 +1442,101 @@ class TestSearchFilters(unittest.TestCase):
         conn.commit()
         conn.close()
 
-        results = self.db.search("Migracion", until="2025-06-01")
+        results = self.db.search("Migration", until="2025-06-01")
         titles = [r.get("title", "") for r in results]
 
-        self.assertNotIn("Migracion reciente", titles)
+        self.assertNotIn("Migration recent", titles)
         self.assertTrue(
-            any("Migracion antigua" in t for t in titles),
-            f"La decision antigua deberia aparecer, resultados: {titles}",
+            any("Migration old" in t for t in titles),
+            f"The old decision must appear, results: {titles}",
         )
 
     def test_search_with_tags_filter(self):
-        """tags filtra decisiones que contengan al menos una etiqueta."""
+        """tags filters decisions that contain at least one tag."""
         self.db.log_decision(
-            title="Politica de autenticacion",
+            title="Authentication policy",
             chosen="OAuth2",
             tags=["security", "auth"],
         )
         self.db.log_decision(
-            title="Politica de cache",
+            title="Cache policy",
             chosen="Redis",
             tags=["performance"],
         )
 
-        results = self.db.search("Politica", tags=["security"])
+        results = self.db.search("policy", tags=["security"])
         titles = [r.get("title", "") for r in results]
 
         self.assertTrue(
-            any("autenticacion" in t for t in titles),
-            f"La decision de seguridad deberia aparecer: {titles}",
+            any("Authentication" in t for t in titles),
+            f"The security decision must appear: {titles}",
         )
-        self.assertNotIn("Politica de cache", titles)
+        self.assertNotIn("Cache policy", titles)
 
     def test_search_with_status_filter(self):
-        """status filtra decisiones por su estado."""
+        """status filters decisions by their status."""
         dec_active = self.db.log_decision(
-            title="Estrategia de despliegue activa",
+            title="Deployment strategy active",
             chosen="Kubernetes",
         )
         dec_superseded = self.db.log_decision(
-            title="Estrategia de despliegue antigua",
+            title="Deployment strategy old",
             chosen="Docker Swarm",
         )
         self.db.update_decision_status(dec_superseded, "superseded")
 
-        results = self.db.search("Estrategia de despliegue", status="active")
+        results = self.db.search("Deployment strategy", status="active")
         titles = [r.get("title", "") for r in results]
 
         self.assertTrue(
-            any("activa" in t for t in titles),
-            f"La decision activa deberia aparecer: {titles}",
+            any("active" in t for t in titles),
+            f"The active decision must appear: {titles}",
         )
-        self.assertNotIn("Estrategia de despliegue antigua", titles)
+        self.assertNotIn("Deployment strategy old", titles)
 
     def test_get_decisions_with_tags_filter(self):
-        """get_decisions filtra por etiquetas en SQL."""
+        """get_decisions filters by tags in SQL."""
         self.db.log_decision(
-            title="Patron de acceso a datos",
+            title="Data access pattern",
             chosen="Repository pattern",
-            tags=["arquitectura", "backend"],
+            tags=["architecture", "backend"],
         )
         self.db.log_decision(
-            title="Diseno de la UI",
+            title="UI design",
             chosen="Material Design",
             tags=["frontend", "ux"],
         )
 
-        results = self.db.get_decisions(tags=["arquitectura"])
+        results = self.db.get_decisions(tags=["architecture"])
         self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]["title"], "Patron de acceso a datos")
+        self.assertEqual(results[0]["title"], "Data access pattern")
 
     def test_get_decisions_with_status_filter(self):
-        """get_decisions filtra por estado en SQL."""
+        """get_decisions filters by status in SQL."""
         dec1 = self.db.log_decision(
-            title="Decision vigente",
+            title="Current decision",
             chosen="A",
         )
         dec2 = self.db.log_decision(
-            title="Decision reemplazada",
+            title="Replaced decision",
             chosen="B",
         )
         self.db.update_decision_status(dec2, "superseded")
 
         actives = self.db.get_decisions(status="active")
         self.assertEqual(len(actives), 1)
-        self.assertEqual(actives[0]["title"], "Decision vigente")
+        self.assertEqual(actives[0]["title"], "Current decision")
 
         superseded = self.db.get_decisions(status="superseded")
         self.assertEqual(len(superseded), 1)
-        self.assertEqual(superseded[0]["title"], "Decision reemplazada")
+        self.assertEqual(superseded[0]["title"], "Replaced decision")
 
 
 class TestCommitFiles(unittest.TestCase):
-    """Tests del campo files en commits.
+    """Tests for the files field on commits.
 
-    Verifican que la lista de ficheros modificados se serializa
-    correctamente como JSON en la columna ``files`` de la tabla commits.
+    They check that the list of changed files is serialized correctly
+    as JSON in the ``files`` column of the commits table.
     """
 
     def setUp(self):
@@ -1558,15 +1555,15 @@ class TestCommitFiles(unittest.TestCase):
                 os.unlink(path)
 
     def test_log_commit_with_files(self):
-        """files se almacena como JSON cuando se proporciona una lista."""
+        """files is stored as JSON when a list is given."""
         commit_id = self.db.log_commit(
             sha="files_test_sha_1",
-            message="feat: nuevo componente",
+            message="feat: new component",
             files=["src/components/Button.tsx", "src/styles/button.css"],
         )
         self.assertIsNotNone(commit_id)
 
-        # Verificar via SQL directo
+        # Check with direct SQL
         conn = sqlite3.connect(self._db_path)
         row = conn.execute(
             "SELECT files FROM commits WHERE id = ?", (commit_id,)
@@ -1580,10 +1577,10 @@ class TestCommitFiles(unittest.TestCase):
         )
 
     def test_log_commit_without_files_defaults_empty(self):
-        """Sin files, la columna contiene una lista JSON vacia."""
+        """Without files, the column contains an empty JSON list."""
         commit_id = self.db.log_commit(
             sha="files_test_sha_2",
-            message="chore: limpieza",
+            message="chore: cleanup",
         )
         self.assertIsNotNone(commit_id)
 
@@ -1597,7 +1594,7 @@ class TestCommitFiles(unittest.TestCase):
         self.assertEqual(files, [])
 
     def test_log_commit_files_list_stored(self):
-        """Los paths se almacenan fielmente en el campo files."""
+        """Paths are stored exactly in the files field."""
         expected_files = [
             "core/memory.py",
             "tests/test_memory.py",
@@ -1605,12 +1602,12 @@ class TestCommitFiles(unittest.TestCase):
         ]
         commit_id = self.db.log_commit(
             sha="files_test_sha_3",
-            message="refactor: reorganizar modulos",
+            message="refactor: reorganize modules",
             files=expected_files,
         )
         self.assertIsNotNone(commit_id)
 
-        # Verificacion directa contra SQLite sin pasar por la API
+        # Check directly against SQLite, without the API
         conn = sqlite3.connect(self._db_path)
         row = conn.execute(
             "SELECT files FROM commits WHERE sha = 'files_test_sha_3'"
@@ -1622,10 +1619,10 @@ class TestCommitFiles(unittest.TestCase):
 
 
 class TestHealthCheck(unittest.TestCase):
-    """Tests de validacion de integridad de la base de datos.
+    """Tests for database integrity validation.
 
-    Verifican que check_health() detecta correctamente el estado del
-    esquema, los permisos del fichero y el tamano de la base de datos.
+    They check that check_health() correctly detects the schema state,
+    the file permissions and the database size.
     """
 
     def setUp(self):
@@ -1644,31 +1641,31 @@ class TestHealthCheck(unittest.TestCase):
                 os.unlink(path)
 
     def test_healthy_db(self):
-        """Una DB nueva debe reportar status 'healthy' sin issues."""
+        """A new DB must report status 'healthy' with no issues."""
         health = self.db.check_health()
         self.assertEqual(health["status"], "healthy")
         self.assertEqual(len(health["issues"]), 0)
 
     def test_schema_version_check(self):
-        """La version del esquema debe ser '4'."""
+        """The schema version must be '4'."""
         health = self.db.check_health()
         self.assertEqual(health["schema_version"], "4")
 
     def test_permissions_check(self):
-        """Los permisos del fichero deben ser correctos."""
+        """The file permissions must be correct."""
         health = self.db.check_health()
         self.assertTrue(health["permissions_ok"])
 
     def test_db_size_reported(self):
-        """El tamano de la BD debe existir y ser un entero mayor que 0."""
+        """The DB size must exist and be an integer greater than 0."""
         health = self.db.check_health()
         self.assertIn("size_bytes", health)
         self.assertIsInstance(health["size_bytes"], int)
         self.assertGreater(health["size_bytes"], 0)
 
     def test_health_includes_wal_size(self):
-        """size_bytes debe incluir el WAL cuando hay datos recientes."""
-        self.db.start_iteration("feature", "tamano")
+        """size_bytes must include the WAL when there is recent data."""
+        self.db.start_iteration("feature", "size")
         self.db.log_event(event_type="custom", content="A" * 100000)
 
         health = self.db.check_health()
@@ -1677,9 +1674,9 @@ class TestHealthCheck(unittest.TestCase):
         self.assertGreater(health["size_bytes"], main_size)
 
     def test_reopen_repairs_legacy_fts_content(self):
-        """Al reabrir, una DB vieja debe reconstruir FTS con el formato nuevo."""
+        """On reopen, an old DB must rebuild FTS with the new format."""
         if not self.db.fts_enabled:
-            self.skipTest("FTS5 no disponible en este entorno.")
+            self.skipTest("FTS5 is not available in this environment.")
 
         iteration_id = self.db.start_iteration("feature", "fts legacy")
         commit_id = self.db.log_commit(
@@ -1726,11 +1723,11 @@ class TestHealthCheck(unittest.TestCase):
 
 
 class TestExportImport(unittest.TestCase):
-    """Tests de exportacion e importacion de datos.
+    """Tests for data export and import.
 
-    Verifican que export_decisions_markdown genera ficheros correctos
-    y que import_git_history es idempotente respecto a commits ya
-    registrados.
+    They check that export_decisions_markdown writes correct files and
+    that import_git_history is idempotent for commits that are already
+    recorded.
     """
 
     def setUp(self):
@@ -1771,11 +1768,11 @@ class TestExportImport(unittest.TestCase):
         return repo_dir
 
     def test_export_markdown_creates_file(self):
-        """export_decisions_markdown debe crear el fichero con el titulo."""
+        """export_decisions_markdown must create the file with the title."""
         self.db.log_decision(
-            title="Usar SQLite como motor de memoria",
+            title="Use SQLite as the memory engine",
             chosen="SQLite",
-            context="Necesitamos persistencia local ligera",
+            context="We need light local persistence",
         )
         export_path = os.path.join(self._export_dir, "decisions.md")
         count = self.db.export_decisions_markdown(export_path)
@@ -1785,26 +1782,26 @@ class TestExportImport(unittest.TestCase):
 
         with open(export_path, "r", encoding="utf-8") as f:
             content = f.read()
-        self.assertIn("Usar SQLite como motor de memoria", content)
+        self.assertIn("Use SQLite as the memory engine", content)
 
     def test_export_markdown_includes_metadata(self):
-        """El export debe incluir etiquetas y estado en el Markdown."""
+        """The export must include tags and status in the Markdown."""
         self.db.log_decision(
-            title="Patron de acceso a datos",
+            title="Data access pattern",
             chosen="Repository pattern",
-            tags=["arquitectura", "backend"],
+            tags=["architecture", "backend"],
         )
         export_path = os.path.join(self._export_dir, "meta.md")
         self.db.export_decisions_markdown(export_path)
 
         with open(export_path, "r", encoding="utf-8") as f:
             content = f.read()
-        self.assertIn("arquitectura", content)
+        self.assertIn("architecture", content)
         self.assertIn("backend", content)
         self.assertIn("active", content)
 
     def test_import_git_history_idempotent(self):
-        """Importar el mismo historial dos veces no duplica commits."""
+        """Importing the same history twice does not duplicate commits."""
         import subprocess
 
         repo_dir = self._init_repo("test_repo")
@@ -1827,7 +1824,7 @@ class TestExportImport(unittest.TestCase):
         self.assertEqual(second_count, 0)
 
     def test_import_git_history_handles_pipe_in_subject(self):
-        """No debe romperse si el subject del commit contiene |."""
+        """Must not break if the commit subject contains |."""
         import subprocess
 
         repo_dir = self._init_repo("pipe_repo")
@@ -1852,7 +1849,7 @@ class TestExportImport(unittest.TestCase):
         self.assertEqual(results[0]["author"], "Test")
 
     def test_import_git_history_preserves_commit_date(self):
-        """El historial importado debe conservar committed_at del repo."""
+        """Imported history must keep committed_at from the repo."""
         import subprocess
 
         repo_dir = self._init_repo("dated_repo")
@@ -1885,7 +1882,7 @@ class TestExportImport(unittest.TestCase):
         self.assertEqual(actual, expected)
 
     def test_import_git_history_does_not_link_history_to_active_iteration(self):
-        """Importar historial no debe contaminar la iteracion activa actual."""
+        """Importing history must not pollute the current active iteration."""
         import subprocess
 
         repo_dir = self._init_repo("iteration_repo")
@@ -1900,7 +1897,7 @@ class TestExportImport(unittest.TestCase):
             cwd=repo_dir, capture_output=True, check=True,
         )
 
-        active_iteration = self.db.start_iteration("feature", "Trabajo actual")
+        active_iteration = self.db.start_iteration("feature", "Current work")
         imported = self.db.import_git_history(repo_dir)
 
         self.assertEqual(imported, 1)
@@ -1916,7 +1913,7 @@ class TestExportImport(unittest.TestCase):
 
 
 class TestEventSearchAndPurge(unittest.TestCase):
-    """Verifica FTS de eventos y limpieza al purgar."""
+    """Check event FTS and cleanup on purge."""
 
     def setUp(self):
         self._tmpfile = tempfile.NamedTemporaryFile(
@@ -1925,7 +1922,7 @@ class TestEventSearchAndPurge(unittest.TestCase):
         self._db_path = self._tmpfile.name
         self._tmpfile.close()
         self.db = MemoryDB(self._db_path)
-        self.iter_id = self.db.start_iteration("feature", "fts eventos")
+        self.iter_id = self.db.start_iteration("feature", "fts events")
 
     def tearDown(self):
         self.db.close()
@@ -1935,7 +1932,7 @@ class TestEventSearchAndPurge(unittest.TestCase):
                 os.unlink(path)
 
     def test_search_returns_event_content(self):
-        """La busqueda debe devolver eventos si coinciden por texto."""
+        """Search must return events that match by text."""
         self.db.log_event(
             event_type="custom",
             content="token refresh strategy approved",
@@ -1948,7 +1945,7 @@ class TestEventSearchAndPurge(unittest.TestCase):
         self.assertEqual(results[0]["content"], "token refresh strategy approved")
 
     def test_purge_old_events_removes_fts_entries(self):
-        """Al purgar eventos tambien deben limpiarse sus filas FTS."""
+        """Purging events must also clean up their FTS rows."""
         event_id = self.db.log_event(
             event_type="custom",
             content="legacy rollout note",

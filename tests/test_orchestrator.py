@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para el orquestador de flujos."""
+"""Tests for the flow orchestrator."""
 
 import json
 import os
@@ -35,10 +35,10 @@ def _save_project_config_with_optionals(
     project_dir: str,
     enabled_optionals,
     *,
-    notes: str = "Configuración temporal para test.",
+    notes: str = "Temporary config for the test.",
 ) -> str:
-    """Guarda una config local mínima activando los opcionales indicados."""
-    config = load_config("/ruta/que/no/existe")
+    """Save a minimal local config that enables the given optional agents."""
+    config = load_config("/path/that/does/not/exist")
     for agent_name in enabled_optionals:
         config["agentes_opcionales"][agent_name] = True
     return save_project_config(
@@ -64,7 +64,7 @@ class TestFlows(unittest.TestCase):
         self.assertEqual(set(FLOWS.keys()), expected)
 
     def test_architecture_gate_is_usuario_seguridad(self):
-        """La fase de arquitectura debe tener gate usuario+seguridad."""
+        """The arquitectura phase must have the usuario+seguridad gate."""
         fase_arq = FLOWS["feature"]["fases"][2]
         self.assertEqual(fase_arq["nombre"], "arquitectura")
         self.assertEqual(fase_arq["gate_tipo"], "usuario+seguridad")
@@ -75,7 +75,7 @@ class TestFlows(unittest.TestCase):
 
 class TestSession(unittest.TestCase):
     def test_create_session(self):
-        session = create_session("feature", "Sistema de autenticación")
+        session = create_session("feature", "Authentication system")
         self.assertEqual(session["comando"], "feature")
         self.assertEqual(session["fase_actual"], "producto")
         self.assertEqual(session["fase_numero"], 0)
@@ -85,16 +85,16 @@ class TestSession(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             state_path = f.name
         try:
-            session = create_session("fix", "Bug en login")
+            session = create_session("fix", "Login bug")
             save_state(session, state_path)
             loaded = load_state(state_path)
             self.assertEqual(loaded["comando"], "fix")
-            self.assertEqual(loaded["descripcion"], "Bug en login")
+            self.assertEqual(loaded["descripcion"], "Login bug")
         finally:
             os.unlink(state_path)
 
     def test_create_quick_session(self):
-        session = create_session("quick", "Ajuste pequeño en login")
+        session = create_session("quick", "Small login tweak")
         self.assertEqual(session["comando"], "quick")
         self.assertEqual(session["fase_actual"], "ejecucion_acotada")
         self.assertEqual(session["fase_numero"], 0)
@@ -102,7 +102,7 @@ class TestSession(unittest.TestCase):
     def test_create_session_accepts_optional_stack(self):
         session = create_session(
             "feature",
-            "Sistema de autenticación",
+            "Authentication system",
             stack={"runtime": "python", "framework": "fastapi"},
         )
         self.assertEqual(session["stack"]["framework"], "fastapi")
@@ -111,7 +111,7 @@ class TestSession(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
-            session = create_session("feature", "Sistema de autenticación")
+            session = create_session("feature", "Authentication system")
 
             save_state(session, state_path)
 
@@ -127,7 +127,7 @@ class TestSession(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
-            session = create_session("feature", "Sistema de autenticación")
+            session = create_session("feature", "Authentication system")
 
             save_state(session, state_path)
 
@@ -145,7 +145,7 @@ class TestSession(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
-            session = create_session("fix", "Bug en login")
+            session = create_session("fix", "Login bug")
             save_state(session, state_path)
             while session["fase_actual"] != "completado":
                 session = advance_phase(session, resultado="aprobado", artefactos=[])
@@ -183,7 +183,7 @@ class TestSession(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
-            session = create_session("fix", "Bug en login")
+            session = create_session("fix", "Login bug")
 
             save_state(session, state_path)
 
@@ -199,7 +199,7 @@ class TestSession(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
-            session = create_session("fix", "Bug en login")
+            session = create_session("fix", "Login bug")
             save_state(session, state_path)
             session = load_state(state_path)
             session = advance_phase(session, resultado="aprobado", artefactos=["docs/diag.md"])
@@ -218,7 +218,7 @@ class TestSession(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
-            session = create_session("feature", "Sistema de autenticación")
+            session = create_session("feature", "Authentication system")
 
             save_state(session, state_path)
 
@@ -254,10 +254,10 @@ class TestSession(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
-            session = create_session("quick", "Ajuste pequeño en login")
+            session = create_session("quick", "Small login tweak")
             save_state(session, state_path)
             while session["fase_actual"] != "completado":
-                session = advance_phase(session, resultado="aprobado", artefactos=["docs/cambio.md"])
+                session = advance_phase(session, resultado="aprobado", artefactos=["docs/change.md"])
             save_state(session, state_path)
             write_uat_files(tmpdir, raw_request="aprobado smoke manual correcto")
 
@@ -278,7 +278,7 @@ class TestSession(unittest.TestCase):
         self.assertIn("Текущая UAT: одобрена.", traceability)
         self.assertIn("## Ручная проверка", traceability)
         self.assertIn("Статус verify: `done`.", traceability)
-        self.assertIn("docs/cambio.md", traceability)
+        self.assertIn("docs/change.md", traceability)
         self.assertIn(UAT_MD_RELATIVE_PATH, traceability)
         self.assertIn(UAT_MD_RELATIVE_PATH, loaded["artefactos"])
         self.assertIn(UAT_JSON_RELATIVE_PATH, loaded["artefactos"])
@@ -287,7 +287,7 @@ class TestSession(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
-            session = create_session("feature", "Checkout nuevo")
+            session = create_session("feature", "New checkout")
             session["fase_actual"] = "calidad"
             session["fase_numero"] = 4
             session["equipo_sesion"] = {
@@ -385,7 +385,7 @@ class TestSession(unittest.TestCase):
             )
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
 
-            session = run_flow("feature", "Checkout nuevo", project_dir=tmpdir)
+            session = run_flow("feature", "New checkout", project_dir=tmpdir)
             save_state(session, state_path)
 
             persisted = load_state(state_path)
@@ -417,7 +417,7 @@ class TestSession(unittest.TestCase):
             )
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
 
-            session = run_flow("fix", "Regresión en checkout", project_dir=tmpdir)
+            session = run_flow("fix", "Checkout regression", project_dir=tmpdir)
             save_state(session, state_path)
 
             persisted = load_state(state_path)
@@ -482,7 +482,7 @@ class TestSession(unittest.TestCase):
             )
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
 
-            session = run_flow("quick", "Ajuste fino", project_dir=tmpdir)
+            session = run_flow("quick", "Fine tuning", project_dir=tmpdir)
             save_state(session, state_path)
 
             persisted = load_state(state_path)
@@ -514,7 +514,7 @@ class TestSession(unittest.TestCase):
             )
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
 
-            session = run_flow("audit", "Auditoría anual", project_dir=tmpdir)
+            session = run_flow("audit", "Annual audit", project_dir=tmpdir)
             save_state(session, state_path)
 
             persisted = load_state(state_path)
@@ -547,7 +547,7 @@ class TestSession(unittest.TestCase):
             )
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
 
-            session = run_flow("spike", "Evaluar Bun para jobs", project_dir=tmpdir)
+            session = run_flow("spike", "Evaluate Bun for jobs", project_dir=tmpdir)
             save_state(session, state_path)
 
             persisted = load_state(state_path)
@@ -583,7 +583,7 @@ class TestSession(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
-            session = create_session("audit", "Auditoría anual")
+            session = create_session("audit", "Annual audit")
             session["fase_actual"] = "auditoria_paralela"
             session["fase_numero"] = 0
             session["equipo_sesion"] = {
@@ -616,7 +616,7 @@ class TestSession(unittest.TestCase):
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
             session = create_session(
                 "feature",
-                "Sistema de autenticación",
+                "Authentication system",
                 stack={"runtime": "python", "framework": "fastapi"},
             )
             save_state(session, state_path)
@@ -652,7 +652,7 @@ class TestSession(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
-            session = create_session("feature", "Sistema de autenticación")
+            session = create_session("feature", "Authentication system")
             session["iteraciones_fase"] = 2
             session = advance_phase(session, resultado="aprobado", artefactos=["docs/producto.md"])
 
@@ -676,17 +676,17 @@ class TestSession(unittest.TestCase):
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
 
             with open(os.path.join(tmpdir, "docs", "style-direction.md"), "w", encoding="utf-8") as fh:
-                fh.write("# Direccion de estilo\n")
+                fh.write("# Style direction\n")
             with open(
                 os.path.join(tmpdir, ".alfred-dev", "visual", "session-1", "state", "events"),
                 "w",
                 encoding="utf-8",
             ) as fh:
                 fh.write(
-                    '{"type":"click","choice":"B","label":"Editorial cálido","ts":"2026-04-07T10:00:02Z"}\n'
+                    '{"type":"click","choice":"B","label":"Warm editorial","ts":"2026-04-07T10:00:02Z"}\n'
                 )
 
-            session = create_session("feature", "Sistema de autenticación")
+            session = create_session("feature", "Authentication system")
             session = advance_phase(session, resultado="aprobado", artefactos=["docs/producto.md"])
             session = advance_phase(session, resultado="aprobado", artefactos=[])
 
@@ -703,7 +703,7 @@ class TestSession(unittest.TestCase):
 
         estilo_task = next(task for task in board["done"] if task["title"].startswith("feature:estilo_visual"))
         self.assertIn("docs/style-direction.md", estilo_task["body"])
-        self.assertIn("Editorial cálido", estilo_task["notes"])
+        self.assertIn("Warm editorial", estilo_task["notes"])
         self.assertIn("Визуальный выбор", estilo_task["evidence"])
 
 
@@ -719,9 +719,9 @@ class TestGates(unittest.TestCase):
         self.assertFalse(result["passed"])
 
     def test_automatic_gate_fails_when_tests_fail(self):
-        """Las gates automáticas bloquean si los tests no pasan."""
+        """Automatic gates block if the tests fail."""
         session = create_session("feature", "Test")
-        # Avanzar a fase de desarrollo (gate automática)
+        # Advance to the desarrollo phase (automatic gate)
         session = advance_phase(session)  # producto -> estilo_visual
         session = advance_phase(session)  # estilo_visual -> arquitectura
         session = advance_phase(session)  # arquitectura -> desarrollo
@@ -730,7 +730,7 @@ class TestGates(unittest.TestCase):
         self.assertIn("тесты", result["reason"].lower())
 
     def test_automatic_gate_passes_when_tests_ok(self):
-        """Las gates automáticas dejan pasar si tests y resultado OK."""
+        """Automatic gates pass if the tests and the result are OK."""
         session = create_session("feature", "Test")
         session = advance_phase(session)  # producto -> estilo_visual
         session = advance_phase(session)  # estilo_visual -> arquitectura
@@ -739,24 +739,24 @@ class TestGates(unittest.TestCase):
         self.assertTrue(result["passed"])
 
     def test_security_gate_fails_when_security_fails(self):
-        """Las gates con seguridad bloquean si security_ok es False."""
+        """Gates with security block if security_ok is False."""
         session = create_session("feature", "Test")
         session = advance_phase(session)  # producto -> estilo_visual
         session = advance_phase(session)  # estilo_visual -> arquitectura
         session = advance_phase(session)  # arquitectura -> desarrollo
         session = advance_phase(session)  # desarrollo -> calidad
-        # Fase de calidad: gate automático+seguridad
+        # calidad phase: automatico+seguridad gate
         result = check_gate(session, resultado="aprobado", security_ok=False)
         self.assertFalse(result["passed"])
         self.assertIn("безопасности", result["reason"].lower())
 
     def test_advance_phase_propagates_tests_ok(self):
-        """advance_phase propaga tests_ok a check_gate."""
+        """advance_phase passes tests_ok to check_gate."""
         session = create_session("feature", "Test")
         session = advance_phase(session)  # producto -> estilo_visual
         session = advance_phase(session)  # estilo_visual -> arquitectura
         session = advance_phase(session)  # arquitectura -> desarrollo
-        # Intentar avanzar desarrollo con tests rojos
+        # Try to advance desarrollo with red tests
         with self.assertRaises(RuntimeError):
             advance_phase(session, resultado="aprobado", tests_ok=False)
 
@@ -770,15 +770,15 @@ class TestAdvancePhase(unittest.TestCase):
         self.assertEqual(len(session["fases_completadas"]), 1)
 
     def test_cannot_advance_past_last_phase(self):
-        session = create_session("spike", "Investigación")
+        session = create_session("spike", "Research")
         session = advance_phase(session, resultado="aprobado", artefactos=[])
         session = advance_phase(session, resultado="aprobado", artefactos=[])
         self.assertEqual(session["fase_actual"], "completado")
 
 
-# --- Fixture compartida para equipo_sesion ---
-# Representa un equipo de sesión válido con composición dinámica.
-# Se usa como referencia en los tests de validación y run_flow.
+# --- Shared fixture for equipo_sesion ---
+# A valid session team with dynamic composition.
+# The validation and run_flow tests use it as a reference.
 VALID_EQUIPO_SESION = {
     "opcionales_activos": {
         "cto": True,
@@ -792,22 +792,22 @@ VALID_EQUIPO_SESION = {
 
 
 class TestValidateEquipoSesion(unittest.TestCase):
-    """Validación de la estructura del equipo de sesión."""
+    """Validation of the session team structure."""
 
-    def test_tc20_dict_valido_completo(self):
-        """TC-20: un dict válido completo devuelve True."""
+    def test_tc20_valid_complete_dict(self):
+        """TC-20: a valid complete dict returns True."""
         self.assertTrue(_validate_equipo_sesion(VALID_EQUIPO_SESION))
 
-    def test_tc21_dict_vacio(self):
-        """TC-21: un dict vacío devuelve False."""
+    def test_tc21_empty_dict(self):
+        """TC-21: an empty dict returns False."""
         self.assertFalse(_validate_equipo_sesion({}))
 
-    def test_tc22_agente_extra_en_opcionales_acepta_con_aviso(self):
-        """TC-22: un agente extra se acepta (True) pero emite aviso a stderr."""
+    def test_tc22_extra_optional_agent_is_accepted_with_warning(self):
+        """TC-22: an extra agent is accepted (True) but writes a warning to stderr."""
         import copy
         import io
         malo = copy.deepcopy(VALID_EQUIPO_SESION)
-        malo["opcionales_activos"]["agente-inventado"] = True
+        malo["opcionales_activos"]["made-up-agent"] = True
         captured = io.StringIO()
         old_stderr = sys.stderr
         sys.stderr = captured
@@ -816,17 +816,17 @@ class TestValidateEquipoSesion(unittest.TestCase):
         finally:
             sys.stderr = old_stderr
         self.assertTrue(result)
-        self.assertIn("agente-inventado", captured.getvalue())
+        self.assertIn("made-up-agent", captured.getvalue())
 
-    def test_tc22b_agente_faltante_en_opcionales_falla(self):
-        """TC-22b: si falta un agente conocido, devuelve False."""
+    def test_tc22b_missing_optional_agent_fails(self):
+        """TC-22b: if a known agent is missing, return False."""
         import copy
         malo = copy.deepcopy(VALID_EQUIPO_SESION)
         del malo["opcionales_activos"]["cto"]
         self.assertFalse(_validate_equipo_sesion(malo))
 
-    def test_tc22c_clave_legacy_lucius_se_acepta_como_cto(self):
-        """TC-22c: estados antiguos con `lucius` se normalizan a `cto`."""
+    def test_tc22c_legacy_lucius_key_is_accepted_as_cto(self):
+        """TC-22c: old states with `lucius` are normalized to `cto`."""
         import copy
         legacy = copy.deepcopy(VALID_EQUIPO_SESION)
         legacy["opcionales_activos"]["lucius"] = legacy["opcionales_activos"].pop("cto")
@@ -834,15 +834,15 @@ class TestValidateEquipoSesion(unittest.TestCase):
         self.assertIn("cto", legacy["opcionales_activos"])
         self.assertNotIn("lucius", legacy["opcionales_activos"])
 
-    def test_tc23_valor_no_bool_en_opcionales(self):
-        """TC-23: un valor no booleano en opcionales devuelve False."""
+    def test_tc23_non_bool_optional_value(self):
+        """TC-23: a non-boolean value in the optional agents returns False."""
         import copy
         malo = copy.deepcopy(VALID_EQUIPO_SESION)
-        malo["opcionales_activos"]["cto"] = "si"
+        malo["opcionales_activos"]["cto"] = "yes"
         self.assertFalse(_validate_equipo_sesion(malo))
 
-    def test_tc23b_fuente_persistida_tambien_es_valida(self):
-        """TC-23b: la config persistida usa el mismo contrato runtime."""
+    def test_tc23b_persisted_source_is_also_valid(self):
+        """TC-23b: the persisted config uses the same runtime contract."""
         import copy
         persisted = copy.deepcopy(VALID_EQUIPO_SESION)
         persisted["fuente"] = "config_persistida"
@@ -850,24 +850,24 @@ class TestValidateEquipoSesion(unittest.TestCase):
 
 
 class TestRunFlow(unittest.TestCase):
-    """Tests para la función run_flow de creación de sesión con equipo."""
+    """Tests for run_flow, which creates a session with a team."""
 
-    def test_tc15_sin_equipo_sesion(self):
-        """TC-15: run_flow sin equipo_sesion crea sesión con equipo_sesion=None."""
+    def test_tc15_without_equipo_sesion(self):
+        """TC-15: run_flow without equipo_sesion creates a session with equipo_sesion=None."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            session = run_flow("feature", "Nueva funcionalidad", project_dir=tmpdir)
+            session = run_flow("feature", "New feature", project_dir=tmpdir)
         self.assertIn("equipo_sesion", session)
         self.assertIsNone(session["equipo_sesion"])
         self.assertIsNone(session["equipo_sesion_error"])
 
-    def test_tc16_con_equipo_sesion_valido(self):
-        """TC-16: run_flow con equipo_sesion válido lo inyecta en la sesión."""
-        session = run_flow("feature", "Nueva funcionalidad", equipo_sesion=VALID_EQUIPO_SESION)
+    def test_tc16_with_valid_equipo_sesion(self):
+        """TC-16: run_flow with a valid equipo_sesion injects it into the session."""
+        session = run_flow("feature", "New feature", equipo_sesion=VALID_EQUIPO_SESION)
         self.assertEqual(session["equipo_sesion"], VALID_EQUIPO_SESION)
         self.assertIsNone(session["equipo_sesion_error"])
 
-    def test_tc17_equipo_sesion_invalido_cae_a_none_con_error(self):
-        """TC-17: run_flow con equipo_sesion inválido cae a None y registra motivo."""
+    def test_tc17_invalid_equipo_sesion_falls_back_to_none_with_error(self):
+        """TC-17: run_flow with an invalid equipo_sesion falls back to None and records the reason."""
         import io
         captured = io.StringIO()
         old_stderr = sys.stderr
@@ -877,25 +877,25 @@ class TestRunFlow(unittest.TestCase):
                 session = run_flow(
                     "feature",
                     "Test",
-                    equipo_sesion={"malo": True},
+                    equipo_sesion={"bad": True},
                     project_dir=tmpdir,
                 )
         finally:
             sys.stderr = old_stderr
         self.assertIsNone(session["equipo_sesion"])
         self.assertIn("Alfred Dev", captured.getvalue())
-        # Verifica que el motivo del descarte se registra en la sesión
+        # Verify that the session records the reason for the rejection
         self.assertIsNotNone(session["equipo_sesion_error"])
         self.assertIn("не прошла проверку", session["equipo_sesion_error"])
 
-    def test_tc18_comando_desconocido_lanza_valueerror(self):
-        """TC-18: run_flow con comando desconocido lanza ValueError."""
+    def test_tc18_unknown_command_raises_valueerror(self):
+        """TC-18: run_flow with an unknown command raises ValueError."""
         with self.assertRaises(ValueError):
-            run_flow("inventado", "No existe")
+            run_flow("made-up", "Does not exist")
 
-    def test_tc19_integracion_extremo_a_extremo(self):
-        """TC-19: run_flow -> extraer opcionales -> get_effective_agents."""
-        session = run_flow("feature", "Nuevo módulo", equipo_sesion=VALID_EQUIPO_SESION)
+    def test_tc19_end_to_end_integration(self):
+        """TC-19: run_flow -> extract optional agents -> get_effective_agents."""
+        session = run_flow("feature", "New module", equipo_sesion=VALID_EQUIPO_SESION)
         opcionales = session["equipo_sesion"]["opcionales_activos"]
         arquitectura = get_effective_agents("arquitectura", opcionales)
         calidad = get_effective_agents("calidad", opcionales)
@@ -903,8 +903,8 @@ class TestRunFlow(unittest.TestCase):
         self.assertEqual(arquitectura["secuencial"], [])
         self.assertIn("cto", calidad["secuencial"])
 
-    def test_tc24_retrocompatibilidad_get_effective_agents_con_none(self):
-        """TC-24: get_effective_agents(fase, None) sigue funcionando."""
+    def test_tc24_backward_compat_get_effective_agents_with_none(self):
+        """TC-24: get_effective_agents(fase, None) still works."""
         result = get_effective_agents("calidad", None)
         self.assertEqual(result, {"paralelo": [], "secuencial": []})
 
@@ -978,7 +978,7 @@ class TestRunFlow(unittest.TestCase):
             session = run_flow(
                 "ship",
                 "Release 2.1.0",
-                equipo_sesion={"malo": True},
+                equipo_sesion={"bad": True},
                 project_dir=tmpdir,
             )
 
@@ -988,7 +988,7 @@ class TestRunFlow(unittest.TestCase):
         self.assertIn("Применена сохранённая конфигурация", session["equipo_sesion_error"])
 
     def test_quick_flow_uses_optional_agents_on_light_phases(self):
-        """quick integra CTO solo en la validación rápida."""
+        """quick includes CTO only in validacion_rapida."""
         opcionales = {
             **VALID_EQUIPO_SESION["opcionales_activos"],
             "cto": True,
@@ -1000,7 +1000,7 @@ class TestRunFlow(unittest.TestCase):
         self.assertIn("cto", validacion["secuencial"])
 
     def test_fix_flow_uses_optional_agents_on_bug_phases(self):
-        """fix integra CTO solo en validacion."""
+        """fix includes CTO only in validacion."""
         opcionales = {
             **VALID_EQUIPO_SESION["opcionales_activos"],
             "cto": True,
@@ -1016,7 +1016,7 @@ class TestRunFlow(unittest.TestCase):
         self.assertIn("cto", validacion["secuencial"])
 
     def test_unknown_optional_flags_are_ignored_by_effective_agents(self):
-        """Los opcionales recortados no reaparecen aunque vengan en el estado."""
+        """Removed optional agents do not come back even if the state has them."""
         opcionales = {
             "cto": True,
             "copywriter": True,
@@ -1030,7 +1030,7 @@ class TestRunFlow(unittest.TestCase):
         self.assertEqual(empaquetado["secuencial"], [])
 
     def test_cto_runs_as_external_audit_in_quality_closures(self):
-        """CTO se integra al cierre como auditoría secuencial externa."""
+        """CTO joins the closing phases as a sequential external audit."""
         opcionales = {
             **VALID_EQUIPO_SESION["opcionales_activos"],
             "cto": True,
@@ -1041,7 +1041,7 @@ class TestRunFlow(unittest.TestCase):
         self.assertIn("cto", auditoria["secuencial"])
 
     def test_ship_and_audit_use_release_optional_agents(self):
-        """ship y audit integran CTO en las fases de auditoria."""
+        """ship and audit include CTO in the audit phases."""
         opcionales = {
             **VALID_EQUIPO_SESION["opcionales_activos"],
             "cto": True,
@@ -1059,32 +1059,32 @@ class TestRunFlow(unittest.TestCase):
         self.assertIn("cto", auditoria_paralela["secuencial"])
 
 
-class TestLoopIterativo(unittest.TestCase):
-    """Tests para el loop iterativo dentro de fases (v0.4.0)."""
+class TestIterativeLoop(unittest.TestCase):
+    """Tests for the iterative loop inside phases (v0.4.0)."""
 
     def test_should_retry_when_gate_fails(self):
-        """Si la gate falla y hay iteraciones, recomienda retry."""
+        """If the gate fails and iterations remain, recommend a retry."""
         session = create_session("feature", "Test loop")
-        # Fase 0 = producto, gate_tipo = usuario
+        # Phase 0 = producto, gate_tipo = usuario
         result = should_retry_phase(session, resultado="rechazado")
         self.assertEqual(result["action"], "retry")
         self.assertEqual(result["iteration"], 1)
 
     def test_should_advance_when_gate_passes(self):
-        """Si la gate se supera, recomienda avanzar."""
+        """If the gate passes, recommend to advance."""
         session = create_session("feature", "Test loop")
         result = should_retry_phase(session, resultado="aprobado")
         self.assertEqual(result["action"], "advance")
 
     def test_should_escalate_after_max_iterations(self):
-        """Al agotar iteraciones, recomienda escalar al usuario."""
+        """When iterations run out, recommend escalation to the user."""
         session = create_session("feature", "Test loop")
         session["iteraciones_fase"] = MAX_PHASE_ITERATIONS
         result = should_retry_phase(session, resultado="rechazado")
         self.assertEqual(result["action"], "escalate")
 
     def test_iteration_counter_increments(self):
-        """El contador de iteraciones se incrementa con cada retry."""
+        """The iteration counter increments with each retry."""
         session = create_session("feature", "Test loop")
         session["iteraciones_fase"] = 0
         should_retry_phase(session, resultado="rechazado")
@@ -1093,22 +1093,22 @@ class TestLoopIterativo(unittest.TestCase):
         self.assertEqual(session["iteraciones_fase"], 2)
 
     def test_reset_phase_iterations(self):
-        """El reset pone el contador a 0."""
+        """The reset sets the counter to 0."""
         session = create_session("feature", "Test loop")
         session["iteraciones_fase"] = 3
         reset_phase_iterations(session)
         self.assertEqual(session["iteraciones_fase"], 0)
 
     def test_advance_phase_resets_iterations(self):
-        """Avanzar de fase reinicia el contador automaticamente."""
+        """Advancing the phase resets the counter automatically."""
         session = create_session("feature", "Test loop")
         session["iteraciones_fase"] = 3
         session = advance_phase(session, resultado="aprobado")
         self.assertEqual(session.get("iteraciones_fase", 0), 0)
 
     def test_advance_phase_preserves_iterations(self):
-        """advance_phase guarda el contador de iteraciones en la fase completada."""
-        session = create_session("feature", "Test iteraciones")
+        """advance_phase stores the iteration counter in the completed phase."""
+        session = create_session("feature", "Test iterations")
         session["iteraciones_fase"] = 3
         session = advance_phase(session, resultado="aprobado")
         fase_completada = session["fases_completadas"][-1]
@@ -1123,11 +1123,11 @@ class TestLoopIterativo(unittest.TestCase):
 
 
 class TestAutopilot(unittest.TestCase):
-    """Tests para el modo autopilot (v0.4.0)."""
+    """Tests for autopilot mode (v0.4.0)."""
 
     def test_run_flow_autopilot_creates_session(self):
-        """El modo autopilot crea una sesion con el flag activo."""
-        session = run_flow_autopilot("feature", "Login automatico")
+        """Autopilot mode creates a session with the flag set."""
+        session = run_flow_autopilot("feature", "Automatic login")
         self.assertTrue(session["autopilot"])
 
     def test_run_flow_autopilot_uses_persisted_project_config(self):
@@ -1146,7 +1146,7 @@ class TestAutopilot(unittest.TestCase):
                     "---\n"
                 )
 
-            session = run_flow_autopilot("ship", "Release automática", project_dir=tmpdir)
+            session = run_flow_autopilot("ship", "Automatic release", project_dir=tmpdir)
 
         self.assertTrue(session["autopilot"])
         self.assertEqual(session["equipo_sesion"]["fuente"], "config_persistida")
@@ -1155,17 +1155,17 @@ class TestAutopilot(unittest.TestCase):
         self.assertEqual(session["max_iteraciones_fase"], MAX_PHASE_ITERATIONS)
 
     def test_autopilot_approves_user_gates(self):
-        """En autopilot, las gates de usuario se aprueban automaticamente."""
+        """In autopilot, user gates are approved automatically."""
         session = create_session("feature", "Test autopilot")
-        # Fase 0 = producto, gate_tipo = usuario
+        # Phase 0 = producto, gate_tipo = usuario
         result = is_autopilot_gate_passable(session)
         self.assertTrue(result["passed"])
         self.assertIn("autopilot", result["reason"])
 
     def test_autopilot_evaluates_automatic_gates(self):
-        """En autopilot, las gates automaticas se evaluan normalmente."""
+        """In autopilot, automatic gates are evaluated normally."""
         session = create_session("feature", "Test autopilot")
-        # Avanzar a fase 3 = desarrollo, gate_tipo = automatico
+        # Advance to phase 3 = desarrollo, gate_tipo = automatico
         session = advance_phase(session, resultado="aprobado")  # producto -> estilo_visual
         session = advance_phase(session, resultado="aprobado")  # estilo_visual -> arquitectura
         session = advance_phase(session, resultado="aprobado")  # arquitectura -> desarrollo
@@ -1173,41 +1173,41 @@ class TestAutopilot(unittest.TestCase):
         self.assertFalse(result["passed"])
 
     def test_autopilot_evaluates_security_gates(self):
-        """En autopilot, las gates de seguridad se evaluan normalmente."""
+        """In autopilot, security gates are evaluated normally."""
         session = create_session("feature", "Test autopilot")
         session = advance_phase(session, resultado="aprobado")  # producto -> estilo_visual
         session = advance_phase(session, resultado="aprobado")  # estilo_visual -> arquitectura
         session = advance_phase(session, resultado="aprobado")  # arquitectura -> desarrollo
         session = advance_phase(session, resultado="aprobado", tests_ok=True)  # desarrollo -> calidad
-        # Fase 4 = calidad, gate_tipo = automatico+seguridad
+        # Phase 4 = calidad, gate_tipo = automatico+seguridad
         result = is_autopilot_gate_passable(session, security_ok=False)
         self.assertFalse(result["passed"])
 
     def test_autopilot_invalid_command(self):
-        """Autopilot con comando invalido lanza ValueError."""
+        """Autopilot with an invalid command raises ValueError."""
         with self.assertRaises(ValueError):
-            run_flow_autopilot("inexistente", "Test")
+            run_flow_autopilot("nonexistent", "Test")
 
     def test_autopilot_gate_completed_session(self):
-        """is_autopilot_gate_passable no falla con sesion completada."""
+        """is_autopilot_gate_passable does not fail with a completed session."""
         session = create_session("spike", "Test")
         session = advance_phase(session, resultado="aprobado")
         session = advance_phase(session, resultado="aprobado")
-        # Ahora fase_actual == "completado"
+        # Now fase_actual == "completado"
         result = is_autopilot_gate_passable(session)
         self.assertTrue(result["passed"])
 
     def test_autopilot_usuario_seguridad_auto_approves_user_part(self):
-        """En autopilot, GATE_USUARIO_SEGURIDAD aprueba la parte de usuario
-        pero evalua la de seguridad. Test de documentacion del comportamiento."""
+        """In autopilot, GATE_USUARIO_SEGURIDAD approves the user part
+        but evaluates the security part. This test documents the behavior."""
         session = create_session("feature", "Test autopilot")
         session = advance_phase(session, resultado="aprobado")  # producto -> estilo_visual
         session = advance_phase(session, resultado="aprobado")  # estilo_visual -> arquitectura
-        # Ahora en fase arquitectura con gate GATE_USUARIO_SEGURIDAD
-        # Con seguridad OK: debe pasar
+        # Now in the arquitectura phase with the GATE_USUARIO_SEGURIDAD gate
+        # With security OK: must pass
         result = is_autopilot_gate_passable(session, security_ok=True)
         self.assertTrue(result["passed"])
-        # Con seguridad KO: debe fallar
+        # With security KO: must fail
         result = is_autopilot_gate_passable(session, security_ok=False)
         self.assertFalse(result["passed"])
 
@@ -1224,11 +1224,11 @@ class TestAutopilot(unittest.TestCase):
 
 
 class TestCompletedSessionGuards(unittest.TestCase):
-    """Verifica que check_gate no lanza IndexError con sesiones completadas."""
+    """Verify that check_gate does not raise IndexError with completed sessions."""
 
     def test_check_gate_completed_session(self):
-        """check_gate devuelve passed=True para sesiones completadas."""
-        session = create_session("spike", "Investigacion")
+        """check_gate returns passed=True for completed sessions."""
+        session = create_session("spike", "Research")
         session = advance_phase(session, resultado="aprobado")
         session = advance_phase(session, resultado="aprobado")
         self.assertEqual(session["fase_actual"], "completado")
@@ -1236,7 +1236,7 @@ class TestCompletedSessionGuards(unittest.TestCase):
         self.assertTrue(result["passed"])
 
     def test_check_gate_overflowed_fase_numero(self):
-        """Un índice fuera de rango debe rechazarse como estado inválido."""
+        """An out-of-range index must be rejected as an invalid state."""
         session = create_session("spike", "Test")
         session["fase_numero"] = 999
         result = check_gate(session, resultado="aprobado")

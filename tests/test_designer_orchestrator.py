@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para las funciones del orquestador de Designer (la estilista)."""
+"""Tests for the Designer orchestrator functions (the stylist)."""
 
 import os
 import sys
@@ -14,9 +14,9 @@ from core.orchestrator import (
 
 
 class TestHasFrontend(unittest.TestCase):
-    """Verifica que has_frontend identifique correctamente frameworks con UI."""
+    """Verify that has_frontend correctly identifies frameworks with a UI."""
 
-    # --- Frameworks con interfaz de usuario (deben devolver True) ---
+    # --- Frameworks with a user interface (must return True) ---
 
     def test_next(self):
         stack = {"framework": "next", "runtime": "node", "lenguaje": "typescript"}
@@ -62,7 +62,7 @@ class TestHasFrontend(unittest.TestCase):
         stack = {"framework": "qwik", "runtime": "node", "lenguaje": "typescript"}
         self.assertTrue(has_frontend(stack))
 
-    # --- Frameworks sin interfaz de usuario (deben devolver False) ---
+    # --- Frameworks without a user interface (must return False) ---
 
     def test_fastapi(self):
         stack = {"framework": "fastapi", "runtime": "python", "lenguaje": "python"}
@@ -76,18 +76,18 @@ class TestHasFrontend(unittest.TestCase):
         stack = {"framework": "django", "runtime": "python", "lenguaje": "python"}
         self.assertFalse(has_frontend(stack))
 
-    def test_desconocido(self):
+    def test_desconocido_sentinel_framework(self):
         stack = {"framework": "desconocido", "runtime": "node", "lenguaje": "javascript"}
         self.assertFalse(has_frontend(stack))
 
-    def test_sin_framework(self):
-        """Un stack sin clave 'framework' debe devolver False (valor por defecto)."""
+    def test_no_framework(self):
+        """A stack without a 'framework' key must return False (default value)."""
         stack = {"runtime": "node", "lenguaje": "javascript"}
         self.assertFalse(has_frontend(stack))
 
 
 class TestDesignerPhase(unittest.TestCase):
-    """Verifica que la fase estilo_visual esta correctamente integrada."""
+    """Verify that the estilo_visual phase is integrated correctly."""
 
     def test_feature_flow_has_7_phases(self):
         self.assertEqual(len(FLOWS["feature"]["fases"]), 7)
@@ -119,16 +119,16 @@ class TestDesignerPhase(unittest.TestCase):
         self.assertEqual(len(FLOWS["quick"]["fases"]), 2)
 
     def test_session_starts_at_producto(self):
-        session = create_session("feature", "App con frontend")
+        session = create_session("feature", "App with frontend")
         self.assertEqual(session["fase_actual"], "producto")
 
     def test_advance_from_producto_goes_to_estilo_visual(self):
-        session = create_session("feature", "App con frontend")
+        session = create_session("feature", "App with frontend")
         session = advance_phase(session, resultado="aprobado")
         self.assertEqual(session["fase_actual"], "estilo_visual")
 
     def test_advance_from_estilo_visual_goes_to_arquitectura(self):
-        session = create_session("feature", "App con frontend")
+        session = create_session("feature", "App with frontend")
         session = advance_phase(session, resultado="aprobado")
         self.assertEqual(session["fase_actual"], "estilo_visual")
         session = advance_phase(session, resultado="aprobado")
@@ -136,49 +136,49 @@ class TestDesignerPhase(unittest.TestCase):
 
 
 class TestDesignerFullFlow(unittest.TestCase):
-    """Verifica el flujo completo feature con Designer."""
+    """Verify the full feature flow with Designer."""
 
     def test_full_feature_flow_with_designer(self):
-        """Recorrer las 7 fases del flujo feature."""
-        session = create_session("feature", "App con dashboard")
+        """Walk through the 7 phases of the feature flow."""
+        session = create_session("feature", "App with dashboard")
 
-        # Fase 0: producto
+        # Phase 0: producto
         self.assertEqual(session["fase_actual"], "producto")
         session = advance_phase(session, resultado="aprobado")
 
-        # Fase 1: estilo_visual
+        # Phase 1: estilo_visual
         self.assertEqual(session["fase_actual"], "estilo_visual")
         session = advance_phase(session, resultado="aprobado")
 
-        # Fase 2: arquitectura
+        # Phase 2: arquitectura
         self.assertEqual(session["fase_actual"], "arquitectura")
         session = advance_phase(session, resultado="aprobado", security_ok=True)
 
-        # Fase 3: desarrollo
+        # Phase 3: desarrollo
         self.assertEqual(session["fase_actual"], "desarrollo")
         session = advance_phase(session, resultado="aprobado", tests_ok=True)
 
-        # Fase 4: calidad
+        # Phase 4: calidad
         self.assertEqual(session["fase_actual"], "calidad")
         session = advance_phase(
             session, resultado="aprobado", security_ok=True, tests_ok=True,
         )
 
-        # Fase 5: documentacion
+        # Phase 5: documentacion
         self.assertEqual(session["fase_actual"], "documentacion")
         session = advance_phase(session, resultado="aprobado")
 
-        # Fase 6: entrega
+        # Phase 6: entrega
         self.assertEqual(session["fase_actual"], "entrega")
         session = advance_phase(session, resultado="aprobado", security_ok=True)
 
-        # Completado
+        # Completed
         self.assertEqual(session["fase_actual"], "completado")
         self.assertEqual(len(session["fases_completadas"]), 7)
 
     def test_estilo_visual_gate_rejects_without_approval(self):
-        """La gate de estilo_visual rechaza sin aprobacion."""
-        session = create_session("feature", "App con UI")
+        """The estilo_visual gate rejects without approval."""
+        session = create_session("feature", "App with UI")
         session = advance_phase(session, resultado="aprobado")
         self.assertEqual(session["fase_actual"], "estilo_visual")
 
@@ -187,30 +187,30 @@ class TestDesignerFullFlow(unittest.TestCase):
 
 
 class TestDesignerSkippedWhenNoFrontend(unittest.TestCase):
-    """Verifica que estilo_visual se salta en proyectos sin frontend."""
+    """Verify that estilo_visual is skipped in projects without a frontend."""
 
     def test_skip_estilo_visual_when_no_frontend(self):
-        """Con stack sin frontend, estilo_visual se salta."""
+        """With a stack without a frontend, estilo_visual is skipped."""
         session = create_session("feature", "API backend")
         session["stack"] = {"framework": "fastapi", "runtime": "python", "lenguaje": "python"}
-        session = advance_phase(session, resultado="aprobado")  # producto -> debe saltar estilo_visual
+        session = advance_phase(session, resultado="aprobado")  # producto -> must skip estilo_visual
         self.assertEqual(session["fase_actual"], "arquitectura")
-        # Verificar que estilo_visual se registro como saltada
+        # Verify that estilo_visual is recorded as skipped
         skipped = [f for f in session["fases_completadas"] if f["nombre"] == "estilo_visual"]
         self.assertEqual(len(skipped), 1)
         self.assertEqual(skipped[0]["resultado"], "saltada")
 
     def test_estilo_visual_executes_when_frontend(self):
-        """Con stack con frontend, estilo_visual se ejecuta normalmente."""
+        """With a stack with a frontend, estilo_visual runs normally."""
         session = create_session("feature", "App Next.js")
         session["stack"] = {"framework": "next", "runtime": "node", "lenguaje": "typescript"}
         session = advance_phase(session, resultado="aprobado")  # producto -> estilo_visual
         self.assertEqual(session["fase_actual"], "estilo_visual")
 
     def test_skip_when_no_stack_in_session(self):
-        """Sin stack en sesion, la condicion no se evalua y la fase se ejecuta."""
-        session = create_session("feature", "Proyecto nuevo")
-        # Sin stack: la condicion no puede evaluarse, asi que la fase se ejecuta
+        """Without a stack in the session, the condition is not evaluated and the phase runs."""
+        session = create_session("feature", "New project")
+        # No stack: the condition cannot be evaluated, so the phase runs
         session = advance_phase(session, resultado="aprobado")
         self.assertEqual(session["fase_actual"], "estilo_visual")
 

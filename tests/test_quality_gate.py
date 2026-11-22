@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Tests para el hook quality-gate.py.
+Tests for the quality-gate.py hook.
 
-La logica de deteccion de comandos y resultados esta cubierta por
-``test_evidence_guard.py``. Aqui se verifica unicamente que el hook
-importa correctamente desde ``evidence_guard_lib`` (fuente unica de verdad)
-y que su logica de flujo principal funciona como se espera.
+``test_evidence_guard.py`` covers the command and result detection logic.
+This file only verifies that the hook imports correctly from
+``evidence_guard_lib`` (single source of truth) and that its main flow
+works as expected.
 """
 
 import importlib.util
@@ -16,14 +16,14 @@ import unittest
 from io import StringIO
 from unittest.mock import patch
 
-# Rutas base para importar modulos con guion en el nombre
+# Base paths to import modules with a hyphen in the name
 _TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 _HOOKS_DIR = os.path.join(_TESTS_DIR, "..", "hooks")
 _HOOK_PATH = os.path.join(_HOOKS_DIR, "quality-gate.py")
 
 
 def _load_quality_gate():
-    """Carga el modulo quality-gate.py mediante importlib."""
+    """Load the quality-gate.py module with importlib."""
     spec = importlib.util.spec_from_file_location("quality_gate", _HOOK_PATH)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -31,22 +31,22 @@ def _load_quality_gate():
 
 
 class TestQualityGateImports(unittest.TestCase):
-    """Verifica que quality-gate reutiliza las funciones de evidence_guard_lib."""
+    """Verify that quality-gate reuses the evidence_guard_lib functions."""
 
     def test_quality_gate_uses_evidence_guard_lib(self):
-        """quality-gate debe usar las funciones de evidence_guard_lib."""
+        """quality-gate must use the evidence_guard_lib functions."""
         qg = _load_quality_gate()
-        # Debe usar la misma funcion que evidence_guard_lib
+        # Must use the same function as evidence_guard_lib
         sys.path.insert(0, _HOOKS_DIR)
         from evidence_guard_lib import is_test_command as lib_fn
         self.assertIs(qg.is_test_command, lib_fn)
 
 
 class TestQualityGateMain(unittest.TestCase):
-    """Verifica el flujo de main() ante distintas entradas."""
+    """Verify the main() flow for different inputs."""
 
     def _run_main(self, payload: dict) -> tuple[int, str]:
-        """Ejecuta main() con el payload dado y devuelve (exit_code, stderr)."""
+        """Run main() with the given payload and return (exit_code, stderr)."""
         qg = _load_quality_gate()
         stdin_data = json.dumps(payload)
         stderr_capture = StringIO()
@@ -62,7 +62,7 @@ class TestQualityGateMain(unittest.TestCase):
         return exit_code, stderr_capture.getvalue()
 
     def test_non_test_command_exits_0_silently(self):
-        """Comandos que no son runners de tests no emiten nada por stderr."""
+        """Commands that are not test runners write nothing to stderr."""
         payload = {
             "tool_input": {"command": "ls -la"},
             "tool_output": {"stdout": "", "stderr": ""},
@@ -72,7 +72,7 @@ class TestQualityGateMain(unittest.TestCase):
         self.assertEqual(stderr, "")
 
     def test_passing_tests_exits_0_silently(self):
-        """Tests que pasan no emiten aviso."""
+        """Passing tests emit no warning."""
         payload = {
             "tool_input": {"command": "pytest tests/"},
             "tool_output": {"stdout": "5 passed in 0.12s", "stderr": ""},
@@ -82,7 +82,7 @@ class TestQualityGateMain(unittest.TestCase):
         self.assertNotIn("Ломатель", stderr)
 
     def test_failing_tests_emits_warning(self):
-        """Tests fallidos emiten el aviso de El Rompe-cosas por stderr."""
+        """Failing tests emit the Breaker warning to stderr."""
         payload = {
             "tool_input": {"command": "pytest tests/"},
             "tool_output": {"stdout": "1 failed, 4 passed in 0.15s", "stderr": ""},
@@ -92,7 +92,7 @@ class TestQualityGateMain(unittest.TestCase):
         self.assertIn("Ломатель", stderr)
 
     def test_nonzero_exit_code_without_output_emits_warning(self):
-        """Un exit code no cero tambien debe disparar el aviso."""
+        """A nonzero exit code must also trigger the warning."""
         payload = {
             "tool_input": {"command": "pytest tests/"},
             "tool_output": {"stdout": "", "stderr": "", "exit_code": 1},
@@ -102,7 +102,7 @@ class TestQualityGateMain(unittest.TestCase):
         self.assertIn("Ломатель", stderr)
 
     def test_tool_result_payload_is_supported(self):
-        """El hook debe tolerar el payload actual con tool_result."""
+        """The hook must accept the current payload with tool_result."""
         payload = {
             "tool_input": {"command": "pytest tests/"},
             "tool_result": {"stdout": "", "stderr": "", "exit_code": 1},
@@ -112,11 +112,11 @@ class TestQualityGateMain(unittest.TestCase):
         self.assertIn("Ломатель", stderr)
 
     def test_invalid_json_exits_0_with_warning(self):
-        """Entrada JSON invalida emite aviso pero no bloquea (exit 0)."""
+        """Invalid JSON input emits a warning but does not block (exit 0)."""
         qg = _load_quality_gate()
         stderr_capture = StringIO()
         exit_code = None
-        with patch("sys.stdin", StringIO("esto no es json")):
+        with patch("sys.stdin", StringIO("this is not json")):
             with patch("sys.stderr", stderr_capture):
                 try:
                     qg.main()

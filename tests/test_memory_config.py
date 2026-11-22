@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para el parser ligero de configuracion de memoria."""
+"""Tests for the lightweight memory config parser."""
 
 import os
 import shutil
@@ -17,7 +17,7 @@ from core.memory_config import (
 
 
 class TestMemoryConfig(unittest.TestCase):
-    """Verifica defaults y parseo del bloque memoria."""
+    """Check defaults and parsing of the memoria block."""
 
     def setUp(self):
         self._tmpdir = tempfile.mkdtemp()
@@ -31,7 +31,7 @@ class TestMemoryConfig(unittest.TestCase):
         shutil.rmtree(self._tmpdir, ignore_errors=True)
 
     def test_defaults_if_config_missing(self):
-        """Sin fichero debe devolver defaults seguros."""
+        """Without a file, return safe defaults."""
         config = load_memory_config(self._tmpdir)
         self.assertFalse(config["enabled"])
         self.assertTrue(config["sync_to_native"])
@@ -39,7 +39,7 @@ class TestMemoryConfig(unittest.TestCase):
         self.assertEqual(config["retention_days"], 365)
 
     def test_reads_memory_block_from_frontmatter(self):
-        """Debe parsear bools e ints del bloque memoria."""
+        """Parse bools and ints from the memoria block."""
         with open(self._config_path, "w", encoding="utf-8") as handle:
             handle.write(
                 "---\n"
@@ -65,16 +65,16 @@ class TestMemoryConfig(unittest.TestCase):
         self.assertTrue(is_memory_enabled(self._tmpdir))
 
     def test_ignores_memory_block_outside_frontmatter(self):
-        """No debe activar memoria desde el cuerpo Markdown."""
+        """Do not enable memory from the Markdown body."""
         with open(self._config_path, "w", encoding="utf-8") as handle:
-            handle.write("# Notas\n\nmemoria:\n  enabled: true\n")
+            handle.write("# Notes\n\nmemoria:\n  enabled: true\n")
 
         config = load_memory_config(self._tmpdir)
         self.assertEqual(config, DEFAULT_MEMORY_CONFIG)
         self.assertFalse(is_memory_enabled(self._tmpdir))
 
     def test_ignores_unclosed_frontmatter(self):
-        """Un frontmatter mal cerrado no debe aplicarse parcialmente."""
+        """Do not partly apply an unclosed frontmatter."""
         with open(self._config_path, "w", encoding="utf-8") as handle:
             handle.write("---\nmemoria:\n  enabled: true\n")
 
@@ -83,7 +83,7 @@ class TestMemoryConfig(unittest.TestCase):
         self.assertFalse(is_memory_enabled(self._tmpdir))
 
     def test_invalid_values_fall_back_to_defaults(self):
-        """Los valores semánticamente inválidos deben caer al default."""
+        """Semantically invalid values fall back to the default."""
         with open(self._config_path, "w", encoding="utf-8") as handle:
             handle.write(
                 "---\n"
@@ -91,7 +91,7 @@ class TestMemoryConfig(unittest.TestCase):
                 "  enabled: maybe\n"
                 "  sync_to_native: 1\n"
                 "  sync_commits_limit: 0\n"
-                "  capture_decisions: quizas\n"
+                "  capture_decisions: perhaps\n"
                 "  capture_commits: nope\n"
                 "  retention_days: -5\n"
                 "---\n"

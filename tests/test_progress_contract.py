@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contratos para exponer el estado operativo de SonIA en CLI."""
+"""Contracts that expose the SonIA operational state in the CLI."""
 
 import os
 import unittest

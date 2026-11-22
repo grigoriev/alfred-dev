@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para el hook dangerous-command-guard.py."""
+"""Tests for the dangerous-command-guard.py hook."""
 
 import importlib.util
 import json
@@ -8,7 +8,7 @@ import subprocess
 import sys
 import unittest
 
-# Importar el hook usando importlib (el nombre tiene guion)
+# Import the hook with importlib (the file name has a hyphen)
 _hook_path = os.path.join(
     os.path.dirname(__file__), "..", "hooks", "dangerous-command-guard.py"
 )
@@ -23,14 +23,14 @@ _find_dangerous_reason = _mod._find_dangerous_reason
 
 
 def _is_dangerous(command: str) -> bool:
-    """Comprueba si un comando seria bloqueado por el hook real."""
+    """Check if the real hook would block a command."""
     return _find_dangerous_reason(command) is not None
 
 
 class TestDangerousCommands(unittest.TestCase):
-    """Verifica que los comandos peligrosos se detectan correctamente."""
+    """Verify that dangerous commands are detected correctly."""
 
-    # --- Borrado catastrofico ---
+    # --- Catastrophic deletion ---
 
     def test_rm_rf_root(self):
         self.assertTrue(_is_dangerous("rm -rf /"))
@@ -51,18 +51,18 @@ class TestDangerousCommands(unittest.TestCase):
         self.assertTrue(_is_dangerous("rm -rf /usr"))
 
     def test_rm_fr_root(self):
-        """Verifica que -fr (orden inverso de flags) tambien se detecta."""
+        """Verify that -fr (reversed flag order) is also detected."""
         self.assertTrue(_is_dangerous("rm -fr /"))
 
     def test_sudo_rm_rf_root(self):
-        """Verifica que sudo rm -rf / tambien se detecta."""
+        """Verify that sudo rm -rf / is also detected."""
         self.assertTrue(_is_dangerous("sudo rm -rf /"))
 
     def test_rm_separated_flags(self):
-        """Verifica que flags separadas -r -f tambien se detectan."""
+        """Verify that separate flags -r -f are also detected."""
         self.assertTrue(_is_dangerous("rm -r -f /"))
 
-    # --- Comandos seguros de rm ---
+    # --- Safe rm commands ---
 
     def test_rm_rf_node_modules(self):
         self.assertFalse(_is_dangerous("rm -rf node_modules"))
@@ -74,7 +74,7 @@ class TestDangerousCommands(unittest.TestCase):
         self.assertFalse(_is_dangerous("rm -rf build/"))
 
     def test_rm_single_file(self):
-        self.assertFalse(_is_dangerous("rm archivo.txt"))
+        self.assertFalse(_is_dangerous("rm file.txt"))
 
     # --- Force push ---
 
@@ -84,15 +84,15 @@ class TestDangerousCommands(unittest.TestCase):
     def test_git_push_f_master(self):
         self.assertTrue(_is_dangerous("git push -f origin master"))
 
-    # --- Comandos git seguros ---
+    # --- Safe git commands ---
 
     def test_git_push_normal(self):
-        self.assertFalse(_is_dangerous("git push origin feature/nueva"))
+        self.assertFalse(_is_dangerous("git push origin feature/new"))
 
     def test_git_push_u(self):
         self.assertFalse(_is_dangerous("git push -u origin main"))
 
-    # --- SQL destructivo ---
+    # --- Destructive SQL ---
 
     def test_drop_database(self):
         self.assertTrue(_is_dangerous("DROP DATABASE produccion"))
@@ -114,7 +114,7 @@ class TestDangerousCommands(unittest.TestCase):
     def test_docker_system_prune_fa(self):
         self.assertTrue(_is_dangerous("docker system prune -f -a"))
 
-    # --- Permisos inseguros ---
+    # --- Insecure permissions ---
 
     def test_chmod_777_root(self):
         self.assertTrue(_is_dangerous("chmod 777 /"))
@@ -127,7 +127,7 @@ class TestDangerousCommands(unittest.TestCase):
     def test_fork_bomb(self):
         self.assertTrue(_is_dangerous(":(){ :|:& };:"))
 
-    # --- Formateo de disco ---
+    # --- Disk formatting ---
 
     def test_mkfs_ext4(self):
         self.assertTrue(_is_dangerous("mkfs.ext4 /dev/sda1"))
@@ -138,7 +138,7 @@ class TestDangerousCommands(unittest.TestCase):
     def test_dd_to_nvme(self):
         self.assertTrue(_is_dangerous("dd if=/dev/zero of=/dev/nvme0n1"))
 
-    # --- Redireccion a dispositivo ---
+    # --- Redirection to a device ---
 
     def test_redirect_to_sda(self):
         self.assertTrue(_is_dangerous("> /dev/sda"))
@@ -151,7 +151,7 @@ class TestDangerousCommands(unittest.TestCase):
     def test_git_reset_hard_origin_master(self):
         self.assertTrue(_is_dangerous("git reset --hard origin/master"))
 
-    # --- Comandos seguros generales ---
+    # --- General safe commands ---
 
     def test_ls(self):
         self.assertFalse(_is_dangerous("ls -la"))
@@ -195,14 +195,14 @@ class TestDangerousCommands(unittest.TestCase):
 
 
 class TestSafeAlfredHelpers(unittest.TestCase):
-    """Verifica la autoaprobacion de helpers deterministas de Alfred."""
+    """Verify auto-approval of deterministic Alfred helpers."""
 
     def test_safe_consume_prefetch_command(self):
         command = 'python3 .claude/alfred-continuity.py consume-prefetch "$PWD" --expected map-codebase'
         self.assertTrue(_is_safe_alfred_helper_command(command))
 
     def test_safe_map_codebase_command(self):
-        command = 'python3 .claude/alfred-continuity.py map-codebase "$PWD" --raw "login y usuarios"'
+        command = 'python3 .claude/alfred-continuity.py map-codebase "$PWD" --raw "login and users"'
         self.assertTrue(_is_safe_alfred_helper_command(command))
 
     def test_safe_operational_helpers_added_later(self):
@@ -216,7 +216,7 @@ class TestSafeAlfredHelpers(unittest.TestCase):
             'python3 .claude/alfred-continuity.py validate "$PWD"'
         ))
         self.assertTrue(_is_safe_alfred_helper_command(
-            'python3 .claude/alfred-continuity.py search "$PWD" --raw "login usuarios"'
+            'python3 .claude/alfred-continuity.py search "$PWD" --raw "login users"'
         ))
 
     def test_safe_helper_with_capture_suffix(self):
@@ -240,7 +240,7 @@ class TestSafeAlfredHelpers(unittest.TestCase):
 
     def test_rejects_real_shell_controls_outside_quotes(self):
         self.assertTrue(_has_shell_controls_outside_quotes('echo hola && whoami'))
-        self.assertFalse(_has_shell_controls_outside_quotes('echo "hola && adios"'))
+        self.assertFalse(_has_shell_controls_outside_quotes('echo "hello && bye"'))
         self.assertFalse(_has_shell_controls_outside_quotes("echo 'a | b ; c > d'"))
 
     def test_rejects_command_substitution_even_if_quoted(self):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests E2E del prototipo de Memory UI."""
+"""E2E tests for the Memory UI prototype."""
 
 import json
 import os
@@ -44,25 +44,25 @@ class TestMemoryUI(unittest.TestCase):
 
         db_path = os.path.join(self.tmpdir, ".claude", "alfred-memory.db")
         db = MemoryDB(db_path)
-        iteration_id = db.start_iteration("feature", "Sistema de login social")
+        iteration_id = db.start_iteration("feature", "Social login system")
         dec1 = db.log_decision(
-            title="Usar OAuth 2.1",
-            chosen="GitHub + Google con backend centralizado",
-            rationale="Evita flujos duplicados y simplifica auditoría",
+            title="Use OAuth 2.1",
+            chosen="GitHub + Google with a central backend",
+            rationale="Avoids duplicate flows and simplifies audit",
             tags=["auth", "security"],
             iteration_id=iteration_id,
         )
         dec2 = db.log_decision(
-            title="Persistir sesiones en SQLite",
-            chosen="SQLite por simplicidad y trazabilidad local",
-            rationale="Encaja con la memoria persistente del proyecto",
+            title="Persist sessions in SQLite",
+            chosen="SQLite for simplicity and local traceability",
+            rationale="Fits the persistent project memory",
             tags=["storage"],
             iteration_id=iteration_id,
         )
         db.link_decisions(dec1, dec2, "depends_on")
         db.log_commit(
             sha="abc1234567890",
-            message="feat: implementar callback OAuth",
+            message="feat: implement OAuth callback",
             author="Alfred",
             iteration_id=iteration_id,
             files=["src/auth/callback.ts", "tests/auth/callback.test.ts"],
@@ -70,8 +70,8 @@ class TestMemoryUI(unittest.TestCase):
         db.log_event(
             event_type="phase_completed",
             phase="arquitectura",
-            summary="Arquitectura completada",
-            content="ADR aprobada para OAuth y persistencia local.",
+            summary="Architecture completed",
+            content="ADR approved for OAuth and local persistence.",
             iteration_id=iteration_id,
         )
         db.close()
@@ -119,7 +119,7 @@ class TestMemoryUI(unittest.TestCase):
 
         decisions = self._get_json(f"{result['url']}/api/decisions")
         self.assertEqual(len(decisions["items"]), 2)
-        self.assertEqual(decisions["items"][0]["title"], "Persistir sesiones en SQLite")
+        self.assertEqual(decisions["items"][0]["title"], "Persist sessions in SQLite")
 
         graph = self._get_json(f"{result['url']}/api/graph")
         self.assertGreaterEqual(len(graph["nodes"]), 2)
@@ -152,8 +152,8 @@ class TestMemoryUI(unittest.TestCase):
                 "<tool-use-id>toolu_01</tool-use-id>\n"
                 "<output-file>/tmp/abc123.output</output-file>\n"
                 "<status>killed</status>\n"
-                "<summary>Agent \"Auditoría QA del proyecto\" was stopped</summary>\n"
-                "<result>Tengo suficiente material.</result>\n"
+                "<summary>Agent \"Project QA audit\" was stopped</summary>\n"
+                "<result>I have enough material.</result>\n"
                 "</task-notification>\n"
                 "Full transcript available at: /tmp/abc123.output\n"
             ),
@@ -170,8 +170,8 @@ class TestMemoryUI(unittest.TestCase):
         first = activity["recent_events"][0]
         self.assertEqual(first["kind_label"], "Субагент")
         self.assertEqual(first["status_label"], "killed")
-        self.assertIn("Auditoría QA del proyecto", first["display_title"])
-        self.assertIn("Tengo suficiente material", first["display_body"])
+        self.assertIn("Project QA audit", first["display_title"])
+        self.assertIn("I have enough material", first["display_body"])
 
     def test_activity_humanizes_helper_seeded_events(self):
         db_path = os.path.join(self.tmpdir, ".claude", "alfred-memory.db")
@@ -181,10 +181,10 @@ class TestMemoryUI(unittest.TestCase):
         db.log_event(
             event_type="helper_seeded",
             phase="discovery",
-            summary="Refinado preparado para /alfred-dev:feature",
+            summary="Refinement ready for /alfred-dev:feature",
             content=(
-                "Refinado previo listo para 'Login social'. "
-                "Siguiente comando recomendado: /alfred-dev:feature."
+                "Prior refinement ready for 'Social login'. "
+                "Recommended next command: /alfred-dev:feature."
             ),
             payload={
                 "helper": "discuss",
@@ -206,8 +206,8 @@ class TestMemoryUI(unittest.TestCase):
         activity = self._get_json(f"{result['url']}/api/activity")
         first = activity["recent_events"][0]
         self.assertEqual(first["kind_label"], "Helper")
-        self.assertIn("Refinado preparado", first["display_title"])
-        self.assertIn("Login social", first["display_body"])
+        self.assertIn("Refinement ready", first["display_title"])
+        self.assertIn("Social login", first["display_body"])
         self.assertTrue(any("Следующий шаг" in line for line in first["detail_lines"]))
 
     def test_build_activity_payload_counts_recent_window_instead_of_full_history(self):
@@ -217,13 +217,13 @@ class TestMemoryUI(unittest.TestCase):
         for index in range(6):
             db.log_event(
                 event_type="helper_seeded",
-                summary=f"helper viejo {index}",
+                summary=f"old helper {index}",
                 iteration_id=iteration_id,
             )
         for index in range(3):
             db.log_event(
                 event_type="command_executed",
-                summary=f"comando reciente {index}",
+                summary=f"recent command {index}",
                 iteration_id=iteration_id,
             )
         db.close()
@@ -250,8 +250,8 @@ class TestMemoryUI(unittest.TestCase):
         db = MemoryDB(db_path)
         db.log_event(
             event_type="session_started",
-            summary="Sesión abierta por bootstrap",
-            content="Memoria lista.",
+            summary="Session opened by bootstrap",
+            content="Memory ready.",
         )
         db.close()
 
@@ -276,9 +276,9 @@ class TestMemoryUI(unittest.TestCase):
             json.dump(
                 {
                     "comando": "feature",
-                    "descripcion": "Checkout nuevo",
+                    "descripcion": "New checkout",
                     "fase_actual": "completado",
-                    "objetivo": "Checkout nuevo",
+                    "objetivo": "New checkout",
                     "fases_completadas": ["producto", "arquitectura", "desarrollo"],
                 },
                 fh,
@@ -320,7 +320,7 @@ class TestMemoryUI(unittest.TestCase):
             json.dump(
                 {
                     "comando": "spike",
-                    "descripcion": "Checkout roto",
+                    "descripcion": "Broken checkout",
                     "fase_actual": "exploracion",
                     "fase_numero": 0,
                     "fases_completadas": [],
@@ -391,7 +391,7 @@ class TestMemoryUI(unittest.TestCase):
                 break
             time.sleep(0.05)
         else:
-            self.fail("La Memory UI siguió respondiendo tras enviar SIGTERM.")
+            self.fail("The Memory UI still responded after SIGTERM.")
 
         self.assertFalse(os.path.exists(state_path))
 
@@ -446,8 +446,8 @@ class TestMemoryUI(unittest.TestCase):
                         body = json.dumps(
                             {
                                 "ok": True,
-                                "project_dir": "/tmp/otro-proyecto",
-                                "db_path": "/tmp/otra-memory.db",
+                                "project_dir": "/tmp/other-project",
+                                "db_path": "/tmp/other-memory.db",
                             }
                         ).encode("utf-8")
                         self.send_response(200)
@@ -481,7 +481,7 @@ class TestMemoryUI(unittest.TestCase):
             except Exception:
                 time.sleep(0.05)
         else:
-            self.fail("El servidor fake de healthz no arrancó a tiempo.")
+            self.fail("The fake healthz server did not start in time.")
 
         _save_memory_ui_state(
             self.tmpdir,
@@ -490,8 +490,8 @@ class TestMemoryUI(unittest.TestCase):
                 "url": "http://127.0.0.1:4550",
                 "host": "127.0.0.1",
                 "port": 4550,
-                "project_dir": "/tmp/otro-proyecto",
-                "db_path": "/tmp/otra-memory.db",
+                "project_dir": "/tmp/other-project",
+                "db_path": "/tmp/other-memory.db",
             },
         )
 
@@ -514,7 +514,7 @@ class TestMemoryUI(unittest.TestCase):
         for index in range(1004):
             db.log_event(
                 event_type="command_executed",
-                summary=f"evento {index}",
+                summary=f"event {index}",
                 iteration_id=iteration_id,
             )
         db.close()
@@ -530,23 +530,23 @@ class TestMemoryUI(unittest.TestCase):
         for index in range(4):
             db.log_event(
                 event_type="command_executed",
-                summary=f"evento antiguo {index}",
-                content=f"detalle antiguo {index}",
+                summary=f"old event {index}",
+                content=f"old detail {index}",
                 iteration_id=iteration_id,
             )
         db.log_event(
             event_type="command_executed",
-            summary="evento más reciente",
-            content="detalle final de la iteración",
+            summary="most recent event",
+            content="final iteration detail",
             iteration_id=iteration_id,
         )
         db.close()
 
         payload = build_iterations_payload(db_path)
         item = payload["items"][0]
-        self.assertEqual(item["last_summary"], "evento más reciente")
-        self.assertEqual(item["last_title"], "evento más reciente")
-        self.assertEqual(item["last_body"], "detalle final de la iteración")
+        self.assertEqual(item["last_summary"], "most recent event")
+        self.assertEqual(item["last_title"], "most recent event")
+        self.assertEqual(item["last_body"], "final iteration detail")
 
     def test_timeline_endpoint_returns_full_iteration_when_limit_is_omitted(self):
         db_path = os.path.join(self.tmpdir, ".claude", "alfred-memory.db")
@@ -581,7 +581,7 @@ class TestMemoryUI(unittest.TestCase):
         for index in range(12):
             db.log_event(
                 event_type="command_executed",
-                summary=f"evento {index}",
+                summary=f"event {index}",
                 iteration_id=iteration_id,
             )
         db.close()
@@ -597,11 +597,11 @@ class TestMemoryUI(unittest.TestCase):
         db = MemoryDB(db_path)
         first_iteration_id = int(db.get_active_iteration()["id"])
         for index in range(201):
-            iteration_id = db.start_iteration("feature", f"iteración {index}")
+            iteration_id = db.start_iteration("feature", f"iteration {index}")
             db.complete_iteration(iteration_id)
         db.log_commit(
             sha="def1234567890",
-            message="feat: mantener contexto de iteración antigua",
+            message="feat: keep old iteration context",
             author="Alfred",
             iteration_id=first_iteration_id,
             committed_at="2099-01-01T00:00:00+00:00",
@@ -652,7 +652,7 @@ class TestMemoryUI(unittest.TestCase):
         with open(os.path.join(repo, "README.md"), "w", encoding="utf-8") as fh:
             fh.write("# Demo\n")
         subprocess.run(["git", "add", "README.md"], cwd=repo, check=True)
-        subprocess.run(["git", "commit", "-m", "feat: crear demo base"], cwd=repo, check=True)
+        subprocess.run(["git", "commit", "-m", "feat: create base demo"], cwd=repo, check=True)
 
         result = launch_memory_ui(
             repo,
@@ -692,11 +692,11 @@ class TestMemoryUI(unittest.TestCase):
         db_path = os.path.join(self.tmpdir, ".claude", "alfred-memory.db")
         db = MemoryDB(db_path)
         first_id = int(db.get_active_iteration()["id"])
-        second_id = db.start_iteration("fix", "Regresión de checkout")
+        second_id = db.start_iteration("fix", "Checkout regression")
         db.log_decision(
-            title="Aislar el checkout",
-            chosen="Reproducir en fixture local",
-            rationale="Evita ruido de otros flujos",
+            title="Isolate the checkout",
+            chosen="Reproduce in a local fixture",
+            rationale="Avoids noise from other flows",
             iteration_id=second_id,
         )
         db.close()
@@ -711,9 +711,9 @@ class TestMemoryUI(unittest.TestCase):
         titles = [item["title"] for item in snapshot["decisions"]["items"]]
         graph_titles = [node["title"] for node in snapshot["graph"]["nodes"]]
         self.assertEqual(snapshot["selected_iteration_id"], second_id)
-        self.assertIn("Aislar el checkout", titles)
-        self.assertNotIn("Usar OAuth 2.1", titles)
-        self.assertIn("Aislar el checkout", graph_titles)
+        self.assertIn("Isolate the checkout", titles)
+        self.assertNotIn("Use OAuth 2.1", titles)
+        self.assertIn("Isolate the checkout", graph_titles)
         self.assertTrue(all(node["status"] == "active" for node in snapshot["graph"]["nodes"]))
         self.assertEqual(snapshot["timeline"]["iteration"]["id"], second_id)
 
@@ -725,8 +725,8 @@ class TestMemoryUI(unittest.TestCase):
             iteration_id=first_id,
         )
         first_titles = [item["title"] for item in first_snapshot["decisions"]["items"]]
-        self.assertIn("Usar OAuth 2.1", first_titles)
-        self.assertNotIn("Aislar el checkout", first_titles)
+        self.assertIn("Use OAuth 2.1", first_titles)
+        self.assertNotIn("Isolate the checkout", first_titles)
 
     def test_graph_payload_defaults_to_active_status(self):
         db_path = os.path.join(self.tmpdir, ".claude", "alfred-memory.db")
@@ -794,7 +794,7 @@ class TestMemoryUI(unittest.TestCase):
                 break
             time.sleep(0.05)
         else:
-            self.fail("La Memory UI siguió respondiendo tras /memory-ui cerrar.")
+            self.fail("The Memory UI still responded after /memory-ui cerrar.")
 
     def test_snapshot_endpoint_is_exposed(self):
         result = launch_memory_ui(

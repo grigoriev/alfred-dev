@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Clasificación de prompts sin slash."""
+"""Classification of prompts without a slash."""
 
 import json
 import os

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests de contrato para el primer bloque GSD en Alfred."""
+"""Contract tests for the first GSD block in Alfred."""
 
 import os
 import unittest

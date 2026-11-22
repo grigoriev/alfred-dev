@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para la generación guiada de variantes finales de Designer."""
+"""Tests for guided generation of final Designer variants."""
 
 import json
 import os
@@ -60,7 +60,7 @@ class TestDesignerStyleVariants(unittest.TestCase):
     def test_write_guided_style_options_uses_latest_brief_choice(self):
         with open(self.events_path, "w", encoding="utf-8") as fh:
             fh.write(
-                '{"type":"click","choice":"brief::neo-brutalism::brutal-readable::solid","label":"Brutal legible · Solidos","ts":"2026-04-11T10:00:00Z"}\n'
+                '{"type":"click","choice":"brief::neo-brutalism::brutal-readable::solid","label":"Brutal readable · Solid","ts":"2026-04-11T10:00:00Z"}\n'
             )
 
         result = write_guided_style_options(self.state_dir)

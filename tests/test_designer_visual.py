@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para la lectura canónica de elecciones visuales de Designer."""
+"""Tests for the canonical reading of Designer visual choices."""
 
 import json
 import os
@@ -36,7 +36,7 @@ class TestDesignerVisual(unittest.TestCase):
     def test_read_latest_style_choice_uses_last_valid_click(self):
         with open(self.events_path, "w", encoding="utf-8") as fh:
             fh.write('{"type":"hover","choice":"A"}\n')
-            fh.write("no es json\n")
+            fh.write("not json\n")
             fh.write('{"type":"click","choice":"A","element":".style-option","ts":"2026-04-07T10:00:00Z"}\n')
             fh.write('{"source":"user-event","type":"click","choice":"B","label":"Editorial","timestamp":"2026-04-07T10:00:01Z"}\n')
 
@@ -76,7 +76,7 @@ class TestDesignerVisual(unittest.TestCase):
 
     def test_read_choice_cli_returns_latest_choice(self):
         with open(self.events_path, "w", encoding="utf-8") as fh:
-            fh.write('{"type":"click","choice":"C","label":"Minimalismo vibrante","ts":"2026-04-07T10:00:02Z"}\n')
+            fh.write('{"type":"click","choice":"C","label":"Vibrant minimalism","ts":"2026-04-07T10:00:02Z"}\n')
 
         result = subprocess.run(
             ["python3", READ_CHOICE_SCRIPT, self.state_dir],
@@ -88,12 +88,12 @@ class TestDesignerVisual(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(payload["status"], "ok")
         self.assertEqual(payload["choice"], "C")
-        self.assertEqual(payload["label"], "Minimalismo vibrante")
+        self.assertEqual(payload["label"], "Vibrant minimalism")
         self.assertEqual(payload["timestamp"], "2026-04-07T10:00:02Z")
 
     def test_read_choice_cli_includes_parsed_guided_choice_when_present(self):
         with open(self.events_path, "w", encoding="utf-8") as fh:
-            fh.write('{"type":"click","choice":"brief::neo-brutalism::brutal-readable::solid","label":"Brutal legible · Solidos","ts":"2026-04-07T10:00:02Z"}\n')
+            fh.write('{"type":"click","choice":"brief::neo-brutalism::brutal-readable::solid","label":"Brutal readable · Solid","ts":"2026-04-07T10:00:02Z"}\n')
 
         result = subprocess.run(
             ["python3", READ_CHOICE_SCRIPT, self.state_dir],
