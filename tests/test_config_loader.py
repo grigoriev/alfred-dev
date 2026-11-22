@@ -660,6 +660,46 @@ class TestDetectStack(unittest.TestCase):
         self.assertEqual(stack["framework"], "spring-boot")
         self.assertEqual(stack["test_runner"], "junit")
 
+    def test_jvm_manifest_wins_over_asset_only_package_json(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with open(os.path.join(tmpdir, "pom.xml"), "w", encoding="utf-8") as f:
+                f.write(
+                    "<project><dependencies>"
+                    "<dependency><groupId>org.springframework.boot</groupId>"
+                    "<artifactId>spring-boot-starter-web</artifactId></dependency>"
+                    "</dependencies></project>"
+                )
+            pkg = {
+                "name": "app-frontend",
+                "dependencies": {"htmx.org": "2.0.0", "alpinejs": "3.0.0"},
+                "devDependencies": {"tailwindcss": "4.0.0"},
+            }
+            with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as f:
+                json.dump(pkg, f)
+            stack = detect_stack(tmpdir)
+        self.assertEqual(stack["runtime"], "jvm")
+        self.assertEqual(stack["lenguaje"], "java")
+        self.assertEqual(stack["framework"], "spring-boot")
+
+    def test_node_wins_when_package_json_declares_a_framework(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with open(os.path.join(tmpdir, "pom.xml"), "w", encoding="utf-8") as f:
+                f.write("<project></project>")
+            with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as f:
+                json.dump({"name": "ui", "dependencies": {"react": "^18.0.0"}}, f)
+            stack = detect_stack(tmpdir)
+        self.assertEqual(stack["runtime"], "node")
+        self.assertEqual(stack["framework"], "react")
+
+    def test_node_wins_over_requirements_txt_alone(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with open(os.path.join(tmpdir, "requirements.txt"), "w", encoding="utf-8") as f:
+                f.write("pre-commit==4.0.0\n")
+            with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as f:
+                json.dump({"name": "tool"}, f)
+            stack = detect_stack(tmpdir)
+        self.assertEqual(stack["runtime"], "node")
+
     def test_detects_kotlin_gradle_project(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with open(os.path.join(tmpdir, "build.gradle.kts"), "w", encoding="utf-8") as f:

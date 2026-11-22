@@ -1540,6 +1540,21 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertIn("index.js", codebase_map_content)
         self.assertIn("/alfred-dev:discuss", current_content)
 
+    def test_write_codebase_map_files_names_jvm_project_after_directory(self):
+        with tempfile.TemporaryDirectory() as parent:
+            tmpdir = os.path.join(parent, "invoices")
+            os.makedirs(tmpdir)
+            with open(os.path.join(tmpdir, "pom.xml"), "w", encoding="utf-8") as fh:
+                fh.write("<project><artifactId>spring-boot-starter-web</artifactId></project>")
+            with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
+                json.dump({"name": "invoices-frontend", "dependencies": {"htmx.org": "2.0.0"}}, fh)
+
+            result = write_codebase_map_files(tmpdir)
+
+        self.assertEqual(result["project_name"], "invoices")
+        self.assertEqual(result["stack"]["runtime"], "jvm")
+        self.assertEqual(result["stack"]["framework"], "spring-boot")
+
     def test_write_codebase_map_files_blocks_active_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)

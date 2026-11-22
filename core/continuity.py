@@ -4226,8 +4226,16 @@ def _load_package_json(project_dir: str) -> Dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def _detect_project_name(project_dir: str, package_data: Dict[str, Any]) -> str:
-    name = package_data.get("name")
+def _detect_project_name(
+    project_dir: str,
+    package_data: Dict[str, Any],
+    stack: Optional[Dict[str, str]] = None,
+) -> str:
+    # El nombre de package.json solo vale si Node define el stack. En un
+    # proyecto JVM o Python ese fichero suele describir solo los assets.
+    if stack is None:
+        stack = detect_stack(project_dir)
+    name = package_data.get("name") if stack.get("runtime") == "node" else None
     if isinstance(name, str) and name.strip():
         return name.strip()
     return os.path.basename(os.path.abspath(project_dir)) or "proyecto"
@@ -5239,7 +5247,7 @@ def write_codebase_map_files(project_dir: str, raw_request: str = "") -> Dict[st
 
     package_data = _load_package_json(project_dir)
     stack = detect_stack(project_dir)
-    project_name = _detect_project_name(project_dir, package_data)
+    project_name = _detect_project_name(project_dir, package_data, stack)
     focus_area = _normalize_request_description(raw_request, "") if raw_request else ""
     analysis = _summarize_tests_build_deploy(project_dir, package_data, stack)
     modules = _detect_primary_modules(project_dir)

@@ -917,10 +917,24 @@ def detect_stack(project_dir):
     has_dotnet = _has_root_file_with_suffix(project_dir, (".csproj", ".sln"))
     has_package_swift = os.path.isfile(os.path.join(project_dir, "Package.swift"))
 
+    # Un package.json junto a otro manifiesto fuerte (pom.xml, go.mod, ...)
+    # suele servir solo para assets del frontend. Node define el stack solo
+    # si declara un framework o si no hay otro manifiesto fuerte.
+    has_other_strong_manifest = any((
+        has_pyproject, has_setup_py, has_cargo, has_go_mod, has_gemfile,
+        has_mix, has_pom, has_gradle, has_composer, has_dotnet, has_package_swift,
+    ))
+    node_stack = None
     if has_package_json:
-        stack["runtime"] = "node"
-        stack["lenguaje"] = "typescript" if has_tsconfig else "javascript"
-        _detect_node_details(project_dir, stack)
+        node_stack = dict(stack)
+        node_stack["runtime"] = "node"
+        node_stack["lenguaje"] = "typescript" if has_tsconfig else "javascript"
+        _detect_node_details(project_dir, node_stack)
+        if has_other_strong_manifest and node_stack["framework"] == "desconocido":
+            node_stack = None
+
+    if node_stack is not None:
+        stack.update(node_stack)
     elif has_pyproject or has_setup_py or has_requirements:
         stack["runtime"] = "python"
         stack["lenguaje"] = "python"
