@@ -231,7 +231,7 @@ class TestSession(unittest.TestCase):
             loaded = load_state(state_path)
 
         self.assertIn("Процесс: `feature`.", current)
-        self.assertIn("Рекомендуемая следующая команда: /alfred-dev:resume", current)
+        self.assertIn("Рекомендуемая следующая команда: /alfred-dev:retomar", current)
         self.assertIn("Незакрытая gate: `usuario`.", current)
         self.assertIn("Завершено фаз: 0/7.", progress)
         self.assertIn("Видимый kanban:", progress)

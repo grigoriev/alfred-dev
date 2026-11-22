@@ -406,7 +406,7 @@ class TestGenerateReportExtended(unittest.TestCase):
             content = f.read()
         self.assertIn("прервана", content.lower())
         self.assertIn("## Краткое резюме", content)
-        self.assertIn("Команда: `/alfred-dev:resume`", content)
+        self.assertIn("Команда: `/alfred-dev:retomar`", content)
 
     def test_header_fields_are_single_line(self):
         session = {
@@ -486,7 +486,7 @@ class TestGenerateReportExtended(unittest.TestCase):
         self.assertIn("- Зарегистрировано фаз: 2 (пропущено: 1, с повторами: 1).", content)
         self.assertIn("- Тесты: нет данных о прогонах.", content)
         self.assertIn("- Проверка/UAT: в ожидании.", content)
-        self.assertIn("Команда: `/alfred-dev:verify`", content)
+        self.assertIn("Команда: `/alfred-dev:uat`", content)
 
     def test_completed_report_reflects_approved_uat(self):
         os.makedirs(os.path.join(self.tmpdir, ".claude"), exist_ok=True)
@@ -578,7 +578,7 @@ class TestGenerateReportExtended(unittest.TestCase):
 
         self.assertIn("- Фокус: Продолжить текущую сессию", content)
         self.assertIn("- Источник: активная сессия (`state`)", content)
-        self.assertIn("Команда: `/alfred-dev:resume`", content)
+        self.assertIn("Команда: `/alfred-dev:retomar`", content)
         self.assertIn("Что делать сейчас: Продолжи сессию с места остановки", content)
 
     def test_completed_report_includes_matching_memory_decisions(self):

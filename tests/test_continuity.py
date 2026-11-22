@@ -12,6 +12,9 @@ from datetime import datetime, timedelta, timezone
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from core.continuity import (
+    load_handoff,
+    _canonical_slash_commands,
+    _public_command,
     CODEBASE_MAP_RELATIVE_PATH,
     CURRENT_RELATIVE_PATH,
     DISCOVERY_MD_RELATIVE_PATH,
@@ -200,7 +203,7 @@ class TestContinuitySuggestions(unittest.TestCase):
                     {
                         "command": "fix",
                         "phase": "validacion",
-                        "resume_command": "/alfred-dev:resume",
+                        "resume_command": "/alfred-dev:retomar",
                         "resolved": False,
                     },
                     fh,
@@ -283,7 +286,7 @@ class TestContinuitySuggestions(unittest.TestCase):
             with open(os.path.join(tmpdir, "docs", "project", "current.md"), "w", encoding="utf-8") as fh:
                 fh.write("# current\n")
             with open(os.path.join(tmpdir, DISCOVERY_MD_RELATIVE_PATH), "w", encoding="utf-8") as fh:
-                fh.write("# Discovery\n\nComando recomendado: /alfred-dev:verify\n")
+                fh.write("# Discovery\n\nComando recomendado: /alfred-dev:uat\n")
 
             suggestion = suggest_next_action(tmpdir)
 
@@ -405,7 +408,7 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("## Рабочее состояние Alfred Dev", result.stdout)
         self.assertIn("Фокус: Продолжить текущий процесс", result.stdout)
-        self.assertIn("/alfred-dev:resume", result.stdout)
+        self.assertIn("/alfred-dev:retomar", result.stdout)
 
     def test_cli_map_codebase_mode_supports_direct_execution(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -656,7 +659,7 @@ class TestContinuityHelpers(unittest.TestCase):
             )
             self.assertEqual(quick.returncode, 0, msg=quick.stderr)
             self.assertIn("## Quick подготовлен", quick.stdout)
-            self.assertIn("/alfred-dev:verify", quick.stdout)
+            self.assertIn("/alfred-dev:uat", quick.stdout)
             self.assertIn("без блоков Insight", quick.stdout)
             self.assertFalse(quick.stdout.lstrip().startswith("{"))
 
@@ -677,7 +680,7 @@ class TestContinuityHelpers(unittest.TestCase):
             self.assertEqual(quick_json.returncode, 0, msg=quick_json.stderr)
             quick_json_payload = json.loads(quick_json.stdout)
             self.assertEqual(quick_json_payload["command"], "quick")
-            self.assertEqual(quick_json_payload["next_command"], "/alfred-dev:verify")
+            self.assertEqual(quick_json_payload["next_command"], "/alfred-dev:uat")
 
             next_after_quick = subprocess.run(
                 [sys.executable, continuity_script, "next", tmpdir, "--json"],
@@ -717,7 +720,7 @@ class TestContinuityHelpers(unittest.TestCase):
 
             summary = render_flow_start_summary(result)
             self.assertIn("`FEATURE_HEADLESS_START`", summary)
-            self.assertIn("/alfred-dev:resume", summary)
+            self.assertIn("/alfred-dev:retomar", summary)
             self.assertIn("Я не отмечал фазы как завершённые", summary)
 
     def test_cli_start_flow_outputs_markdown_and_json(self):
@@ -860,6 +863,31 @@ class TestContinuityHelpers(unittest.TestCase):
         session = create_session("feature", "Autenticación")
         self.assertEqual(get_pending_gate(session), "usuario")
 
+    def test_load_handoff_maps_legacy_resume_command(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
+            with open(os.path.join(tmpdir, HANDOFF_JSON_RELATIVE_PATH), "w", encoding="utf-8") as fh:
+                json.dump(
+                    {
+                        "command": "fix",
+                        "phase": "validacion",
+                        "resume_command": "/alfred-dev:resume",
+                        "resolved": False,
+                    },
+                    fh,
+                )
+            handoff = load_handoff(tmpdir)
+        self.assertEqual(handoff["resume_command"], "/alfred-dev:retomar")
+
+    def test_public_command_maps_internal_keys(self):
+        self.assertEqual(_public_command("resume"), "retomar")
+        self.assertEqual(_public_command("verify"), "uat")
+        self.assertEqual(_public_command("feature"), "feature")
+        self.assertEqual(
+            _canonical_slash_commands("Закрой через /alfred-dev:verify."),
+            "Закрой через /alfred-dev:uat.",
+        )
+
     def test_build_handoff_uses_active_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
@@ -869,7 +897,7 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertIsNotNone(handoff)
         self.assertEqual(handoff["command"], "feature")
         self.assertEqual(handoff["phase"], "producto")
-        self.assertEqual(handoff["resume_command"], "/alfred-dev:resume")
+        self.assertEqual(handoff["resume_command"], "/alfred-dev:retomar")
         self.assertIn("Продолжить", handoff["next_step"])
 
     def test_write_handoff_files_creates_json_and_markdown(self):
@@ -946,7 +974,7 @@ class TestContinuityHelpers(unittest.TestCase):
             )
             self.assertEqual(paused.returncode, 0, msg=paused.stderr)
             self.assertIn("## Сессия на паузе", paused.stdout)
-            self.assertIn("`/alfred-dev:resume`", paused.stdout)
+            self.assertIn("`/alfred-dev:retomar`", paused.stdout)
             self.assertFalse(paused.stdout.lstrip().startswith("{"))
 
             paused_json = subprocess.run(
@@ -990,7 +1018,7 @@ class TestContinuityHelpers(unittest.TestCase):
                     {
                         "command": "fix",
                         "phase": "calidad",
-                        "resume_command": "/alfred-dev:resume",
+                        "resume_command": "/alfred-dev:retomar",
                         "resolved": False,
                     },
                     fh,
@@ -1060,7 +1088,7 @@ class TestContinuityHelpers(unittest.TestCase):
                 content = fh.read()
 
         self.assertIn("Ручная проверка / UAT", content)
-        self.assertIn("/alfred-dev:verify aprobado", content)
+        self.assertIn("/alfred-dev:uat aprobado", content)
 
     def test_cli_verify_renders_markdown_by_default_and_json_on_demand(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1267,7 +1295,7 @@ class TestContinuityHelpers(unittest.TestCase):
                     {
                         "command": "feature",
                         "phase": "producto",
-                        "resume_command": "/alfred-dev:resume",
+                        "resume_command": "/alfred-dev:retomar",
                         "resolved": False,
                     },
                     fh,
@@ -1371,7 +1399,7 @@ class TestContinuityHelpers(unittest.TestCase):
                 "phase": "ejecucion_acotada",
                 "description": "Ajustar copy",
                 "needs_codebase_map": False,
-                "next_command": "/alfred-dev:verify",
+                "next_command": "/alfred-dev:uat",
             }
         )
 
@@ -1381,7 +1409,7 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertIn("Главный риск", discuss_summary)
         self.assertIn("/alfred-dev:feature", discuss_summary)
         self.assertIn("## Quick подготовлен", quick_summary)
-        self.assertIn("/alfred-dev:verify", quick_summary)
+        self.assertIn("/alfred-dev:uat", quick_summary)
 
     def test_start_quick_session_blocks_when_uat_is_pending(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1499,12 +1527,12 @@ class TestContinuityHelpers(unittest.TestCase):
                 backlog_content = fh.read()
 
         self.assertIn("Статус: активно.", current_content)
-        self.assertIn("/alfred-dev:resume", current_content)
+        self.assertIn("/alfred-dev:retomar", current_content)
         self.assertIn("Рабочий процесс: `quick`.", progress_content)
         self.assertIn("ajustar copy del login", progress_content)
         self.assertIn("Видимый kanban:", progress_content)
         self.assertIn("ajustar copy del login", in_progress_content)
-        self.assertIn("/alfred-dev:verify", backlog_content)
+        self.assertIn("/alfred-dev:uat", backlog_content)
 
     def test_write_codebase_map_files_creates_brownfield_artifacts(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1645,7 +1673,7 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"), "w", encoding="utf-8") as fh:
                 fh.write(
                     "# Backlog\n\n"
-                    "### [T-010] Validar 'Login' con /alfred-dev:verify.\n\n"
+                    "### [T-010] Validar 'Login' con /alfred-dev:uat.\n\n"
                     "- **Agente:** alfred:verify\n"
                 )
             with open(os.path.join(tmpdir, "docs", "project", "kanban", "in-progress.md"), "w", encoding="utf-8") as fh:
@@ -1859,7 +1887,7 @@ class TestContinuityHelpers(unittest.TestCase):
         handoff = {
             "command": "feature",
             "phase": "producto",
-            "resume_command": "/alfred-dev:resume",
+            "resume_command": "/alfred-dev:retomar",
             "resolved": False,
         }
         snapshot = {
@@ -1888,7 +1916,7 @@ class TestContinuityHelpers(unittest.TestCase):
 
         self.assertIn("### Незакрытый handoff", content)
         self.assertNotIn("### Активный процесс", content)
-        self.assertIn("Команда: `/alfred-dev:resume`", content)
+        self.assertIn("Команда: `/alfred-dev:retomar`", content)
 
     def test_render_next_markdown_uses_structured_guidance(self):
         content = render_next_markdown(
@@ -1905,7 +1933,7 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertIn("## Следующий рабочий шаг", content)
         self.assertIn("Фокус: Cerrar la verificación pendiente", content)
         self.assertIn("Источник: verificación/UAT (`verify`)", content)
-        self.assertIn("Команда: `/alfred-dev:verify`", content)
+        self.assertIn("Команда: `/alfred-dev:uat`", content)
         self.assertIn("Что делать сейчас: Registra la UAT antes de seguir.", content)
 
     def test_render_status_markdown_includes_structured_next_action_and_runtime_summary(self):
@@ -1922,7 +1950,7 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertIn("### Проект", content)
         self.assertIn("### Записанные фазы", content)
         self.assertIn("Фокус: Продолжить текущий процесс", content)
-        self.assertIn("Команда: `/alfred-dev:resume`", content)
+        self.assertIn("Команда: `/alfred-dev:retomar`", content)
 
 
 class TestLegacyDesignerPhaseResult(unittest.TestCase):

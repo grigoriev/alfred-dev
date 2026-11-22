@@ -3326,7 +3326,7 @@ def check_human_contracts() -> list[str]:
             ("Gate развёртывания ВСЕГДА интерактивный", commands["ship"]),
             ("НИКОГДА не утверждай автоматически развёртывание", commands["ship"]),
             ("НЕ помечай UAT как одобренную без явного указания пользователя", commands["uat"]),
-            ("`/alfred-dev:verify aprobado`", commands["uat"]),
+            ("`/alfred-dev:uat aprobado`", commands["uat"]),
         ],
         "operational honesty": [
             ("Операционная честность и запрет имитации", commands["_composicion"]),
@@ -3642,7 +3642,7 @@ def check_continuity_smoke() -> list[str]:
             _fail(f"discuss returned an unexpected recommendation: {discussed}")
 
         quick = _run_continuity(project, "quick", str(project), "--raw", "cambiar CTA")
-        if "## Quick подготовлен" not in quick or "/alfred-dev:verify" not in quick:
+        if "## Quick подготовлен" not in quick or "/alfred-dev:uat" not in quick:
             _fail("quick did not return a human summary with the next verify")
 
         handoff = json.loads(_run_continuity(project, "write-handoff", str(project)))
@@ -3694,7 +3694,7 @@ def check_continuity_smoke() -> list[str]:
         kanban.mkdir(parents=True, exist_ok=True)
         (kanban / "backlog.md").write_text(
             "# Backlog\n\n"
-            "### [T-010] Validar login con /alfred-dev:verify\n\n"
+            "### [T-010] Validar login con /alfred-dev:uat\n\n"
             "- **Agente:** alfred:verify\n",
             encoding="utf-8",
         )

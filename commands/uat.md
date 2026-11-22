@@ -45,14 +45,14 @@ python3 .claude/alfred-continuity.py verify "$PWD" --raw "$ARGUMENTS"
 
 5. Если есть активная сессия и `fase_actual` НЕ `completado`, НЕ выдумывай
    преждевременную ручную приёмку. Укажи, что сначала нужно закрыть или продолжить этот
-   процесс через `/alfred-dev:resume` или `/alfred-dev:next`.
+   процесс через `/alfred-dev:retomar` или `/alfred-dev:next`.
 
 ## Ограничения
 
-- НЕ используй `AskUserQuestion` как обязательный шаг внутри `/alfred-dev:verify`.
+- НЕ используй `AskUserQuestion` как обязательный шаг внутри `/alfred-dev:uat`.
 - НЕ помечай UAT как одобренную без явного указания пользователя.
 - НЕ удаляй состояние завершённого процесса, породившего валидацию.
 - НЕ добавляй второй слой сводки, если helper уже оставил `Estado`,
   `Objetivo`, `Checklist`, `Notas` и `Siguiente paso`.
 - Если UAT остаётся в ожидании, закончи, указав, как зарегистрировать результат:
-  `/alfred-dev:verify aprobado` или `/alfred-dev:verify rechazado <заметка>`.
+  `/alfred-dev:uat aprobado` или `/alfred-dev:uat rechazado <заметка>`.

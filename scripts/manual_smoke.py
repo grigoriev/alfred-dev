@@ -269,7 +269,7 @@ CASES: tuple[ManualCase, ...] = (
     ),
     ManualCase(
         "resume",
-        "/alfred-dev:resume",
+        "/alfred-dev:retomar",
         "Resumes a pending handoff without reopening work blindly.",
         setup="handoff",
         commands=("resume",),
@@ -728,7 +728,7 @@ def _seed_handoff(project: Path) -> None:
             "command": "quick",
             "description": "Изменить CTA",
             "phase": "ejecucion_acotada",
-            "resume_command": "/alfred-dev:resume",
+            "resume_command": "/alfred-dev:retomar",
             "resolved": False,
             "next_action": "Продолжить ограниченное выполнение и проверить CTA.",
             "created_at": _iso_now(),

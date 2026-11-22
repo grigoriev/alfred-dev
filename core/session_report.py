@@ -368,7 +368,7 @@ def _verification_status(
         return {
             "label": "пока не применяется",
             "detail": f"Процесс ещё активен в фазе '{current_phase}'.",
-            "next_command": "/alfred-dev:resume",
+            "next_command": "/alfred-dev:retomar",
             "next_reason": "Сессия ещё не закрыта: лучше продолжить её с того места, где она остановилась.",
         }
 
@@ -377,7 +377,7 @@ def _verification_status(
         return {
             "label": "в ожидании",
             "detail": "Процесс отмечен как завершённый, но ручная проверка/UAT ещё не зарегистрирована.",
-            "next_command": "/alfred-dev:verify",
+            "next_command": "/alfred-dev:uat",
             "next_reason": "Нужно проверить итоговый результат, прежде чем считать процесс действительно закрытым.",
         }
 
@@ -415,7 +415,7 @@ def _verification_status(
     return {
         "label": "в ожидании",
         "detail": detail,
-        "next_command": "/alfred-dev:verify",
+        "next_command": "/alfred-dev:uat",
         "next_reason": "Итоговая проверка ещё открыта, её нужно закрыть явно.",
     }
 
@@ -430,7 +430,7 @@ def _report_next_step_payload(
         default="/alfred",
     )
 
-    if next_command == "/alfred-dev:resume":
+    if next_command == "/alfred-dev:retomar":
         return {
             "focus": "Продолжить текущую сессию",
             "source_label": "активная сессия",
@@ -440,7 +440,7 @@ def _report_next_step_payload(
             "reason": verification.get("next_reason", "Сессия ещё не закрыта."),
         }
 
-    if next_command == "/alfred-dev:verify":
+    if next_command == "/alfred-dev:uat":
         return {
             "focus": "Закрыть ожидающую проверку",
             "source_label": "проверка/UAT",

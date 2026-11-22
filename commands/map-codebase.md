@@ -47,7 +47,7 @@ python3 .claude/alfred-continuity.py map-codebase "$PWD" --raw "$ARGUMENTS"
   `docs/project/codebase-map.md` и `docs/project/current.md`; верни этот текст
   и НЕ используй никаких других инструментов;
 - если helper сообщает, что есть активная сессия или незакрытый handoff, действуй как
-  `/alfred-dev:next` или `/alfred-dev:resume` в зависимости от случая;
+  `/alfred-dev:next` или `/alfred-dev:retomar` в зависимости от случая;
 - если helper падает, недоступен или `Bash` отклонён, НЕ повторяй его:
   немедленно переходи в ручной режим.
 

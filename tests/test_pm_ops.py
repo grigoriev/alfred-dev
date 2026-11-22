@@ -103,7 +103,7 @@ class TestPmHelpers(unittest.TestCase):
         )
         _write(
             os.path.join(tmpdir, "docs", "project", "current.md"),
-            "# Current\n\n- Estado: implementación en curso\n- Comando recomendado: /alfred-dev:verify\n",
+            "# Current\n\n- Estado: implementación en curso\n- Comando recomendado: /alfred-dev:uat\n",
         )
 
     def test_load_kanban_board_parses_heading_tasks(self):
@@ -167,7 +167,7 @@ class TestPmHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-### [T-010] Validar 'Login' con /alfred-dev:verify.
+### [T-010] Validar 'Login' con /alfred-dev:uat.
 
 - **Agente:** alfred:verify
 """,
@@ -269,7 +269,7 @@ class TestPmHelpers(unittest.TestCase):
         self.assertIn("## Ежедневный standup", content)
         self.assertIn("[T-002] Implementar endpoint POST /login", content)
         self.assertIn("[T-004] Integrar sesión persistente", content)
-        self.assertIn("/alfred-dev:verify", content)
+        self.assertIn("/alfred-dev:uat", content)
 
     def test_standup_snapshot_lists_latest_done_tasks_first(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -404,7 +404,7 @@ class TestPmHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-### [T-010] Validar 'Login' con /alfred-dev:verify.
+### [T-010] Validar 'Login' con /alfred-dev:uat.
 
 - **Agente:** alfred:verify
 """,
@@ -525,7 +525,7 @@ class TestPmHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-### [T-010] Validar 'Login' con /alfred-dev:verify.
+### [T-010] Validar 'Login' con /alfred-dev:uat.
 
 - **Agente:** alfred:verify
 """,
@@ -692,7 +692,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-### [T-010] Validar 'Login' con /alfred-dev:verify.
+### [T-010] Validar 'Login' con /alfred-dev:uat.
 
 - **Agente:** alfred:verify
 """,

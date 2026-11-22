@@ -416,6 +416,37 @@ def _capture_helper_memory(
         db.close()
 
 
+# Internal runtime command keys that are not public slash commands.
+_PUBLIC_COMMAND_NAMES = {
+    "resume": "retomar",
+    "verify": "uat",
+    "config": "ajustes",
+    "help": "alfred",
+    "status": "progress",
+    "blocked": "progress",
+    "in-progress": "progress",
+    "standup": "progress",
+    "validate": "progress",
+}
+# Public slash commands whose runtime key differs.
+_INTERNAL_COMMAND_NAMES = {"retomar": "resume", "uat": "verify", "ajustes": "config"}
+_LEGACY_SLASH_COMMAND_RE = re.compile(r"/alfred-dev:(resume|verify)\b")
+
+
+def _public_command(name: Any) -> str:
+    """Return the public slash command name for an internal command key."""
+    key = str(name or "").strip()
+    return _PUBLIC_COMMAND_NAMES.get(key, key)
+
+
+def _canonical_slash_commands(text: Any) -> str:
+    """Replace legacy slash commands stored in old state files."""
+    return _LEGACY_SLASH_COMMAND_RE.sub(
+        lambda match: f"/alfred-dev:{_PUBLIC_COMMAND_NAMES[match.group(1)]}",
+        str(text or ""),
+    )
+
+
 def load_handoff(project_dir: str) -> Optional[Dict[str, Any]]:
     """Load the handoff if it exists and has a minimal valid structure."""
     handoff_path = _project_path(project_dir, HANDOFF_JSON_RELATIVE_PATH)
@@ -434,6 +465,7 @@ def load_handoff(project_dir: str) -> Optional[Dict[str, Any]]:
     if not required.issubset(data.keys()):
         return None
 
+    data["resume_command"] = _canonical_slash_commands(data["resume_command"])
     return data
 
 
@@ -773,6 +805,8 @@ def _infer_legacy_task_type(task: Dict[str, Any]) -> str:
     if (
         "con /alfred-dev:verify" in title_normalized
         or "через /alfred-dev:verify" in title_normalized
+        or "con /alfred-dev:uat" in title_normalized
+        or "через /alfred-dev:uat" in title_normalized
         or "validacion manual pendiente del flujo" in notes_normalized
         or "ручная проверка процесса" in notes_normalized
         or agent_normalized == "alfred:verify"
@@ -1202,8 +1236,8 @@ def _merge_task_notes(existing_notes: str, extra_note: str) -> str:
 def _verification_task_title(description: str) -> str:
     cleaned = " ".join((description or "").split()).strip()
     if not cleaned:
-        return "Проверить последний завершённый процесс через /alfred-dev:verify."
-    return f"Проверить '{cleaned}' через /alfred-dev:verify."
+        return "Проверить последний завершённый процесс через /alfred-dev:uat."
+    return f"Проверить '{cleaned}' через /alfred-dev:uat."
 
 
 def _ensure_verification_task(
@@ -1219,7 +1253,7 @@ def _ensure_verification_task(
         agent="alfred:verify",
         notes=(
             f"Ручная проверка процесса '{command}' ещё не пройдена. "
-            "Закрой через /alfred-dev:verify."
+            "Закрой через /alfred-dev:uat."
         ),
         task_type="verify",
     )
@@ -1364,7 +1398,7 @@ def _sync_kanban_after_verify(
         reject_note = (
             f"UAT отклонена: {record['notes']}"
             if record.get("notes")
-            else "UAT отклонена: проверь изменение и повтори /alfred-dev:verify."
+            else "UAT отклонена: проверь изменение и повтори /alfred-dev:uat."
         )
 
         if match is not None:
@@ -2019,16 +2053,18 @@ def _get_verify_task(
 def _session_next_command(session: Dict[str, Any], uat: Optional[Dict[str, Any]]) -> str:
     phase = str(session.get("fase_actual", "")).strip()
     if phase != "completado":
-        return "/alfred-dev:resume"
+        return "/alfred-dev:retomar"
 
     uat_status = str((uat or {}).get("status", "")).strip()
     if uat_status == "approved":
         return "/alfred"
 
-    next_after_completion = str(session.get("next_after_completion", "")).strip()
+    next_after_completion = _canonical_slash_commands(
+        session.get("next_after_completion", "")
+    ).strip()
     if next_after_completion:
         return next_after_completion
-    return "/alfred-dev:verify"
+    return "/alfred-dev:uat"
 
 
 def _session_status_label(session: Dict[str, Any], uat: Optional[Dict[str, Any]]) -> str:
@@ -2476,7 +2512,7 @@ def _build_progress_overview_cards(
                 "title": handoff.get("command", "desconocido"),
                 "body": (
                     f"Фаза: {handoff.get('phase', 'desconocida')} · "
-                    f"Продолжить через {handoff.get('resume_command', '/alfred-dev:resume')}"
+                    f"Продолжить через {handoff.get('resume_command', '/alfred-dev:retomar')}"
                 ),
                 "chips": ["pending"],
             }
@@ -2534,7 +2570,7 @@ def _build_progress_overview_cards(
     cards.append(
         {
             "label": "Рекомендуемый следующий шаг",
-            "title": f"/alfred-dev:{next_action.get('command', 'alfred')}",
+            "title": f"/alfred-dev:{_public_command(next_action.get('command', 'alfred'))}",
             "body": next_action.get(
                 "directive",
                 next_action.get("reason", "Причина не указана."),
@@ -3871,7 +3907,7 @@ def _board_issue_body(
             f"- Источник рекомендации: {next_action.get('source_label', next_action.get('source', 'desconocida'))} "
             f"(`{next_action.get('source', 'desconocida')}`)"
         ),
-        f"- Рекомендуемый следующий шаг: `/alfred-dev:{next_action.get('command', 'alfred')}`",
+        f"- Рекомендуемый следующий шаг: `/alfred-dev:{_public_command(next_action.get('command', 'alfred'))}`",
         (
             "- Что делать сейчас: "
             + next_action.get(
@@ -4024,7 +4060,7 @@ def render_github_sync_markdown(result: Dict[str, Any]) -> str:
         lines.append(f"- Исправлено удалённого drift: {len(remote_drift)}")
     lines.extend(
         [
-            f"- Рекомендуемый следующий шаг: `/alfred-dev:{next_action.get('command', 'alfred')}`",
+            f"- Рекомендуемый следующий шаг: `/alfred-dev:{_public_command(next_action.get('command', 'alfred'))}`",
             (
                 "- Что делать сейчас: "
                 + next_action.get(
@@ -4102,7 +4138,7 @@ def render_github_sync_cli_summary(result: Dict[str, Any]) -> str:
         f"- Локальное состояние: `{GITHUB_SYNC_JSON_RELATIVE_PATH}`",
         f"- Подробный отчёт: `{GITHUB_SYNC_MD_RELATIVE_PATH}`",
         (
-            f"- Следующий шаг: `/alfred-dev:{next_action.get('command', 'alfred')}`: "
+            f"- Следующий шаг: `/alfred-dev:{_public_command(next_action.get('command', 'alfred'))}`: "
             f"{next_action.get('directive', 'Переходи к следующей рекомендуемой команде.')}"
         ),
     ]
@@ -4245,6 +4281,7 @@ def _extract_recommended_alfred_command(markdown: str) -> Optional[str]:
             flags=re.IGNORECASE,
         ):
             command = match.group("command").lower()
+            command = _INTERNAL_COMMAND_NAMES.get(command, command)
             if (
                 command not in _KNOWN_ALFRED_COMMANDS
                 or command in _SELF_ROUTING_COMMANDS
@@ -4726,7 +4763,7 @@ def render_codebase_current_markdown(record: Dict[str, Any]) -> str:
         f"framework `{_stack_value_label(record['stack'].get('framework', 'desconocido'))}`.\n"
         f"- Что осталось: выбрать следующий процесс на основе готовой карты.\n"
         f"- Главный риск: {record['risks'][0]}\n"
-        f"- Рекомендуемая следующая команда: /alfred-dev:{record['recommended_command']}\n"
+        f"- Рекомендуемая следующая команда: /alfred-dev:{_public_command(record['recommended_command'])}\n"
         f"{previous_section}"
     )
 
@@ -4743,7 +4780,7 @@ def render_codebase_map_summary(result: Dict[str, Any]) -> str:
         f"framework `{_stack_value_label(stack.get('framework', 'desconocido'))}`\n"
         f"{focus_line}"
         f"- Артефакты: `{CODEBASE_MAP_RELATIVE_PATH}` и `{CURRENT_RELATIVE_PATH}`\n"
-        f"- Рекомендуемая следующая команда: `/alfred-dev:{result.get('recommended_command', 'alfred')}`\n"
+        f"- Рекомендуемая следующая команда: `/alfred-dev:{_public_command(result.get('recommended_command', 'alfred'))}`\n"
     )
 
 
@@ -4775,7 +4812,7 @@ def render_discovery_summary(result: Dict[str, Any]) -> str:
         f"{question_line}"
         f"{risk_line}"
         f"- Артефакты: `{DISCOVERY_MD_RELATIVE_PATH}` и `{CURRENT_RELATIVE_PATH}`\n"
-        f"- Рекомендуемая следующая команда: `/alfred-dev:{result.get('recommended_command', 'feature')}`\n"
+        f"- Рекомендуемая следующая команда: `/alfred-dev:{_public_command(result.get('recommended_command', 'feature'))}`\n"
     )
 
 
@@ -4793,7 +4830,7 @@ def render_quick_setup_summary(result: Dict[str, Any]) -> str:
         f"- Запрошенное изменение: `{result.get('description', 'быстрое ограниченное изменение')}`\n"
         f"- Сохранённое состояние: `{STATE_RELATIVE_PATH}`\n"
         f"{map_note}"
-        f"- Ожидаемый шаг после завершения: `{result.get('next_command', '/alfred-dev:verify')}`\n"
+        f"- Ожидаемый шаг после завершения: `{result.get('next_command', '/alfred-dev:uat')}`\n"
         "- Каноническое завершение: ответь этим резюме, без блоков Insight и длинных объяснений.\n"
     )
 
@@ -4835,7 +4872,7 @@ def render_flow_start_current_markdown(result: Dict[str, Any]) -> str:
         f"- Незакрытая gate: {pending_gate}.\n"
         "- Что готово: рабочее состояние, минимальная трассируемость и основная задача в SonIA.\n"
         "- Что осталось: выполнить текущую фазу, дать подтверждение и закрыть соответствующую gate.\n"
-        "- Рекомендуемая следующая команда: /alfred-dev:resume\n"
+        "- Рекомендуемая следующая команда: /alfred-dev:retomar\n"
     )
 
 
@@ -4850,7 +4887,7 @@ def render_flow_start_progress_markdown(result: Dict[str, Any]) -> str:
         f"- Начальная фаза ожидает: `{phase}`.\n"
         f"- Цель фазы: {phase_description}\n"
         "- Завершённых фаз пока нет: helper только подготовил continuity и guardrails.\n"
-        "- Продолжи через `/alfred-dev:resume`, чтобы выполнить реальную работу с её gates.\n"
+        "- Продолжи через `/alfred-dev:retomar`, чтобы выполнить реальную работу с её gates.\n"
     )
 
 
@@ -4863,7 +4900,7 @@ def render_flow_start_traceability_markdown(result: Dict[str, Any]) -> str:
         f"- `{command}` запущен через helper-first: ни одна фаза не отмечена как завершённая.\n"
         f"- Начальная незакрытая gate: {pending_gate}.\n"
         "- Требуемое подтверждение: артефакты фазы, tests/checks, где они применимы, и проверка безопасности по процессу.\n"
-        "- Команда продолжения: `/alfred-dev:resume`.\n"
+        "- Команда продолжения: `/alfred-dev:retomar`.\n"
     )
 
 
@@ -4883,7 +4920,7 @@ def render_flow_start_summary(result: Dict[str, Any]) -> str:
         f"- Запрошенная работа: `{result.get('description', 'работа')}`\n"
         f"- Незакрытая gate: {pending_gate}\n"
         f"- Сохранённое состояние: `{STATE_RELATIVE_PATH}`\n"
-        f"- Следующий шаг: `{result.get('next_command', '/alfred-dev:resume')}`\n\n"
+        f"- Следующий шаг: `{result.get('next_command', '/alfred-dev:retomar')}`\n\n"
         f"{sonarqube_section}"
         "### Первая фаза\n\n"
         f"{phase_description}\n\n"
@@ -5150,7 +5187,7 @@ def start_flow_session(project_dir: str, command: str, raw_request: str = "") ->
                     str(state.get("comando", normalized_command)),
                     str(state.get("fase_actual", "")),
                 ),
-                "next_command": "/alfred-dev:resume",
+                "next_command": "/alfred-dev:retomar",
                 "headless_marker": f"{normalized_command.upper()}_HEADLESS_START",
                 "artifacts": state.get("artefactos", []),
                 "already_active": True,
@@ -5161,19 +5198,19 @@ def start_flow_session(project_dir: str, command: str, raw_request: str = "") ->
                 result["headless_marker"] = result["sonarqube_preflight"].get("headless_marker", "AUDIT_HEADLESS_START")
             return result
         raise RuntimeError(
-            "Активная сессия уже есть. Используй /alfred-dev:next или /alfred-dev:resume, прежде чем открывать другой процесс."
+            "Активная сессия уже есть. Используй /alfred-dev:next или /alfred-dev:retomar, прежде чем открывать другой процесс."
         )
 
     handoff = load_handoff(project_dir)
     if handoff and not handoff.get("resolved", False):
         raise RuntimeError(
-            "Есть незакрытый handoff. Продолжи его через /alfred-dev:resume, прежде чем открывать другой процесс."
+            "Есть незакрытый handoff. Продолжи его через /alfred-dev:retomar, прежде чем открывать другой процесс."
         )
 
     session = run_flow(normalized_command, description, project_dir=project_dir)
     session["origen"] = f"/alfred-dev:{normalized_command}"
     session["helper_first"] = True
-    session["next_after_completion"] = "/alfred-dev:verify"
+    session["next_after_completion"] = "/alfred-dev:uat"
 
     os.makedirs(_project_path(project_dir, ".claude"), exist_ok=True)
     os.makedirs(_project_path(project_dir, os.path.join("docs", "project")), exist_ok=True)
@@ -5195,7 +5232,7 @@ def start_flow_session(project_dir: str, command: str, raw_request: str = "") ->
         "description": session.get("descripcion", description),
         "pending_gate": pending_gate,
         "phase_description": phase_description,
-        "next_command": "/alfred-dev:resume",
+        "next_command": "/alfred-dev:retomar",
         "headless_marker": (
             sonarqube_preflight.get("headless_marker", "AUDIT_HEADLESS_START")
             if sonarqube_preflight
@@ -5238,7 +5275,7 @@ def start_flow_session(project_dir: str, command: str, raw_request: str = "") ->
             "Во время helper-first ни одна фаза не завершена."
         ),
         decision_title=f"Открыть процесс {normalized_command}: {session['descripcion']}",
-        decision_choice="Подготовить состояние и продолжить через /alfred-dev:resume",
+        decision_choice="Подготовить состояние и продолжить через /alfred-dev:retomar",
         decision_context=(
             "Команде нужны continuity и проверяемые gates. В headless-режиме "
             "она не должна пытаться пройти весь интерактивный процесс."
@@ -5270,7 +5307,7 @@ def render_prefetch_response(payload: Dict[str, Any]) -> str:
                 "## Выбранный маршрут: `/alfred-dev:map-codebase`\n\n"
                 "- Обнаружен brownfield-репозиторий без постоянной карты.\n"
                 f"- Подготовленные артефакты: `{CODEBASE_MAP_RELATIVE_PATH}` и `{CURRENT_RELATIVE_PATH}`\n"
-                f"- Рекомендуемая следующая команда: `/alfred-dev:{recommended}`\n"
+                f"- Рекомендуемая следующая команда: `/alfred-dev:{_public_command(recommended)}`\n"
             )
         return render_codebase_map_summary(payload)
 
@@ -5305,7 +5342,7 @@ def write_codebase_map_files(project_dir: str, raw_request: str = "") -> Dict[st
     handoff = load_handoff(project_dir)
     if handoff and not handoff.get("resolved", False):
         raise RuntimeError(
-            "Есть незакрытый handoff. Используй /alfred-dev:resume, прежде чем открывать /alfred-dev:map-codebase."
+            "Есть незакрытый handoff. Используй /alfred-dev:retomar, прежде чем открывать /alfred-dev:map-codebase."
         )
 
     package_data = _load_package_json(project_dir)
@@ -5363,7 +5400,7 @@ def write_codebase_map_files(project_dir: str, raw_request: str = "") -> Dict[st
                 if focus_area
                 else "Текущий фокус: общая карта codebase."
             ),
-            f"Рекомендуемый следующий шаг: /alfred-dev:{record['recommended_command']}.",
+            f"Рекомендуемый следующий шаг: /alfred-dev:{_public_command(record['recommended_command'])}.",
         ],
         traceability_items=[
             "Перед реализацией ещё нужны конкретные критерии приёмки.",
@@ -5372,7 +5409,7 @@ def write_codebase_map_files(project_dir: str, raw_request: str = "") -> Dict[st
         ],
         backlog_items=[
             (
-                f"Уточнить '{focus_area}' через /alfred-dev:{record['recommended_command']}."
+                f"Уточнить '{focus_area}' через /alfred-dev:{_public_command(record['recommended_command'])}."
                 if focus_area
                 else "Просмотреть карту brownfield и выбрать следующий процесс."
             ),
@@ -5388,7 +5425,7 @@ def write_codebase_map_files(project_dir: str, raw_request: str = "") -> Dict[st
         event_content=(
             f"Проект '{project_name}' проанализирован. {stack_summary}. "
             f"Фокус: {focus_area or 'общий'}. "
-            f"Рекомендуемая следующая команда: /alfred-dev:{record['recommended_command']}. "
+            f"Рекомендуемая следующая команда: /alfred-dev:{_public_command(record['recommended_command'])}. "
             f"Артефакты: {CODEBASE_MAP_RELATIVE_PATH} и {CURRENT_RELATIVE_PATH}."
         ),
         decision_title="Начать с map-codebase перед реализацией",
@@ -5609,7 +5646,7 @@ def _next_command_for_uat(status: str) -> str:
         return "/alfred"
     if status == "rejected":
         return "/alfred"
-    return "/alfred-dev:verify aprobado"
+    return "/alfred-dev:uat aprobado"
 
 
 def _build_uat_record(
@@ -5668,7 +5705,7 @@ def render_uat_markdown(uat: Dict[str, Any]) -> str:
     if uat.get("status") == "pending":
         action = (
             "Выполни ручную проверку и запиши результат через "
-            "`/alfred-dev:verify aprobado` или `/alfred-dev:verify rechazado <заметка>`."
+            "`/alfred-dev:uat aprobado` или `/alfred-dev:uat rechazado <заметка>`."
         )
     elif uat.get("status") == "approved":
         action = (
@@ -5678,7 +5715,7 @@ def render_uat_markdown(uat: Dict[str, Any]) -> str:
     else:
         action = (
             "Ручная проверка не пройдена. Используй Alfred, чтобы внести нужные "
-            "доработки, и снова запусти `/alfred-dev:verify`, когда будешь готов."
+            "доработки, и снова запусти `/alfred-dev:uat`, когда будешь готов."
         )
 
     return (
@@ -5834,7 +5871,7 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
             focus="Подхватить незакрытый handoff",
             directive=(
                 f"Продолжи `{handoff['command']}` с `{handoff['phase']}` через "
-                f"`{handoff.get('resume_command', '/alfred-dev:resume')}`."
+                f"`{handoff.get('resume_command', '/alfred-dev:retomar')}`."
             ),
             urgency="alta",
         )
@@ -5871,7 +5908,7 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
             "discovery",
             focus="Следовать рекомендации discovery",
             directive=(
-                f"Продолжи с `/alfred-dev:{discovery_command}`, опираясь на сохранённое "
+                f"Продолжи с `/alfred-dev:{_public_command(discovery_command)}`, опираясь на сохранённое "
                 "уточнение как на рабочую основу."
             ),
             urgency="media",
@@ -5889,7 +5926,7 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
             "current",
             focus="Следовать сохранённому рабочему состоянию",
             directive=(
-                f"Продолжи с `/alfred-dev:{current_command}`, опираясь на "
+                f"Продолжи с `/alfred-dev:{_public_command(current_command)}`, опираясь на "
                 "`docs/project/current.md` и уже созданные артефакты."
             ),
             urgency="media",
@@ -5936,7 +5973,7 @@ def render_next_markdown(suggestion: Dict[str, str]) -> str:
             f"- Источник: {suggestion.get('source_label', suggestion.get('source', 'неизвестно'))} "
             f"(`{suggestion.get('source', 'неизвестно')}`)"
         ),
-        f"- Команда: `/alfred-dev:{suggestion.get('command', 'alfred')}`",
+        f"- Команда: `/alfred-dev:{_public_command(suggestion.get('command', 'alfred'))}`",
         (
             "- Что делать сейчас: "
             + suggestion.get(
@@ -6017,7 +6054,7 @@ def build_progress_snapshot(
                     if has_paused_state and not (handoff and not handoff.get("resolved", False))
                     else ""
                 ),
-                f"Предлагаемый следующий шаг: `/alfred-dev:{next_action.get('command', 'alfred')}`.",
+                f"Предлагаемый следующий шаг: `/alfred-dev:{_public_command(next_action.get('command', 'alfred'))}`.",
             ]
             if item
         ]
@@ -6123,7 +6160,7 @@ def _extend_next_action_section(
                 f"- Источник: {next_action.get('source_label', next_action.get('source', 'неизвестно'))} "
                 f"(`{next_action.get('source', 'неизвестно')}`)"
             ),
-            f"- Команда: `/alfred-dev:{next_action.get('command', 'alfred')}`",
+            f"- Команда: `/alfred-dev:{_public_command(next_action.get('command', 'alfred'))}`",
             (
                 "- Что делать сейчас: "
                 + next_action.get(
@@ -6214,7 +6251,7 @@ def render_status_markdown(snapshot: Dict[str, Any]) -> str:
             lines.append(f"- Источник runtime-команды: {_team_source_label_ru(team_source)}.")
         if handoff and not handoff.get("resolved", False):
             lines.append(
-                f"- Незакрытый handoff: продолжить через `{handoff.get('resume_command', '/alfred-dev:resume')}` с `{handoff.get('phase', 'desconocida')}`."
+                f"- Незакрытый handoff: продолжить через `{handoff.get('resume_command', '/alfred-dev:retomar')}` с `{handoff.get('phase', 'desconocida')}`."
             )
         on_demand_optionals = _session_on_demand_optionals_for_flow(state)
         if on_demand_optionals:
@@ -6230,7 +6267,7 @@ def render_status_markdown(snapshot: Dict[str, Any]) -> str:
                 "",
                 f"- Незавершённый процесс: `{handoff.get('command', 'desconocido')}`",
                 f"- Фаза: `{handoff.get('phase', 'desconocida')}`",
-                f"- Продолжить через: `{handoff.get('resume_command', '/alfred-dev:resume')}`",
+                f"- Продолжить через: `{handoff.get('resume_command', '/alfred-dev:retomar')}`",
             ]
         )
     else:
@@ -6314,7 +6351,7 @@ def render_progress_markdown(snapshot: Dict[str, Any]) -> str:
                 "",
                 f"- Процесс: `{handoff.get('command', 'desconocido')}`",
                 f"- Фаза: `{handoff.get('phase', 'desconocida')}`",
-                f"- Следующий шаг: `{handoff.get('resume_command', '/alfred-dev:resume')}`",
+                f"- Следующий шаг: `{handoff.get('resume_command', '/alfred-dev:retomar')}`",
             ]
         )
     elif state and state.get("fase_actual") != "completado" and is_session_paused(state):
@@ -6325,7 +6362,7 @@ def render_progress_markdown(snapshot: Dict[str, Any]) -> str:
                 f"- Процесс: `{state.get('comando', 'desconocido')}`",
                 f"- Описание: {state.get('descripcion', 'Без описания')}",
                 f"- Фаза на паузе: `{state.get('fase_actual', 'desconocida')}`",
-                "- Видимого handoff нет; стоит пересоздать его через `/alfred-dev:pause` или продолжить через `/alfred-dev:resume`.",
+                "- Видимого handoff нет; стоит пересоздать его через `/alfred-dev:pause` или продолжить через `/alfred-dev:retomar`.",
             ]
         )
     else:
@@ -6475,7 +6512,7 @@ def render_discovery_markdown(record: Dict[str, Any]) -> str:
         "## Риски и деликатные места\n\n"
         f"{risks}\n\n"
         "## Рекомендуемая команда\n\n"
-        f"/alfred-dev:{record['recommended_command']}\n"
+        f"/alfred-dev:{_public_command(record['recommended_command'])}\n"
     )
 
 
@@ -6487,7 +6524,7 @@ def render_discovery_current_markdown(record: Dict[str, Any]) -> str:
         f"- Текущий фокус: {record['description']}.\n"
         f"- Основной актор: {record['actor']}.\n"
         f"- Что осталось: проверить допущения и закрыть открытые вопросы в `docs/project/discovery.md`.\n"
-        f"- Рекомендуемая следующая команда: /alfred-dev:{record['recommended_command']}\n"
+        f"- Рекомендуемая следующая команда: /alfred-dev:{_public_command(record['recommended_command'])}\n"
     )
 
 
@@ -6505,8 +6542,8 @@ def render_quick_current_markdown(record: Dict[str, Any]) -> str:
         f"- Текущая фаза: `{record['phase']}`.\n"
         "- Что готово: Alfred уже подготовил быструю сессию и минимальный контекст для продолжения.\n"
         f"{warning_line}"
-        "- Что осталось: выполнить ограниченное изменение, проверить его и закрыть через `/alfred-dev:verify`.\n"
-        "- Рекомендуемая следующая команда: /alfred-dev:resume\n"
+        "- Что осталось: выполнить ограниченное изменение, проверить его и закрыть через `/alfred-dev:uat`.\n"
+        "- Рекомендуемая следующая команда: /alfred-dev:retomar\n"
     )
 
 
@@ -6523,7 +6560,7 @@ def render_quick_progress_markdown(record: Dict[str, Any]) -> str:
         "- Активный процесс: `quick`.\n"
         f"- Ограниченное изменение в работе: {record['description']}.\n"
         f"- Главный guardrail: {guardrail}\n"
-        "- Ожидаемое закрытие: `/alfred-dev:verify` после реализации и проверки изменения.\n"
+        "- Ожидаемое закрытие: `/alfred-dev:uat` после реализации и проверки изменения.\n"
     )
 
 
@@ -6538,7 +6575,7 @@ def write_discovery_files(project_dir: str, raw_request: str = "") -> Dict[str, 
     handoff = load_handoff(project_dir)
     if handoff and not handoff.get("resolved", False):
         raise RuntimeError(
-            "Есть незакрытый handoff. Используй /alfred-dev:resume, прежде чем открывать discuss."
+            "Есть незакрытый handoff. Используй /alfred-dev:retomar, прежде чем открывать discuss."
         )
 
     description = _normalize_request_description(raw_request, "Следующая работа для уточнения")
@@ -6671,29 +6708,31 @@ def start_quick_session(project_dir: str, raw_request: str = "") -> Dict[str, An
                 "phase": state["fase_actual"],
                 "description": state["descripcion"],
                 "needs_codebase_map": needs_codebase_map(project_dir),
-                "next_command": state.get("next_after_completion", "/alfred-dev:verify"),
+                "next_command": _canonical_slash_commands(
+                    state.get("next_after_completion", "/alfred-dev:uat")
+                ),
                 "bypass_path": arm_stop_hook_bypass(project_dir, "/alfred-dev:quick"),
             }
         raise RuntimeError(
-            "Активная сессия уже есть. Используй /alfred-dev:next или /alfred-dev:resume, прежде чем открывать quick."
+            "Активная сессия уже есть. Используй /alfred-dev:next или /alfred-dev:retomar, прежде чем открывать quick."
         )
 
     handoff = load_handoff(project_dir)
     if handoff and not handoff.get("resolved", False):
         raise RuntimeError(
-            "Есть незакрытый handoff. Продолжи его через /alfred-dev:resume, прежде чем открывать quick."
+            "Есть незакрытый handoff. Продолжи его через /alfred-dev:retomar, прежде чем открывать quick."
         )
 
     verify_suggestion = suggest_verify_action(project_dir)
     if verify_suggestion is not None:
         raise RuntimeError(
-            "Ручная проверка/UAT ещё не пройдена. Используй /alfred-dev:verify, прежде чем открывать quick."
+            "Ручная проверка/UAT ещё не пройдена. Используй /alfred-dev:uat, прежде чем открывать quick."
         )
 
     session = run_flow("quick", description, project_dir=project_dir)
     session["modo_rapido"] = True
     session["origen"] = "/alfred-dev:quick"
-    session["next_after_completion"] = "/alfred-dev:verify"
+    session["next_after_completion"] = "/alfred-dev:uat"
     os.makedirs(_project_path(project_dir, ".claude"), exist_ok=True)
     bypass_path = arm_stop_hook_bypass(project_dir, "/alfred-dev:quick")
     os.makedirs(_project_path(project_dir, os.path.join("docs", "project")), exist_ok=True)
@@ -6797,7 +6836,7 @@ def build_handoff(project_dir: str) -> Optional[Dict[str, Any]]:
         "completed_phases": completed,
         "pending_gate": gate,
         "artifacts": state.get("artefactos", []),
-        "resume_command": "/alfred-dev:resume",
+        "resume_command": "/alfred-dev:retomar",
         "next_step": (
             f"Продолжить '{state.get('comando', 'desconocido')}' "
             f"с фазы '{state.get('fase_actual', 'desconocida')}'."
@@ -7130,7 +7169,7 @@ def render_handoff_markdown(handoff: Dict[str, Any]) -> str:
         "## Зарегистрированные артефакты\n\n"
         f"{artifact_lines}\n\n"
         "## Следующий шаг\n\n"
-        f"- Команда возврата: `{handoff.get('resume_command', '/alfred-dev:resume')}`\n"
+        f"- Команда возврата: `{handoff.get('resume_command', '/alfred-dev:retomar')}`\n"
         f"- Предлагаемое действие: {handoff.get('next_step', '-')}\n"
     )
 
@@ -7138,7 +7177,7 @@ def render_handoff_markdown(handoff: Dict[str, Any]) -> str:
 def render_pause_markdown(result: Dict[str, Any]) -> str:
     """Render a helper-first pause in human format."""
     gate = result.get("pending_gate") or "незакрытая gate не обнаружена"
-    next_step = result.get("next_step") or "Продолжить сессию через `/alfred-dev:resume`."
+    next_step = result.get("next_step") or "Продолжить сессию через `/alfred-dev:retomar`."
     return (
         "## Сессия на паузе\n\n"
         f"- Процесс: `{result.get('command', '-')}`\n"
@@ -7147,7 +7186,7 @@ def render_pause_markdown(result: Dict[str, Any]) -> str:
         f"- Незакрытая gate: {gate}\n"
         f"- Handoff сохранён в: `{HANDOFF_JSON_RELATIVE_PATH}` и `{HANDOFF_MD_RELATIVE_PATH}`\n"
         f"- Состояние обновлено в: `{STATE_RELATIVE_PATH}`\n"
-        f"- Команда возврата: `/alfred-dev:resume`\n"
+        f"- Команда возврата: `/alfred-dev:retomar`\n"
         f"- Следующее действие: {next_step}\n"
     )
 
@@ -7264,7 +7303,7 @@ def resume_session(project_dir: str) -> Optional[Dict[str, str]]:
         result["pending_gate"] = handoff.get("pending_gate", "")
         result["next_step"] = handoff.get(
             "next_step",
-            f"Продолжить через {handoff.get('resume_command', '/alfred-dev:resume')}.",
+            f"Продолжить через {handoff.get('resume_command', '/alfred-dev:retomar')}.",
         )
 
     if state is not None:
@@ -7283,7 +7322,7 @@ def resume_session(project_dir: str) -> Optional[Dict[str, str]]:
         save_handoff(project_dir, handoff)
         result["handoff_path"] = _project_path(project_dir, HANDOFF_JSON_RELATIVE_PATH)
 
-    bypass_path = arm_stop_hook_bypass(project_dir, "/alfred-dev:resume")
+    bypass_path = arm_stop_hook_bypass(project_dir, "/alfred-dev:retomar")
     result["bypass_path"] = bypass_path
     try:
         from core.session_brief import build_session_brief
@@ -7330,7 +7369,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--raw",
         default="",
         dest="raw_request",
-        help="Free-form argument from /alfred-dev:verify",
+        help="Free-form argument from /alfred-dev:uat",
     )
 
     progress_parser = subparsers.add_parser(
