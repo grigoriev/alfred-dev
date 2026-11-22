@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse: bloquea secretos en Write, Edit, Bash y tools MCP de escritura."""
+"""PreToolUse: block secrets in Write, Edit, Bash and MCP write tools."""
 
 from __future__ import annotations
 

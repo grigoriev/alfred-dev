@@ -1,36 +1,36 @@
-# Contribuir y publicar cambios
+# Вклад в проект и публикация изменений
 
-Este documento explica cómo mantener Alfred Dev sin romper la superficie pública del plugin. En este repo no basta con que el código funcione: también tienen que quedar alineados prompts, manifiestos, instaladores, documentación, tests de contrato y versión pública.
+Этот документ объясняет, как сопровождать Alfred Dev и не ломать публичную поверхность плагина. В этом репозитории мало того, чтобы код работал: промпты, манифесты, установщики, документация, контрактные тесты и публичная версия тоже должны оставаться согласованными.
 
-La regla práctica es esta: cualquier cambio que altere la superficie visible del plugin debe venir acompañado de sus contratos y su documentación correspondiente.
+Практическое правило такое: любое изменение видимой поверхности плагина должно сопровождаться соответствующими контрактами и документацией.
 
 ---
 
-## Qué revisar antes de cambiar nada
+## Что проверить перед любым изменением
 
-Según la zona que toques, estas son las superficies que se suelen mover juntas:
+В зависимости от зоны, которую ты затрагиваешь, эти поверхности обычно меняются вместе:
 
-| Si cambias... | Revisa también... |
+| Если меняешь... | Проверь также... |
 |---|---|
-| `commands/*.md` | `.claude-plugin/plugin.json`, `README.md`, `docs/commands.md`, tests de contrato |
-| `agents/*.md` | `.claude-plugin/plugin.json`, `docs/agents/`, `docs/personality.md`, tests relacionados |
-| `skills/` | `.claude-plugin/plugin.json`, `docs/skills.md`, tests de superficie pública |
-| `hooks/` | `hooks/hooks.json`, `docs/hooks.md`, tests del hook |
-| `core/memory*` | `docs/memory.md`, `docs/mcp.md`, tests de memoria/UI/MCP |
-| instaladores | `docs/installation.md`, `README.md`, tests de instalación |
-| versión pública | `README.md`, `.claude-plugin/plugin.json`, marketplace, tests de consistencia |
+| `commands/*.md` | `.claude-plugin/plugin.json`, `README.md`, `docs/commands.md`, контрактные тесты |
+| `agents/*.md` | `.claude-plugin/plugin.json`, `docs/agents/`, `docs/personality.md`, связанные тесты |
+| `skills/` | `.claude-plugin/plugin.json`, `docs/skills.md`, тесты публичной поверхности |
+| `hooks/` | `hooks/hooks.json`, `docs/hooks.md`, тесты hook |
+| `core/memory*` | `docs/memory.md`, `docs/mcp.md`, тесты памяти/UI/MCP |
+| установщики | `docs/installation.md`, `README.md`, тесты установки |
+| публичная версия | `README.md`, `.claude-plugin/plugin.json`, marketplace, тесты согласованности |
 
 ---
 
-## Cómo validar cambios
+## Как проверять изменения
 
-La validación mínima del repo pasa por `pytest`:
+Минимальная проверка репозитория выполняется через `pytest`:
 
 ```bash
 python3 -m pytest tests/ -v
 ```
 
-Si el cambio toca contratos públicos, versión o documentación sensible, conviene prestar atención especial a estas familias de tests:
+Если изменение затрагивает публичные контракты, версию или чувствительную документацию, обрати особое внимание на эти группы тестов:
 
 - `test_public_surface_contract.py`
 - `test_version_consistency.py`
@@ -40,73 +40,73 @@ Si el cambio toca contratos públicos, versión o documentación sensible, convi
 - `test_install_script.py`
 - `test_uninstall_script.py`
 
-Si el cambio afecta a una zona concreta, ejecuta además su suite específica.
+Если изменение касается конкретной зоны, запусти также её отдельный набор тестов.
 
 ---
 
-## CI actual
+## Текущий CI
 
-La automatización de GitHub vive en `.github/workflows/test.yml`.
+Автоматизация GitHub находится в `.github/workflows/test.yml`.
 
-Hoy la CI:
+Сейчас CI:
 
-- se ejecuta en `push` y `pull_request` sobre `main`;
-- job `test`: Python `3.10`–`3.13`, `pytest`, y en `3.12` `release_audit` + cobertura 60%;
-- job `plugin`: misma secuencia en Ubuntu, macOS y Windows (`fail-fast: false`); instala Claude CLI, valida, instala 0.7.0 desde el checkout, enseña el inventario y desinstala;
-- no instala FastMCP (el servidor local tiene fallback);
-- no usa el `curl` de GitHub `main`; instala el checkout de la CI.
+- запускается на `push` и `pull_request` в `main`;
+- job `test`: Python `3.10`–`3.13`, `pytest`, а на `3.12` также `release_audit` и покрытие 60%;
+- job `plugin`: та же последовательность на Ubuntu, macOS и Windows (`fail-fast: false`); устанавливает Claude CLI, проверяет, устанавливает 0.7.0 из checkout, показывает инвентарь и удаляет плагин;
+- не устанавливает FastMCP (у локального сервера есть fallback);
+- не использует `curl` из GitHub `main`; устанавливает checkout из CI.
 
-Esto convierte la matriz de Python en parte del contrato del repo: si añades una dependencia o sintaxis no compatible con alguno de esos intérpretes, rompes la release.
+Поэтому матрица Python становится частью контракта репозитория: если ты добавишь зависимость или синтаксис, несовместимый с одним из этих интерпретаторов, ты сломаешь релиз.
 
 ---
 
-## Versionado y release
+## Версионирование и релиз
 
-El plugin tiene varias superficies donde la versión debe mantenerse coherente:
+У плагина несколько поверхностей, где версия должна оставаться согласованной:
 
 - `.claude-plugin/plugin.json`
 - `README.md`
-- instaladores y desinstaladores, cuando proceda
-- documentación técnica afectada
-- tests de consistencia de versión
-- landing, cuando el cambio también la afecta en la rama `Alfred-Astro`
+- установщики и деинсталляторы, когда это нужно
+- затронутая техническая документация
+- тесты согласованности версии
+- landing, если изменение затрагивает и его в ветке `Alfred-Astro`
 
-No conviene tratar la versión como un detalle cosmético. En Alfred Dev, la versión es una señal contractual que se cruza desde tests y documentación.
-
----
-
-## Cambios en prompts
-
-Los prompts de commands y agentes son parte del producto. Aunque no sean “código ejecutable” en el sentido clásico, sí tienen contrato público y pueden romper comportamiento.
-
-Al modificarlos:
-
-1. mantén alineado el manifiesto del plugin;
-2. revisa los tests de contrato correspondientes;
-3. actualiza la documentación si cambia el comportamiento observable;
-4. evita introducir claims que no estén respaldados por el repo.
+Не стоит считать версию косметической деталью. В Alfred Dev версия это контрактный сигнал, который сверяют тесты и документация.
 
 ---
 
-## Cambios en documentación
+## Изменения в промптах
 
-La documentación en `docs/` debe seguir dos reglas:
+Промпты команд и агентов это часть продукта. Даже если это не «исполняемый код» в классическом смысле, у них есть публичный контракт, и они могут сломать поведение.
 
-- describir el estado real del repo, no planes futuros;
-- contener solo documentación estable y útil para el plugin.
+При их изменении:
 
-Las auditorías, planes temporales o notas de reorganización deben vivir en `internal/`, no en `docs/`.
+1. держи манифест плагина в согласованном состоянии;
+2. проверь соответствующие контрактные тесты;
+3. обнови документацию, если меняется наблюдаемое поведение;
+4. не добавляй утверждения, которые не подтверждены репозиторием.
 
 ---
 
-## Publicar sin dejar drift
+## Изменения в документации
 
-Antes de cerrar una release o un cambio amplio, revisa explícitamente:
+Документация в `docs/` должна следовать двум правилам:
 
-1. si cambió la superficie pública de comandos, agentes o skills;
-2. si los contadores públicos siguen siendo correctos;
-3. si la documentación aún coincide con el código;
-4. si los tests de contrato y consistencia siguen verdes;
-5. si la rama `Alfred-Astro` necesita reflejar el cambio en la landing.
+- описывать реальное состояние репозитория, а не планы на будущее;
+- содержать только стабильную и полезную для плагина документацию.
 
-Ese paso final evita uno de los problemas más comunes del repo: que el código quede bien pero la narrativa pública se quede una versión atrás.
+Аудиты, временные планы и заметки о реорганизации должны лежать в `internal/`, а не в `docs/`.
+
+---
+
+## Публикация без расхождений
+
+Перед закрытием релиза или крупного изменения явно проверь:
+
+1. изменилась ли публичная поверхность команд, агентов или skills;
+2. остаются ли публичные счётчики правильными;
+3. совпадает ли документация с кодом;
+4. остаются ли зелёными контрактные тесты и тесты согласованности;
+5. нужно ли отразить изменение в landing в ветке `Alfred-Astro`.
+
+Этот последний шаг предотвращает одну из самых частых проблем репозитория: код в порядке, а публичное описание отстаёт на одну версию.

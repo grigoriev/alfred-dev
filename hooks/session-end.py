@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SessionEnd fail-open: cierra Memory UI y deja el bloque de cierre."""
+"""SessionEnd, fail-open: stop the Memory UI and write the session closing block."""
 
 from __future__ import annotations
 

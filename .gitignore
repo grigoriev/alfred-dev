@@ -1,4 +1,4 @@
-# Sesiones del servidor visual de Designer
+# Designer visual server sessions
 .alfred-dev/visual/
 .claude/
 .tmp/
@@ -14,7 +14,7 @@ docs/release-operator-handoff-*.md
 docs/external-live-smoke*.json
 docs/claude-auth-recovery*.json
 
-# Artefactos locales de Python y testing
+# Local Python and test artifacts
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -24,7 +24,7 @@ coverage-html/
 venv/
 *.egg-info/
 
-# Dependencias y secretos que no deben subirse
+# Dependencies and secrets that must not be committed
 node_modules/
 .env
 .env.*

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests del reporte asistido de revision manual."""
+"""Tests for the assisted manual review report."""
 
 import importlib.util
 import json
@@ -71,9 +71,9 @@ class TestManualReviewReport(unittest.TestCase):
 
             markdown = report.build_report(evidence_path)
 
-        self.assertIn("# Reporte asistido de revision manual", markdown)
-        self.assertIn("Este reporte no aprueba la release", markdown)
-        self.assertIn("Review template: no suministrada", markdown)
+        self.assertIn("# Assisted manual review report", markdown)
+        self.assertIn("This report does not approve the release", markdown)
+        self.assertIn("Review template: not provided", markdown)
         self.assertIn("`quick-cta`", markdown)
         self.assertIn("`feature-login`", markdown)
         self.assertIn("status=failed", markdown)
@@ -96,10 +96,10 @@ class TestManualReviewReport(unittest.TestCase):
 
             markdown = report.build_report(evidence_path)
 
-        self.assertIn("## Superficie Del Plugin", markdown)
-        self.assertIn("evidence.plugin_surface.roots no coincide", markdown)
-        self.assertIn("evidence.plugin_surface.file_count no coincide", markdown)
-        self.assertIn("evidence.plugin_surface.sha256 no coincide", markdown)
+        self.assertIn("## Plugin Surface", markdown)
+        self.assertIn("evidence.plugin_surface.roots does not match", markdown)
+        self.assertIn("evidence.plugin_surface.file_count does not match", markdown)
+        self.assertIn("evidence.plugin_surface.sha256 does not match", markdown)
 
     def test_report_reads_optional_review_state_without_mutating_it(self):
         report = _load_report_module()
@@ -139,7 +139,7 @@ class TestManualReviewReport(unittest.TestCase):
 
             markdown = report.build_report(evidence_path, review_path)
 
-        self.assertIn("## Calidad De Review Humana", markdown)
+        self.assertIn("## Human Review Quality", markdown)
         self.assertIn("notes_low_quality", markdown)
         self.assertIn("notes_repeated", markdown)
         self.assertIn("`quick-cta`", markdown)
@@ -173,7 +173,7 @@ class TestManualReviewReport(unittest.TestCase):
 
             markdown = report.build_report(evidence_path, review_path)
 
-        self.assertIn("Sin flags automaticos de notas humanas", markdown)
+        self.assertIn("No automatic human note flags", markdown)
         self.assertNotIn("notes_low_quality", markdown)
         self.assertNotIn("notes_repeated", markdown)
 
@@ -192,7 +192,7 @@ class TestManualReviewReport(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(mode, 0o600)
-        self.assertIn("# Reporte asistido de revision manual", body)
+        self.assertIn("# Assisted manual review report", body)
 
 
 if __name__ == "__main__":

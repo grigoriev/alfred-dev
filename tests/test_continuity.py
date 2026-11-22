@@ -158,7 +158,7 @@ class TestContinuitySuggestions(unittest.TestCase):
         self.assertEqual(state["equipo_sesion"]["fuente"], "config_persistida")
         self.assertEqual(set(state["equipo_sesion"]["opcionales_activos"]), {"cto"})
         self.assertTrue(state["equipo_sesion"]["opcionales_activos"]["cto"])
-        self.assertIn("Opcionales secuenciales: `cto`.", traceability)
+        self.assertIn("Опциональные последовательно: `cto`.", traceability)
 
     def test_active_state_has_priority_over_brownfield_map(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -532,11 +532,11 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, TRACEABILITY_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 traceability = fh.read()
 
-        self.assertIn("Estado: completado y verificado.", current)
-        self.assertIn("Siguiente comando recomendado: /alfred", current)
-        self.assertIn("Verificación/UAT: aprobada.", progress)
-        self.assertIn("UAT actual: aprobada.", traceability)
-        self.assertIn("Estado de verify: `done`.", traceability)
+        self.assertIn("Статус: завершено и проверено.", current)
+        self.assertIn("Рекомендуемая следующая команда: /alfred", current)
+        self.assertIn("Проверка/UAT: одобрена.", progress)
+        self.assertIn("Текущая UAT: одобрена.", traceability)
+        self.assertIn("Статус verify: `done`.", traceability)
 
     def test_cli_helper_first_chain_updates_next_step_consistently(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -885,8 +885,8 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, HANDOFF_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 content = fh.read()
 
-        self.assertIn("Handoff de Alfred Dev", content)
-        self.assertIn("Comando de retorno", content)
+        self.assertIn("Handoff Alfred Dev", content)
+        self.assertIn("Команда возврата", content)
 
     def test_mark_and_clear_paused_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1059,7 +1059,7 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, UAT_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 content = fh.read()
 
-        self.assertIn("Verificación manual / UAT", content)
+        self.assertIn("Ручная проверка / UAT", content)
         self.assertIn("/alfred-dev:verify aprobado", content)
 
     def test_cli_verify_renders_markdown_by_default_and_json_on_demand(self):
@@ -1082,9 +1082,9 @@ class TestContinuityHelpers(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(verify.returncode, 0, msg=verify.stderr)
-            self.assertIn("Verificación manual / UAT", verify.stdout)
-            self.assertIn("**Estado:** pendiente", verify.stdout)
-            self.assertIn("## Checklist de validación", verify.stdout)
+            self.assertIn("Ручная проверка / UAT", verify.stdout)
+            self.assertIn("**Статус:** в ожидании", verify.stdout)
+            self.assertIn("## Checklist проверки", verify.stdout)
             self.assertFalse(verify.stdout.lstrip().startswith("{"))
 
             verify_json = subprocess.run(
@@ -1148,7 +1148,7 @@ class TestContinuityHelpers(unittest.TestCase):
 
         self.assertEqual(result["status"], "rejected")
         blocked = next(task for task in board["blocked"] if task["id"] == active["kanban_task_id"])
-        self.assertIn("UAT rechazada", blocked["notes"])
+        self.assertIn("UAT отклонена", blocked["notes"])
         self.assertFalse(any(task["id"] == active["kanban_verify_task_id"] for task in board["backlog"]))
 
     def test_write_uat_files_approved_creates_done_task_when_no_kanban_exists(self):
@@ -1422,9 +1422,9 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(current_path, "r", encoding="utf-8") as fh:
                 current_content = fh.read()
 
-        self.assertIn("## Comando recomendado", discovery_content)
+        self.assertIn("## Рекомендуемая команда", discovery_content)
         self.assertIn("/alfred-dev:feature", discovery_content)
-        self.assertIn("Estado: refinado previo preparado", current_content)
+        self.assertIn("Статус: предварительное уточнение подготовлено", current_content)
 
     def test_helper_first_commands_capture_richer_memory_when_enabled(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1452,9 +1452,9 @@ class TestContinuityHelpers(unittest.TestCase):
             self.assertGreaterEqual(len(decisions), 3)
             self.assertGreaterEqual(len(helper_events), 3)
             titles = [item["title"] for item in decisions]
-            self.assertIn("Arrancar por map-codebase antes de implementar", titles)
-            self.assertTrue(any(title.startswith("Refinar antes de implementar:") for title in titles))
-            self.assertTrue(any(title.startswith("Clasificar como quick:") for title in titles))
+            self.assertIn("Начать с map-codebase перед реализацией", titles)
+            self.assertTrue(any(title.startswith("Уточнить перед реализацией:") for title in titles))
+            self.assertTrue(any(title.startswith("Классифицировать как quick:") for title in titles))
 
     def test_helper_first_commands_seed_operational_artifacts_for_ui(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1477,8 +1477,8 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, KANBAN_IN_PROGRESS_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 in_progress_content = fh.read()
 
-        self.assertIn("Flujo operativo: `quick`.", progress_content)
-        self.assertIn("Riesgo principal", traceability_content)
+        self.assertIn("Рабочий процесс: `quick`.", progress_content)
+        self.assertIn("Главный риск", traceability_content)
         self.assertIn("/alfred-dev:feature", backlog_content)
         self.assertIn("ajustar copy del login", in_progress_content)
 
@@ -1498,11 +1498,11 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, KANBAN_BACKLOG_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 backlog_content = fh.read()
 
-        self.assertIn("Estado: activo.", current_content)
+        self.assertIn("Статус: активно.", current_content)
         self.assertIn("/alfred-dev:resume", current_content)
-        self.assertIn("Flujo operativo: `quick`.", progress_content)
+        self.assertIn("Рабочий процесс: `quick`.", progress_content)
         self.assertIn("ajustar copy del login", progress_content)
-        self.assertIn("Kanban visible:", progress_content)
+        self.assertIn("Видимый kanban:", progress_content)
         self.assertIn("ajustar copy del login", in_progress_content)
         self.assertIn("/alfred-dev:verify", backlog_content)
 
@@ -1535,7 +1535,7 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(current_path, "r", encoding="utf-8") as fh:
                 current_content = fh.read()
 
-        self.assertIn("## Stack y runtime detectados", codebase_map_content)
+        self.assertIn("## Обнаруженный stack и runtime", codebase_map_content)
         self.assertIn("Aplicación de ejemplo para validar Alfred.", codebase_map_content)
         self.assertIn("index.js", codebase_map_content)
         self.assertIn("/alfred-dev:discuss", current_content)
@@ -1682,9 +1682,9 @@ class TestContinuityHelpers(unittest.TestCase):
             snapshot = build_progress_snapshot(tmpdir)
 
         labels = [card["label"] for card in snapshot["overview_cards"]]
-        self.assertIn("Handoff pendiente", labels)
+        self.assertIn("Незакрытый handoff", labels)
         self.assertNotIn("Flujo activo", labels)
-        self.assertEqual(snapshot["overview_cards"][0]["label"], "Handoff pendiente")
+        self.assertEqual(snapshot["overview_cards"][0]["label"], "Незакрытый handoff")
 
     def test_build_progress_snapshot_overview_cards_show_completed_session_not_active(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1695,10 +1695,10 @@ class TestContinuityHelpers(unittest.TestCase):
             snapshot = build_progress_snapshot(tmpdir)
 
         labels = [card["label"] for card in snapshot["overview_cards"]]
-        self.assertIn("Último flujo completado", labels)
+        self.assertIn("Последний завершённый процесс", labels)
         self.assertNotIn("Flujo activo", labels)
-        self.assertEqual(snapshot["overview_cards"][0]["label"], "Último flujo completado")
-        self.assertIn("UAT pendiente", snapshot["overview_cards"][0]["body"])
+        self.assertEqual(snapshot["overview_cards"][0]["label"], "Последний завершённый процесс")
+        self.assertIn("UAT в ожидании", snapshot["overview_cards"][0]["body"])
 
     def test_build_progress_snapshot_is_pure_by_default(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1740,7 +1740,7 @@ class TestContinuityHelpers(unittest.TestCase):
         titles = [card["title"] for card in snapshot["project_signal_cards"]]
         self.assertNotIn("Current", titles)
         all_items = [item for card in snapshot["project_signal_cards"] for item in card["items"]]
-        self.assertFalse(any(item.startswith("Trabajo en curso:") for item in all_items))
+        self.assertFalse(any(item.startswith("Работа в процессе:") for item in all_items))
 
     def test_build_progress_snapshot_project_signal_cards_do_not_repeat_uat_from_overview(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1752,7 +1752,7 @@ class TestContinuityHelpers(unittest.TestCase):
             snapshot = build_progress_snapshot(tmpdir)
 
         traceability_card = next(
-            card for card in snapshot["project_signal_cards"] if card["title"] == "Trazabilidad"
+            card for card in snapshot["project_signal_cards"] if card["title"] == "Трассируемость"
         )
         self.assertFalse(any(item.startswith("UAT actual:") for item in traceability_card["items"]))
         self.assertFalse(any(item.startswith("Objetivo trazado:") for item in traceability_card["items"]))
@@ -1768,8 +1768,8 @@ class TestContinuityHelpers(unittest.TestCase):
             snapshot = build_progress_snapshot(tmpdir)
 
         titles = [card["title"] for card in snapshot["project_signal_cards"]]
-        self.assertIn("En curso", titles)
-        self.assertIn("Bloqueos", titles)
+        self.assertIn("В работе", titles)
+        self.assertIn("Блокеры", titles)
         self.assertNotIn("In progress", titles)
         self.assertNotIn("Blocked", titles)
 
@@ -1799,11 +1799,11 @@ class TestContinuityHelpers(unittest.TestCase):
             snapshot = build_progress_snapshot(tmpdir)
 
         team_card = next(
-            card for card in snapshot["project_signal_cards"] if card["title"] == "Equipo runtime"
+            card for card in snapshot["project_signal_cards"] if card["title"] == "Runtime-команда"
         )
-        self.assertIn("Origen runtime: configuración persistida.", team_card["items"])
+        self.assertIn("Источник runtime: сохранённая конфигурация.", team_card["items"])
         self.assertIn(
-            "Opcionales solo bajo demanda en este flujo: `cto`.",
+            "Опциональные агенты только по запросу в этом процессе: `cto`.",
             team_card["items"],
         )
 

@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Designer — La Estilista</title>
+  <title>Designer: Стилист</title>
   <style>
     /* =====================================================================
-       Variables de tema — direccion editorial cálida, sin sesgo morado
+       Theme variables: warm editorial direction, no purple bias
        ===================================================================== */
     :root {
       color-scheme: light;
@@ -33,7 +33,7 @@
     }
 
     /* =====================================================================
-       Reset y base
+       Reset and base
        ===================================================================== */
     *, *::before, *::after {
       box-sizing: border-box;
@@ -84,7 +84,7 @@
     }
 
     /* =====================================================================
-       Cabecera
+       Header
        ===================================================================== */
     .alfred-header {
       background: var(--bg-header);
@@ -144,7 +144,7 @@
     }
 
     /* =====================================================================
-       Contenido principal
+       Main content
        ===================================================================== */
     .alfred-body {
       flex: 1;
@@ -157,7 +157,7 @@
     }
 
     /* =====================================================================
-       Barra indicadora inferior
+       Bottom indicator bar
        ===================================================================== */
     .alfred-indicator {
       background: var(--bg-header);
@@ -176,7 +176,7 @@
     }
 
     /* =====================================================================
-       Mensaje de espera
+       Waiting message
        ===================================================================== */
     .waiting-message {
       text-align: center;
@@ -220,7 +220,7 @@
     }
 
     /* =====================================================================
-       Rejilla de opciones — layout de tres columnas
+       Option grid: three-column layout
        ===================================================================== */
     .style-grid {
       display: grid;
@@ -235,7 +235,7 @@
     }
 
     /* =====================================================================
-       Opcion de estilo — columna seleccionable
+       Style option: selectable column
        ===================================================================== */
     .style-option {
       --option-accent: var(--accent);
@@ -289,7 +289,7 @@
     }
 
     /* =====================================================================
-       Insignia de letra (A, B, C)
+       Letter badge (A, B, C)
        ===================================================================== */
     .style-letter {
       position: absolute;
@@ -310,7 +310,7 @@
     }
 
     /* =====================================================================
-       Zona de previsualizacion
+       Preview area
        ===================================================================== */
     .style-preview {
       min-height: 300px;
@@ -352,7 +352,7 @@
     }
 
     /* =====================================================================
-       Zona de metadatos (debajo de la previsualizacion)
+       Metadata area (below the preview)
        ===================================================================== */
     .style-meta {
       padding: 1.1rem 1.25rem 1.25rem;
@@ -435,7 +435,7 @@
     }
 
     /* =====================================================================
-       Paleta de colores
+       Color palette
        ===================================================================== */
     .palette {
       display: flex;
@@ -466,7 +466,7 @@
     }
 
     /* =====================================================================
-       Etiquetas de tipografia y tono
+       Typography and tone labels
        ===================================================================== */
     .style-typo,
     .style-tone,
@@ -484,7 +484,7 @@
     }
 
     /* =====================================================================
-       Elementos mock para previsualizacion
+       Mock elements for the preview
        ===================================================================== */
     .mock-nav {
       height: 34px;
@@ -2471,7 +2471,7 @@
     }
 
     /* =====================================================================
-       Overrides por familia visual — el sistema elegido manda
+       Overrides per visual family: the chosen system wins
        ===================================================================== */
     .style-family--neo-brutalism {
       border: 2px solid #111111;
@@ -2790,7 +2790,7 @@
     }
 
     /* =====================================================================
-       Clases de compatibilidad con el patron de Superpowers
+       Compatibility classes for the Superpowers pattern
        ===================================================================== */
     .options {
       display: grid;
@@ -2855,26 +2855,26 @@
   </style>
 </head>
 <body>
-  <!-- Cabecera -->
+  <!-- Header -->
   <header class="alfred-header">
     <div class="alfred-header-left">
-      <span class="alfred-title">Designer — La Estilista</span>
-      <span class="alfred-phase">Propuesta de estilo</span>
+      <span class="alfred-title">Designer: Стилист</span>
+      <span class="alfred-phase">Предложение стиля</span>
     </div>
     <div class="alfred-connection">
       <span id="alfred-connection-dot" class="alfred-connection-dot"></span>
-      <span id="alfred-connection-label">Conectado</span>
+      <span id="alfred-connection-label">Подключено</span>
     </div>
   </header>
 
-  <!-- Contenido principal -->
+  <!-- Main content -->
   <main class="alfred-body">
     <div id="alfred-content"><!-- CONTENT --></div>
   </main>
 
-  <!-- Barra indicadora -->
+  <!-- Indicator bar -->
   <footer class="alfred-indicator" id="alfred-indicator">
-    Haz clic en la opcion que prefieras — vuelve al terminal para continuar
+    Нажми на вариант, который тебе больше нравится, и вернись в терминал, чтобы продолжить
   </footer>
 </body>
 </html>

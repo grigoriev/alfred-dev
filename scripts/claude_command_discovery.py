@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Smoke PTY para comprobar que Claude descubre el slash command global /alfred.
+"""PTY smoke test that checks that Claude discovers the global /alfred slash command.
 
-No ejecuta el comando ni consume modelo: arranca una sesion interactiva de
-Claude, escribe "/alfred" en el prompt y analiza el selector de comandos. Esta
-prueba cubre el fallo de UX donde Claude mostraba "No commands match
-\"/alfred\"" aunque el plugin estuviera instalado.
+It does not run the command and does not use the model. It starts an interactive
+Claude session, types "/alfred" in the prompt and analyzes the command picker.
+This test covers the UX bug where Claude showed "No commands match
+\"/alfred\"" even though the plugin was installed.
 """
 
 from __future__ import annotations
@@ -28,6 +28,8 @@ ANSI_RE = re.compile(
     r"|\x1b\[[0-?]*[ -/]*[@-~]"
     r"|\x1b[()][A-Za-z0-9]"
 )
+# Description markers of the /alfred entry in the command picker.
+ALIAS_MARKERS = ("alias global", "контекстный ассистент")
 
 
 @dataclass(frozen=True)
@@ -41,17 +43,30 @@ class DiscoveryAnalysis:
 
 
 class CommandDiscoveryError(AssertionError):
-    """Claude no mostro /alfred como comando descubrible."""
+    """Claude did not show /alfred as a discoverable command."""
 
 
 def strip_terminal_control(text: str) -> str:
-    """Quita secuencias ANSI/OSC y normaliza espacios para analizar la UI."""
+    """Remove ANSI/OSC sequences and normalize spaces to analyze the UI."""
 
     cleaned = ANSI_RE.sub("", text)
     cleaned = cleaned.replace("\r", "\n")
     cleaned = re.sub(r"[ \t]+", " ", cleaned)
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     return cleaned.strip()
+
+
+def _has_alias_marker(lowered: str, compact_lowered: str) -> bool:
+    """Return True if the text has a description marker of the /alfred entry.
+
+    Accept the legacy Spanish alias text and the current Russian description
+    from commands/alfred.md.
+    """
+
+    return any(
+        marker in lowered or marker.replace(" ", "") in compact_lowered
+        for marker in ALIAS_MARKERS
+    )
 
 
 def analyze_discovery_output(raw_output: str) -> DiscoveryAnalysis:
@@ -64,27 +79,22 @@ def analyze_discovery_output(raw_output: str) -> DiscoveryAnalysis:
         for line in text.splitlines()
         if line.startswith("/alfred")
         and not line.startswith("/alfred-dev:")
-        and (
-            "alias global" in line.lower()
-            or "aliasglobal" in re.sub(r"\s+", "", line.lower())
-        )
+        and _has_alias_marker(line.lower(), re.sub(r"\s+", "", line.lower()))
     )
     alias_visible = alias_entry_count >= 1 or (
-        "/alfred" in text and (
-            "alias global" in lowered or "aliasglobal" in compact_lowered
-        )
+        "/alfred" in text and _has_alias_marker(lowered, compact_lowered)
     )
     namespaced_visible = "/alfred-dev:" in text
 
     problems: list[str] = []
     if no_match_visible:
-        problems.append('Claude muestra "No commands match" para /alfred')
+        problems.append('Claude shows "No commands match" for /alfred')
     if not alias_visible:
-        problems.append("No se ve /alfred como alias global en el selector")
+        problems.append("/alfred is not visible as the global alias in the picker")
     if alias_entry_count > 1:
-        problems.append("Claude muestra mas de una entrada /alfred en el selector")
+        problems.append("Claude shows more than one /alfred entry in the picker")
     if not namespaced_visible:
-        problems.append("No se ven comandos /alfred-dev:* junto al alias")
+        problems.append("No /alfred-dev:* commands are visible next to the alias")
 
     return DiscoveryAnalysis(
         ok=not problems,
@@ -152,7 +162,7 @@ def _terminate(proc: subprocess.Popen[str], fd: int) -> None:
 def run_interactive_discovery(workdir: Path, timeout: float = 18.0) -> str:
     claude = shutil.which("claude")
     if claude is None:
-        raise CommandDiscoveryError("No se encontro 'claude' en PATH")
+        raise CommandDiscoveryError("'claude' not found in PATH")
 
     workdir.mkdir(parents=True, exist_ok=True)
     master_fd, slave_fd = os.openpty()
@@ -186,9 +196,9 @@ def run_interactive_discovery(workdir: Path, timeout: float = 18.0) -> str:
             _write(master_fd, "\r")
             raw_output += _read_until_quiet(master_fd, min(deadline, time.monotonic() + 5.0))
 
-        # Claude pinta el prompt antes de terminar de enganchar el input raw. Si
-        # escribimos justo en ese instante, algunas versiones aceptan la sesion
-        # pero descartan la primera tecla; esperamos y drenamos una vez mas.
+        # Claude draws the prompt before it finishes attaching raw input. If we
+        # type at that moment, some versions accept the session but drop the
+        # first key. Wait and drain the output one more time.
         time.sleep(min(2.0, max(0.0, deadline - time.monotonic())))
         raw_output += _read_until_quiet(master_fd, min(deadline, time.monotonic() + 2.0), quiet_seconds=0.5)
 

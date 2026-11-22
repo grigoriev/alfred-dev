@@ -22,7 +22,7 @@ python3 .claude/alfred-continuity.py consume-prefetch "$PWD" --expected audit
 командой:
 
 ```bash
-python3 .claude/alfred-continuity.py start-flow "$PWD" --command audit --raw "Auditoría completa del proyecto"
+python3 .claude/alfred-continuity.py start-flow "$PWD" --command audit --raw "Полный аудит проекта"
 ```
 
 В режиме headless (`claude -p`), SDK без пригодного callback `AskUserQuestion`,

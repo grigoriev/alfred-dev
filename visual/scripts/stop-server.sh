@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
-# stop-server.sh — Detiene el servidor visual de Alfred.
+# stop-server.sh: stops the Alfred visual server.
 #
-# Uso:
+# Usage:
 #   stop-server.sh <session_dir>
 #
-# Lee el PID desde <session_dir>/state/server.pid, envia SIGTERM y espera
-# hasta 2 s. Si el proceso no termina, envia SIGKILL. Limpia los ficheros
-# de estado y elimina el directorio de sesion si esta bajo /tmp.
+# Reads the PID from <session_dir>/state/server.pid, sends SIGTERM and waits
+# up to 2 s. If the process does not exit, sends SIGKILL. Removes the state
+# files and deletes the session directory if it is under /tmp.
 #
-# Salida JSON en stdout:
-#   {"status":"stopped"}          — El servidor se detuvo correctamente.
-#   {"status":"not_running"}      — No habia servidor activo en ese directorio.
-#   {"status":"failed","error":"..."} — No se pudo detener el proceso.
+# JSON output on stdout:
+#   {"status":"stopped"}          - The server stopped correctly.
+#   {"status":"not_running"}      - No active server in that directory.
+#   {"status":"failed","error":"..."} - The process could not be stopped.
 
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
-# Validacion de argumentos
+# Argument validation
 # ---------------------------------------------------------------------------
 
 if [[ $# -lt 1 ]]; then
-  printf '{"status":"failed","error":"Uso: stop-server.sh <session_dir>"}\n'
+  printf '{"status":"failed","error":"Использование: stop-server.sh <session_dir>"}\n'
   exit 1
 fi
 
@@ -36,7 +36,7 @@ LOG_FILE="${SESSION_DIR}/state/server.log"
 SERVER_INFO_FILE="${SESSION_DIR}/state/server-info"
 
 # ---------------------------------------------------------------------------
-# Comprobar si hay un PID registrado
+# Check for a recorded PID
 # ---------------------------------------------------------------------------
 
 if [[ ! -f "$PID_FILE" ]]; then
@@ -107,18 +107,18 @@ PY
 }
 
 # ---------------------------------------------------------------------------
-# Verificar si el proceso esta vivo
+# Check if the process is alive
 # ---------------------------------------------------------------------------
 
 if ! kill -0 "$SERVER_PID" 2>/dev/null || ! is_expected_visual_process "$SERVER_PID"; then
-  # El proceso ya no existe; limpiar residuos
+  # The process no longer exists. Clean up leftovers
   rm -f "$PID_FILE" "$LOG_FILE" "$SERVER_INFO_FILE"
   printf '{"status":"not_running"}\n'
   exit 0
 fi
 
 # ---------------------------------------------------------------------------
-# Enviar SIGTERM y esperar hasta 2 s (poll cada 0.1 s)
+# Send SIGTERM and wait up to 2 s (poll every 0.1 s)
 # ---------------------------------------------------------------------------
 
 kill -TERM "$SERVER_PID" 2>/dev/null || true
@@ -130,39 +130,39 @@ while kill -0 "$SERVER_PID" 2>/dev/null && [[ $_waited -lt 20 ]]; do
 done
 
 # ---------------------------------------------------------------------------
-# Fallback a SIGKILL si el proceso sigue vivo
+# Fall back to SIGKILL if the process is still alive
 # ---------------------------------------------------------------------------
 
 if kill -0 "$SERVER_PID" 2>/dev/null; then
   kill -KILL "$SERVER_PID" 2>/dev/null || true
 
-  # Esperar un segundo mas para confirmar la muerte
+  # Wait one more second to confirm the exit
   _kill_waited=0
   while kill -0 "$SERVER_PID" 2>/dev/null && [[ $_kill_waited -lt 10 ]]; do
     sleep 0.1
     (( _kill_waited++ )) || true
   done
 
-  # Si sigue vivo tras SIGKILL, informar del fallo
+  # If it is still alive after SIGKILL, report the failure
   if kill -0 "$SERVER_PID" 2>/dev/null; then
-    printf '{"status":"failed","error":"No se pudo detener el proceso %s"}\n' "$SERVER_PID"
+    printf '{"status":"failed","error":"Не удалось остановить процесс %s"}\n' "$SERVER_PID"
     exit 1
   fi
 fi
 
 # ---------------------------------------------------------------------------
-# Limpiar ficheros de estado
+# Remove the state files
 # ---------------------------------------------------------------------------
 
 rm -f "$PID_FILE" "$LOG_FILE"
 
 # ---------------------------------------------------------------------------
-# Eliminar el directorio de sesion solo si esta bajo /tmp.
-# Los directorios persistentes (dentro de un proyecto) se conservan para
-# que el usuario pueda inspeccionar el contenido generado.
+# Delete the session directory only if it is under /tmp.
+# Persistent directories (inside a project) stay so that the user
+# can inspect the generated content.
 # ---------------------------------------------------------------------------
 
-# Normalizar la ruta real para comparar con /tmp de forma segura
+# Normalize the real path to compare with /tmp safely
 REAL_TMP="$(cd /tmp 2>/dev/null && pwd -P || echo "/tmp")"
 
 if [[ "$REAL_SESSION_DIR" == "${REAL_TMP}/"* ]]; then

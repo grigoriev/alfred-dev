@@ -227,7 +227,7 @@ class TestServerLifecycle(unittest.TestCase):
         self._start_server()
         status, body = self._get('/')
         self.assertEqual(status, 200)
-        self.assertIn('Esperando', body)
+        self.assertIn('Ждём', body)
 
     def test_server_serves_newest_html(self):
         """Tras escribir un fichero HTML, GET / lo incluye en la respuesta."""
@@ -303,7 +303,7 @@ class TestServerLifecycle(unittest.TestCase):
         self._start_server()
         status, body = self._get('/files/%E0%A4%A')
         self.assertEqual(status, 400)
-        self.assertIn('Ruta invalida', body)
+        self.assertIn('Invalid path', body)
 
         status_after, _ = self._get('/')
         self.assertEqual(status_after, 200)
@@ -368,7 +368,7 @@ class TestServerLifecycle(unittest.TestCase):
         self._start_server()
         status, body = self._post_json('/events', {'choice': 42, 'label': 'No valido'})
         self.assertEqual(status, 400)
-        self.assertIn('Evento invalido', body)
+        self.assertIn('Invalid event', body)
         self.assertFalse(os.path.exists(os.path.join(self.state_dir, 'events')))
 
     def test_server_rejects_oversized_http_click_event(self):
@@ -376,7 +376,7 @@ class TestServerLifecycle(unittest.TestCase):
         self._start_server()
         status, body = self._post_json('/events', {'choice': 'A' * (70 * 1024), 'label': 'Grande'})
         self.assertEqual(status, 413)
-        self.assertIn('Evento demasiado grande', body)
+        self.assertIn('Event too large', body)
         self.assertFalse(os.path.exists(os.path.join(self.state_dir, 'events')))
 
     def test_server_accepts_loopback_origin_alias_for_websocket(self):

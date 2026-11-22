@@ -168,7 +168,7 @@ class TestMemoryUI(unittest.TestCase):
         )
         activity = self._get_json(f"{result['url']}/api/activity")
         first = activity["recent_events"][0]
-        self.assertEqual(first["kind_label"], "Subagente")
+        self.assertEqual(first["kind_label"], "Субагент")
         self.assertEqual(first["status_label"], "killed")
         self.assertIn("Auditoría QA del proyecto", first["display_title"])
         self.assertIn("Tengo suficiente material", first["display_body"])
@@ -208,7 +208,7 @@ class TestMemoryUI(unittest.TestCase):
         self.assertEqual(first["kind_label"], "Helper")
         self.assertIn("Refinado preparado", first["display_title"])
         self.assertIn("Login social", first["display_body"])
-        self.assertTrue(any("Siguiente paso" in line for line in first["detail_lines"]))
+        self.assertTrue(any("Следующий шаг" in line for line in first["detail_lines"]))
 
     def test_build_activity_payload_counts_recent_window_instead_of_full_history(self):
         db_path = os.path.join(self.tmpdir, ".claude", "alfred-memory.db")
@@ -235,7 +235,7 @@ class TestMemoryUI(unittest.TestCase):
             [
                 {
                     "event_type": "command_executed",
-                    "label": "Comando",
+                    "label": "Команда",
                     "total": 3,
                 }
             ],
@@ -294,7 +294,7 @@ class TestMemoryUI(unittest.TestCase):
         cards = overview["progress"]["project_signal_cards"]
         titles = [card["title"] for card in cards]
         self.assertNotIn("Current", titles)
-        self.assertIn("Progreso", titles)
+        self.assertIn("Прогресс", titles)
 
     def test_build_overview_payload_exposes_structured_next_action_guidance(self):
         overview = build_overview_payload(
@@ -343,11 +343,11 @@ class TestMemoryUI(unittest.TestCase):
             port=4553,
         )
         team_card = next(
-            card for card in overview["progress"]["project_signal_cards"] if card["title"] == "Equipo runtime"
+            card for card in overview["progress"]["project_signal_cards"] if card["title"] == "Runtime-команда"
         )
-        self.assertIn("Origen runtime: configuración persistida.", team_card["items"])
+        self.assertIn("Источник runtime: сохранённая конфигурация.", team_card["items"])
         self.assertIn(
-            "Opcionales solo bajo demanda en este flujo: `cto`.",
+            "Опциональные агенты только по запросу в этом процессе: `cto`.",
             team_card["items"],
         )
 

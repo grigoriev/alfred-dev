@@ -1,29 +1,29 @@
-# Flujos de trabajo
+# Процессы
 
-Alfred Dev organiza el desarrollo en 6 flujos de ejecucion predefinidos, cada uno compuesto por fases secuenciales con quality gates entre ellas. La razon de esta estructura es que el desarrollo de software no es un proceso monolítico: una funcionalidad nueva requiere análisis de requisitos, diseño, implementacion, revision de calidad, documentación y entrega, mientras que un hotfix o un cambio pequeno necesitan recorridos mas cortos y proporcionales al riesgo. Forzar el mismo flujo para todos los escenarios seria tan ineficiente como no tener flujo alguno.
+Alfred Dev делит разработку на 6 готовых процессов выполнения. Каждый процесс состоит из последовательных фаз, между которыми стоят quality gates. Такая структура нужна, потому что разработка ПО не монолитный процесс: новая функциональность требует анализа требований, проектирования, реализации, проверки качества, документации и поставки, а hotfix или небольшое изменение требуют более коротких маршрутов, соразмерных риску. Один и тот же процесс для всех сценариев был бы так же неэффективен, как полное отсутствие процесса.
 
-Cada flujo responde a un escenario real del ciclo de vida del software:
+Каждый процесс отвечает реальному сценарию жизненного цикла ПО:
 
-| Flujo | Escenario | Fases |
+| Процесс | Сценарий | Фазы |
 |-------|-----------|-------|
-| `feature` | Nueva funcionalidad, desde la idea hasta la entrega | 7 (6 base + estilo visual condicional) |
-| `fix` | Correccion de un bug, desde el diagnóstico hasta la validación | 3 |
-| `spike` | Investigación exploratoria con conclusiones formales | 2 |
-| `ship` | Release completa: auditoria, empaquetado y despliegue | 4 |
-| `audit` | Auditoria integral del proyecto en un solo paso | 1 |
-| `quick` | Cambio pequeno con menos ceremonia, pero con regresion local y revision | 2 |
+| `feature` | Новая функциональность, от идеи до поставки | 7 (6 базовых + условный визуальный стиль) |
+| `fix` | Исправление бага, от диагностики до валидации | 3 |
+| `spike` | Исследование с формальными выводами | 2 |
+| `ship` | Полный релиз: аудит, упаковка и развёртывание | 4 |
+| `audit` | Комплексный аудит проекта за один шаг | 1 |
+| `quick` | Небольшое изменение с меньшей церемонией, но с локальной регрессией и проверкой | 2 |
 
-Ademas de estos flujos de ejecucion, Alfred expone comandos operativos de continuidad (`map-codebase`, `discuss`, `next`, `pause`, `resume`, `progress`, `verify`) que preparan, orientan o cierran el trabajo sin abrir necesariamente un flujo multiagente.
+Кроме этих процессов выполнения, Alfred предоставляет операционные команды непрерывности (`map-codebase`, `discuss`, `next`, `pause`, `retomar`, `progress`, `uat`). Они готовят, направляют или закрывают работу и не обязательно открывают мультиагентный процесс.
 
-Los flujos no son arbitrarios: cada uno define exactamente que agentes participan, en que orden se ejecutan y que condiciones deben cumplirse para avanzar de una fase a la siguiente. Esas condiciones son las quality gates, puntos de control que actuan como barreras entre fases para garantizar que el trabajo cumple los estandares antes de progresar.
+Процессы не произвольны: каждый точно задаёт, какие агенты участвуют, в каком порядке они выполняются и какие условия нужно выполнить, чтобы перейти от одной фазы к следующей. Эти условия и есть quality gates: контрольные точки, которые работают как барьеры между фазами и гарантируют, что работа соответствует стандартам, прежде чем идти дальше.
 
 ---
 
-## Los 5 tipos de gate
+## 5 типов gate
 
-Las gates son el mecanismo central de control de calidad del orquestador. Sin ellas, las fases serian simplemente una lista de tareas sin garantias de que el resultado de una sea válido antes de empezar la siguiente. El tipo de gate de cada fase no se elige al azar: refleja el nivel de riesgo y la naturaleza de la validación que requiere esa transición concreta.
+Gates главный механизм контроля качества в оркестраторе. Без них фазы были бы просто списком задач без гарантии, что результат одной фазы валиден до начала следующей. Тип gate для каждой фазы выбран не случайно: он отражает уровень риска и характер проверки, которая нужна для этого конкретного перехода.
 
-El orquestador define 5 tipos de gate como constantes en `orchestrator.py`:
+Оркестратор задаёт 5 типов gate как константы в `orchestrator.py`:
 
 ```python
 GATE_LIBRE = "libre"
@@ -35,159 +35,159 @@ GATE_AUTOMATICO_SEGURIDAD = "automatico+seguridad"
 
 ### Gate `libre`
 
-Se supera cuando el resultado del agente responsable es favorable y hay evidencia directa del artefacto o checklist esperado. No requiere tests verdes, auditoria de seguridad ni aprobacion humana. Eso no la convierte en una aprobacion incondicional: si faltan docs, conclusiones, changelog o cualquier entregable prometido por la fase, la gate debe quedar pendiente o rechazada. Este tipo de gate existe porque hay fases donde no tiene sentido exigir validaciones técnicas: por ejemplo, la fase de documentación genera prosa y diagramas, no código ejecutable. Pedir tests verdes a un fichero Markdown seria absurdo. La gate libre confiere al flujo la flexibilidad de avanzar rapidamente en fases que producen artefactos no ejecutables, sin relajar el rigor en las fases que si lo necesitan.
+Проходится, когда результат ответственного агента положительный и есть прямое подтверждение ожидаемого артефакта или чек-листа. Не требует зелёных тестов, аудита безопасности или одобрения человека. Но это не делает её безусловным одобрением: если не хватает docs, выводов, changelog или любого результата, который обещает фаза, gate должна остаться в ожидании или быть отклонена. Этот тип gate существует, потому что в некоторых фазах технические проверки не имеют смысла: например, фаза документации создаёт текст и диаграммы, а не исполняемый код. Требовать зелёные тесты от Markdown-файла было бы абсурдно. Свободная gate даёт процессу гибкость быстро проходить фазы с неисполняемыми артефактами и не ослабляет строгость в фазах, где она нужна.
 
 ### Gate `usuario`
 
-Requiere aprobacion explícita del usuario para superarse. Se usa en fases donde el criterio de aceptacion es subjetivo y no puede automatizarse: aceptar un PRD, aprobar un diseño arquitectonico o dar el visto bueno a las conclusiones de una investigación son decisiones que dependen del contexto del proyecto y de las prioridades del equipo. Ningun test automatizado puede sustituir ese juicio.
+Для прохождения нужно явное одобрение пользователя. Используется в фазах, где критерий приёмки субъективен и не автоматизируется: принять PRD, одобрить архитектурный дизайн или согласовать выводы исследования. Эти решения зависят от контекста проекта и приоритетов команды. Никакой автоматический тест не заменит это суждение.
 
 ### Gate `automático`
 
-Requiere que el resultado sea favorable y que los tests pasen correctamente. Se usa en fases de desarrollo donde los criterios de aceptacion son objetivos y medibles: el código compila, los tests pasan, el linter no reporta errores. La ventaja de este tipo de gate es que no necesita intervencion humana: si las metricas son verdes, el flujo avanza. Esto permite que las fases de implementacion sean mas fluidas sin sacrificar la verificación.
+Требует положительного результата и успешно пройденных тестов. Используется в фазах разработки, где критерии приёмки объективны и измеримы: код компилируется, тесты проходят, линтер не сообщает об ошибках. Преимущество этого типа gate в том, что он не требует участия человека: если метрики зелёные, процесс идёт дальше. Так фазы реализации идут плавнее без потери проверки.
 
 ### Gate `usuario+seguridad`
 
-Requiere aprobacion explícita del usuario y además que la auditoria de seguridad sea favorable. Se usa en fases de entrega donde hay riesgo de despliegue: antes de hacer merge o de publicar una release, alguien debe confirmar que el resultado es el esperado y que no hay vulnerabilidades abiertas. La combinación de juicio humano y validación de seguridad existe porque un despliegue con una vulnerabilidad conocida puede tener consecuencias irreversibles.
+Требует явного одобрения пользователя и положительного аудита безопасности. Используется в фазах поставки, где есть риск развёртывания: перед merge или публикацией релиза кто-то должен подтвердить, что результат соответствует ожиданиям и открытых уязвимостей нет. Сочетание человеческого суждения и проверки безопасности нужно, потому что развёртывание с известной уязвимостью может иметь необратимые последствия.
 
 ### Gate `automático+seguridad`
 
-Requiere tests verdes, auditoria de seguridad favorable y resultado positivo. Es el tipo de gate mas estricto del sistema y se usa en fases de calidad y auditoria donde el margen de error debe ser mínimo. La fase de calidad del flujo feature, por ejemplo, combina code review (qa-engineer) con análisis OWASP (security-officer): ambas validaciones deben ser satisfactorias para que el código pase a documentación. No basta con que los tests pasen si hay una inyección SQL pendiente, ni con que la seguridad este limpia si los tests fallan.
+Требует зелёных тестов, положительного аудита безопасности и положительного результата. Это самый строгий тип gate в системе. Он используется в фазах качества и аудита, где допустимая ошибка должна быть минимальной. Например, фаза качества процесса feature сочетает code review (qa-engineer) с анализом OWASP (security-officer): обе проверки должны пройти, чтобы код перешёл к документации. Мало того, что тесты проходят, если осталась SQL-инъекция, и мало чистой безопасности, если тесты падают.
 
-### Resumen comparativo
+### Сравнительная сводка
 
-La siguiente tabla muestra de un vistazo que condiciones exige cada tipo de gate. Es util como referencia rápida al leer las definiciones de los flujos:
+Таблица ниже показывает, какие условия требует каждый тип gate. Это удобная быстрая справка при чтении описаний процессов:
 
-| Tipo de gate | Resultado favorable | Tests verdes | Seguridad OK | Aprobacion del usuario |
+| Тип gate | Положительный результат | Зелёные тесты | Безопасность OK | Одобрение пользователя |
 |--------------|:-------------------:|:------------:|:------------:|:----------------------:|
-| `libre` | Si | -- | -- | -- |
-| `usuario` | Si | -- | -- | Si |
-| `automático` | Si | Si | -- | -- |
-| `usuario+seguridad` | Si | -- | Si | Si |
-| `automático+seguridad` | Si | Si | Si | -- |
+| `libre` | Да | -- | -- | -- |
+| `usuario` | Да | -- | -- | Да |
+| `automático` | Да | Да | -- | -- |
+| `usuario+seguridad` | Да | -- | Да | Да |
+| `automático+seguridad` | Да | Да | Да | -- |
 
 ---
 
-## Formato de veredicto
+## Формат вердикта
 
-Todos los agentes utilizan un formato estandarizado para emitir su veredicto cuando evaluan una gate. Este formato uniforme es importante porque permite al orquestador procesar los resultados de forma mecánica, sin tener que interpretar textos libres. Además, garantiza que tanto el usuario como los hooks puedan leer el veredicto de cualquier agente con la misma lógica.
+Все агенты используют стандартный формат вердикта, когда оценивают gate. Единый формат важен, потому что оркестратор обрабатывает результаты механически и не интерпретирует свободный текст. Кроме того, пользователь и hooks читают вердикт любого агента по одной логике.
 
-Los tres posibles resultados son:
+Возможны три результата:
 
-| Veredicto | Significado | Efecto sobre la gate |
+| Вердикт | Значение | Влияние на gate |
 |-----------|-------------|----------------------|
-| **APROBADO** | El trabajo cumple todos los criterios exigidos por la gate. | La gate se supera y el flujo puede avanzar a la siguiente fase. |
-| **APROBADO CON CONDICIONES** | El trabajo cumple los criterios minimos, pero hay observaciones que conviene atender. | La gate se supera, pero las observaciones quedan registradas como deuda técnica o mejoras pendientes. |
-| **RECHAZADO** | El trabajo no cumple los criterios exigidos. | La gate bloquea el avance. Es necesario corregir los problemas senalados y volver a evaluar. |
+| **APROBADO** | Работа соответствует всем критериям gate. | Gate пройдена, процесс может перейти к следующей фазе. |
+| **APROBADO CON CONDICIONES** | Работа соответствует минимальным критериям, но есть замечания, которые стоит учесть. | Gate пройдена, но замечания фиксируются как технический долг или отложенные улучшения. |
+| **RECHAZADO** | Работа не соответствует требуемым критериям. | Gate блокирует продвижение. Нужно исправить указанные проблемы и оценить заново. |
 
-La distinción entre APROBADO y APROBADO CON CONDICIONES es deliberada: permite que el flujo no se detenga por observaciones menores (un nombre de variable mejorable, un comentario que podria ser mas claro) mientras deja constancia formal de que hay aspectos a revisar. Esto evita el efecto de «todo o nada» que frustra a los desarrolladores cuando una revision bloquea el avance por cuestiones cosmeticas.
+Различие между APROBADO и APROBADO CON CONDICIONES сделано намеренно: процесс не останавливается из-за мелких замечаний (неудачное имя переменной, комментарий, который можно сделать понятнее), но формально фиксирует, что есть что пересмотреть. Это убирает эффект «всё или ничего», который раздражает разработчиков, когда ревью блокирует работу из-за косметики.
 
 ---
 
-## Flujo feature
+## Процесс feature
 
-El flujo feature es el mas completo del sistema: 6 fases base mas una fase 1b condicional de estilo visual, con hasta 8 agentes involucrados y 5 tipos de gate distintos. Existe para cubrir el ciclo de vida completo de una funcionalidad nueva, desde la definición de requisitos hasta la entrega final. Cada fase aporta un tipo de validación diferente y los agentes se eligen por su especialización, no por rotación.
+Процесс feature самый полный в системе: 6 базовых фаз плюс условная фаза 1b визуального стиля, до 8 агентов и 5 разных типов gate. Он покрывает полный жизненный цикл новой функциональности, от определения требований до финальной поставки. Каждая фаза даёт свой тип проверки, а агенты выбираются по специализации, а не по очереди.
 
-### Fase 1: producto
+### Фаза 1: продукт
 
-La primera fase del flujo existe porque escribir código sin entender que problema se resuelve es la forma mas cara de perder el tiempo. El agente `product-owner` analiza la peticion del usuario, identifica requisitos funcionales y no funcionales, y genera un PRD (Product Requirements Document) con historias de usuario.
+Первая фаза существует потому, что писать код без понимания решаемой проблемы самый дорогой способ потерять время. Агент `product-owner` анализирует запрос пользователя, определяет функциональные и нефункциональные требования и создаёт PRD (Product Requirements Document) с пользовательскими историями.
 
-La gate es de tipo `usuario` porque solo el usuario puede decidir si el PRD refleja lo que realmente necesita. Ningun test automatizado puede validar que los requisitos sean los correctos.
+Gate имеет тип `usuario`, потому что только пользователь может решить, отражает ли PRD то, что ему действительно нужно. Никакой автоматический тест не проверит, что требования верные.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `product-owner` |
-| Ejecución | Secuencial |
+| Агенты | `product-owner` |
+| Выполнение | Последовательное |
 | Gate | `gate_producto` |
-| Tipo de gate | `usuario` |
-| Artefacto | PRD con historias de usuario |
+| Тип gate | `usuario` |
+| Артефакт | PRD с пользовательскими историями |
 
-### Fase 1b: estilo visual (condicional)
+### Фаза 1b: визуальный стиль (условная)
 
-Si el proyecto tiene interfaz de usuario, Alfred activa a `selina` entre producto y arquitectura. Su trabajo no es decorar al final, sino fijar una dirección visual antes de que nadie diseñe componentes o escriba CSS. Selina presenta tres propuestas, el usuario elige una y la decisión queda persistida en `docs/style-direction.md` para que architect, senior-dev y los agentes opcionales de frontend trabajen sobre una misma referencia.
+Если у проекта есть пользовательский интерфейс, Alfred включает `designer` между продуктом и архитектурой. Её задача не украшать в конце, а зафиксировать визуальное направление до того, как кто-то спроектирует компоненты или напишет CSS. Designer представляет три предложения, пользователь выбирает одно, и решение сохраняется в `docs/style-direction.md`, чтобы architect, senior-dev и опциональные фронтенд-агенты работали по одному ориентиру.
 
-La gate sigue siendo de tipo `usuario`: no hay criterio automático válido para decidir qué dirección visual representa mejor al producto. Si el proyecto no tiene frontend, esta fase se omite sin bloquear el flujo.
+Gate остаётся типа `usuario`: нет валидного автоматического критерия, чтобы решить, какое визуальное направление лучше представляет продукт. Если у проекта нет фронтенда, фаза пропускается и не блокирует процесс.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `selina` |
-| Ejecución | Secuencial |
+| Агенты | `designer` |
+| Выполнение | Последовательное |
 | Gate | `gate_estilo` |
-| Tipo de gate | `usuario` |
-| Artefacto | Dirección de estilo visual |
+| Тип gate | `usuario` |
+| Артефакт | Направление визуального стиля |
 
-### Fase 2: arquitectura
+### Фаза 2: архитектура
 
-Una vez aprobados los requisitos, hay que decidir como implementarlos. Esta fase involucra dos agentes en paralelo: `architect` disena la arquitectura técnica (patrones, componentes, interfaces) mientras `security-officer` elabora el threat model (superficie de ataque, vectores, mitigaciones). Trabajan en paralelo porque sus tareas son independientes: el architect no necesita el threat model para disenar la arquitectura, y el security-officer no necesita la propuesta arquitectonica para identificar amenazas. Al terminar, ambos artefactos se presentan juntos al usuario.
+Когда требования одобрены, нужно решить, как их реализовать. В этой фазе параллельно работают два агента: `architect` проектирует техническую архитектуру (паттерны, компоненты, интерфейсы), а `security-officer` готовит threat model (поверхность атаки, векторы, меры защиты). Они работают параллельно, потому что их задачи независимы: architect не нужен threat model для проектирования архитектуры, а security-officer не нужно архитектурное предложение для выявления угроз. В конце оба артефакта представляются пользователю вместе.
 
-La gate es de tipo `usuario+seguridad` porque la arquitectura es una decisión estrategica que afecta a todo el proyecto y, además, no se puede avanzar si el threat model o la revisión del `security-officer` detectan riesgos sin resolver. El usuario debe entender y aceptar el diseño, y seguridad debe validarlo antes de que se escriba una sola linea de código.
+Gate имеет тип `usuario+seguridad`, потому что архитектура это стратегическое решение, которое влияет на весь проект. Кроме того, продвинуться нельзя, если threat model или проверка `security-officer` нашли нерешённые риски. Пользователь должен понять и принять дизайн, а безопасность должна его проверить до того, как будет написана хоть одна строка кода.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `architect`, `security-officer` |
-| Ejecución | Paralelo |
+| Агенты | `architect`, `security-officer` |
+| Выполнение | Параллельное |
 | Gate | `gate_arquitectura` |
-| Tipo de gate | `usuario+seguridad` |
-| Artefactos | Propuesta arquitectonica, threat model |
+| Тип gate | `usuario+seguridad` |
+| Артефакты | Архитектурное предложение, threat model |
 
-### Fase 3: desarrollo
+### Фаза 3: разработка
 
-Con los requisitos aprobados y la arquitectura validada, el agente `senior-dev` implementa el código siguiendo TDD estricto: primero escribe los tests que fallan (rojo), luego el código mínimo para que pasen (verde) y finalmente refactoriza para mejorar la calidad sin cambiar el comportamiento (refactor). Este ciclo no promete cobertura línea a línea: exige tests de comportamiento para los criterios de aceptación y deja evidencia ejecutable antes de avanzar.
+Когда требования одобрены и архитектура проверена, агент `senior-dev` реализует код по строгому TDD: сначала пишет падающие тесты (красный), затем минимальный код, чтобы они прошли (зелёный), и в конце рефакторит, чтобы улучшить качество без изменения поведения (рефакторинг). Этот цикл не обещает построчного покрытия: он требует поведенческих тестов для критериев приёмки и оставляет исполняемое подтверждение до перехода дальше.
 
-La gate es de tipo `automático` porque en esta fase los criterios de aceptacion son objetivos: el código compila y los tests pasan. No se necesita aprobacion humana para verificar que `2 + 2 == 4`. Esto permite que el desarrollador itere rapidamente sin esperar validaciones externas.
+Gate имеет тип `automático`, потому что в этой фазе критерии приёмки объективны: код компилируется и тесты проходят. Одобрение человека не нужно, чтобы проверить, что `2 + 2 == 4`. Так разработчик быстро итерирует и не ждёт внешних проверок.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `senior-dev` |
-| Ejecución | Secuencial |
+| Агенты | `senior-dev` |
+| Выполнение | Последовательное |
 | Gate | `gate_desarrollo` |
-| Tipo de gate | `automático` |
-| Artefacto | Código con tests |
+| Тип gate | `automático` |
+| Артефакт | Код с тестами |
 
-### Fase 4: calidad
+### Фаза 4: качество
 
-La fase de calidad es la barrera mas rigurosa del flujo. Dos agentes trabajan en paralelo: `qa-engineer` ejecuta code review, plan de tests y análisis de cobertura, mientras `security-officer` realiza auditorias OWASP, revisa dependencias y genera el SBOM. El paralelismo se justifica porque ambas auditorias son independientes y juntas cubren las dos dimensiones críticas de la calidad: funcional (funciona correctamente?) y no funcional (es seguro?).
+Фаза качества самый строгий барьер процесса. Два агента работают параллельно: `qa-engineer` выполняет code review, план тестов и анализ покрытия, а `security-officer` проводит аудиты OWASP, проверяет зависимости и создаёт SBOM. Параллельность оправдана, потому что оба аудита независимы и вместе покрывают два критических измерения качества: функциональное (работает ли правильно?) и нефункциональное (безопасно ли?).
 
-La gate es de tipo `automático+seguridad`, la mas estricta del sistema. Esto significa que para avanzar se necesitan tres cosas simultaneamente: tests verdes, auditoria de seguridad favorable y resultado positivo del code review. Si alguna de las tres falla, la gate bloquea el avance y hay que corregir antes de continuar.
+Gate имеет тип `automático+seguridad`, самый строгий в системе. Для продвижения одновременно нужны три вещи: зелёные тесты, положительный аудит безопасности и положительный результат code review. Если хотя бы одно не выполнено, gate блокирует продвижение, и нужно исправить проблему, прежде чем продолжить.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `qa-engineer`, `security-officer` |
-| Ejecución | Paralelo |
+| Агенты | `qa-engineer`, `security-officer` |
+| Выполнение | Параллельное |
 | Gate | `gate_calidad` |
-| Tipo de gate | `automático+seguridad` |
-| Artefactos | Informe QA, informe de seguridad |
+| Тип gate | `automático+seguridad` |
+| Артефакты | Отчёт QA, отчёт по безопасности |
 
-### Fase 5: documentación
+### Фаза 5: документация
 
-El agente `tech-writer` genera la documentación técnica y de usuario pensada para la comunidad: documentación de API, guias de uso, diagramas de arquitectura y cualquier otro artefacto necesario para que otros desarrolladores entiendan la funcionalidad sin leer el código fuente.
+Агент `tech-writer` создаёт техническую и пользовательскую документацию для сообщества: документацию API, руководства по использованию, архитектурные диаграммы и любые другие артефакты, чтобы другие разработчики поняли функциональность без чтения исходного кода.
 
-La gate es de tipo `libre` porque la documentación es texto, no código ejecutable. No tiene sentido exigir tests verdes a un fichero Markdown. Basta con que el resultado sea favorable (el tech-writer ha generado la documentación) para avanzar a la última fase.
+Gate имеет тип `libre`, потому что документация это текст, а не исполняемый код. Требовать зелёные тесты от Markdown-файла бессмысленно. Чтобы перейти к последней фазе, достаточно положительного результата (tech-writer создал документацию).
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `tech-writer` |
-| Ejecución | Secuencial |
+| Агенты | `tech-writer` |
+| Выполнение | Последовательное |
 | Gate | `gate_documentacion` |
-| Tipo de gate | `libre` |
-| Artefacto | Documentación técnica y de usuario |
+| Тип gate | `libre` |
+| Артефакт | Техническая и пользовательская документация |
 
-### Fase 6: entrega
+### Фаза 6: поставка
 
-La fase final prepara el entregable: `devops-engineer` se encarga del CI/CD, el changelog y la preparacion del merge, mientras `security-officer` realiza una validación final para asegurar que nada ha cambiado desde la fase de calidad que comprometa la seguridad.
+Финальная фаза готовит результат к поставке: `devops-engineer` отвечает за CI/CD, changelog и подготовку merge, а `security-officer` проводит финальную проверку, чтобы убедиться, что после фазы качества ничего не изменилось в ущерб безопасности.
 
-La gate es de tipo `usuario+seguridad` porque un merge o deploy incorrecto puede afectar a todo el equipo. Se exige tanto la aprobacion explícita del usuario (que confirme que quiere entregar) como el visto bueno de seguridad (que confirme que no hay vulnerabilidades abiertas). Es la última linea de defensa antes de que el código llegue a produccion.
+Gate имеет тип `usuario+seguridad`, потому что неверный merge или deploy может затронуть всю команду. Нужны и явное одобрение пользователя (он подтверждает, что хочет поставку), и согласие безопасности (она подтверждает, что открытых уязвимостей нет). Это последняя линия защиты до того, как код попадёт в production.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `devops-engineer`, `security-officer` |
-| Ejecución | Secuencial |
+| Агенты | `devops-engineer`, `security-officer` |
+| Выполнение | Последовательное |
 | Gate | `gate_entrega` |
-| Tipo de gate | `usuario+seguridad` |
-| Artefactos | Changelog, artefacto de entrega |
+| Тип gate | `usuario+seguridad` |
+| Артефакты | Changelog, артефакт поставки |
 
-### Diagrama de estados del flujo feature
+### Диаграмма состояний процесса feature
 
-El siguiente diagrama muestra las 6 fases base y la fase 1b condicional como estados y las gates como transiciones entre ellos. Las notas indican que agentes participan en cada fase y como se ejecutan.
+Диаграмма ниже показывает 6 базовых фаз и условную фазу 1b как состояния, а gates как переходы между ними. Заметки указывают, какие агенты участвуют в каждой фазе и как они выполняются.
 
 ```mermaid
 stateDiagram-v2
@@ -195,16 +195,16 @@ stateDiagram-v2
 
     [*] --> producto: create_session("feature")
 
-    state "Fase 1 -- Producto" as producto
-    state "Fase 1b -- Estilo visual" as estilo_visual
-    state "Fase 2 -- Arquitectura" as arquitectura
-    state "Fase 3 -- Desarrollo" as desarrollo
-    state "Fase 4 -- Calidad" as calidad
-    state "Fase 5 -- Documentación" as documentación
-    state "Fase 6 -- Entrega" as entrega
+    state "Фаза 1 -- Продукт" as producto
+    state "Фаза 1b -- Визуальный стиль" as estilo_visual
+    state "Фаза 2 -- Архитектура" as arquitectura
+    state "Фаза 3 -- Разработка" as desarrollo
+    state "Фаза 4 -- Качество" as calidad
+    state "Фаза 5 -- Документация" as documentación
+    state "Фаза 6 -- Поставка" as entrega
 
-    producto --> estilo_visual: gate_producto [usuario + frontend]
-    producto --> arquitectura: gate_producto [sin frontend]
+    producto --> estilo_visual: gate_producto [usuario + фронтенд]
+    producto --> arquitectura: gate_producto [без фронтенда]
     estilo_visual --> arquitectura: gate_estilo [usuario]
     arquitectura --> desarrollo: gate_arquitectura [usuario+seguridad]
     desarrollo --> calidad: gate_desarrollo [automático]
@@ -213,117 +213,117 @@ stateDiagram-v2
     entrega --> [*]: gate_entrega [usuario+seguridad]
 
     note right of producto
-        Agente: product-owner
-        Secuencial
-        PRD con historias de usuario
+        Агент: product-owner
+        Последовательно
+        PRD с пользовательскими историями
     end note
 
     note right of arquitectura
-        Agentes: architect + security-officer
-        Paralelo
-        Diseño técnico + threat model
+        Агенты: architect + security-officer
+        Параллельно
+        Технический дизайн + threat model
     end note
 
     note right of desarrollo
-        Agente: senior-dev
-        Secuencial
-        TDD rojo-verde-refactor
+        Агент: senior-dev
+        Последовательно
+        TDD красный-зелёный-рефакторинг
     end note
 
     note right of calidad
-        Agentes: qa-engineer + security-officer
-        Paralelo
+        Агенты: qa-engineer + security-officer
+        Параллельно
         Code review + OWASP
     end note
 
     note right of documentación
-        Agente: tech-writer
-        Secuencial
-        Documentación para la comunidad
+        Агент: tech-writer
+        Последовательно
+        Документация для сообщества
     end note
 
     note right of entrega
-        Agentes: devops-engineer + security-officer
-        Secuencial
-        CI/CD + validación final
+        Агенты: devops-engineer + security-officer
+        Последовательно
+        CI/CD + финальная проверка
     end note
 ```
 
-### Experiencia del usuario en el flujo feature
+### Опыт пользователя в процессе feature
 
-Este diagrama de recorrido muestra como percibe el usuario las distintas fases del flujo, que actividades realiza en cada una y que nivel de satisfaccion cabe esperar. Las fases iniciales requieren mas participacion activa (revisar PRD, aprobar arquitectura), las intermedias son mas autonomas (el senior-dev implementa, QA revisa) y la final vuelve a requerir atencion para aprobar la entrega.
+Эта диаграмма пути показывает, как пользователь воспринимает разные фазы процесса, что он делает в каждой и какой уровень удовлетворённости ожидать. Начальные фазы требуют больше активного участия (проверить PRD, одобрить архитектуру), средние более автономны (senior-dev реализует, QA проверяет), а финальная снова требует внимания, чтобы одобрить поставку.
 
 ```mermaid
 journey
-    title Experiencia del desarrollador en el flujo feature
-    section Producto
-        Describe la funcionalidad: 5: Usuario
-        Revisa el PRD generado: 4: Usuario
-        Aprueba requisitos: 5: Usuario
-    section Arquitectura
-        Espera diseño + threat model: 3: Usuario
-        Revisa propuesta arquitectonica: 4: Usuario
-        Aprueba diseño: 5: Usuario
-    section Desarrollo
-        El senior-dev implementa con TDD: 4: Sistema
-        Los hooks vigilan tests y secretos: 3: Sistema
-        Tests verdes, avance automático: 5: Sistema
-    section Calidad
-        QA y seguridad auditan en paralelo: 3: Sistema
-        Se resuelven hallazgos si los hay: 2: Usuario, Sistema
-        Gate superada: 5: Sistema
-    section Documentación
-        Tech-writer genera docs: 4: Sistema
-        Docs completas, gate libre con evidencia: 5: Sistema
-    section Entrega
-        DevOps prepara CI/CD y changelog: 4: Sistema
-        Revisa artefacto de entrega: 4: Usuario
-        Aprueba entrega final: 5: Usuario
+    title Опыт разработчика в процессе feature
+    section Продукт
+        Описывает функциональность: 5: Пользователь
+        Проверяет созданный PRD: 4: Пользователь
+        Одобряет требования: 5: Пользователь
+    section Архитектура
+        Ждёт дизайн + threat model: 3: Пользователь
+        Проверяет архитектурное предложение: 4: Пользователь
+        Одобряет дизайн: 5: Пользователь
+    section Разработка
+        senior-dev реализует по TDD: 4: Система
+        Hooks следят за тестами и секретами: 3: Система
+        Тесты зелёные, автоматический переход: 5: Система
+    section Качество
+        QA и безопасность проводят аудит параллельно: 3: Система
+        Находки исправляются, если есть: 2: Пользователь, Система
+        Gate пройдена: 5: Система
+    section Документация
+        Tech-writer создаёт docs: 4: Система
+        Docs готовы, свободная gate с подтверждением: 5: Система
+    section Поставка
+        DevOps готовит CI/CD и changelog: 4: Система
+        Проверяет артефакт поставки: 4: Пользователь
+        Одобряет финальную поставку: 5: Пользователь
 ```
 
 ---
 
-## Flujo fix
+## Процесс fix
 
-El flujo fix es mas corto que el feature porque un bug ya tiene contexto: hay código existente que no funciona como deberia. No hace falta análisis de requisitos ni diseño arquitectonico; hace falta encontrar la causa raiz, corregirla y validar que la correccion no rompe nada.
+Процесс fix короче процесса feature, потому что у бага уже есть контекст: существующий код работает не так, как должен. Анализ требований и архитектурный дизайн не нужны. Нужно найти первопричину, исправить её и проверить, что исправление ничего не ломает.
 
-### Fase 1: diagnóstico
+### Фаза 1: диагностика
 
-El agente `senior-dev` investiga la causa raiz del bug: reproduce el problema, analiza logs y trazas, identifica el componente afectado y documenta sus hallazgos. La gate es de tipo `usuario` porque el diagnóstico puede revelar que el problema es mas profundo de lo esperado (por ejemplo, un defecto de diseño), y el usuario debe decidir si proceder con un fix puntual o replantear la solucion.
+Агент `senior-dev` ищет первопричину бага: воспроизводит проблему, анализирует логи и трассировки, определяет затронутый компонент и документирует находки. Gate имеет тип `usuario`, потому что диагностика может показать, что проблема глубже, чем ожидалось (например, дефект дизайна), и пользователь должен решить, делать точечный fix или пересмотреть решение.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `senior-dev` |
-| Ejecución | Secuencial |
+| Агенты | `senior-dev` |
+| Выполнение | Последовательное |
 | Gate | `gate_diagnostico` |
-| Tipo de gate | `usuario` |
-| Artefacto | Informe de causa raiz |
+| Тип gate | `usuario` |
+| Артефакт | Отчёт о первопричине |
 
-### Fase 2: correccion
+### Фаза 2: исправление
 
-Con el diagnóstico aprobado, `senior-dev` implementa la correccion junto con un test de regresión que demuestra que el bug queda resuelto. El test de regresión es obligatorio: sin el, no hay forma de verificar automáticamente que el bug no vuelva a aparecer en el futuro. La gate es de tipo `automático` porque el criterio de aceptacion es objetivo: el test de regresión pasa y los tests existentes siguen verdes.
+Когда диагностика одобрена, `senior-dev` реализует исправление вместе с регрессионным тестом, который доказывает, что баг устранён. Регрессионный тест обязателен: без него нельзя автоматически проверить, что баг не вернётся в будущем. Gate имеет тип `automático`, потому что критерий приёмки объективен: регрессионный тест проходит, а существующие тесты остаются зелёными.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `senior-dev` |
-| Ejecución | Secuencial |
+| Агенты | `senior-dev` |
+| Выполнение | Последовательное |
 | Gate | `gate_correccion` |
-| Tipo de gate | `automático` |
-| Artefacto | Fix con test de regresión |
+| Тип gate | `automático` |
+| Артефакт | Fix с регрессионным тестом |
 
-### Fase 3: validación
+### Фаза 3: валидация
 
-La fase final ejecuta la suite completa de tests y una revision de seguridad para asegurar que la correccion no ha introducido efectos colaterales. `qa-engineer` y `security-officer` trabajan en paralelo porque sus revisiones son independientes. La gate es de tipo `automático+seguridad`, la mas estricta, porque un fix mal validado puede causar mas dano que el bug original.
+Финальная фаза запускает полный набор тестов и проверку безопасности, чтобы убедиться, что исправление не дало побочных эффектов. `qa-engineer` и `security-officer` работают параллельно, потому что их проверки независимы. Gate имеет тип `automático+seguridad`, самый строгий, потому что плохо проверенный fix может навредить больше, чем исходный баг.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `qa-engineer`, `security-officer` |
-| Ejecución | Paralelo |
+| Агенты | `qa-engineer`, `security-officer` |
+| Выполнение | Параллельное |
 | Gate | `gate_validacion` |
-| Tipo de gate | `automático+seguridad` |
-| Artefacto | Informe de validación completa |
+| Тип gate | `automático+seguridad` |
+| Артефакт | Отчёт о полной валидации |
 
-### Diagrama de estados del flujo fix
+### Диаграмма состояний процесса fix
 
 ```mermaid
 stateDiagram-v2
@@ -331,66 +331,66 @@ stateDiagram-v2
 
     [*] --> diagnóstico: create_session("fix")
 
-    state "Fase 1 -- Diagnóstico" as diagnóstico
-    state "Fase 2 -- Correccion" as correccion
-    state "Fase 3 -- Validación" as validación
+    state "Фаза 1 -- Диагностика" as diagnóstico
+    state "Фаза 2 -- Исправление" as correccion
+    state "Фаза 3 -- Валидация" as validación
 
     diagnóstico --> correccion: gate_diagnostico [usuario]
     correccion --> validación: gate_correccion [automático]
     validación --> [*]: gate_validacion [automático+seguridad]
 
     note right of diagnóstico
-        Agente: senior-dev
-        Secuencial
-        Causa raiz del bug
+        Агент: senior-dev
+        Последовательно
+        Первопричина бага
     end note
 
     note right of correccion
-        Agente: senior-dev
-        Secuencial
-        Fix + test de regresión
+        Агент: senior-dev
+        Последовательно
+        Fix + регрессионный тест
     end note
 
     note right of validación
-        Agentes: qa-engineer + security-officer
-        Paralelo
-        Tests completos + seguridad
+        Агенты: qa-engineer + security-officer
+        Параллельно
+        Полные тесты + безопасность
     end note
 ```
 
 ---
 
-## Flujo quick
+## Процесс quick
 
-El flujo quick existe para cambios pequeños, locales y de riesgo acotado donde abrir un `feature` completo sería desproporcionado. Su objetivo es mantener la disciplina técnica --estado persistente, tests, seguridad y verify posterior-- sin introducir la ceremonia de discovery, arquitectura formal o documentación amplia cuando no aportan valor.
+Процесс quick нужен для небольших локальных изменений с ограниченным риском, где полный `feature` был бы несоразмерен. Его цель сохранить техническую дисциплину (постоянное состояние, тесты, безопасность и последующий verify) без церемонии discovery, формальной архитектуры или объёмной документации, когда они не дают пользы.
 
-Antes de la primera fase, Alfred prepara la sesión con el helper de continuidad y resuelve el `equipo_sesion` real. Ese equipo puede venir de composición dinámica efímera o, si no existe, del fallback persistido en `.claude/alfred-dev.local.md`. En ambos casos, `equipo_sesion` es la fuente runtime canónica. El único opcional es Lucius; si no entra en las fases, queda bajo demanda y se refleja así en `current.md`, `progress.md` y `traceability.md`.
+Перед первой фазой Alfred готовит сессию через helper непрерывности и определяет реальный `equipo_sesion`. Эта команда может прийти из временной динамической композиции или, если её нет, из сохранённого fallback в `.claude/alfred-dev.local.md`. В обоих случаях `equipo_sesion` каноничный runtime-источник. Единственный опциональный агент CTO; если он не входит в фазы, он остаётся по запросу, и это отражается в `current.md`, `progress.md` и `traceability.md`.
 
-### Fase 1: ejecución acotada
+### Фаза 1: ограниченное выполнение
 
-`senior-dev` lidera la implementación del cambio. La fase no suma especialistas 0.6: el único opcional del runtime es Lucius, y entra en validación si está activo. La gate es de tipo `automático` porque el criterio sigue siendo objetivo: cambio local, checks verdes y sin bloquear continuidad.
+`senior-dev` ведёт реализацию изменения. Фаза не добавляет специалистов 0.6: единственный опциональный агент runtime это CTO, и он входит в валидацию, если активен. Gate имеет тип `automático`, потому что критерий остаётся объективным: локальное изменение, зелёные проверки и без блокировки непрерывности.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `senior-dev` |
-| Ejecución | Secuencial |
+| Агенты | `senior-dev` |
+| Выполнение | Последовательное |
 | Gate | `gate_ejecucion_acotada` |
-| Tipo de gate | `automático` |
-| Artefacto | Cambio acotado con checks locales |
+| Тип gate | `automático` |
+| Артефакт | Ограниченное изменение с локальными проверками |
 
-### Fase 2: validación rápida
+### Фаза 2: быстрая валидация
 
-La segunda fase comprueba que el cambio pequeño sigue siendo seguro y no regresa en la zona tocada. `qa-engineer` y `security-officer` trabajan en paralelo. Si `lucius` está activo en `equipo_sesion`, entra después como revisión secuencial externa de cierre.
+Вторая фаза проверяет, что небольшое изменение остаётся безопасным и не даёт регрессии в затронутой области. `qa-engineer` и `security-officer` работают параллельно. Если `cto` активен в `equipo_sesion`, он входит после них как внешняя последовательная проверка на закрытии.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `qa-engineer`, `security-officer` |
-| Ejecución | Paralelo |
+| Агенты | `qa-engineer`, `security-officer` |
+| Выполнение | Параллельное |
 | Gate | `gate_validacion_rapida` |
-| Tipo de gate | `automático+seguridad` |
-| Artefacto | Validación rápida de regresión y seguridad |
+| Тип gate | `automático+seguridad` |
+| Артефакт | Быстрая проверка регрессии и безопасности |
 
-### Diagrama de estados del flujo quick
+### Диаграмма состояний процесса quick
 
 ```mermaid
 stateDiagram-v2
@@ -398,64 +398,64 @@ stateDiagram-v2
 
     [*] --> ejecucion_acotada: create_session("quick")
 
-    state "Fase 1 -- Ejecución acotada" as ejecucion_acotada
-    state "Fase 2 -- Validación rápida" as validacion_rapida
+    state "Фаза 1 -- Ограниченное выполнение" as ejecucion_acotada
+    state "Фаза 2 -- Быстрая валидация" as validacion_rapida
 
     ejecucion_acotada --> validacion_rapida: gate_ejecucion_acotada [automático]
     validacion_rapida --> [*]: gate_validacion_rapida [automático+seguridad]
 
     note right of ejecucion_acotada
-        Agente: senior-dev
-        Secuencial
-        Cambio pequeño, local y acotado
+        Агент: senior-dev
+        Последовательно
+        Небольшое, локальное и ограниченное изменение
     end note
 
     note right of validacion_rapida
-        Agentes: qa-engineer + security-officer
-        Paralelo
-        Regresión local + seguridad
+        Агенты: qa-engineer + security-officer
+        Параллельно
+        Локальная регрессия + безопасность
     end note
 ```
 
 ---
 
-## Flujo spike
+## Процесс spike
 
-El flujo spike existe para investigaciones exploratorias donde el objetivo no es producir código de produccion, sino responder una pregunta técnica: es viable esta tecnología para nuestro caso de uso? Que alternativas hay? Cual es el rendimiento esperado? La estructura es intencionadamente ligera (2 fases) porque una investigación con demasiada burocracia deja de ser exploratoria.
+Процесс spike нужен для исследований, где цель не production-код, а ответ на технический вопрос: подходит ли эта технология для нашего сценария? Какие есть альтернативы? Какой ожидаемый уровень производительности? Структура намеренно лёгкая (2 фазы), потому что исследование с лишней бюрократией перестаёт быть исследованием.
 
-Si `equipo_sesion` llega con opcionales activos por composición dinámica o por
-fallback a `.claude/alfred-dev.local.md`, esa sigue siendo la fuente runtime
-canónica. En `spike`, por defecto los opcionales quedan fuera del loop estándar
-y se consideran especialistas **bajo demanda**: solo se incorporan si el tema
-investigado lo justifica de forma explícita.
+Если `equipo_sesion` приходит с активными опциональными агентами из динамической
+композиции или из fallback в `.claude/alfred-dev.local.md`, он остаётся каноничным
+runtime-источником. В `spike` опциональные агенты по умолчанию не входят в
+стандартный цикл и считаются специалистами **по запросу**: они подключаются,
+только если тема исследования явно этого требует.
 
-### Fase 1: exploracion
+### Фаза 1: исследование
 
-`architect` y `senior-dev` trabajan en paralelo para cubrir dos angulos complementarios: el architect evalua alternativas a nivel de diseño (patrones, integraciones, trade-offs) mientras el senior-dev construye pruebas de concepto y ejecuta benchmarks. El paralelismo tiene sentido porque ambas perspectivas son independientes y juntas proporcionan una vision mas completa.
+`architect` и `senior-dev` работают параллельно и покрывают два взаимодополняющих угла: architect оценивает альтернативы на уровне дизайна (паттерны, интеграции, компромиссы), а senior-dev строит прототипы и запускает бенчмарки. Параллельность оправдана, потому что обе точки зрения независимы и вместе дают более полную картину.
 
-La gate es de tipo `libre` porque la exploracion es por definición abierta: no hay tests que pasar ni código de produccion que auditar. Basta con que los agentes produzcan resultados para avanzar. Esto es deliberado: bloquear una investigación con gates estrictas mataria la creatividad y la velocidad que se espera de un spike.
+Gate имеет тип `libre`, потому что исследование по определению открыто: нет тестов, которые нужно пройти, и нет production-кода для аудита. Для продвижения достаточно, чтобы агенты выдали результаты. Это сделано намеренно: строгие gates в исследовании убили бы креативность и скорость, которых ждут от spike.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `architect`, `senior-dev` |
-| Ejecución | Paralelo |
+| Агенты | `architect`, `senior-dev` |
+| Выполнение | Параллельное |
 | Gate | `gate_exploracion` |
-| Tipo de gate | `libre` |
-| Artefactos | PoCs, benchmarks, análisis de alternativas |
+| Тип gate | `libre` |
+| Артефакты | PoC, бенчмарки, анализ альтернатив |
 
-### Fase 2: conclusiones
+### Фаза 2: выводы
 
-El agente `architect` consolida todos los hallazgos de la exploracion en un informe formal con recomendaciones accionables. El informe responde a la pregunta original del spike con datos, no con opiniones. La gate es de tipo `usuario` porque las conclusiones de una investigación afectan a decisiones estrategicas del proyecto y el usuario debe evaluarlas antes de actuar sobre ellas.
+Агент `architect` сводит все находки исследования в формальный отчёт с практическими рекомендациями. Отчёт отвечает на исходный вопрос spike данными, а не мнениями. Gate имеет тип `usuario`, потому что выводы исследования влияют на стратегические решения проекта, и пользователь должен оценить их, прежде чем действовать.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `architect` |
-| Ejecución | Secuencial |
+| Агенты | `architect` |
+| Выполнение | Последовательное |
 | Gate | `gate_conclusiones` |
-| Tipo de gate | `usuario` |
-| Artefacto | Informe con recomendaciones |
+| Тип gate | `usuario` |
+| Артефакт | Отчёт с рекомендациями |
 
-### Diagrama de estados del flujo spike
+### Диаграмма состояний процесса spike
 
 ```mermaid
 stateDiagram-v2
@@ -463,87 +463,87 @@ stateDiagram-v2
 
     [*] --> exploracion: create_session("spike")
 
-    state "Fase 1 -- Exploracion" as exploracion
-    state "Fase 2 -- Conclusiones" as conclusiones
+    state "Фаза 1 -- Исследование" as exploracion
+    state "Фаза 2 -- Выводы" as conclusiones
 
     exploracion --> conclusiones: gate_exploracion [libre]
     conclusiones --> [*]: gate_conclusiones [usuario]
 
     note right of exploracion
-        Agentes: architect + senior-dev
-        Paralelo
-        PoCs, benchmarks, alternativas
+        Агенты: architect + senior-dev
+        Параллельно
+        PoC, бенчмарки, альтернативы
     end note
 
     note right of conclusiones
-        Agente: architect
-        Secuencial
-        Informe con recomendaciones
+        Агент: architect
+        Последовательно
+        Отчёт с рекомендациями
     end note
 ```
 
 ---
 
-## Flujo ship
+## Процесс ship
 
-El flujo ship cubre el proceso completo de release: desde la auditoria previa hasta el despliegue a produccion. Es el flujo con mayor densidad de validaciones de seguridad porque cada fase manipula artefactos que acabaran en manos de usuarios finales. Un error aquí no se corrige con un hotfix rápido: puede requerir un rollback, una comunicación de incidencia o una nueva release.
+Процесс ship покрывает полный процесс релиза: от предварительного аудита до развёртывания в production. В этом процессе больше всего проверок безопасности, потому что каждая фаза работает с артефактами, которые попадут к конечным пользователям. Ошибку здесь не исправить быстрым hotfix: может понадобиться rollback, сообщение об инциденте или новый релиз.
 
-### Fase 1: auditoria final
+### Фаза 1: финальный аудит
 
-Antes de empaquetar nada, `qa-engineer` y `security-officer` auditan el estado actual del proyecto en paralelo. Esta fase existe porque el código puede haber pasado las gates del flujo feature individualmente, pero el conjunto (multiples features, fixes y refactors acumulados) necesita una validación integral. La gate es de tipo `automático+seguridad` porque los criterios son objetivos y no admiten excepciones antes de una release.
+Прежде чем что-то упаковывать, `qa-engineer` и `security-officer` параллельно проверяют текущее состояние проекта. Эта фаза нужна, потому что код мог пройти gates процесса feature по отдельности, но целое (несколько накопленных features, fixes и рефакторингов) требует комплексной проверки. Gate имеет тип `automático+seguridad`, потому что критерии объективны и перед релизом не допускают исключений.
 
-Si `lucius` está activo en `equipo_sesion`, entra después como auditor externo
-secuencial para contrastar este cierre antes de pasar al empaquetado.
+Если `cto` активен в `equipo_sesion`, он входит после них как внешний
+последовательный аудитор, чтобы перепроверить это закрытие до перехода к упаковке.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `qa-engineer`, `security-officer` |
-| Ejecución | Paralelo |
+| Агенты | `qa-engineer`, `security-officer` |
+| Выполнение | Параллельное |
 | Gate | `gate_auditoria_final` |
-| Tipo de gate | `automático+seguridad` |
-| Artefacto | Informe de auditoria integral |
+| Тип gate | `automático+seguridad` |
+| Артефакт | Отчёт о комплексном аудите |
 
-### Fase 2: documentación
+### Фаза 2: документация
 
-El agente `tech-writer` redacta la documentación de release: changelog, guias de migración, notas de versión y cualquier otro documento que los usuarios necesiten para adoptar la nueva versión. La gate es de tipo `libre` porque no hay código que validar, solo prosa.
+Агент `tech-writer` пишет документацию релиза: changelog, руководства по миграции, примечания к версии и любые другие документы, которые нужны пользователям, чтобы перейти на новую версию. Gate имеет тип `libre`, потому что проверять нужно не код, а только текст.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `tech-writer` |
-| Ejecución | Secuencial |
+| Агенты | `tech-writer` |
+| Выполнение | Последовательное |
 | Gate | `gate_documentacion_ship` |
-| Tipo de gate | `libre` |
-| Artefactos | Changelog, notas de versión, guias de migración |
+| Тип gate | `libre` |
+| Артефакты | Changelog, примечания к версии, руководства по миграции |
 
-### Fase 3: empaquetado
+### Фаза 3: упаковка
 
-`devops-engineer` y `security-officer` generan el artefacto de release versionado y firmado. La participacion del security-officer en esta fase asegura que el artefacto empaquetado no incluye dependencias vulnerables ni secretos filtrados. La gate es de tipo `automático+seguridad`: el empaquetado debe generar artefacto verificable y, además, la validación de seguridad y firma tiene que ser favorable.
+`devops-engineer` и `security-officer` создают версионированный и подписанный артефакт релиза. Участие security-officer в этой фазе гарантирует, что упакованный артефакт не содержит уязвимых зависимостей или утёкших секретов. Gate имеет тип `automático+seguridad`: упаковка должна создать проверяемый артефакт, а проверка безопасности и подписи должна быть положительной.
 
-El espejo remoto, si hace falta, lo hace `/alfred-dev:sync-github` sobre el tablero local. No hay agente `github-manager`.
+Удалённое зеркало при необходимости делает `/alfred-dev:sync-github` на основе локальной доски. Агента `github-manager` нет.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `devops-engineer`, `security-officer` |
-| Ejecución | Secuencial |
+| Агенты | `devops-engineer`, `security-officer` |
+| Выполнение | Последовательное |
 | Gate | `gate_empaquetado` |
-| Tipo de gate | `automático+seguridad` |
-| Artefacto | Release con versionado semántico |
+| Тип gate | `automático+seguridad` |
+| Артефакт | Релиз с семантическим версионированием |
 
-### Fase 4: despliegue
+### Фаза 4: развёртывание
 
-El agente `devops-engineer` ejecuta el despliegue a produccion con validación post-deploy y rollback preparado. La gate es de tipo `usuario+seguridad` porque el despliegue es el punto de no retorno: una vez publicado, los usuarios pueden descargarlo. Se exige aprobacion explícita del usuario (que confirme que quiere desplegar) y seguridad OK (que confirme que todo esta limpio). Incluso en modo autopilot, esta confirmación humana se mantiene: el flujo puede automatizar toda la preparación, pero no el acto final de publicar.
+Агент `devops-engineer` выполняет развёртывание в production с проверкой после deploy и подготовленным rollback. Gate имеет тип `usuario+seguridad`, потому что развёртывание это точка невозврата: после публикации пользователи могут скачать релиз. Нужно явное одобрение пользователя (он подтверждает, что хочет развернуть) и безопасность OK (она подтверждает, что всё чисто). Даже в режиме autopilot это подтверждение человека сохраняется: процесс может автоматизировать всю подготовку, но не финальный акт публикации.
 
-`sync-github` puede dejar el tablero remoto alineado después del despliegue, pero nunca sustituye la confirmación humana.
+`sync-github` может выровнять удалённую доску после развёртывания, но никогда не заменяет подтверждение человека.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `devops-engineer` |
-| Ejecución | Secuencial |
+| Агенты | `devops-engineer` |
+| Выполнение | Последовательное |
 | Gate | `gate_despliegue` |
-| Tipo de gate | `usuario+seguridad` |
-| Artefacto | Release desplegada |
+| Тип gate | `usuario+seguridad` |
+| Артефакт | Развёрнутый релиз |
 
-### Diagrama de estados del flujo ship
+### Диаграмма состояний процесса ship
 
 ```mermaid
 stateDiagram-v2
@@ -551,10 +551,10 @@ stateDiagram-v2
 
     [*] --> auditoria_final: create_session("ship")
 
-    state "Fase 1 -- Auditoria final" as auditoria_final
-    state "Fase 2 -- Documentación" as documentación
-    state "Fase 3 -- Empaquetado" as empaquetado
-    state "Fase 4 -- Despliegue" as despliegue
+    state "Фаза 1 -- Финальный аудит" as auditoria_final
+    state "Фаза 2 -- Документация" as documentación
+    state "Фаза 3 -- Упаковка" as empaquetado
+    state "Фаза 4 -- Развёртывание" as despliegue
 
     auditoria_final --> documentación: gate_auditoria_final [automático+seguridad]
     documentación --> empaquetado: gate_documentacion_ship [libre]
@@ -562,67 +562,67 @@ stateDiagram-v2
     despliegue --> [*]: gate_despliegue [usuario+seguridad]
 
     note right of auditoria_final
-        Agentes: qa-engineer + security-officer
-        Paralelo
-        Auditoria integral pre-release
+        Агенты: qa-engineer + security-officer
+        Параллельно
+        Комплексный аудит перед релизом
     end note
 
     note right of documentación
-        Agente: tech-writer
-        Secuencial
-        Changelog + guias de migración
+        Агент: tech-writer
+        Последовательно
+        Changelog + руководства по миграции
     end note
 
     note right of empaquetado
-        Agentes: devops-engineer + security-officer
-        Secuencial
-        Versionado semántico + etiquetado
+        Агенты: devops-engineer + security-officer
+        Последовательно
+        Семантическое версионирование + теги
     end note
 
     note right of despliegue
-        Agente: devops-engineer
-        Secuencial
-        Deploy + validación post-deploy
+        Агент: devops-engineer
+        Последовательно
+        Deploy + проверка после deploy
     end note
 ```
 
 ---
 
-## Flujo audit
+## Процесс audit
 
-El flujo audit es el único que tiene una sola fase, y eso es una decisión de diseño consciente. Su propósito es ejecutar una auditoria integral del proyecto lo mas rápido posible, sin la ceremonia de un flujo multifase. Se usa de dos formas: como flujo independiente (cuando el usuario quiere un chequeo rápido del estado del proyecto) y como paso obligatorio al cierre de sprint.
+Процесс audit единственный с одной фазой, и это осознанное решение дизайна. Его цель провести комплексный аудит проекта как можно быстрее, без церемонии многофазного процесса. Он используется двумя способами: как самостоятельный процесс (когда пользователь хочет быстро проверить состояние проекта) и как обязательный шаг при закрытии спринта.
 
-### Fase 1: auditoria paralela
+### Фаза 1: параллельный аудит
 
-Cuatro agentes trabajan simultaneamente, cada uno en su ámbito de especialización:
+Четыре агента работают одновременно, каждый в своей области специализации:
 
-- `qa-engineer` ejecuta la suite de tests, revisa cobertura y analiza deuda técnica.
-- `security-officer` audita dependencias, busca vulnerabilidades y verifica que no haya secretos expuestos.
-- `architect` revisa la coherencia arquitectonica, detecta violaciones de patrones y evalua la deuda de diseño.
-- `tech-writer` verifica la completitud y coherencia de la documentación existente.
+- `qa-engineer` запускает набор тестов, проверяет покрытие и анализирует технический долг.
+- `security-officer` проверяет зависимости, ищет уязвимости и проверяет, что нет раскрытых секретов.
+- `architect` проверяет согласованность архитектуры, находит нарушения паттернов и оценивает долг дизайна.
+- `tech-writer` проверяет полноту и согласованность существующей документации.
 
-El paralelismo total se justifica porque los cuatro agentes trabajan sobre aspectos completamente independientes del proyecto. No hay dependencia entre la revision de cobertura de tests y la auditoria de dependencias, ni entre la coherencia arquitectonica y la documentación. Ejecutarlos en serie cuadruplicaria el tiempo sin ningun beneficio.
+Полная параллельность оправдана, потому что четыре агента работают над полностью независимыми аспектами проекта. Нет зависимости между проверкой покрытия тестами и аудитом зависимостей, или между согласованностью архитектуры и документацией. Последовательный запуск увеличил бы время в четыре раза без всякой пользы.
 
-Si `lucius` está activo, se ejecuta después como cierre secuencial externo: no
-sustituye ninguna de las cuatro auditorías, sino que contrasta sus resultados
-antes del resumen final.
+Если `cto` активен, он запускается после них как внешнее последовательное закрытие:
+он не заменяет ни один из четырёх аудитов, а перепроверяет их результаты
+перед финальной сводкой.
 
-Si `equipo_sesion` llega con opcionales activos por composición dinámica o por
-fallback a `.claude/alfred-dev.local.md`, esa sigue siendo la fuente runtime
-canónica. En `audit`, salvo `lucius`, el resto de opcionales quedan fuera del
-loop estándar y se tratan como especialistas **bajo demanda**.
+Если `equipo_sesion` приходит с активными опциональными агентами из динамической
+композиции или из fallback в `.claude/alfred-dev.local.md`, он остаётся каноничным
+runtime-источником. В `audit`, кроме `cto`, остальные опциональные агенты не входят
+в стандартный цикл и считаются специалистами **по запросу**.
 
-La gate es de tipo `automático+seguridad` porque una auditoria que se pueda superar con resultados mediocres no tiene sentido. Si alguno de los cuatro agentes detecta un problema crítico, la gate bloquea y hay que resolverlo.
+Gate имеет тип `automático+seguridad`, потому что аудит, который можно пройти с посредственными результатами, не имеет смысла. Если любой из четырёх агентов находит критическую проблему, gate блокирует, и проблему нужно решить.
 
-| Propiedad | Valor |
+| Свойство | Значение |
 |-----------|-------|
-| Agentes | `qa-engineer`, `security-officer`, `architect`, `tech-writer` |
-| Ejecución | Paralelo |
+| Агенты | `qa-engineer`, `security-officer`, `architect`, `tech-writer` |
+| Выполнение | Параллельное |
 | Gate | `gate_auditoria` |
-| Tipo de gate | `automático+seguridad` |
-| Artefactos | Informes de calidad, seguridad, arquitectura y documentación |
+| Тип gate | `automático+seguridad` |
+| Артефакты | Отчёты о качестве, безопасности, архитектуре и документации |
 
-### Diagrama de estados del flujo audit
+### Диаграмма состояний процесса audit
 
 ```mermaid
 stateDiagram-v2
@@ -630,56 +630,56 @@ stateDiagram-v2
 
     [*] --> auditoria_paralela: create_session("audit")
 
-    state "Fase única -- Auditoria paralela" as auditoria_paralela
+    state "Единственная фаза -- Параллельный аудит" as auditoria_paralela
 
     auditoria_paralela --> [*]: gate_auditoria [automático+seguridad]
 
     note right of auditoria_paralela
-        Agentes: qa-engineer + security-officer
+        Агенты: qa-engineer + security-officer
                  + architect + tech-writer
-        Paralelo (4 agentes simultaneos)
-        Auditoria integral del proyecto
+        Параллельно (4 агента одновременно)
+        Комплексный аудит проекта
     end note
 ```
 
 ---
 
-## El patron de paralelismo
+## Паттерн параллельности
 
-No todas las fases ejecutan agentes en paralelo, y la decisión de cuando usar paralelismo no es arbitraria. El criterio es simple: se ejecutan en paralelo cuando los agentes trabajan de forma independiente y sus resultados no dependen unos de otros. Se ejecutan en secuencia cuando hay dependencia entre ellos.
+Не все фазы запускают агентов параллельно, и решение, когда использовать параллельность, не произвольно. Критерий простой: агенты запускаются параллельно, когда работают независимо и их результаты не зависят друг от друга. Они запускаются последовательно, когда между ними есть зависимость.
 
-### Fases con ejecución paralela
+### Фазы с параллельным выполнением
 
-| Flujo | Fase | Agentes en paralelo | Razon del paralelismo |
+| Процесс | Фаза | Агенты параллельно | Причина параллельности |
 |-------|------|---------------------|-----------------------|
-| `feature` | arquitectura | `architect`, `security-officer` | El diseño técnico y el threat model son independientes. El architect no necesita el threat model para disenar, ni el security-officer la arquitectura para identificar amenazas. |
-| `feature` | calidad | `qa-engineer`, `security-officer` | El code review funcional y la auditoria de seguridad cubren dimensiones distintas del mismo código. No hay dependencia entre ellos. |
-| `fix` | validación | `qa-engineer`, `security-officer` | La suite de tests y la revision de seguridad son independientes. Ejecutarlas en paralelo reduce el tiempo de validación a la mitad. |
-| `spike` | exploracion | `architect`, `senior-dev` | El architect evalua alternativas de diseño mientras el senior-dev construye PoCs. Ambos enfoques se complementan sin depender uno del otro. |
-| `ship` | auditoria_final | `qa-engineer`, `security-officer` | Auditoria funcional y de seguridad, independientes como en la fase de calidad del flujo feature. |
-| `audit` | auditoria_paralela | `qa-engineer`, `security-officer`, `architect`, `tech-writer` | Las cuatro dimensiones (calidad, seguridad, arquitectura, documentación) son completamente independientes. Máximo paralelismo posible. |
+| `feature` | arquitectura | `architect`, `security-officer` | Технический дизайн и threat model независимы. Architect не нужен threat model для проектирования, а security-officer не нужна архитектура для выявления угроз. |
+| `feature` | calidad | `qa-engineer`, `security-officer` | Функциональный code review и аудит безопасности покрывают разные измерения одного кода. Зависимости между ними нет. |
+| `fix` | validación | `qa-engineer`, `security-officer` | Набор тестов и проверка безопасности независимы. Параллельный запуск сокращает время валидации вдвое. |
+| `spike` | exploracion | `architect`, `senior-dev` | Architect оценивает альтернативы дизайна, пока senior-dev строит PoC. Оба подхода дополняют друг друга и не зависят друг от друга. |
+| `ship` | auditoria_final | `qa-engineer`, `security-officer` | Функциональный аудит и аудит безопасности, независимые, как в фазе качества процесса feature. |
+| `audit` | auditoria_paralela | `qa-engineer`, `security-officer`, `architect`, `tech-writer` | Четыре измерения (качество, безопасность, архитектура, документация) полностью независимы. Максимально возможная параллельность. |
 
-### Fases sin paralelismo
+### Фазы без параллельности
 
-Las fases restantes usan ejecución secuencial por una de estas dos razones:
+Остальные фазы выполняются последовательно по одной из двух причин:
 
-1. **Un solo agente**: cuando solo hay un agente (como `senior-dev` en la fase de desarrollo o `tech-writer` en documentación), el paralelismo no aplica.
-2. **Dependencia implícita**: en la fase de entrega del flujo feature, `devops-engineer` y `security-officer` aparecen juntos pero no en paralelo porque el security-officer necesita validar el artefacto que genera el devops-engineer, no un aspecto independiente del proyecto.
+1. **Один агент**: когда агент только один (например, `senior-dev` в фазе разработки или `tech-writer` в документации), параллельность неприменима.
+2. **Неявная зависимость**: в фазе поставки процесса feature `devops-engineer` и `security-officer` участвуют вместе, но не параллельно, потому что security-officer должен проверить артефакт, который создаёт devops-engineer, а не независимый аспект проекта.
 
 ---
 
-## Estado de sesión
+## Состояние сессии
 
-Todo el estado del flujo en curso se persiste en un único fichero JSON: `.claude/alfred-dev-state.json`. Este fichero es el eje de coordinación de todo el sistema: los commands lo leen para saber en que fase estamos y que agentes invocar, los hooks lo leen para decidir si bloquear una accion o dejarla pasar, y el orquestador lo escribe con escritura atomica (escritura en fichero temporal + renombrado con `os.replace`) para evitar corrupcion si el proceso se interrumpe.
+Всё состояние текущего процесса хранится в одном JSON-файле: `.claude/alfred-dev-state.json`. Этот файл ось координации всей системы: commands читают его, чтобы знать, в какой мы фазе и каких агентов вызывать, hooks читают его, чтобы решить, блокировать действие или пропустить, а оркестратор пишет его атомарно (запись во временный файл + переименование через `os.replace`), чтобы файл не повредился, если процесс прервётся.
 
-La decisión de usar un fichero JSON plano en lugar de la base de datos SQLite es deliberada: el estado de la sesión es efimero (dura lo que dura el flujo) y su estructura es plana (no hay relaciones entre entidades). La base de datos se reserva para la memoria histórica del proyecto, que si tiene relaciones y necesita consultas complejas.
+Плоский JSON-файл вместо базы данных SQLite выбран намеренно: состояние сессии временное (живёт, пока идёт процесс), а его структура плоская (связей между сущностями нет). База данных зарезервирована для исторической памяти проекта, где связи есть и нужны сложные запросы.
 
-### Estructura del JSON
+### Структура JSON
 
 ```json
 {
   "comando": "feature",
-  "descripción": "Implementar sistema de notificaciones push",
+  "descripción": "Реализовать систему push-уведомлений",
   "fase_actual": "desarrollo",
   "fase_numero": 2,
   "fases_completadas": [
@@ -706,26 +706,26 @@ La decisión de usar un fichero JSON plano en lugar de la base de datos SQLite e
 }
 ```
 
-### Descripción de los campos
+### Описание полей
 
-| Campo | Tipo | Descripción |
+| Поле | Тип | Описание |
 |-------|------|-------------|
-| `comando` | `string` | Identificador del flujo activo (`feature`, `fix`, `spike`, `ship`, `audit`). |
-| `descripción` | `string` | Descripción en lenguaje natural de la tarea, tal como la proporciono el usuario. |
-| `fase_actual` | `string` | Nombre de la fase en curso, o `"completado"` si el flujo ha terminado. |
-| `fase_numero` | `int` | Índice de la fase actual (base 0). Permite al orquestador acceder directamente a la definición de la fase en el array `FLOWS[comando]["fases"]`. |
-| `fases_completadas` | `array` | Registro histórico de las fases superadas, cada una con su nombre, resultado, artefactos generados y marca temporal de finalizacion. |
-| `artefactos` | `array` | Lista acumulada de todos los artefactos generados a lo largo del flujo. Es la union de los artefactos de cada fase completada. |
-| `creado_en` | `string` | Marca temporal ISO 8601 del momento en que se creo la sesión. |
-| `actualizado_en` | `string` | Marca temporal ISO 8601 de la última modificacion del estado. Se actualiza cada vez que el orquestador avanza de fase. |
+| `comando` | `string` | Идентификатор активного процесса (`feature`, `fix`, `spike`, `ship`, `audit`). |
+| `descripción` | `string` | Описание задачи на естественном языке, в том виде, в каком его дал пользователь. |
+| `fase_actual` | `string` | Имя текущей фазы или `"completado"`, если процесс завершён. |
+| `fase_numero` | `int` | Индекс текущей фазы (с 0). Позволяет оркестратору напрямую обратиться к описанию фазы в массиве `FLOWS[comando]["fases"]`. |
+| `fases_completadas` | `array` | История пройденных фаз: для каждой имя, результат, созданные артефакты и отметка времени завершения. |
+| `artefactos` | `array` | Накопленный список всех артефактов, созданных за процесс. Это объединение артефактов каждой завершённой фазы. |
+| `creado_en` | `string` | Отметка времени ISO 8601 момента создания сессии. |
+| `actualizado_en` | `string` | Отметка времени ISO 8601 последнего изменения состояния. Обновляется каждый раз, когда оркестратор переходит к следующей фазе. |
 
-### Como leen los hooks este fichero
+### Как hooks читают этот файл
 
-Los hooks acceden al fichero de estado para tomar decisiones contextuales. Por ejemplo, el hook `quality-gate.py` necesita saber si estamos en una fase de desarrollo (donde los tests rojos son informativos) o en una fase de calidad (donde los tests rojos bloquean el avance). El hook `activity-capture.py` necesita saber en que fase y flujo estamos para asociar los eventos capturados a la iteracion correcta en la memoria persistente.
+Hooks обращаются к файлу состояния, чтобы принимать решения с учётом контекста. Например, hook `quality-gate.py` должен знать, идёт ли фаза разработки (где красные тесты носят информационный характер) или фаза качества (где красные тесты блокируют продвижение). Hook `activity-capture.py` должен знать фазу и процесс, чтобы связать захваченные события с правильной итерацией в постоянной памяти.
 
-El patron de lectura es siempre el mismo: el hook lee el fichero JSON, extrae los campos que necesita (`comando`, `fase_actual`, `fase_numero`) y adapta su comportamiento en función del contexto. Si el fichero no existe (porque no hay ningun flujo activo), el hook funciona en modo por defecto sin bloquear nada.
+Схема чтения всегда одна: hook читает JSON-файл, извлекает нужные поля (`comando`, `fase_actual`, `fase_numero`) и подстраивает поведение под контекст. Если файла нет (потому что активного процесса нет), hook работает в режиме по умолчанию и ничего не блокирует.
     note right of estilo_visual
-        Agente: selina
-        Secuencial
-        Tres propuestas + elección visual
+        Агент: designer
+        Последовательно
+        Три предложения + визуальный выбор
     end note

@@ -66,8 +66,8 @@ class TestMemoryUIContract(unittest.TestCase):
 
     def test_memory_ui_server_localizes_dates_and_statuses(self):
         server = _read("core/memory_ui_server.py")
-        self.assertIn('Intl.DateTimeFormat("es-ES"', server)
-        self.assertIn('healthy: "saludable"', server)
+        self.assertIn('Intl.DateTimeFormat("ru-RU"', server)
+        self.assertIn('healthy: "в порядке"', server)
         self.assertIn("function statusLabel(status", server)
 
     def test_memory_ui_prioritizes_active_iteration_in_selector(self):

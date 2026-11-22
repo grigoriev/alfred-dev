@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 """
-Generador de informes de sesion para Alfred Dev.
+Session report generator for Alfred Dev.
 
-Al finalizar una sesion de trabajo (evento Stop), este modulo genera un
-informe en formato markdown con el resumen de la actividad: estado del
-flujo, fases completadas, artefactos generados, evidencia de tests y
-proximo paso operativo.
+When a work session ends (Stop event), this module writes a markdown
+report that summarizes the activity: flow state, completed phases,
+generated artifacts, test evidence and the next operational step.
 
-El informe se guarda en ``docs/alfred-reports/`` y queda disponible
-como registro historico para consultas futuras. Si la memoria
-persistente esta activa, se registra tambien como evento en la DB.
+The report goes to ``docs/alfred-reports/`` and stays there as a
+historical record. If persistent memory is active, the report is also
+logged as an event in the DB.
 
-Arquitectura:
-    El informe se compone de secciones modulares. Cada seccion es una
-    funcion que recibe los datos y devuelve un bloque de markdown. La
-    funcion principal ``generate_report()`` las ensambla en orden.
+Architecture:
+    The report is built from modular sections. Each section is a
+    function that takes the data and returns a markdown block. The main
+    function ``generate_report()`` assembles them in order.
 """
 
 import json
@@ -35,15 +34,15 @@ from core.optional_agents import (
 from core.orchestrator import FLOWS
 
 
-# --- Formato del informe ---
+# --- Report format ---
 
 _REPORT_DIR = "docs/alfred-reports"
 
-_REPORT_TEMPLATE = """# Informe de sesion: {comando}
+_REPORT_TEMPLATE = """# Отчёт о сессии: {comando}
 
-**Fecha:** {fecha}
-**Duracion estimada:** {duracion}
-**Descripcion:** {descripcion}
+**Дата:** {fecha}
+**Примерная длительность:** {duracion}
+**Описание:** {descripcion}
 
 ---
 
@@ -51,14 +50,14 @@ _REPORT_TEMPLATE = """# Informe de sesion: {comando}
 
 ---
 
-*Generado automaticamente por Alfred Dev v{version}*
+*Создано автоматически Alfred Dev v{version}*
 """
 
-_REPORT_TEMPLATE_INTERRUPTED = """# Sesion interrumpida: {comando}
+_REPORT_TEMPLATE_INTERRUPTED = """# Сессия прервана: {comando}
 
-**Fecha:** {fecha}
-**Duracion estimada:** {duracion}
-**Descripcion:** {descripcion}
+**Дата:** {fecha}
+**Примерная длительность:** {duracion}
+**Описание:** {descripcion}
 
 ---
 
@@ -66,17 +65,17 @@ _REPORT_TEMPLATE_INTERRUPTED = """# Sesion interrumpida: {comando}
 
 ---
 
-*Generado automaticamente por Alfred Dev v{version}*
+*Создано автоматически Alfred Dev v{version}*
 """
 
 _OPTIONAL_INTEGRATIONS = get_optional_integrations()
 
 
-# --- Secciones del informe ---
+# --- Report sections ---
 
 
 def _single_line_text(value: Any, default: str = "") -> str:
-    """Normaliza texto libre a una sola linea legible."""
+    """Normalize free text to one readable line."""
     if value is None:
         return default
     text = re.sub(r"\s+", " ", str(value)).strip()
@@ -84,20 +83,20 @@ def _single_line_text(value: Any, default: str = "") -> str:
 
 
 def _markdown_table_cell(value: Any, default: str = "-") -> str:
-    """Escapa una celda de tabla Markdown para texto libre."""
+    """Escape free text for a Markdown table cell."""
     text = _single_line_text(value, default=default)
     return text.replace("|", r"\|")
 
 
 def _markdown_inline_code(value: Any, default: str = "-") -> str:
-    """Renderiza texto seguro para usarlo como codigo inline."""
+    """Render text that is safe to use as inline code."""
     text = _single_line_text(value, default=default)
     text = text.replace("`", "'")
     return f"`{text}`"
 
 
 def _truncate_text(value: Any, limit: int = 120, default: str = "") -> str:
-    """Recorta texto libre manteniendo una sola linea."""
+    """Truncate free text and keep it on one line."""
     text = _single_line_text(value, default=default)
     if len(text) <= limit:
         return text
@@ -105,21 +104,21 @@ def _truncate_text(value: Any, limit: int = 120, default: str = "") -> str:
 
 
 def _session_team_source_label(session: Dict[str, Any]) -> str:
-    """Devuelve una etiqueta humana para la fuente del equipo runtime."""
+    """Return a human-readable label for the runtime team source."""
     equipo = session.get("equipo_sesion")
     if not isinstance(equipo, dict):
         return ""
 
     source = _single_line_text(equipo.get("fuente", ""))
     if source == "config_persistida":
-        return "configuración persistida"
+        return "сохранённая конфигурация"
     if source == "composicion_dinamica":
-        return "composición dinámica"
+        return "динамический состав"
     return ""
 
 
 def _session_on_demand_optionals_for_flow(session: Dict[str, Any]) -> List[str]:
-    """Devuelve opcionales activos que no participan en ninguna fase del flujo."""
+    """Return active optional agents that take part in no phase of the flow."""
     command = _single_line_text(session.get("comando", ""))
     flow = FLOWS.get(command, {})
     flow_phases = {
@@ -151,7 +150,7 @@ def _session_on_demand_optionals_for_flow(session: Dict[str, Any]) -> List[str]:
 
 
 def _last_completed_at(session: Dict[str, Any]) -> str:
-    """Obtiene la referencia temporal del ultimo cierre de fase/sesion."""
+    """Get the timestamp of the last phase or session close."""
     completed = session.get("fases_completadas") or []
     if completed and isinstance(completed[-1], dict):
         completed_at = _single_line_text(completed[-1].get("completada_en", ""))
@@ -169,7 +168,7 @@ def _last_completed_at(session: Dict[str, Any]) -> str:
 def _load_matching_session_uat(
     project_dir: Optional[str], session: Dict[str, Any]
 ) -> Optional[Dict[str, Any]]:
-    """Carga la UAT asociada exactamente a esta sesion completada."""
+    """Load the UAT that belongs exactly to this completed session."""
     if not project_dir or session.get("fase_actual") != "completado":
         return None
 
@@ -190,7 +189,7 @@ def _load_matching_session_uat(
 
 
 def _parse_iso_datetime(value: Any) -> Optional[datetime]:
-    """Parsea fechas ISO de forma tolerante."""
+    """Parse ISO dates leniently."""
     text = _single_line_text(value)
     if not text:
         return None
@@ -204,12 +203,12 @@ def _parse_iso_datetime(value: Any) -> Optional[datetime]:
 
 
 def _normalized_match_key(value: Any) -> str:
-    """Normaliza texto para comparaciones blandas."""
+    """Normalize text for loose comparisons."""
     return _single_line_text(value).casefold()
 
 
 def _open_memory_db(project_dir: Optional[str]):
-    """Abre la DB de memoria si existe y es accesible."""
+    """Open the memory DB if it exists and is accessible."""
     if not project_dir:
         return None
 
@@ -229,7 +228,7 @@ def _open_memory_db(project_dir: Optional[str]):
 
 
 def _find_session_iteration(db: Any, session: Dict[str, Any], completed: bool) -> Optional[Dict[str, Any]]:
-    """Encuentra la iteracion de memoria que mejor encaja con la sesion."""
+    """Find the memory iteration that best matches the session."""
     command_key = _normalized_match_key(session.get("comando", ""))
     description_key = _normalized_match_key(session.get("descripcion", ""))
     session_time = _parse_iso_datetime(
@@ -301,7 +300,7 @@ def _session_decisions_snapshot(
     completed: bool,
     limit: int = 5,
 ) -> Dict[str, Any]:
-    """Recupera decisiones vinculadas a la iteracion de esta sesion."""
+    """Get the decisions linked to the iteration of this session."""
     snapshot = {
         "available": False,
         "iteration_id": None,
@@ -337,49 +336,49 @@ def _session_decisions_snapshot(
 
 
 def _test_summary(evidence: Optional[Dict[str, Any]]) -> str:
-    """Resume la evidencia de tests en una linea legible."""
+    """Summarize the test evidence in one readable line."""
     if evidence is None:
-        return "sin datos de evidencia"
+        return "нет данных о прогонах"
     if not evidence.get("has_evidence", False):
-        return "sin tests ejecutados"
+        return "тесты не запускались"
 
     records = evidence.get("records", []) or []
     passed = sum(1 for record in records if record.get("result") == "pass")
     failed = sum(1 for record in records if record.get("result") == "fail")
     unknown = max(len(records) - passed - failed, 0)
 
-    parts = [f"{len(records)} ronda(s)"]
+    parts = [f"прогонов: {len(records)}"]
     if passed:
-        parts.append(f"{passed} OK")
+        parts.append(f"OK: {passed}")
     if failed:
-        parts.append(f"{failed} con fallo")
+        parts.append(f"с ошибкой: {failed}")
     if unknown:
-        parts.append(f"{unknown} indeterminada(s)")
+        parts.append(f"без результата: {unknown}")
     return ", ".join(parts)
 
 
 def _verification_status(
     project_dir: Optional[str], session: Dict[str, Any], completed: bool
 ) -> Dict[str, str]:
-    """Resume el estado de verify/UAT y el siguiente paso recomendado."""
+    """Summarize the verify/UAT state and the recommended next step."""
     if not completed or session.get("fase_actual") != "completado":
         current_phase = _single_line_text(
-            session.get("fase_actual", "desconocida"), default="desconocida"
+            session.get("fase_actual", "неизвестна"), default="неизвестна"
         )
         return {
-            "label": "no aplica todavía",
-            "detail": f"El flujo sigue activo en la fase '{current_phase}'.",
+            "label": "пока не применяется",
+            "detail": f"Процесс ещё активен в фазе '{current_phase}'.",
             "next_command": "/alfred-dev:resume",
-            "next_reason": "La sesión no está cerrada todavía; conviene retomarla donde se quedó.",
+            "next_reason": "Сессия ещё не закрыта: лучше продолжить её с того места, где она остановилась.",
         }
 
     uat = _load_matching_session_uat(project_dir, session)
     if not uat:
         return {
-            "label": "pendiente",
-            "detail": "El flujo figura completado, pero todavía no hay verificación manual/UAT registrada.",
+            "label": "в ожидании",
+            "detail": "Процесс отмечен как завершённый, но ручная проверка/UAT ещё не зарегистрирована.",
             "next_command": "/alfred-dev:verify",
-            "next_reason": "Hace falta validar el resultado final antes de dar el flujo por cerrado de verdad.",
+            "next_reason": "Нужно проверить итоговый результат, прежде чем считать процесс действительно закрытым.",
         }
 
     status = _single_line_text(uat.get("status", ""), default="desconocido")
@@ -387,44 +386,44 @@ def _verification_status(
     notes = _single_line_text(uat.get("notes", ""))
 
     if status == "approved":
-        detail = "UAT aprobada."
+        detail = "UAT одобрена."
         if updated_at:
-            detail = f"{detail} Registrada el {updated_at}."
+            detail = f"{detail} Зарегистрирована {updated_at}."
         return {
-            "label": "aprobada",
+            "label": "одобрена",
             "detail": detail,
             "next_command": "/alfred",
-            "next_reason": "La validación final ya está cerrada; toca continuar con el siguiente trabajo o preparar release.",
+            "next_reason": "Итоговая проверка уже закрыта: переходи к следующей задаче или готовь release.",
         }
 
     if status == "rejected":
-        detail = "UAT rechazada."
+        detail = "UAT отклонена."
         if notes:
             detail = f"{detail} {notes}"
         elif updated_at:
-            detail = f"{detail} Registrada el {updated_at}."
+            detail = f"{detail} Зарегистрирована {updated_at}."
         return {
-            "label": "rechazada",
+            "label": "отклонена",
             "detail": detail,
             "next_command": "/alfred",
-            "next_reason": "Hay que corregir el cambio y volver a pasar la verificación manual.",
+            "next_reason": "Нужно исправить изменение и снова пройти ручную проверку.",
         }
 
-    detail = "Verificación manual/UAT pendiente."
+    detail = "Ручная проверка/UAT в ожидании."
     if updated_at:
-        detail = f"{detail} Última actualización: {updated_at}."
+        detail = f"{detail} Последнее обновление: {updated_at}."
     return {
-        "label": "pendiente",
+        "label": "в ожидании",
         "detail": detail,
         "next_command": "/alfred-dev:verify",
-        "next_reason": "La validación final sigue abierta y necesita cerrarse explícitamente.",
+        "next_reason": "Итоговая проверка ещё открыта, её нужно закрыть явно.",
     }
 
 
 def _report_next_step_payload(
     project_dir: Optional[str], session: Dict[str, Any], completed: bool
 ) -> Dict[str, str]:
-    """Devuelve una guía estructurada del siguiente paso para el informe."""
+    """Return structured next-step guidance for the report."""
     verification = _verification_status(project_dir, session, completed)
     next_command = _single_line_text(
         verification.get("next_command", "/alfred"),
@@ -433,33 +432,33 @@ def _report_next_step_payload(
 
     if next_command == "/alfred-dev:resume":
         return {
-            "focus": "Retomar la sesión en curso",
-            "source_label": "sesión activa",
+            "focus": "Продолжить текущую сессию",
+            "source_label": "активная сессия",
             "source": "state",
             "command": next_command,
-            "directive": "Reanuda la sesión donde se quedó y trabaja sobre la fase abierta antes de abrir otro flujo.",
-            "reason": verification.get("next_reason", "La sesión no está cerrada todavía."),
+            "directive": "Продолжи сессию с места остановки и доведи открытую фазу, прежде чем начинать другой процесс.",
+            "reason": verification.get("next_reason", "Сессия ещё не закрыта."),
         }
 
     if next_command == "/alfred-dev:verify":
         return {
-            "focus": "Cerrar la verificación pendiente",
-            "source_label": "verificación/UAT",
+            "focus": "Закрыть ожидающую проверку",
+            "source_label": "проверка/UAT",
             "source": "verify",
             "command": next_command,
-            "directive": "Registra o completa la verificación manual/UAT del entregable antes de seguir con otro trabajo.",
-            "reason": verification.get("next_reason", "Hace falta validar el resultado final."),
+            "directive": "Зарегистрируй или заверши ручную проверку/UAT результата, прежде чем браться за другую задачу.",
+            "reason": verification.get("next_reason", "Нужно проверить итоговый результат."),
         }
 
     return {
-        "focus": "Continuar después del cierre del flujo",
-        "source_label": "cierre de sesión",
+        "focus": "Продолжить после закрытия процесса",
+        "source_label": "закрытие сессии",
         "source": "report",
         "command": next_command,
-        "directive": "Usa Alfred para decidir el siguiente ciclo o cerrar la entrega apoyándote en el contexto ya sembrado.",
+        "directive": "Используй Alfred, чтобы выбрать следующий цикл или закрыть поставку, опираясь на уже собранный контекст.",
         "reason": verification.get(
             "next_reason",
-            "El flujo ya quedó cerrado y toca decidir el siguiente movimiento.",
+            "Процесс уже закрыт, пора выбрать следующий шаг.",
         ),
     }
 
@@ -471,7 +470,7 @@ def _section_summary(
     project_dir: Optional[str],
     completed: bool,
 ) -> str:
-    """Genera un resumen ejecutivo corto y accionable."""
+    """Build a short, actionable executive summary."""
     phases = [
         phase for phase in (session.get("fases_completadas") or []) if isinstance(phase, dict)
     ]
@@ -481,24 +480,24 @@ def _section_summary(
     verification = _verification_status(project_dir, session, completed)
 
     if completed and session.get("fase_actual") == "completado":
-        state_label = "flujo completado en estado"
+        state_label = "процесс завершён по состоянию"
     else:
         current_phase = _single_line_text(
-            session.get("fase_actual", "desconocida"), default="desconocida"
+            session.get("fase_actual", "неизвестна"), default="неизвестна"
         )
-        state_label = f"sesión interrumpida en '{current_phase}'"
+        state_label = f"сессия прервана в фазе '{current_phase}'"
 
-    lines = ["## Resumen ejecutivo\n"]
-    lines.append(f"- Estado general: {state_label}.")
+    lines = ["## Краткое резюме\n"]
+    lines.append(f"- Общее состояние: {state_label}.")
     lines.append(
-        f"- Fases registradas: {len(phases)}"
-        f" ({skipped} saltada(s), {retried} con reintentos)."
+        f"- Зарегистрировано фаз: {len(phases)}"
+        f" (пропущено: {skipped}, с повторами: {retried})."
     )
-    lines.append(f"- Artefactos globales: {len(artifacts)}.")
-    lines.append(f"- Tests: {_test_summary(evidence)}.")
+    lines.append(f"- Общих артефактов: {len(artifacts)}.")
+    lines.append(f"- Тесты: {_test_summary(evidence)}.")
     if decisions.get("available"):
-        lines.append(f"- Decisiones en memoria: {int(decisions.get('total', 0))} vinculada(s) a la sesión.")
-    lines.append(f"- Verificación/UAT: {verification['label']}. {verification['detail']}")
+        lines.append(f"- Решений в памяти, связанных с сессией: {int(decisions.get('total', 0))}.")
+    lines.append(f"- Проверка/UAT: {verification['label']}. {verification['detail']}")
 
     equipo = session.get("equipo_sesion") or {}
     opcionales = equipo.get("opcionales_activos", {}) if isinstance(equipo, dict) else {}
@@ -508,43 +507,43 @@ def _section_summary(
     team_source = _session_team_source_label(session)
     on_demand = _session_on_demand_optionals_for_flow(session)
     if team_source:
-        lines.append(f"- Origen del equipo runtime: {team_source}.")
+        lines.append(f"- Источник runtime-команды: {team_source}.")
     if activos:
-        lines.append(f"- Equipo opcional activo: {', '.join(activos)}.")
+        lines.append(f"- Активные опциональные агенты: {', '.join(activos)}.")
     if on_demand:
-        lines.append(f"- Opcionales solo bajo demanda en este flujo: {', '.join(on_demand)}.")
+        lines.append(f"- Опциональные агенты только по запросу в этом процессе: {', '.join(on_demand)}.")
 
     return "\n".join(lines) + "\n"
 
 
 def _section_decisions(decisions: Dict[str, Any]) -> str:
-    """Renderiza las decisiones destacadas recuperadas de memoria."""
+    """Render the key decisions loaded from memory."""
     if not decisions.get("available"):
         return ""
 
     items = decisions.get("items") or []
-    lines = ["## Decisiones destacadas\n"]
+    lines = ["## Ключевые решения\n"]
     total = int(decisions.get("total", 0) or 0)
 
     if not items:
-        lines.append("No se detectaron decisiones registradas en memoria para esta sesión.\n")
+        lines.append("В памяти нет зарегистрированных решений для этой сессии.\n")
         return "\n".join(lines) + "\n"
 
     lines.append(
-        f"Se recuperaron **{total} decisiones** vinculadas a la iteración de memoria.\n"
+        f"Найдено решений, связанных с итерацией памяти: **{total}**.\n"
     )
     for item in items:
-        title = _truncate_text(item.get("title", ""), limit=90, default="Decisión sin título")
-        chosen = _truncate_text(item.get("chosen", ""), limit=120, default="sin elección registrada")
+        title = _truncate_text(item.get("title", ""), limit=90, default="Решение без названия")
+        chosen = _truncate_text(item.get("chosen", ""), limit=120, default="выбор не зарегистрирован")
         phase = _single_line_text(item.get("phase", ""))
         status = _single_line_text(item.get("status", ""), default="active")
         rationale = _truncate_text(item.get("rationale", ""), limit=120)
 
         meta: List[str] = []
         if phase:
-            meta.append(f"fase: {phase}")
+            meta.append(f"фаза: {phase}")
         if status and status != "active":
-            meta.append(f"estado: {status}")
+            meta.append(f"статус: {status}")
         if rationale:
             meta.append(rationale)
         meta_suffix = f" ({'; '.join(meta)})" if meta else ""
@@ -557,40 +556,40 @@ def _section_decisions(decisions: Dict[str, Any]) -> str:
 def _section_next_step(
     session: Dict[str, Any], project_dir: Optional[str], completed: bool
 ) -> str:
-    """Indica el siguiente paso operativo más razonable."""
+    """Show the most reasonable next operational step."""
     payload = _report_next_step_payload(project_dir, session, completed)
     return (
-        "## Siguiente paso recomendado\n\n"
-        f"- Foco: {payload['focus']}\n"
-        f"- Fuente: {payload['source_label']} (`{payload['source']}`)\n"
-        f"- Comando: `{payload['command']}`\n"
-        f"- Qué hacer ahora: {payload['directive']}\n"
-        f"- Motivo: {payload['reason']}\n"
+        "## Рекомендуемый следующий шаг\n\n"
+        f"- Фокус: {payload['focus']}\n"
+        f"- Источник: {payload['source_label']} (`{payload['source']}`)\n"
+        f"- Команда: `{payload['command']}`\n"
+        f"- Что делать сейчас: {payload['directive']}\n"
+        f"- Причина: {payload['reason']}\n"
     )
 
 def _section_phases(session: Dict[str, Any]) -> str:
-    """Genera la seccion de fases completadas.
+    """Build the completed phases section.
 
-    Recorre las fases registradas en la sesion y genera una tabla con
-    el nombre de cada fase, su resultado y los artefactos generados.
+    Walks the phases recorded in the session and builds a table with the
+    name of each phase, its result and the generated artifacts.
 
     Args:
-        session: estado de la sesion.
+        session: session state.
 
     Returns:
-        Bloque markdown con la tabla de fases.
+        Markdown block with the phase table.
     """
     fases = session.get("fases_completadas", [])
     if not fases:
-        return "## Fases\n\nNo se completaron fases en esta sesion.\n"
+        return "## Фазы\n\nВ этой сессии не завершено ни одной фазы.\n"
 
-    lines = ["## Fases completadas\n"]
-    lines.append("| Fase | Resultado | Artefactos |")
+    lines = ["## Завершённые фазы\n"]
+    lines.append("| Фаза | Результат | Артефакты |")
     lines.append("|------|-----------|------------|")
 
     for fase in fases:
-        nombre = _markdown_table_cell(fase.get("nombre", "desconocida"))
-        resultado = _markdown_table_cell(fase.get("resultado", "sin resultado"))
+        nombre = _markdown_table_cell(fase.get("nombre", "неизвестна"))
+        resultado = _markdown_table_cell(fase.get("resultado", "нет результата"))
         artefactos = fase.get("artefactos", [])
         artefactos_str = (
             _markdown_table_cell(", ".join(_single_line_text(a) for a in artefactos))
@@ -600,44 +599,44 @@ def _section_phases(session: Dict[str, Any]) -> str:
         lines.append(f"| {nombre} | {resultado} | {artefactos_str} |")
 
     lines.append("")
-    fase_actual = session.get("fase_actual", "desconocida")
+    fase_actual = session.get("fase_actual", "неизвестна")
     if fase_actual == "completado":
-        lines.append("Estado final: **flujo completado**.")
+        lines.append("Итоговое состояние: **процесс завершён**.")
     else:
-        lines.append(f"Estado final: detenido en fase **{fase_actual}**.")
+        lines.append(f"Итоговое состояние: остановлен в фазе **{fase_actual}**.")
 
     return "\n".join(lines) + "\n"
 
 
 def _section_evidence(evidence: Optional[Dict[str, Any]] = None) -> str:
-    """Genera la seccion de evidencia de tests.
+    """Build the test evidence section.
 
-    Muestra si se ejecutaron tests durante la sesion, cuantos y cual
-    fue el resultado de cada uno.
+    Shows whether tests ran during the session, how many, and the result
+    of each run.
 
     Args:
-        evidence: datos de evidencia de ``get_evidence()``. Si es None,
-            se omite la seccion.
+        evidence: evidence data from ``get_evidence()``. If None, the
+            section is skipped.
 
     Returns:
-        Bloque markdown con la evidencia.
+        Markdown block with the evidence.
     """
     if evidence is None:
         return ""
 
     if not evidence.get("has_evidence", False):
         return (
-            "## Evidencia de tests\n\n"
-            "No se ejecutaron tests durante esta sesion.\n"
+            "## Прогоны тестов\n\n"
+            "Во время этой сессии тесты не запускались.\n"
         )
 
     records = evidence.get("records", [])
     all_passing = evidence.get("all_passing", False)
 
-    lines = ["## Evidencia de tests\n"]
-    status = "todos verdes" if all_passing else "con fallos"
-    lines.append(f"Se ejecutaron **{len(records)} rondas de tests** ({status}).\n")
-    lines.append("| Hora | Comando | Resultado |")
+    lines = ["## Прогоны тестов\n"]
+    status = "все зелёные" if all_passing else "есть ошибки"
+    lines.append(f"Прогонов тестов: **{len(records)}** ({status}).\n")
+    lines.append("| Время | Команда | Результат |")
     lines.append("|------|---------|-----------|")
 
     for record in records:
@@ -653,8 +652,8 @@ def _section_evidence(evidence: Optional[Dict[str, Any]] = None) -> str:
         result = record.get("result", "unknown")
         result_display = {
             "pass": "OK",
-            "fail": "FALLO",
-            "unknown": "indeterminado",
+            "fail": "ОШИБКА",
+            "unknown": "не определён",
         }.get(result, result)
 
         lines.append(
@@ -667,15 +666,15 @@ def _section_evidence(evidence: Optional[Dict[str, Any]] = None) -> str:
 
 
 def _section_team(session: Dict[str, Any]) -> str:
-    """Genera la seccion de equipo de sesion.
+    """Build the session team section.
 
-    Muestra los agentes opcionales activos durante la sesion, si los hay.
+    Shows the optional agents that were active during the session, if any.
 
     Args:
-        session: estado de la sesion.
+        session: session state.
 
     Returns:
-        Bloque markdown con el equipo.
+        Markdown block with the team.
     """
     equipo = session.get("equipo_sesion")
     if not equipo:
@@ -687,18 +686,18 @@ def _section_team(session: Dict[str, Any]) -> str:
     if not activos:
         return ""
 
-    lines = ["## Equipo de sesion\n"]
+    lines = ["## Команда сессии\n"]
     source = _session_team_source_label(session)
     if source:
-        lines.append(f"Origen runtime: **{source}**.\n")
-    lines.append("Agentes opcionales activos:\n")
+        lines.append(f"Источник runtime: **{source}**.\n")
+    lines.append("Активные опциональные агенты:\n")
     for agent in order_optional_agent_names(activos):
         lines.append(f"- {agent}")
 
     on_demand = _session_on_demand_optionals_for_flow(session)
     if on_demand:
         lines.append("")
-        lines.append("Opcionales solo bajo demanda en este flujo:\n")
+        lines.append("Опциональные агенты только по запросу в этом процессе:\n")
         for agent in on_demand:
             lines.append(f"- {agent}")
 
@@ -706,21 +705,21 @@ def _section_team(session: Dict[str, Any]) -> str:
 
 
 def _section_artifacts(session: Dict[str, Any]) -> str:
-    """Genera la seccion de artefactos generados.
+    """Build the generated artifacts section.
 
-    Lista todos los artefactos registrados durante el flujo.
+    Lists all artifacts recorded during the flow.
 
     Args:
-        session: estado de la sesion.
+        session: session state.
 
     Returns:
-        Bloque markdown con los artefactos.
+        Markdown block with the artifacts.
     """
     artefactos = session.get("artefactos", [])
     if not artefactos:
         return ""
 
-    lines = ["## Artefactos generados\n"]
+    lines = ["## Созданные артефакты\n"]
     for artefacto in artefactos:
         lines.append(f"- {_markdown_inline_code(artefacto)}")
 
@@ -728,7 +727,7 @@ def _section_artifacts(session: Dict[str, Any]) -> str:
 
 
 def _get_plugin_version() -> str:
-    """Lee la version del plugin desde plugin.json. Fallback a hardcoded."""
+    """Read the plugin version from plugin.json. Fall back to a hardcoded value."""
     try:
         plugin_path = os.path.join(
             os.path.dirname(__file__), "..", ".claude-plugin", "plugin.json"
@@ -741,31 +740,31 @@ def _get_plugin_version() -> str:
 
 
 def _section_mode(session: Dict[str, Any]) -> str:
-    """Genera la seccion de modo de sesion (autopilot o interactivo).
+    """Build the session mode section (autopilot or interactive).
 
     Args:
-        session: estado de la sesion.
+        session: session state.
 
     Returns:
-        Bloque markdown con el modo de sesion.
+        Markdown block with the session mode.
     """
     is_autopilot = session.get("autopilot", False)
-    modo = "autopilot" if is_autopilot else "interactivo"
-    return f"## Modo de sesion\n\nModo: **{modo}**\n"
+    modo = "autopilot" if is_autopilot else "интерактивный"
+    return f"## Режим сессии\n\nРежим: **{modo}**\n"
 
 
 def _section_iterations(session: Dict[str, Any]) -> str:
-    """Genera la seccion de iteraciones por fase si alguna tuvo reintentos.
+    """Build the per-phase iterations section if any phase had retries.
 
-    Solo muestra fases que tuvieron al menos una iteracion, lo que
-    indica que la gate correspondiente no se supero a la primera.
+    Shows only phases with at least one iteration. An iteration means
+    the phase gate did not pass on the first try.
 
     Args:
-        session: estado de la sesion.
+        session: session state.
 
     Returns:
-        Bloque markdown con la tabla de iteraciones, o cadena vacia
-        si ninguna fase tuvo reintentos.
+        Markdown block with the iteration table, or an empty string if
+        no phase had retries.
     """
     fases = session.get("fases_completadas", [])
     fases_con_iteraciones = [
@@ -774,8 +773,8 @@ def _section_iterations(session: Dict[str, Any]) -> str:
     if not fases_con_iteraciones:
         return ""
 
-    lines = ["## Iteraciones por fase\n"]
-    lines.append("| Fase | Iteraciones |")
+    lines = ["## Итерации по фазам\n"]
+    lines.append("| Фаза | Итерации |")
     lines.append("|------|------------|")
     for fase in fases_con_iteraciones:
         lines.append(
@@ -787,21 +786,21 @@ def _section_iterations(session: Dict[str, Any]) -> str:
 
 
 def _estimate_duration(session: Dict[str, Any]) -> str:
-    """Estima la duracion de la sesion a partir de las marcas temporales.
+    """Estimate the session duration from its timestamps.
 
-    Calcula la diferencia entre ``creado_en`` y ``actualizado_en``.
+    Computes the difference between ``creado_en`` and ``actualizado_en``.
 
     Args:
-        session: estado de la sesion.
+        session: session state.
 
     Returns:
-        Cadena con la duracion estimada en formato legible.
+        String with the estimated duration in a readable format.
     """
     creado = session.get("creado_en", "")
     actualizado = session.get("actualizado_en", "")
 
     if not creado or not actualizado:
-        return "no disponible"
+        return "нет данных"
 
     try:
         dt_start = datetime.fromisoformat(creado)
@@ -810,20 +809,20 @@ def _estimate_duration(session: Dict[str, Any]) -> str:
         total_seconds = int(delta.total_seconds())
 
         if total_seconds < 0:
-            return "no disponible"
+            return "нет данных"
         if total_seconds < 60:
-            return f"{total_seconds} segundos"
+            return f"{total_seconds} сек."
         minutes = total_seconds // 60
         if minutes < 60:
-            return f"{minutes} minutos"
+            return f"{minutes} мин."
         hours = minutes // 60
         remaining_minutes = minutes % 60
-        return f"{hours}h {remaining_minutes}m"
+        return f"{hours} ч {remaining_minutes} мин."
     except (ValueError, TypeError):
-        return "no disponible"
+        return "нет данных"
 
 
-# --- Funcion principal ---
+# --- Main function ---
 
 def generate_report(
     session: Dict[str, Any],
@@ -831,29 +830,29 @@ def generate_report(
     project_dir: Optional[str] = None,
     completed: bool = True,
 ) -> str:
-    """Genera un informe de sesion completo en formato markdown.
+    """Build a full session report in markdown.
 
-    Ensambla las secciones del informe en orden: resumen ejecutivo,
-    siguiente paso, modo, fases, iteraciones, evidencia de tests, equipo
-    y artefactos. El informe se guarda en el
-    directorio ``docs/alfred-reports/`` del proyecto.
+    Assembles the report sections in order: executive summary, next
+    step, mode, phases, iterations, test evidence, team and artifacts.
+    The report is saved in the project directory
+    ``docs/alfred-reports/``.
 
-    Si ``completed`` es False, se usa un template alternativo que marca
-    la sesion como interrumpida, util para informes parciales generados
-    cuando el hook de stop detecta una sesion en curso.
+    If ``completed`` is False, an alternative template marks the session
+    as interrupted. This is for partial reports that the stop hook
+    writes when it finds a session in progress.
 
     Args:
-        session: estado de la sesion (dict del orquestador).
-        evidence: datos de evidencia de tests (opcional).
-        project_dir: directorio del proyecto. Si es None, usa cwd.
-        completed: True si la sesion esta completada, False si es parcial.
+        session: session state (orchestrator dict).
+        evidence: test evidence data (optional).
+        project_dir: project directory. If None, uses cwd.
+        completed: True if the session is complete, False if partial.
 
     Returns:
-        Ruta del fichero generado.
+        Path of the generated file.
     """
     base = project_dir or os.getcwd()
 
-    # Ensamblar secciones
+    # Assemble sections
     decisions = _session_decisions_snapshot(base, session, completed)
     secciones = []
     secciones.append(_section_summary(session, evidence, decisions, base, completed))
@@ -866,13 +865,13 @@ def generate_report(
     secciones.append(_section_team(session))
     secciones.append(_section_artifacts(session))
 
-    # Filtrar secciones vacias
+    # Drop empty sections
     secciones_text = "\n".join(s for s in secciones if s.strip())
 
-    # Datos del encabezado
+    # Header data
     comando = _single_line_text(session.get("comando", "desconocido"), default="desconocido")
     descripcion = _single_line_text(
-        session.get("descripcion", "sin descripcion"), default="sin descripcion"
+        session.get("descripcion", "без описания"), default="без описания"
     )
     duracion = _estimate_duration(session)
     fecha = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -888,12 +887,12 @@ def generate_report(
         version=version,
     )
 
-    # Guardar el informe
+    # Save the report
     report_dir = os.path.join(base, _REPORT_DIR)
     os.makedirs(report_dir, exist_ok=True)
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-%f")
-    # Sanitizar el nombre del comando para evitar path traversal
+    # Sanitize the command name to prevent path traversal
     safe_comando = re.sub(r"[^a-zA-Z0-9_-]", "_", comando)
     filename = f"{timestamp}-{safe_comando}.md"
     report_path = os.path.join(report_dir, filename)
@@ -903,9 +902,9 @@ def generate_report(
             f.write(report_content)
     except OSError as e:
         raise RuntimeError(
-            f"No se pudo guardar el informe de sesion en '{report_path}': {e}. "
-            f"Comprueba que el directorio '{report_dir}' existe y tiene "
-            f"permisos de escritura."
+            f"Не удалось сохранить отчёт о сессии в '{report_path}': {e}. "
+            f"Проверь, что каталог '{report_dir}' существует и доступен "
+            f"для записи."
         ) from e
 
     return report_path

@@ -345,10 +345,10 @@ class TestInstallSh(unittest.TestCase):
             self.assertFalse(global_command_alias_path.exists())
             self.assertNotIn(str(fake_bin / "python3.13"), stale_hooks_after)
             self.assertNotIn(str(fake_bin / "python3.13"), stale_mcp_after)
-            self.assertIn("Instalacion global de usuario confirmada (--scope user)", result.stdout)
-            self.assertIn("Scopes local/project normalizados", result.stdout)
-            self.assertIn("No se pisa ~/.claude/skills", result.stdout)
-            self.assertIn("Instalacion completada", result.stdout)
+            self.assertIn("Глобальная установка для пользователя подтверждена (--scope user)", result.stdout)
+            self.assertIn("Scopes local/project нормализованы", result.stdout)
+            self.assertIn("~/.claude/skills не затрагивается", result.stdout)
+            self.assertIn("Установка завершена", result.stdout)
 
 
 if __name__ == "__main__":

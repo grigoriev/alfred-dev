@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
 """
-Fuente unica de verdad para los patrones de deteccion de secretos.
+Single source of truth for secret detection patterns.
 
-Este modulo centraliza los regex que detectan credenciales, tokens y claves
-en texto plano. Los consumidores son:
+This module centralizes the regexes that detect credentials, tokens and keys
+in plain text. The consumers are:
 
-    - ``core/memory.py``: sanitiza contenido antes de persistir en SQLite.
-    - ``hooks/secret-guard.sh``: bloquea escritura de secretos en ficheros.
-    - ``hooks/sensitive-read-guard.py``: avisa al leer ficheros sensibles.
+    - ``core/memory.py``: sanitizes content before it is stored in SQLite.
+    - ``hooks/secret-guard.sh``: blocks writes of secrets to files.
+    - ``hooks/sensitive-read-guard.py``: warns when sensitive files are read.
 
-Antes de este modulo, los patrones estaban duplicados en 3 sitios con
-variantes ligeramente distintas, lo que implicaba que un patron nuevo o
-una correccion de regex tenia que replicarse manualmente en los 3 ficheros.
-Ahora cualquier cambio se hace aqui y se propaga automaticamente.
+Before this module, the patterns were duplicated in 3 places with slightly
+different variants. A new pattern or a regex fix had to be copied by hand
+to all 3 files. Now each change is made here and applies everywhere.
 
-Los patrones se ordenan de mas especifico a mas generico para evitar que
-un patron amplio consuma un match que deberia capturar uno mas preciso.
+The patterns go from most specific to most generic, so that a broad
+pattern does not take a match that a more precise one should capture.
 """
 
 import os
@@ -24,45 +23,45 @@ from typing import List, Optional, Tuple
 
 
 # ---------------------------------------------------------------------------
-# Patrones de secretos en contenido de texto
+# Secret patterns in text content
 # ---------------------------------------------------------------------------
-# Cada tupla contiene (patron_compilado, etiqueta_para_marcador).
-# La etiqueta se usa como [REDACTED:<etiqueta>] en la sanitizacion.
+# Each tuple holds (compiled_pattern, marker_label).
+# Sanitization uses the label as [REDACTED:<label>].
 
 SECRET_PATTERNS: List[Tuple[re.Pattern, str]] = [
-    # Claves AWS (prefijo AKIA fijo)
+    # AWS keys (fixed AKIA prefix)
     (re.compile(r"AKIA[0-9A-Z]{16}"), "AWS_KEY"),
-    # Anthropic API Key (prefijo sk-ant-)
+    # Anthropic API key (sk-ant- prefix)
     (re.compile(r"sk-ant-[a-zA-Z0-9\-]{20,}"), "ANTHROPIC_KEY"),
-    # Claves con prefijo sk- generico (OpenAI, Stripe, etc.)
+    # Keys with a generic sk- prefix (OpenAI, Stripe, etc.)
     (re.compile(r"sk-[a-zA-Z0-9]{20,}"), "SK_KEY"),
-    # GitHub Personal Access Token (ghp_ o github_pat_)
+    # GitHub personal access token (ghp_ or github_pat_)
     (
         re.compile(r"(ghp_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{20,})"),
         "GITHUB_TOKEN",
     ),
     # Slack Token (xoxb, xoxp, xoxs, xoxa)
     (re.compile(r"xox[bpsa]-[a-zA-Z0-9\-]{10,}"), "SLACK_TOKEN"),
-    # Google API Key (prefijo AIza)
+    # Google API key (AIza prefix)
     (re.compile(r"AIza[0-9A-Za-z\-_]{35}"), "GOOGLE_KEY"),
     # SendGrid API Key
     (
         re.compile(r"SG\.[a-zA-Z0-9\-_]{22,}\.[a-zA-Z0-9\-_]{22,}"),
         "SENDGRID_KEY",
     ),
-    # Claves privadas PEM/SSH
+    # PEM/SSH private keys
     (
         re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----"),
         "PRIVATE_KEY",
     ),
-    # JWT tokens hardcodeados (3 segmentos base64url separados por puntos)
+    # Hardcoded JWT tokens (3 base64url segments separated by dots)
     (
         re.compile(
             r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"
         ),
         "JWT",
     ),
-    # Connection strings con credenciales embebidas
+    # Connection strings with embedded credentials
     (
         re.compile(
             r"(?:mysql|postgresql|postgres|mongodb(?:\+srv)?|redis|amqp)"
@@ -82,7 +81,7 @@ SECRET_PATTERNS: List[Tuple[re.Pattern, str]] = [
         ),
         "DISCORD_WEBHOOK",
     ),
-    # Asignaciones directas de credenciales en codigo fuente
+    # Direct credential assignments in source code
     (
         re.compile(
             r"(?i)(?:password|passwd|api_key|apikey|api_secret|secret_key"
@@ -130,12 +129,12 @@ _DISALLOWED_ENV_TOKENS = {
 
 
 def describe_secret_label(label: str) -> str:
-    """Devuelve una descripcion legible para el tipo de secreto."""
+    """Return a readable description for the secret type."""
     return SECRET_DESCRIPTIONS.get(label, label)
 
 
 def find_secret_label(text: str) -> Optional[str]:
-    """Devuelve la primera etiqueta de secreto encontrada en ``text``."""
+    """Return the first secret label found in ``text``."""
     for pattern, label in SECRET_PATTERNS:
         if pattern.search(text):
             return label
@@ -143,10 +142,10 @@ def find_secret_label(text: str) -> Optional[str]:
 
 
 def is_secret_storage_path(file_path: str) -> bool:
-    """Indica si la ruta es un contenedor legitimo de secretos locales.
+    """Tell if the path is a legitimate store for local secrets.
 
-    Se permiten los ficheros de entorno reales del proyecto, pero no sus
-    variantes de ejemplo o plantilla, que suelen ser versionadas.
+    Real project env files are allowed. Their example or template
+    variants are not, because they are usually under version control.
     """
     if not file_path:
         return False
@@ -171,16 +170,16 @@ def is_secret_storage_path(file_path: str) -> bool:
 
 
 def sanitize_text(text: str) -> str:
-    """Reemplaza secretos detectados por marcadores [REDACTED:<tipo>].
+    """Replace detected secrets with [REDACTED:<type>] markers.
 
-    Aplica todos los patrones de ``SECRET_PATTERNS`` sobre el texto y
-    sustituye cada coincidencia por su marcador correspondiente.
+    Applies all ``SECRET_PATTERNS`` to the text and replaces each
+    match with its marker.
 
     Args:
-        text: texto a sanitizar.
+        text: text to sanitize.
 
     Returns:
-        Texto con los secretos reemplazados por marcadores.
+        Text with secrets replaced by markers.
     """
     for pattern, label in SECRET_PATTERNS:
         text = pattern.sub(f"[REDACTED:{label}]", text)

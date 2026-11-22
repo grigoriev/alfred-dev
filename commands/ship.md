@@ -21,7 +21,7 @@ python3 .claude/alfred-continuity.py consume-prefetch "$PWD" --expected ship
 его нет, запусти каноничную сессию командой:
 
 ```bash
-python3 .claude/alfred-continuity.py start-flow "$PWD" --command ship --raw "Preparar entrega a producción"
+python3 .claude/alfred-continuity.py start-flow "$PWD" --command ship --raw "Подготовить поставку в production"
 ```
 
 В режиме headless (`claude -p`), SDK без пригодного callback `AskUserQuestion`,

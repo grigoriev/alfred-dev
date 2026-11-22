@@ -1,119 +1,119 @@
-# Documentación técnica de Alfred Dev
+# Техническая документация Alfred Dev
 
-Esta documentación esta pensada para desarrolladores que necesitan entender como funciona el plugin Alfred Dev por dentro: su arquitectura, sus decisiones de diseño, como se integra en Claude Code y como contribuir. No es documentación de usuario (eso esta en el [README del proyecto](../README.md) y en la [landing page](https://alfred-dev.com/)); es documentación técnica del plugin.
+Эта документация для разработчиков, которым нужно понять, как плагин Alfred Dev устроен внутри: его архитектуру, решения по дизайну, интеграцию с Claude Code и порядок внесения вклада. Это не пользовательская документация (она в [README проекта](../README.md) и на [landing page](https://alfred-dev.com/)); это техническая документация плагина.
 
-`docs/` contiene solo documentación estable y útil para entender, operar y mantener Alfred Dev. Los artefactos temporales de trabajo no se publican aquí; los informes de release versionados sí viven en este directorio cuando documentan evidencia útil para mantener el plugin.
+`docs/` содержит только стабильную документацию, которая помогает понять, эксплуатировать и сопровождать Alfred Dev. Временные рабочие артефакты здесь не публикуются; версионированные отчёты о релизах лежат в этом каталоге, если они документируют подтверждения, полезные для сопровождения плагина.
 
-La rama `main` contiene el plugin y su runtime. La landing publica vive en la rama `Alfred-Astro` y se despliega desde Coolify sobre el VPS.
+Ветка `main` содержит плагин и его runtime. Публичная landing page живёт в ветке `Alfred-Astro` и разворачивается из Coolify на VPS.
 
-Alfred Dev es un plugin de Claude Code con un equipo de 10 agentes (8 de nucleo, Designer si hay frontend y CTO bajo demanda). Cada agente tiene un rol definido y quality gates verificables con evidencia, y el plugin se organiza en 4 capas (comandos, agentes, core Python, integracion) que se coordinan a traves de un fichero de estado JSON y una base de datos SQLite para memoria persistente. Publica 11 skills de proceso.
+Alfred Dev это плагин Claude Code с командой из 10 агентов (8 базовых, Designer при наличии фронтенда и CTO по запросу). У каждого агента своя роль и quality gates, проверяемые по подтверждению. Плагин организован в 4 слоя (команды, агенты, ядро на Python, интеграция), которые координируются через JSON-файл состояния и базу данных SQLite для постоянной памяти. Он публикует 11 skills процесса.
 
-El código fuente es la referencia definitiva, pero esta documentación explica el **por que** detrás de cada decisión: por que Python y no JavaScript, por que SQLite y no JSON, por que 10 agentes y no uno solo, por que quality gates en cada transición. Un junior debe poder leer esta documentación de principio a fin y entender el proyecto sin ayuda externa.
+Исходный код остаётся окончательным источником истины, но эта документация объясняет, **почему** принято каждое решение: почему Python, а не JavaScript, почему SQLite, а не JSON, почему 10 агентов, а не один, почему quality gates на каждом переходе. Junior должен суметь прочитать эту документацию от начала до конца и понять проект без посторонней помощи.
 
 ---
 
-## Mapa del proyecto
+## Карта проекта
 
 ```mermaid
 mindmap
   root((Alfred Dev))
-    Arquitectura
-      4 capas del sistema
-      Decisiones de diseño
-      Flujo de datos
-    Flujos de trabajo
-      feature -- hasta 7 fases
-      fix -- 3 fases
-      spike -- 2 fases
-      ship -- 4 fases
-      audit -- 1 fase
-      quick -- 2 fases
-    El equipo
-      8 agentes de nucleo + Designer
-      CTO opcional
-      Motor de personalidad
-    Capacidades
-      Catalogo publicado de 11 skills de proceso
-      10 hooks del ciclo de vida
-      Memoria persistente SQLite
-    Operaciones
-      Instalación y carga
-      Configuración por proyecto
-      Tests y gates de release
+    Архитектура
+      4 слоя системы
+      Решения по дизайну
+      Поток данных
+    Процессы
+      feature -- до 7 фаз
+      fix -- 3 фазы
+      spike -- 2 фазы
+      ship -- 4 фазы
+      audit -- 1 фаза
+      quick -- 2 фазы
+    Команда
+      8 базовых агентов + Designer
+      Опциональный CTO
+      Движок личности
+    Возможности
+      Опубликованный каталог из 11 skills процесса
+      10 хуков жизненного цикла
+      Постоянная память SQLite
+    Эксплуатация
+      Установка и загрузка
+      Конфигурация по проекту
+      Тесты и gates релиза
 ```
 
 ---
 
-## Navegación
+## Навигация
 
-La documentación se organiza de lo general a lo específico. Se recomienda leer en el orden que aparece en la tabla, aunque cada fichero es autocontenido.
+Документация идёт от общего к частному. Рекомендуется читать в порядке таблицы, хотя каждый файл самодостаточен.
 
-| Fichero | Descripción |
-|---------|-------------|
-| [architecture.md](architecture.md) | Las 4 capas del sistema, diagramas C4 y de secuencia, decisiones de diseño fundamentales |
-| [flows.md](flows.md) | Los 6 flujos de trabajo con diagramas de estado, quality gates y formato de veredicto |
-| [commands.md](commands.md) | Referencia de los 18 comandos publicados por el plugin, agrupados por uso real |
-| [agents/README.md](agents/README.md) | Vision general del equipo de 10 agentes, modelo de colaboración, distribución de modelos |
-| [skills.md](skills.md) | Catalogo de 11 skills planas y reglas de activación manual de los skills más delicados |
-| [visual.md](visual.md) | Runtime visual local de Designer: servidor, scripts, eventos, hardening y empaquetado |
-| [hooks.md](hooks.md) | Los 10 scripts de hooks que conectan Alfred con Claude Code |
-| [memory.md](memory.md) | Memoria persistente: esquema SQLite, FTS5, servidor MCP, sanitizacion |
-| [configuration.md](configuration.md) | Detección de stack, fichero .local.md, niveles de autonomía, agentes opcionales, composicion dinámica de equipo |
-| [installation.md](installation.md) | Cadena de carga de plugins en Claude Code, scripts de instalación, troubleshooting |
-| [personality.md](personality.md) | Motor de personalidad: frases, sarcasmo, veredictos, distribución de modelos |
-| [testing.md](testing.md) | Tests, auditorías reproducibles, smokes de Claude CLI, revisión humana y limites honestos de cobertura |
-| [operations.md](operations.md) | Continuidad, kanban, handoff, UAT, `docs/project/` y sync con GitHub |
-| [release.md](release.md) | Auditoría viva 0.7.0: inventario, gates, matriz manual y revisión humana |
-| [mcp.md](mcp.md) | Servidor MCP de memoria, Memory UI local y cómo encajan con SQLite y continuidad |
-| [contributing.md](contributing.md) | Cómo cambiar prompts, runtime, documentación y releases sin dejar drift |
-| [repository.md](repository.md) | Mapa del repo: dónde vive cada subsistema y qué documento explica cada zona |
+| Файл | Описание |
+|------|----------|
+| [architecture.md](architecture.md) | 4 слоя системы, диаграммы C4 и последовательностей, фундаментальные решения по дизайну |
+| [flows.md](flows.md) | 6 процессов с диаграммами состояний, quality gates и форматом вердикта |
+| [commands.md](commands.md) | Справочник по 18 командам, которые публикует плагин, сгруппированным по реальному использованию |
+| [agents/README.md](agents/README.md) | Обзор команды из 10 агентов, модель совместной работы, распределение моделей |
+| [skills.md](skills.md) | Каталог из 11 плоских skills и правила ручной активации самых чувствительных skills |
+| [visual.md](visual.md) | Локальный визуальный runtime Designer: сервер, скрипты, события, hardening и упаковка |
+| [hooks.md](hooks.md) | 10 скриптов хуков, которые связывают Alfred с Claude Code |
+| [memory.md](memory.md) | Постоянная память: схема SQLite, FTS5, сервер MCP, очистка данных |
+| [configuration.md](configuration.md) | Определение стека, файл .local.md, уровни автономности, опциональные агенты, динамический состав команды |
+| [installation.md](installation.md) | Цепочка загрузки плагинов в Claude Code, скрипты установки, troubleshooting |
+| [personality.md](personality.md) | Движок личности: фразы, сарказм, вердикты, распределение моделей |
+| [testing.md](testing.md) | Тесты, воспроизводимые аудиты, smoke-тесты Claude CLI, проверка человеком и честные границы покрытия |
+| [operations.md](operations.md) | Непрерывность, kanban, handoff, UAT, `docs/project/` и синхронизация с GitHub |
+| [release.md](release.md) | Живой аудит 0.7.0: инвентарь, gates, ручная матрица и проверка человеком |
+| [mcp.md](mcp.md) | Сервер памяти MCP, локальный Memory UI и как они сочетаются с SQLite и непрерывностью |
+| [contributing.md](contributing.md) | Как менять промпты, runtime, документацию и релизы без расхождений |
+| [repository.md](repository.md) | Карта репозитория: где живёт каждая подсистема и какой документ объясняет каждую зону |
 
-### Fichas individuales de agentes
+### Карточки агентов
 
-Cada agente tiene su propia ficha con personalidad, responsabilidades, quality gate, colaboraciones y frases.
+У каждого агента своя карточка: личность, обязанности, quality gate, взаимодействия и фразы.
 
-| Agente | Alias | Tipo |
-|--------|-------|------|
-| [alfred.md](agents/alfred.md) | Alfred | Nucleo |
-| [product-owner.md](agents/product-owner.md) | El Buscador de Problemas | Nucleo |
-| [architect.md](agents/architect.md) | El Dibujante de Cajas | Nucleo |
-| [senior-dev.md](agents/senior-dev.md) | El Artesano | Nucleo |
-| [security-officer.md](agents/security-officer.md) | El Paranoico | Nucleo |
-| [qa-engineer.md](agents/qa-engineer.md) | El Rompe-cosas | Nucleo |
-| [devops-engineer.md](agents/devops-engineer.md) | El Fontanero | Nucleo |
-| [tech-writer.md](agents/tech-writer.md) | El Traductor | Nucleo |
-| [designer.md](agents/designer.md) | Designer — La Estilista | Nucleo (si hay frontend) |
-| [cto.md](agents/cto.md) | CTO — El Director Técnico Externo | Opcional |
-
----
-
-## Por donde empezar
-
-La ruta de lectura depende de lo que necesites:
-
-**Soy nuevo en el proyecto y quiero entender como funciona.** Empieza por [architecture.md](architecture.md) para ver la vision macro, luego [flows.md](flows.md) para entender como se ejecutan los flujos de trabajo. Despues lee [agents/README.md](agents/README.md) para conocer al equipo.
-
-**Quiero contribuir al plugin.** Lee [architecture.md](architecture.md) para entender las capas y luego [testing.md](testing.md) para saber como ejecutar y escribir tests. Consulta [hooks.md](hooks.md) si vas a tocar la capa de integración o [personality.md](personality.md) si vas a añadir un agente.
-
-**Quiero mantener o publicar cambios sin dejar drift.** Lee [contributing.md](contributing.md). Resume qué superficies hay que alinear cuando cambias prompts, manifiestos, instaladores, documentación o versión.
-
-**Quiero ubicarme rápido en el repositorio.** Empieza por [repository.md](repository.md) para saber en que directorio vive cada subsistema. Luego salta a [commands.md](commands.md) si necesitas la superficie operativa publicada o a [architecture.md](architecture.md) si necesitas una visión de diseño.
-
-**Quiero entender la arquitectura y las decisiones de diseño.** Lee [architecture.md](architecture.md) de principio a fin. Las secciones de decisiones de diseño explican el razonamiento detrás de cada eleccion técnica. Complementa con [memory.md](memory.md) para el sistema de memoria y [installation.md](installation.md) para la cadena de carga de plugins.
-
-**Quiero añadir un agente nuevo.** Lee [agents/README.md](agents/README.md) para entender la diferencia entre nucleo y opcionales, luego cualquier ficha de agente como referencia de estructura (por ejemplo, [agents/qa-engineer.md](agents/qa-engineer.md)). Consulta [personality.md](personality.md) para entender como funciona el motor de personalidad y como registrar el agente en `personality.py`.
-
-**Quiero configurar Alfred para mi proyecto.** Lee [configuration.md](configuration.md) para todas las opciones disponibles: detección de stack, niveles de autonomía, agentes opcionales, memoria persistente y personalidad.
-
-**Quiero entender la operación continua del plugin.** Lee [operations.md](operations.md) y luego [mcp.md](mcp.md). Ahí está la relación entre continuidad, `docs/project/`, memoria, búsqueda y la UI local.
+| Агент | Прозвище | Тип |
+|-------|----------|-----|
+| [alfred.md](agents/alfred.md) | Alfred | Базовый |
+| [product-owner.md](agents/product-owner.md) | Искатель проблем | Базовый |
+| [architect.md](agents/architect.md) | Рисовальщик квадратиков | Базовый |
+| [senior-dev.md](agents/senior-dev.md) | Ремесленник | Базовый |
+| [security-officer.md](agents/security-officer.md) | Параноик | Базовый |
+| [qa-engineer.md](agents/qa-engineer.md) | Ломатель | Базовый |
+| [devops-engineer.md](agents/devops-engineer.md) | Сантехник | Базовый |
+| [tech-writer.md](agents/tech-writer.md) | Переводчик | Базовый |
+| [designer.md](agents/designer.md) | Designer: Стилист | Базовый (при наличии фронтенда) |
+| [cto.md](agents/cto.md) | CTO: Внешний технический директор | Опциональный |
 
 ---
 
-## Convenciones de esta documentación
+## С чего начать
 
-- **Idioma**: castellano de Espana con tildes correctas.
-- **Sin emojis**: se usan marcadores tipograficos en su lugar.
-- **Parrafos primero**: cada sección empieza con parrafos explicativos que dan contexto antes de recurrir a tablas, listas o diagramas.
-- **Diagramas Mermaid**: se usan tipos no convencionales (C4Context, stateDiagram-v2, journey, mindmap, erDiagram, quadrantChart, timeline, sequenceDiagram con boxes) para maximizar la expresividad.
-- **Referencias al código**: los datos técnicos (nombres de variables, valores por defecto, patrones regex) se extraen directamente del código fuente y se citan con la ruta del fichero.
-- **Nombre del repositorio**: `alfred-dev` (no usar `Claude-JARVIS-dev` ni `jarvis-dev`).
+Порядок чтения зависит от того, что тебе нужно:
+
+**Я новичок в проекте и хочу понять, как он работает.** Начни с [architecture.md](architecture.md), чтобы увидеть общую картину, затем [flows.md](flows.md), чтобы понять, как выполняются процессы. Потом прочитай [agents/README.md](agents/README.md), чтобы познакомиться с командой.
+
+**Я хочу внести вклад в плагин.** Прочитай [architecture.md](architecture.md), чтобы понять слои, а затем [testing.md](testing.md), чтобы узнать, как запускать и писать тесты. Загляни в [hooks.md](hooks.md), если будешь менять слой интеграции, или в [personality.md](personality.md), если будешь добавлять агента.
+
+**Я хочу сопровождать или публиковать изменения без расхождений.** Прочитай [contributing.md](contributing.md). Там кратко описано, какие поверхности нужно выровнять, когда ты меняешь промпты, манифесты, установщики, документацию или версию.
+
+**Я хочу быстро сориентироваться в репозитории.** Начни с [repository.md](repository.md), чтобы узнать, в каком каталоге живёт каждая подсистема. Потом переходи к [commands.md](commands.md), если нужна опубликованная операционная поверхность, или к [architecture.md](architecture.md), если нужен взгляд на дизайн.
+
+**Я хочу понять архитектуру и решения по дизайну.** Прочитай [architecture.md](architecture.md) от начала до конца. Разделы о решениях по дизайну объясняют логику каждого технического выбора. Дополни это [memory.md](memory.md) о системе памяти и [installation.md](installation.md) о цепочке загрузки плагинов.
+
+**Я хочу добавить нового агента.** Прочитай [agents/README.md](agents/README.md), чтобы понять разницу между базовыми и опциональными агентами, затем любую карточку агента как образец структуры (например, [agents/qa-engineer.md](agents/qa-engineer.md)). Загляни в [personality.md](personality.md), чтобы понять, как работает движок личности и как зарегистрировать агента в `personality.py`.
+
+**Я хочу настроить Alfred для своего проекта.** Прочитай [configuration.md](configuration.md) обо всех доступных опциях: определение стека, уровни автономности, опциональные агенты, постоянная память и личность.
+
+**Я хочу понять непрерывную эксплуатацию плагина.** Прочитай [operations.md](operations.md), а затем [mcp.md](mcp.md). Там описана связь между непрерывностью, `docs/project/`, памятью, поиском и локальным UI.
+
+---
+
+## Соглашения этой документации
+
+- **Язык**: русский. Устоявшиеся термины (handoff, gate, quality gate, UAT, PRD, ADR, kanban) остаются на английском.
+- **Без эмодзи**: вместо них используются типографские маркеры.
+- **Сначала абзацы**: каждый раздел начинается с поясняющих абзацев, которые дают контекст, прежде чем переходить к таблицам, спискам или диаграммам.
+- **Диаграммы Mermaid**: используются нестандартные типы (C4Context, stateDiagram-v2, journey, mindmap, erDiagram, quadrantChart, timeline, sequenceDiagram с boxes) для максимальной выразительности.
+- **Ссылки на код**: технические данные (имена переменных, значения по умолчанию, regex-шаблоны) берутся прямо из исходного кода и цитируются с путём к файлу.
+- **Имя репозитория**: `alfred-dev` (не использовать `Claude-JARVIS-dev` и `jarvis-dev`).

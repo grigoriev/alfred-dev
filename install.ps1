@@ -1,19 +1,19 @@
 # ---------------------------------------------------------------------------
-# Alfred Dev -- script de instalacion para Claude Code (Windows)
+# Alfred Dev -- install script for Claude Code (Windows)
 #
-# Uso:
+# Usage:
 #   irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.ps1 | iex
 #
-# Que hace:
-#   1. Verifica que Claude Code esta instalado
-#   2. Registra globalmente en Claude Code la fuente GitHub del plugin
-#   3. Instala el plugin con claude plugin install
-#   4. No pisa ~/.claude/skills ni instala alias global /alfred
-#   5. Listo para usar: /alfred-dev:alfred
+# What it does:
+#   1. Checks that Claude Code is installed
+#   2. Registers the plugin GitHub source globally in Claude Code
+#   3. Installs the plugin with claude plugin install
+#   4. Does not touch ~/.claude/skills and does not install a global /alfred alias
+#   5. Ready to use: /alfred-dev:alfred
 #
-# El script delega toda la gestion en la CLI nativa de Claude Code
-# (claude plugin marketplace / claude plugin install) para registrar una
-# fuente GitHub personalizada, no oficial, y mantener compatibilidad futura.
+# The script delegates all management to the native Claude Code CLI
+# (claude plugin marketplace / claude plugin install). It registers a
+# custom, unofficial GitHub source and stays compatible with future versions.
 # ---------------------------------------------------------------------------
 
 $ErrorActionPreference = 'Stop'
@@ -22,7 +22,7 @@ $Repo = "grigoriev/alfred-dev"
 $PluginName = "alfred-dev"
 $Version = "0.7.0"
 
-# -- Funciones auxiliares ---------------------------------------------------
+# -- Helper functions -----------------------------------------------------
 
 function Write-Info  { param([string]$Msg) Write-Host ">" $Msg -ForegroundColor Blue }
 function Write-Ok    { param([string]$Msg) Write-Host "+" $Msg -ForegroundColor Green }
@@ -167,14 +167,14 @@ function Normalize-ToUserScopeInstallation {
         [string]$PluginKey
     )
 
-    # Alfred Dev solo soporta instalacion global de usuario. Si alguien lo
-    # instalo antes en local/project, limpiamos ese rastro en el contexto actual
-    # antes de reinstalar con --scope user.
+    # Alfred Dev supports only a global user install. If someone installed it
+    # before in local/project scope, clean up that trace in the current context
+    # before reinstalling with --scope user.
     & claude plugin uninstall $PluginKey --scope local 2>&1 | Out-Null
     & claude plugin uninstall $PluginKey --scope project 2>&1 | Out-Null
     & claude plugin marketplace remove $PluginName --scope local 2>&1 | Out-Null
     & claude plugin marketplace remove $PluginName --scope project 2>&1 | Out-Null
-    Write-Ok "Scopes local/project normalizados; Alfred se instalara como usuario global"
+    Write-Ok "Scopes local/project нормализованы; Alfred будет установлен глобально для пользователя"
 }
 
 function Remove-StaleUserMarketplaceCheckout {
@@ -186,7 +186,7 @@ function Remove-StaleUserMarketplaceCheckout {
     $marketplaceDir = Join-Path $ClaudeDir "plugins/marketplaces/$PluginName"
     if (Test-Path $marketplaceDir -PathType Container) {
         Remove-Item -Path $marketplaceDir -Recurse -Force
-        Write-Ok "Checkout local del marketplace limpiado para evitar cache obsoleta"
+        Write-Ok "Локальный checkout marketplace очищен, чтобы не было устаревшего cache"
     }
 }
 
@@ -195,10 +195,10 @@ function Update-UserMarketplace {
 
     $updateResult = & claude plugin marketplace update $PluginName 2>&1
     if ($LASTEXITCODE -eq 0) {
-        Write-Ok "Marketplace local actualizado"
+        Write-Ok "Локальный marketplace обновлён"
     }
     else {
-        Write-Info "No se pudo ejecutar 'claude plugin marketplace update'; continuo con el checkout recien registrado"
+        Write-Info "Не удалось выполнить 'claude plugin marketplace update'; продолжаю с только что зарегистрированным checkout"
     }
 }
 
@@ -207,8 +207,8 @@ function Assert-UserScopeInstallation {
 
     $pluginListJson = & claude plugin list --json 2>$null
     if ($LASTEXITCODE -ne 0) {
-        Write-Err "No se pudo confirmar el scope global con 'claude plugin list --json'"
-        Write-Err "Alfred Dev debe quedar instalado como scope user."
+        Write-Err "Не удалось подтвердить глобальный scope через 'claude plugin list --json'"
+        Write-Err "Alfred Dev должен быть установлен со scope user."
         exit 1
     }
 
@@ -216,13 +216,13 @@ function Assert-UserScopeInstallation {
         $entries = @(($pluginListJson | Out-String) | ConvertFrom-Json)
     }
     catch {
-        Write-Err "JSON invalido en claude plugin list --json: $_"
+        Write-Err "Некорректный JSON в claude plugin list --json: $_"
         exit 1
     }
 
     $matches = @($entries | Where-Object { $_.id -eq $PluginKey })
     if ($matches.Count -eq 0) {
-        Write-Err "No aparece $PluginKey en claude plugin list --json"
+        Write-Err "$PluginKey нет в claude plugin list --json"
         exit 1
     }
 
@@ -231,14 +231,14 @@ function Assert-UserScopeInstallation {
         $details = @($activeNonUser | ForEach-Object {
             "scope=$($_.scope) projectPath=$($_.projectPath)"
         }) -join ", "
-        Write-Err "Hay instalaciones activas no globales de ${PluginKey}: $details"
+        Write-Err "Есть активные неглобальные установки ${PluginKey}: $details"
         exit 1
     }
 
     $enabledUser = @($matches | Where-Object { $_.enabled -eq $true -and $_.scope -eq "user" })
     if ($enabledUser.Count -eq 0) {
         $scopes = @($matches | ForEach-Object { "$($_.scope)" }) -join ", "
-        Write-Err "$PluginKey existe, pero no hay entrada enabled con scope user. Scopes vistos: $scopes"
+        Write-Err "$PluginKey есть, но нет записи enabled со scope user. Найденные scopes: $scopes"
         exit 1
     }
 
@@ -247,53 +247,53 @@ function Assert-UserScopeInstallation {
         $details = @($staleNonUser | ForEach-Object {
             "scope=$($_.scope) projectPath=$($_.projectPath)"
         }) -join ", "
-        Write-Info "AVISO: quedan entradas antiguas no activas de ${PluginKey}: $details"
+        Write-Info "ВНИМАНИЕ: остались старые неактивные записи ${PluginKey}: $details"
     }
 
-    Write-Ok "Instalacion global de usuario confirmada (--scope user)"
+    Write-Ok "Глобальная установка для пользователя подтверждена (--scope user)"
 }
 
-# -- Verificaciones ---------------------------------------------------------
+# -- Checks ----------------------------------------------------------------
 
 $Python = Get-CompatiblePython
 if ($null -eq $Python) {
-    Write-Err "No se encontro Python 3.10 o superior"
-    Write-Err "Se buscaron: py -3.13, py -3.12, py -3.11, py -3.10, python3, python"
-    Write-Err "Alfred Dev necesita Python para hooks, core y MCP tambien en Windows"
+    Write-Err "Python 3.10 или новее не найден"
+    Write-Err "Искали: py -3.13, py -3.12, py -3.11, py -3.10, python3, python"
+    Write-Err "Alfred Dev нужен Python для hooks, core и MCP, в том числе на Windows"
     exit 1
 }
 
-Write-Ok "Python $($Python.Version) detectado ($($Python.DisplayCommand))"
+Write-Ok "Найден Python $($Python.Version) ($($Python.DisplayCommand))"
 
 if (-not $env:USERPROFILE -or -not (Test-Path $env:USERPROFILE -PathType Container)) {
-    Write-Err "USERPROFILE no esta definido o no apunta a un directorio valido"
+    Write-Err "USERPROFILE не задан или не указывает на существующий каталог"
     exit 1
 }
 
 $ClaudeDir = Join-Path $env:USERPROFILE ".claude"
 if (-not (Test-Path $ClaudeDir)) {
-    Write-Err "No se encontro el directorio $ClaudeDir"
-    Write-Err "Asegurate de tener Claude Code instalado: https://code.claude.com/docs/en/setup"
+    Write-Err "Каталог $ClaudeDir не найден"
+    Write-Err "Убедись, что Claude Code установлен: https://code.claude.com/docs/en/setup"
     exit 1
 }
 
 if (-not (Get-Command claude -ErrorAction SilentlyContinue)) {
-    Write-Err "El comando 'claude' no esta disponible en el PATH"
-    Write-Err "Asegurate de tener Claude Code instalado y accesible desde la terminal"
+    Write-Err "Команды 'claude' нет в PATH"
+    Write-Err "Убедись, что Claude Code установлен и доступен из терминала"
     exit 1
 }
 
-# -- Instalacion ------------------------------------------------------------
+# -- Install ----------------------------------------------------------------
 
 Write-Host ""
 Write-Host "Alfred Dev" -ForegroundColor White -NoNewline
 Write-Host " v$Version" -ForegroundColor DarkGray
-Write-Host "Plugin de ingenieria de software automatizada" -ForegroundColor DarkGray
+Write-Host "Плагин автоматизированной разработки ПО" -ForegroundColor DarkGray
 Write-Host ""
 
-# -- 1. Registrar fuente global en Claude Code ------------------------------
+# -- 1. Register the global source in Claude Code ---------------------------
 
-Write-Info "Registrando fuente GitHub global en Claude Code..."
+Write-Info "Регистрирую глобальный GitHub-источник в Claude Code..."
 
 $pluginKey = "$PluginName@$PluginName"
 Normalize-ToUserScopeInstallation -PluginName $PluginName -PluginKey $pluginKey
@@ -311,29 +311,29 @@ Remove-StaleUserMarketplaceCheckout -ClaudeDir $ClaudeDir -PluginName $PluginNam
 
 $marketplaceResult = & claude plugin marketplace add $Repo --scope user 2>&1
 if ($LASTEXITCODE -eq 0) {
-    Write-Ok "Fuente GitHub declarada"
+    Write-Ok "GitHub-источник объявлен"
 }
 else {
-    Write-Err "No se pudo registrar la fuente GitHub"
-    Write-Err "Verifica tu conexion a internet y que el repositorio sea accesible:"
+    Write-Err "Не удалось зарегистрировать GitHub-источник"
+    Write-Err "Проверь подключение к интернету и доступность репозитория:"
     Write-Err "  https://github.com/$Repo"
     exit 1
 }
 
 if (Test-GlobalSourceRegistration -ClaudeDir $ClaudeDir -PluginName $PluginName -Repo $Repo) {
-    Write-Ok "Fuente GitHub registrada globalmente"
+    Write-Ok "GitHub-источник зарегистрирован глобально"
 }
 else {
-    Write-Info "La CLI respondio OK, pero la fuente no quedo registrada; reintentando..."
+    Write-Info "CLI ответил OK, но источник не зарегистрирован; пробую снова..."
     & claude plugin marketplace remove $PluginName --scope user 2>&1 | Out-Null
     $marketplaceResult = & claude plugin marketplace add $Repo --scope user 2>&1
     if ($LASTEXITCODE -eq 0 -and (Test-GlobalSourceRegistration -ClaudeDir $ClaudeDir -PluginName $PluginName -Repo $Repo)) {
-        Write-Ok "Fuente GitHub registrada globalmente tras reintento"
+        Write-Ok "GitHub-источник зарегистрирован глобально со второй попытки"
     }
     else {
-        Write-Err "Claude Code no dejo registrada la fuente global del plugin"
-        Write-Err "Fichero esperado: $(Join-Path $ClaudeDir 'plugins/known_marketplaces.json')"
-        Write-Err "Prueba a ejecutar manualmente:"
+        Write-Err "Claude Code не зарегистрировал глобальный источник плагина"
+        Write-Err "Ожидаемый файл: $(Join-Path $ClaudeDir 'plugins/known_marketplaces.json')"
+        Write-Err "Попробуй выполнить вручную:"
         Write-Err "  claude plugin marketplace remove $PluginName --scope user"
         Write-Err "  claude plugin marketplace add $Repo --scope user"
         exit 1
@@ -342,29 +342,29 @@ else {
 
 Update-UserMarketplace -PluginName $PluginName
 
-# -- 2. Instalar plugin -----------------------------------------------------
+# -- 2. Install the plugin --------------------------------------------------
 
-Write-Info "Instalando plugin..."
+Write-Info "Устанавливаю плагин..."
 
 $installResult = & claude plugin install $pluginKey --scope user 2>&1
 if ($LASTEXITCODE -eq 0) {
-    Write-Ok "Plugin instalado y habilitado"
+    Write-Ok "Плагин установлен и включён"
 }
 else {
-    Write-Err "No se pudo instalar el plugin"
-    Write-Err "Puedes intentar instalarlo manualmente:"
+    Write-Err "Не удалось установить плагин"
+    Write-Err "Можно установить его вручную:"
     Write-Err "  claude plugin marketplace add $Repo --scope user"
     Write-Err "  claude plugin install $pluginKey --scope user"
     exit 1
 }
 
-# -- 3. Parchear hooks y MCP con el Python detectado -----------------------
+# -- 3. Patch hooks and MCP with the detected Python -----------------------
 
 $PluginRoot = Get-InstalledPluginRoot -ClaudeDir $ClaudeDir -PluginName $PluginName -Version $Version
 $hooksJson = $null
 $mcpJson = $null
 
-Write-Info "Usa /alfred-dev:alfred o /alfred-dev:feature. No se pisa ~/.claude/skills."
+Write-Info "Используй /alfred-dev:alfred или /alfred-dev:feature. ~/.claude/skills не затрагивается."
 Assert-UserScopeInstallation -PluginKey $pluginKey
 
 if ($PluginRoot) {
@@ -403,11 +403,11 @@ if ($hooksJson) {
 
     if ($patchedHooks) {
         Write-TextFileAtomic $hooksJson.FullName ($hooksData | ConvertTo-Json -Depth 20)
-        Write-Ok "hooks.json parcheado para usar $($Python.ExecutablePath)"
+        Write-Ok "hooks.json пропатчен на $($Python.ExecutablePath)"
     }
 }
 else {
-    Write-Info "Aviso: no se encontro hooks.json en la instalacion activa para parchear Python"
+    Write-Info "Внимание: в активной установке нет hooks.json для патча Python"
 }
 
 if ($mcpJson) {
@@ -419,23 +419,23 @@ if ($mcpJson) {
     if ($mcpServers.'alfred-memory'.command -ne $Python.ExecutablePath) {
         $mcpServers.'alfred-memory'.command = $Python.ExecutablePath
         Write-TextFileAtomic $mcpJson.FullName ($mcpData | ConvertTo-Json -Depth 20)
-        Write-Ok ".mcp.json parcheado para usar $($Python.ExecutablePath)"
+        Write-Ok ".mcp.json пропатчен на $($Python.ExecutablePath)"
     }
 }
 else {
-    Write-Info "Aviso: no se encontro .mcp.json en la instalacion activa para parchear Python"
+    Write-Info "Внимание: в активной установке нет .mcp.json для патча Python"
 }
 
-# -- Resultado --------------------------------------------------------------
+# -- Result ----------------------------------------------------------------
 
 Write-Host ""
-Write-Host "Instalacion completada" -ForegroundColor Green
+Write-Host "Установка завершена" -ForegroundColor Green
 Write-Host ""
-Write-Host "  En Claude Code, ejecuta /reload-plugins y despues:"
+Write-Host "  В Claude Code выполни /reload-plugins, а затем:"
 Write-Host "  /alfred-dev:alfred" -ForegroundColor White
-Write-Host "  Estado: /alfred-dev:progress · retomar: /alfred-dev:retomar" -ForegroundColor DarkGray
+Write-Host "  Статус: /alfred-dev:progress · продолжить: /alfred-dev:retomar" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  Si /reload-plugins avisa por MCP/coste de cache o no aparece el plugin, reinicia Claude Code." -ForegroundColor DarkGray
-Write-Host "  Repositorio: https://github.com/$Repo" -ForegroundColor DarkGray
-Write-Host "  Documentacion: https://alfred-dev.com" -ForegroundColor DarkGray
+Write-Host "  Если /reload-plugins предупреждает о MCP/стоимости cache или плагин не появился, перезапусти Claude Code." -ForegroundColor DarkGray
+Write-Host "  Репозиторий: https://github.com/$Repo" -ForegroundColor DarkGray
+Write-Host "  Документация: https://alfred-dev.com" -ForegroundColor DarkGray
 Write-Host ""

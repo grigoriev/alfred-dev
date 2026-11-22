@@ -242,7 +242,7 @@ class TestManualSmokeRunner(unittest.TestCase):
         status, reason = manual_smoke._result_status(payload, json.dumps(payload), "", 1)
 
         self.assertEqual(status, "failed")
-        self.assertIn("presupuesto", reason)
+        self.assertIn("budget", reason)
 
     def test_run_case_uses_noninteractive_permissions_for_plugin_commands(self):
         manual_smoke = _load_manual_smoke_module()
@@ -525,7 +525,7 @@ class TestManualSmokeRunner(unittest.TestCase):
 
         self.assertEqual(diagnosis["code"], "environment_credential_rejected")
         self.assertIn("ANTHROPIC_API_KEY", " ".join(diagnosis["next_steps"]))
-        self.assertIn("entorno limpio", " ".join(diagnosis["next_steps"]))
+        self.assertIn("clean environment", " ".join(diagnosis["next_steps"]))
 
     def test_auth_diagnosis_recommends_update_for_old_claude_cli(self):
         manual_smoke = _load_manual_smoke_module()
@@ -552,7 +552,7 @@ class TestManualSmokeRunner(unittest.TestCase):
         def fake_preflight(timeout=45):
             return {
                 "status": "blocked_auth",
-                "reason": "Claude CLI devolvio 401 Invalid authentication credentials.",
+                "reason": "Claude CLI returned 401 Invalid authentication credentials.",
                 "duration_ms": 1,
                 "returncode": 1,
                 "api_error_status": 401,
@@ -623,7 +623,7 @@ class TestManualSmokeRunner(unittest.TestCase):
         def fake_preflight(timeout=45):
             return {
                 "status": "blocked_auth",
-                "reason": "Claude CLI devolvio 401 Invalid authentication credentials.",
+                "reason": "Claude CLI returned 401 Invalid authentication credentials.",
                 "duration_ms": 1,
                 "returncode": 1,
                 "api_error_status": 401,

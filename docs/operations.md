@@ -1,128 +1,128 @@
-# Operación continua y artefactos de proyecto
+# Непрерывная работа и артефакты проекта
 
-Alfred Dev no solo ejecuta flujos. También mantiene un estado operativo persistente del proyecto para que la sesión actual, la siguiente sesión y otros comandos compartan contexto estable. Esa capa vive sobre dos zonas complementarias:
+Alfred Dev не только выполняет процессы. Он также хранит постоянное операционное состояние проекта, чтобы текущая сессия, следующая сессия и другие команды разделяли стабильный контекст. Этот слой опирается на две взаимодополняющие зоны:
 
-- `.claude/`, que guarda estado de sesión, memoria SQLite, handoff y configuración local;
-- `docs/project/`, que guarda artefactos legibles para humanos y comandos operativos.
+- `.claude/` хранит состояние сессии, память SQLite, handoff и локальную конфигурацию;
+- `docs/project/` хранит артефакты, читаемые людьми и операционными командами.
 
-La idea es simple: los flujos multiagente producen trabajo; la capa de continuidad lo deja visible, resumible y retomable sin depender de recordar la conversación exacta.
+Идея простая: мультиагентные процессы производят работу, а слой непрерывности делает её видимой, кратко изложенной и готовой к продолжению без необходимости помнить точный разговор.
 
 ---
 
-## Las dos fuentes operativas
+## Два операционных источника
 
 ### `.claude/`
 
-Aquí viven los artefactos de runtime y control:
+Здесь лежат артефакты runtime и управления:
 
-- `.claude/alfred-dev-state.json`: estado activo del flujo;
-- `.claude/alfred-handoff.json`: handoff estructurado para pausa y reanudación;
-- `.claude/alfred-memory.db`: memoria persistente SQLite;
-- `.claude/alfred-dev.local.md`: configuración local del proyecto.
+- `.claude/alfred-dev-state.json`: активное состояние процесса;
+- `.claude/alfred-handoff.json`: структурированный handoff для паузы и продолжения;
+- `.claude/alfred-memory.db`: постоянная память SQLite;
+- `.claude/alfred-dev.local.md`: локальная конфигурация проекта.
 
-Estos ficheros son la fuente de verdad para el runtime.
+Эти файлы являются источником истины для runtime.
 
 ### `docs/project/`
 
-Aquí viven las proyecciones Markdown que ayudan al usuario y a los comandos a orientarse sin abrir JSON ni SQLite:
+Здесь лежат проекции в Markdown, которые помогают пользователю и командам ориентироваться без открытия JSON и SQLite:
 
-- `discovery.md`: refinado previo o preguntas abiertas;
-- `current.md`: estado operativo resumido;
-- `codebase-map.md`: mapa brownfield del repo;
-- `progress.md`: resumen de progreso y foco actual;
-- `traceability.md`: trazabilidad entre trabajo, evidencia y estado;
-- `uat.md`: validación manual / UAT;
-- `handoff.md`: handoff legible;
-- `github-sync.md`: estado y resultado del sync con GitHub;
-- `kanban/backlog.md`, `kanban/in-progress.md`, `kanban/blocked.md`, `kanban/done.md`: tablero operativo.
+- `discovery.md`: предварительное уточнение или открытые вопросы;
+- `current.md`: краткое операционное состояние;
+- `codebase-map.md`: brownfield-карта репозитория;
+- `progress.md`: сводка прогресса и текущий фокус;
+- `traceability.md`: трассируемость между работой, подтверждениями и состоянием;
+- `uat.md`: ручная валидация / UAT;
+- `handoff.md`: читаемый handoff;
+- `github-sync.md`: состояние и результат синхронизации с GitHub;
+- `kanban/backlog.md`, `kanban/in-progress.md`, `kanban/blocked.md`, `kanban/done.md`: операционная доска.
 
 ---
 
-## Comandos que alimentan esta capa
+## Команды, которые питают этот слой
 
-| Comando | Qué deja o consume |
+| Команда | Что оставляет или читает |
 |---|---|
-| `alfred` | Decide si mapear, retomar, abrir un flujo o responder en corto |
-| `map-codebase` | Siembra `docs/project/codebase-map.md` y contexto brownfield |
-| `discuss` | Siembra o actualiza `docs/project/discovery.md` |
-| `progress` | Resume `progress.md`, trazabilidad, kanban y UAT. Absorbe standup, blocked, in-progress y validate |
-| `pause` | Genera `.claude/alfred-handoff.json` y `docs/project/handoff.md` |
-| `retomar` | Reanuda una sesión pausada y resuelve el handoff |
-| `uat` | Crea o actualiza la UAT del último entregable |
-| `sync-github` | Refleja el tablero local en GitHub Issues |
-| `memory-ui` | Expone memoria y artefactos operativos en una UI local |
+| `alfred` | Решает, картировать ли, продолжить, открыть процесс или ответить коротко |
+| `map-codebase` | Создаёт `docs/project/codebase-map.md` и brownfield-контекст |
+| `discuss` | Создаёт или обновляет `docs/project/discovery.md` |
+| `progress` | Сводит `progress.md`, трассируемость, kanban и UAT. Заменяет standup, blocked, in-progress и validate |
+| `pause` | Создаёт `.claude/alfred-handoff.json` и `docs/project/handoff.md` |
+| `retomar` | Продолжает приостановленную сессию и закрывает handoff |
+| `uat` | Создаёт или обновляет UAT последнего результата |
+| `sync-github` | Отражает локальную доску в GitHub Issues |
+| `memory-ui` | Показывает память и операционные артефакты в локальном UI |
 
-`next` y `search` existen como helpers internos (`commands/next.md`, `commands/search.md`) y no se publican en `plugin.json`. El runtime de continuidad (`core/continuity.py`) sigue implementando resume/verify/standup para esos helpers y para `progress`.
-
----
-
-## Tablero operativo
-
-No hay agente `project-manager`. El kanban y la trazabilidad los escribe el runtime (`core/continuity.py`): snapshots, Markdown, validación de artefactos, siguiente paso y sync con GitHub.
-
-Esa capa deja visible:
-
-- qué está en backlog;
-- qué está en curso;
-- qué está bloqueado;
-- qué está hecho;
-- qué UAT queda pendiente;
-- qué huecos de trazabilidad siguen abiertos.
+`next` и `search` существуют как внутренние хелперы (`commands/next.md`, `commands/search.md`) и не публикуются в `plugin.json`. Runtime непрерывности (`core/continuity.py`) по-прежнему реализует resume/verify/standup для этих хелперов и для `progress`.
 
 ---
 
-## Handoff, pausa y reanudación
+## Операционная доска
 
-El handoff existe para que una sesión pueda detenerse sin perder el hilo técnico. Cuando el usuario ejecuta `pause`, Alfred:
+Агента `project-manager` нет. Kanban и трассируемость пишет runtime (`core/continuity.py`): снимки, Markdown, валидацию артефактов, следующий шаг и синхронизацию с GitHub.
 
-1. lee el estado actual del flujo;
-2. construye un resumen de fase, gates, artefactos y siguiente paso;
-3. lo guarda en JSON para el runtime y en Markdown para lectura humana.
+Этот слой показывает:
 
-Cuando el usuario ejecuta `retomar`, el plugin:
-
-1. carga el handoff pendiente;
-2. recupera el comando y la fase;
-3. marca el handoff como resuelto;
-4. devuelve una instrucción de reanudación consistente.
-
-Esto evita dos fallos frecuentes en entornos CLI:
-
-- reabrir trabajo sin recordar la última fase real;
-- inventar contexto que el sistema sí conocía, pero no había resumido bien.
+- что лежит в backlog;
+- что в работе;
+- что заблокировано;
+- что сделано;
+- какой UAT ещё ожидает;
+- какие пробелы трассируемости остаются открытыми.
 
 ---
 
-## UAT y validación manual
+## Handoff, пауза и продолжение
 
-Alfred separa expresamente la evidencia automática de la validación humana. Los tests pueden estar verdes y, aun así, faltar confirmación funcional. Por eso `uat` mantiene una pieza propia de estado:
+Handoff нужен, чтобы сессию можно было остановить, не теряя технической нити. Когда пользователь выполняет `pause`, Alfred:
 
-- `pending`: falta revisar el entregable;
-- `approved`: la validación humana está cerrada;
-- `rejected`: el cambio vuelve a retrabajo o bloqueo.
+1. читает текущее состояние процесса;
+2. собирает сводку по фазе, gates, артефактам и следующему шагу;
+3. сохраняет её в JSON для runtime и в Markdown для чтения человеком.
 
-La UAT afecta a la capa operativa y a los informes de sesión. Un flujo puede estar completado a nivel de runtime y seguir “pendiente de UAT” a nivel de operación real.
+Когда пользователь выполняет `retomar`, плагин:
 
----
+1. загружает ожидающий handoff;
+2. восстанавливает команду и фазу;
+3. помечает handoff как закрытый;
+4. возвращает согласованную инструкцию для продолжения.
 
-## Sync con GitHub
+Это предотвращает две частые ошибки в CLI-окружениях:
 
-`sync-github` no convierte GitHub en la fuente de verdad. Hace lo contrario: proyecta el tablero local en GitHub Issues cuando el proyecto lo necesita.
-
-El flujo esperado es:
-
-1. el estado operativo se mantiene en `docs/project/` y `.claude/`;
-2. `progress` comprueba consistencia local;
-3. `sync-github` refleja esa realidad en GitHub usando `gh`;
-4. `github-sync.md` deja rastro de la sincronización.
-
-Esta decisión evita que el proyecto dependa por completo de una integración remota para conservar su contexto operativo.
+- возобновление работы без памяти о последней реальной фазе;
+- выдумывание контекста, который система знала, но плохо изложила.
 
 ---
 
-## Relación con otros documentos
+## UAT и ручная валидация
 
-- [commands.md](commands.md) resume qué hace cada comando.
-- [memory.md](memory.md) explica la memoria persistente.
-- [repository.md](repository.md) ubica esta capa dentro del repo.
-- [testing.md](testing.md) cubre los tests y contratos asociados.
+Alfred явно отделяет автоматические подтверждения от валидации человеком. Тесты могут быть зелёными, но функционального подтверждения всё равно может не хватать. Поэтому `uat` хранит отдельную часть состояния:
+
+- `pending`: результат ещё нужно проверить;
+- `approved`: валидация человеком закрыта;
+- `rejected`: изменение возвращается на доработку или блокируется.
+
+UAT влияет на операционный слой и на отчёты сессии. Процесс может быть завершён на уровне runtime и оставаться «в ожидании UAT» на уровне реальной работы.
+
+---
+
+## Синхронизация с GitHub
+
+`sync-github` не делает GitHub источником истины. Он делает обратное: проецирует локальную доску в GitHub Issues, когда это нужно проекту.
+
+Ожидаемый процесс:
+
+1. операционное состояние хранится в `docs/project/` и `.claude/`;
+2. `progress` проверяет локальную согласованность;
+3. `sync-github` отражает эту картину в GitHub через `gh`;
+4. `github-sync.md` оставляет след синхронизации.
+
+Это решение не даёт проекту полностью зависеть от удалённой интеграции для сохранения операционного контекста.
+
+---
+
+## Связь с другими документами
+
+- [commands.md](commands.md) кратко описывает каждую команду.
+- [memory.md](memory.md) объясняет постоянную память.
+- [repository.md](repository.md) показывает, где этот слой лежит в репозитории.
+- [testing.md](testing.md) описывает связанные тесты и контракты.

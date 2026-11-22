@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Hook sincrono de SessionStart: prepara artefactos locales del proyecto.
-# No toca settings.json ni settings.local.json de Claude Code.
+# Synchronous SessionStart hook: prepares local project artifacts.
+# Does not touch the Claude Code settings.json or settings.local.json.
 
 set -euo pipefail
 
@@ -128,7 +128,7 @@ active = db.get_active_iteration()
 if active is None:
     iteration_id = db.start_iteration(
         command='session',
-        description='Sesion de trabajo general',
+        description='Общая рабочая сессия',
     )
     db.log_event(
         event_type='session_started',

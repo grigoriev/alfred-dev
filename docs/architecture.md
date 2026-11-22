@@ -1,201 +1,201 @@
-# Arquitectura del sistema
+# Архитектура системы
 
-Este documento describe como esta construido Alfred Dev por dentro: sus capas, sus decisiones de diseño y como fluyen los datos desde que el usuario escribe un comando hasta que se genera el artefacto final. Es la pieza central de la documentación técnica del plugin y esta pensado para que cualquier desarrollador, incluidos juniors que se incorporen al proyecto, pueda entender la estructura completa sin ayuda externa.
+Этот документ описывает, как Alfred Dev устроен внутри: его слои, проектные решения и путь данных от момента, когда пользователь пишет команду, до создания итогового артефакта. Это центральная часть технической документации плагина. Она написана так, чтобы любой разработчик, включая junior-разработчиков, которые приходят в проект, мог понять всю структуру без посторонней помощи.
 
-Alfred Dev es un plugin para Claude Code que implementa un equipo virtual de ingenieria de software. El plugin no es una aplicación independiente: funciona dentro del ecosistema de Claude Code y aprovecha sus capacidades nativas (herramientas, subagentes, hooks, MCP) para orquestar flujos de desarrollo completos. El diseño se organiza en cuatro capas con responsabilidades bien delimitadas, donde cada capa depende solo de la anterior y nunca al reves.
-
----
-
-## Las cuatro capas del sistema
-
-La arquitectura de Alfred Dev sigue un modelo de capas donde la comunicación fluye siempre de arriba hacia abajo. Cada capa tiene una responsabilidad clara y un formato de ficheros propio. Esta separación permite modificar una capa sin afectar a las demas, siempre que se respete la interfaz entre ellas.
-
-### Capa de comandos (`commands/*.md`)
-
-Los comandos son la puerta de entrada del usuario al sistema. Cuando alguien escribe `/alfred-dev:feature`, `/alfred-dev:fix` o cualquier otro comando, Claude Code busca el fichero Markdown correspondiente en el directorio `commands/` y lo inyecta como system prompt en la conversacion. Esto significa que los comandos no son scripts ejecutables: son instrucciones en lenguaje natural que le dicen a Claude que hacer paso a paso, que agentes invocar y en que orden.
-
-Cada fichero de comando tiene dos partes: un frontmatter YAML con metadatos (descripción del comando, hint del argumento) y un cuerpo Markdown con las instrucciones del flujo. El frontmatter le permite a Claude Code mostrar ayuda contextual; el cuerpo define las fases, las gates y las reglas que no se pueden saltar.
-
-El plugin tiene 18 comandos registrados en `plugin.json`. La entrada contextual es `/alfred-dev:alfred`:
-
-| Comando | Fichero | Propósito |
-|---------|---------|-----------|
-| `/alfred-dev:alfred` | `alfred.md` | Entrada contextual: decide el siguiente paso |
-| `/alfred-dev:progress` | `progress.md` | Estado operativo, kanban y trazabilidad |
-| `/alfred-dev:retomar` | `retomar.md` | Reanuda una sesión pausada |
-| `/alfred-dev:pause` | `pause.md` | Pausa el trabajo y deja handoff |
-| `/alfred-dev:map-codebase` | `map-codebase.md` | Mapeo brownfield del repositorio |
-| `/alfred-dev:discuss` | `discuss.md` | Refinado previo y discovery persistente |
-| `/alfred-dev:memory-ui` | `memory-ui.md` | UI local de la memoria SQLite |
-| `/alfred-dev:ajustes` | `ajustes.md` | Configuración del plugin |
-| `/alfred-dev:uat` | `uat.md` | Validación humana |
-| `/alfred-dev:sync-github` | `sync-github.md` | Espejo del tablero local en GitHub Issues |
-| `/alfred-dev:quick` | `quick.md` | Flujo ligero |
-| `/alfred-dev:feature` | `feature.md` | Ciclo completo de una feature |
-| `/alfred-dev:fix` | `fix.md` | Diagnóstico y corrección de bugs |
-| `/alfred-dev:spike` | `spike.md` | Investigación exploratoria |
-| `/alfred-dev:ship` | `ship.md` | Release y despliegue |
-| `/alfred-dev:audit` | `audit.md` | Auditoría en paralelo |
-| `/alfred-dev:lucius` | `lucius.md` | Segunda opinión externa |
-| `/alfred-dev:update` | `update.md` | Actualizar el plugin |
-
-La entrada contextual publicada es `/alfred-dev:alfred`. El instalador no
-crea un alias global `/alfred` ni pisa `~/.claude/skills`. `next` y `search`
-viven en `commands/` como helpers internos y no están en `plugin.json`.
-
-### Capa de agentes (`agents/*.md`)
-
-Los agentes son system prompts especializados que Claude Code ejecuta como subagentes mediante la herramienta Agent. Cada agente tiene un rol definido dentro del equipo virtual, herramientas restringidas segun su ámbito de actuacion y una personalidad propia que se adapta al nivel de sarcasmo configurado por el usuario.
-
-La distinción clave en esta capa es la separación entre el nucleo y el único opcional. Los 8 agentes de nucleo más Selina (si hay frontend) participan en los flujos: cuando `feature.md` dice «activa el agente product-owner», Claude Code crea un subagente Agent cuyo system prompt es el contenido de `agents/product-owner.md`. Lucius se activa solo bajo demanda.
-
-**Agentes de nucleo** (8 + Selina):
-
-| Agente | Alias | Rol |
-|--------|-------|-----|
-| `alfred` | Alfred | Jefe de operaciones / Orquestador |
-| `product-owner` | El Buscador de Problemas | Product Owner |
-| `architect` | El Dibujante de Cajas | Arquitecto |
-| `senior-dev` | El Artesano | Senior dev |
-| `security-officer` | El Paranoico | CSO |
-| `qa-engineer` | El Rompe-cosas | QA |
-| `devops-engineer` | El Fontanero | DevOps |
-| `tech-writer` | El Traductor | Tech Writer |
-| `selina` | La Estilista | Dirección visual si hay frontend |
-
-**Agente opcional** (1):
-
-| Agente | Alias | Rol |
-|--------|-------|-----|
-| `lucius` | El Director Tecnico Externo | Segunda opinion tecnica externa |
-
-### Capa core (`core/*.py`)
-
-La capa core contiene la lógica de negocio pura del plugin, escrita en Python. Estos modulos no tienen dependencia directa de Claude Code: son funciones y clases que reciben datos, los procesan y devuelven resultados. Se ejecutan via `python3 -c` desde los hooks o como imports desde el servidor MCP.
-
-La capa core no es un único módulo grande, sino una familia de módulos especializados. Los más importantes hoy son:
-
-- **`orchestrator.py`** -- Maquina de estados que define 6 flujos de trabajo (feature, fix, spike, ship, audit, quick), cada uno con sus fases secuenciales y quality gates. El orquestador gestiona la creación de sesiones, la evaluación de gates y el avance entre fases. El estado se persiste en un fichero JSON plano (`.claude/alfred-dev-state.json`). Desde v0.3.6, `run_flow()` puede inyectar un equipo efimero (`equipo_sesion`) generado por la composicion dinámica y, si no se le pasa uno explícito, deriva automáticamente el equipo persistido del proyecto desde `.claude/alfred-dev.local.md` para que runtime y configuración no diverjan (ver [configuration.md](configuration.md#composicion-dinámica-de-equipo)).
-
-- **`config_loader.py`** -- Cargador de configuración que lee las preferencias del usuario desde un fichero `.local.md` con frontmatter YAML y detecta automáticamente el stack tecnologico del proyecto (runtime, lenguaje, framework, ORM, test runner, bundler). Incluye un parser YAML básico como fallback para entornos sin PyYAML. Su salida se combina con `suggest_optional_agents()` y con el catálogo canónico de `optional_agents.py` para recomendar especialistas según señales reales del proyecto sin duplicar listas entre runtime y composición dinámica. También expone builders canónicos de `equipo_sesion` persistido para que `run_flow()` y helpers como `quick` arranquen con el mismo equipo operativo, y ahora aporta la UX estructurada de `/alfred-dev:ajustes` con `build_config_section_summaries()`, `build_config_section_menu()`, `apply_config_section_update()`, `build_config_section_change_preview()`, `update_config_section()` y `update_project_config_section()`.
-- **`optional_agents.py`** -- Catálogo canónico del único opcional (`lucius`). Centraliza grupo `Auditoria`, labels visibles, especialidad e integración por fase y los builders de menús (`build_optional_agent_group_menu()` / `build_optional_agent_group_menus()`) para que `ajustes` y la composición dinámica no dependan de listas escritas a mano.
-
-- **`continuity.py`** -- Capa determinista de continuidad operativa. La superficie pública usa `map-codebase`, `discuss`, `pause`, `progress`, `retomar`, `uat` y `sync-github`. Los helpers internos `next` y `search` no se publican. El runtime también implementa resume/verify/standup/validate para esos helpers y para `progress`. Persiste `current.md`, `handoff.md`, `uat.md` y `github-sync.md`. Como helper de mantenimiento interno, tambien expone `normalize-kanban` para tableros heredados.
-- **`memory.py`, `memory_sync.py`, `memory_ui_server.py`** -- Subsistema de memoria persistente: SQLite, búsqueda, sanitización, sync a memorias nativas y UI local.
-- **`memory_config.py`** -- Parser ligero de la seccion `memoria` del frontmatter local. Permite que hooks, sync y servidor MCP apliquen la misma configuracion efectiva sin duplicar logica.
-- **`personality.py`** -- Motor de personalidad que define la identidad, voz y frases caracteristicas de cada agente. El tono se adapta a un nivel de sarcasmo configurable (1 = profesional, 5 = acido). Con niveles altos se añaden frases mordaces al repertorio de cada agente.
-- **`session_report.py`** -- Generación de informes de sesión en `docs/alfred-reports/` al cierre o interrupción de flujos.
-- **`selina_*`** -- Runtime visual de Selina: catálogo de estilos, selector guiado, dirección final, variantes y soporte de renderizado.
-
-### Capa de integración (`hooks/`, `mcp/`)
-
-La capa de integración es el puente entre Alfred Dev y el ciclo de vida de Claude Code. Mientras que las capas anteriores definen «que hacer», esta capa define «cuando hacerlo» y «como conectar con el exterior».
-
-**Hooks** (10 scripts registrados, 5 eventos del ciclo de vida):
-
-Los hooks son scripts que Claude Code ejecuta automáticamente cuando ocurren eventos específicos. Se registran en `hooks/hooks.json`; `matcher` es opcional y solo se declara en eventos donde Claude Code lo soporta. En eventos como `Stop` y `UserPromptSubmit`, Alfred evita declarar `matcher` porque Claude Code lo ignora. En `UserPromptExpansion`, Alfred también omite `matcher` para cubrir todos los slash commands y prompts MCP expandidos, aunque Claude Code ya permite filtrar por `command_name`. En `PreCompact`, Alfred omite `matcher` para cubrir tanto compactaciones manuales como automáticas. Este plugin no registra Stop, UserPromptExpansion ni PreCompact.
-
-| Hook | Evento | Matcher | Función |
-|------|--------|---------|---------|
-| `session-bootstrap.sh` | SessionStart | startup, resume, clear, compact, fork | Bootstrap síncrono del proyecto antes del primer prompt |
-| `session-start.sh` | SessionStart | startup, resume, clear, compact, fork | Inyecta contexto del proyecto al inicio de sesión |
-| `session-end.py` | SessionEnd | (ninguno) | Cierra Memory UI y escribe el cierre de sesión |
-| `prompt-route.py` | UserPromptSubmit | (ninguno) | Sugiere fix/quick/retomar si el texto no trae slash |
-| `secret-guard.py` | PreToolUse | Write, Edit, Bash, mcp__.* | Bloquea escritura de secretos |
-| `dangerous-command-guard.py` | PreToolUse | Bash | Bloquea comandos destructivos |
-| `sensitive-read-guard.py` | PreToolUse | Read | Avisa al leer ficheros con credenciales |
-| `quality-gate.py` | PostToolUse | Bash | Vigila resultados de tests tras ejecución de comandos |
-| `evidence-guard.py` | PostToolUse | Bash | Registra evidencia real de ejecucion de tests para gates automaticas |
-| `activity-capture.py` | PostToolUse + UserPromptSubmit | (multiples) | Captura decisiones, gates, handoffs, UAT y commits de la sesión |
-
-**Servidor MCP** (1 fichero):
-
-El fichero `mcp/memory_server.py` implementa un servidor MCP (Model Context Protocol) sobre stdio que expone la memoria persistente del proyecto. Claude Code lanza este proceso al inicio de sesión y lo mantiene vivo. El servidor habla JSON-RPC 2.0 sobre stdio en formato MCP actual (un mensaje JSON por linea), mantiene lectura compatible con el framing `Content-Length` historico y expone 15 herramientas:
-
-| Herramienta MCP | Propósito |
-|-----------------|-----------|
-| `memory_search` | Busqueda textual en decisiones, commits y eventos con contenido (FTS5 o LIKE) |
-| `memory_log_decision` | Registra una decisión de diseño formal |
-| `memory_log_commit` | Registra un commit y lo vincula a decisiones |
-| `memory_get_iteration` | Obtiene datos de una iteracion (o la activa) |
-| `memory_get_timeline` | Cronología de eventos de una iteracion |
-| `memory_stats` | Estadisticas generales de la memoria |
-| `memory_manage_iteration` | Inicia o completa iteraciones desde MCP |
-| `memory_log_event` | Registra eventos arbitrarios de cronología |
-| `memory_get_decisions` | Lista decisiones con filtros por iteración, tags o estado |
-| `memory_purge` | Purga eventos antiguos según retención |
-| `memory_update_decision` | Actualiza estado o etiquetas de una decisión |
-| `memory_link_decisions` | Crea relaciones entre decisiones |
-| `memory_health` | Valida integridad y salud de la memoria |
-| `memory_export` | Exporta decisiones a Markdown tipo ADR |
-| `memory_import` | Importa historial desde Git o ADRs |
+Alfred Dev: плагин для Claude Code, который реализует виртуальную команду программной инженерии. Плагин не отдельное приложение: он работает внутри экосистемы Claude Code и использует её встроенные возможности (инструменты, субагенты, хуки, MCP), чтобы оркестрировать полные процессы разработки. Архитектура состоит из четырёх слоёв с чётко разграниченными зонами ответственности. Каждый слой зависит только от предыдущего и никогда наоборот.
 
 ---
 
-## Vision macro del sistema
+## Четыре слоя системы
 
-El siguiente diagrama C4 muestra las relaciones entre los actores y contenedores principales del sistema. El objetivo es dar una vision de pajaro: quien habla con quien y por donde fluyen los datos.
+Архитектура Alfred Dev следует модели слоёв, где взаимодействие всегда идёт сверху вниз. У каждого слоя ясная ответственность и свой формат файлов. Такое разделение позволяет менять один слой, не затрагивая остальные, если соблюдается интерфейс между ними.
+
+### Слой команд (`commands/*.md`)
+
+Команды: точка входа пользователя в систему. Когда кто-то пишет `/alfred-dev:feature`, `/alfred-dev:fix` или любую другую команду, Claude Code ищет соответствующий Markdown-файл в каталоге `commands/` и внедряет его в разговор как system prompt. Значит, команды не исполняемые скрипты: это инструкции на естественном языке, которые шаг за шагом говорят Claude, что делать, каких агентов вызывать и в каком порядке.
+
+У каждого файла команды две части: YAML frontmatter с метаданными (описание команды, подсказка по аргументу) и тело Markdown с инструкциями процесса. Frontmatter позволяет Claude Code показывать контекстную справку; тело определяет фазы, gates и правила, которые нельзя пропустить.
+
+В плагине 18 команд, зарегистрированных в `plugin.json`. Контекстный вход: `/alfred-dev:alfred`:
+
+| Команда | Файл | Назначение |
+|---------|------|------------|
+| `/alfred-dev:alfred` | `alfred.md` | Контекстный вход: решает, какой шаг следующий |
+| `/alfred-dev:progress` | `progress.md` | Операционное состояние, kanban и трассируемость |
+| `/alfred-dev:retomar` | `retomar.md` | Продолжает приостановленную сессию |
+| `/alfred-dev:pause` | `pause.md` | Ставит работу на паузу и оставляет handoff |
+| `/alfred-dev:map-codebase` | `map-codebase.md` | Brownfield-картирование репозитория |
+| `/alfred-dev:discuss` | `discuss.md` | Предварительное уточнение и постоянный discovery |
+| `/alfred-dev:memory-ui` | `memory-ui.md` | Локальный UI памяти SQLite |
+| `/alfred-dev:ajustes` | `ajustes.md` | Настройка плагина |
+| `/alfred-dev:uat` | `uat.md` | Ручная валидация |
+| `/alfred-dev:sync-github` | `sync-github.md` | Зеркало локальной доски в GitHub Issues |
+| `/alfred-dev:quick` | `quick.md` | Лёгкий процесс |
+| `/alfred-dev:feature` | `feature.md` | Полный цикл feature |
+| `/alfred-dev:fix` | `fix.md` | Диагностика и исправление багов |
+| `/alfred-dev:spike` | `spike.md` | Исследовательская работа |
+| `/alfred-dev:ship` | `ship.md` | Релиз и развёртывание |
+| `/alfred-dev:audit` | `audit.md` | Параллельный аудит |
+| `/alfred-dev:cto` | `cto.md` | Внешнее второе мнение |
+| `/alfred-dev:update` | `update.md` | Обновление плагина |
+
+Опубликованный контекстный вход: `/alfred-dev:alfred`. Установщик не
+создаёт глобальный алиас `/alfred` и не перезаписывает `~/.claude/skills`. `next` и `search`
+лежат в `commands/` как внутренние хелперы и не входят в `plugin.json`.
+
+### Слой агентов (`agents/*.md`)
+
+Агенты: специализированные system prompts, которые Claude Code запускает как субагенты через инструмент Agent. У каждого агента своя роль в виртуальной команде, инструменты, ограниченные его зоной действия, и собственная личность, которая подстраивается под уровень сарказма, заданный пользователем.
+
+Ключевое различие в этом слое: разделение между ядром и единственным опциональным агентом. 8 агентов ядра и Designer (если есть фронтенд) участвуют в процессах: когда `feature.md` говорит «активируй агента product-owner», Claude Code создаёт субагента Agent, чей system prompt равен содержимому `agents/product-owner.md`. CTO активируется только по запросу.
+
+**Агенты ядра** (8 + Designer):
+
+| Агент | Прозвище | Роль |
+|-------|----------|------|
+| `alfred` | Alfred | Руководитель операций / Оркестратор |
+| `product-owner` | Искатель проблем | Product Owner |
+| `architect` | Рисовальщик коробок | Архитектор |
+| `senior-dev` | Мастер | Senior dev |
+| `security-officer` | Параноик | CSO |
+| `qa-engineer` | Ломатель | QA |
+| `devops-engineer` | Сантехник | DevOps |
+| `tech-writer` | Переводчик | Tech Writer |
+| `designer` | Стилист | Визуальное направление, если есть фронтенд |
+
+**Опциональный агент** (1):
+
+| Агент | Прозвище | Роль |
+|-------|----------|------|
+| `cto` | Внешний технический директор | Внешнее техническое второе мнение |
+
+### Слой core (`core/*.py`)
+
+Слой core содержит чистую бизнес-логику плагина на Python. У этих модулей нет прямой зависимости от Claude Code: это функции и классы, которые получают данные, обрабатывают их и возвращают результат. Они запускаются через `python3 -c` из хуков или импортируются сервером MCP.
+
+Слой core не один большой модуль, а семейство специализированных модулей. Самые важные на сегодня:
+
+- **`orchestrator.py`** -- Конечный автомат, который определяет 6 процессов работы (feature, fix, spike, ship, audit, quick), у каждого свои последовательные фазы и quality gates. Оркестратор управляет созданием сессий, оценкой gates и переходом между фазами. Состояние хранится в плоском JSON-файле (`.claude/alfred-dev-state.json`). С v0.3.6 `run_flow()` может внедрить временную команду (`equipo_sesion`), созданную динамическим составом. Если явная команда не передана, он автоматически берёт сохранённую команду проекта из `.claude/alfred-dev.local.md`, чтобы runtime и конфигурация не расходились (см. [configuration.md](configuration.md#динамический-состав-команды)).
+
+- **`config_loader.py`** -- Загрузчик конфигурации. Он читает настройки пользователя из файла `.local.md` с YAML frontmatter и автоматически определяет технологический stack проекта (runtime, язык, framework, ORM, раннер тестов, bundler). Содержит простой YAML-парсер как запасной вариант для окружений без PyYAML. Его вывод объединяется с `suggest_optional_agents()` и каноническим каталогом из `optional_agents.py`, чтобы рекомендовать специалистов по реальным признакам проекта без дублирования списков между runtime и динамическим составом. Также он предоставляет канонические builders сохранённой `equipo_sesion`, чтобы `run_flow()` и хелперы вроде `quick` стартовали с одной и той же рабочей командой, и даёт структурированный UX `/alfred-dev:ajustes` через `build_config_section_summaries()`, `build_config_section_menu()`, `apply_config_section_update()`, `build_config_section_change_preview()`, `update_config_section()` и `update_project_config_section()`.
+- **`optional_agents.py`** -- Канонический каталог единственного опционального агента (`cto`). Централизует группу `Auditoria`, видимые labels, специализацию и интеграцию по фазам, а также builders меню (`build_optional_agent_group_menu()` / `build_optional_agent_group_menus()`), чтобы `ajustes` и динамический состав не зависели от списков, написанных вручную.
+
+- **`continuity.py`** -- Детерминированный слой операционной непрерывности. Публичная поверхность использует `map-codebase`, `discuss`, `pause`, `progress`, `retomar`, `uat` и `sync-github`. Внутренние хелперы `next` и `search` не публикуются. Runtime также реализует resume/verify/standup/validate для этих хелперов и для `progress`. Сохраняет `current.md`, `handoff.md`, `uat.md` и `github-sync.md`. Как внутренний хелпер обслуживания он также предоставляет `normalize-kanban` для унаследованных досок.
+- **`memory.py`, `memory_sync.py`, `memory_ui_server.py`** -- Подсистема постоянной памяти: SQLite, поиск, санитизация, sync в нативные памяти и локальный UI.
+- **`memory_config.py`** -- Лёгкий парсер секции `memoria` локального frontmatter. Позволяет хукам, sync и серверу MCP применять одну и ту же эффективную конфигурацию без дублирования логики.
+- **`personality.py`** -- Движок личности, который задаёт идентичность, голос и характерные фразы каждого агента. Тон подстраивается под настраиваемый уровень сарказма (1 = профессиональный, 5 = едкий). На высоких уровнях в репертуар каждого агента добавляются колкие фразы.
+- **`session_report.py`** -- Создание отчётов сессии в `docs/alfred-reports/` при закрытии или прерывании процессов.
+- **`selina_*`** -- Визуальный runtime Designer: каталог стилей, пошаговый селектор, итоговое направление, варианты и поддержка рендеринга.
+
+### Слой интеграции (`hooks/`, `mcp/`)
+
+Слой интеграции: мост между Alfred Dev и жизненным циклом Claude Code. Предыдущие слои определяют «что делать», а этот слой определяет «когда это делать» и «как связываться с внешним миром».
+
+**Хуки** (10 зарегистрированных скриптов, 5 событий жизненного цикла):
+
+Хуки: скрипты, которые Claude Code запускает автоматически при определённых событиях. Они регистрируются в `hooks/hooks.json`; `matcher` необязателен и объявляется только в событиях, где Claude Code его поддерживает. В событиях вроде `Stop` и `UserPromptSubmit` Alfred не объявляет `matcher`, потому что Claude Code его игнорирует. В `UserPromptExpansion` Alfred тоже опускает `matcher`, чтобы покрыть все slash-команды и развёрнутые MCP-промпты, хотя Claude Code уже позволяет фильтровать по `command_name`. В `PreCompact` Alfred опускает `matcher`, чтобы покрыть и ручную, и автоматическую компактизацию. Этот плагин не регистрирует Stop, UserPromptExpansion и PreCompact.
+
+| Хук | Событие | Matcher | Функция |
+|-----|---------|---------|---------|
+| `session-bootstrap.sh` | SessionStart | startup, resume, clear, compact, fork | Синхронный bootstrap проекта до первого промпта |
+| `session-start.sh` | SessionStart | startup, resume, clear, compact, fork | Внедряет контекст проекта в начале сессии |
+| `session-end.py` | SessionEnd | (нет) | Закрывает Memory UI и записывает закрытие сессии |
+| `prompt-route.py` | UserPromptSubmit | (нет) | Предлагает fix/quick/retomar, если в тексте нет slash |
+| `secret-guard.py` | PreToolUse | Write, Edit, Bash, mcp__.* | Блокирует запись секретов |
+| `dangerous-command-guard.py` | PreToolUse | Bash | Блокирует разрушительные команды |
+| `sensitive-read-guard.py` | PreToolUse | Read | Предупреждает при чтении файлов с учётными данными |
+| `quality-gate.py` | PostToolUse | Bash | Следит за результатами тестов после выполнения команд |
+| `evidence-guard.py` | PostToolUse | Bash | Фиксирует реальное подтверждение запуска тестов для автоматических gates |
+| `activity-capture.py` | PostToolUse + UserPromptSubmit | (несколько) | Захватывает решения, gates, handoffs, UAT и коммиты сессии |
+
+**Сервер MCP** (1 файл):
+
+Файл `mcp/memory_server.py` реализует сервер MCP (Model Context Protocol) поверх stdio, который предоставляет постоянную память проекта. Claude Code запускает этот процесс в начале сессии и держит его живым. Сервер говорит на JSON-RPC 2.0 поверх stdio в текущем формате MCP (одно JSON-сообщение на строку), сохраняет совместимое чтение исторического framing `Content-Length` и предоставляет 15 инструментов:
+
+| Инструмент MCP | Назначение |
+|----------------|------------|
+| `memory_search` | Текстовый поиск по решениям, коммитам и событиям с содержимым (FTS5 или LIKE) |
+| `memory_log_decision` | Регистрирует формальное проектное решение |
+| `memory_log_commit` | Регистрирует коммит и связывает его с решениями |
+| `memory_get_iteration` | Получает данные итерации (или активной) |
+| `memory_get_timeline` | Хронология событий итерации |
+| `memory_stats` | Общая статистика памяти |
+| `memory_manage_iteration` | Начинает или завершает итерации из MCP |
+| `memory_log_event` | Регистрирует произвольные события хронологии |
+| `memory_get_decisions` | Список решений с фильтрами по итерации, тегам или статусу |
+| `memory_purge` | Удаляет старые события по правилу хранения |
+| `memory_update_decision` | Обновляет статус или метки решения |
+| `memory_link_decisions` | Создаёт связи между решениями |
+| `memory_health` | Проверяет целостность и состояние памяти |
+| `memory_export` | Экспортирует решения в Markdown в стиле ADR |
+| `memory_import` | Импортирует историю из Git или ADR |
+
+---
+
+## Общий вид системы
+
+Диаграмма C4 ниже показывает связи между основными участниками и контейнерами системы. Цель: дать взгляд с высоты птичьего полёта: кто с кем говорит и где идут данные.
 
 ```mermaid
 C4Context
-    title Alfred Dev - Contexto del sistema
+    title Alfred Dev - Контекст системы
 
-    Person(user, "Desarrollador", "Escribe comandos /alfred-dev:* y revisa artefactos generados")
+    Person(user, "Разработчик", "Пишет команды /alfred-dev:* и проверяет созданные артефакты")
 
-    System(claude, "Claude Code", "CLI de Anthropic que ejecuta el modelo Claude con herramientas, hooks y plugins")
+    System(claude, "Claude Code", "CLI от Anthropic, который запускает модель Claude с инструментами, хуками и плагинами")
 
-    Container_Boundary(plugin, "Plugin Alfred Dev") {
-        Container(commands, "Commands", "Markdown + YAML", "18 comandos namespaced: flujos, continuidad publica y sync GitHub")
-        Container(agents, "Agents", "Markdown", "8 nucleo + Selina + Lucius, invocados como subagentes Agent")
-        Container(core, "Core", "Python", "Orquestador, continuidad, config, memoria y personalidad")
-        Container(hooks, "Hooks", "Shell + Python", "10 hooks en 5 eventos del ciclo de vida")
-        Container(mcp, "MCP Server", "Python stdio", "Servidor JSON-RPC que expone memoria persistente")
+    Container_Boundary(plugin, "Плагин Alfred Dev") {
+        Container(commands, "Commands", "Markdown + YAML", "18 команд с namespace: процессы, публичная непрерывность и sync GitHub")
+        Container(agents, "Agents", "Markdown", "8 ядра + Designer + CTO, вызываются как субагенты Agent")
+        Container(core, "Core", "Python", "Оркестратор, непрерывность, конфиг, память и личность")
+        Container(hooks, "Hooks", "Shell + Python", "10 хуков в 5 событиях жизненного цикла")
+        Container(mcp, "MCP Server", "Python stdio", "Сервер JSON-RPC, который предоставляет постоянную память")
     }
 
-    ContainerDb(sqlite, "SQLite", "alfred-memory.db", "Memoria persistente: decisiones, commits, iteraciones, eventos")
+    ContainerDb(sqlite, "SQLite", "alfred-memory.db", "Постоянная память: решения, коммиты, итерации, события")
 
-    System_Ext(github, "GitHub API", "Releases, PRs, issues, webhooks")
+    System_Ext(github, "GitHub API", "Releases, PR, issues, webhooks")
 
-    Rel(user, claude, "Escribe comandos, revisa resultados")
-    Rel(claude, commands, "Inyecta command como system prompt")
-    Rel(commands, agents, "Invocan agentes via herramienta Agent")
-    Rel(commands, core, "Leen/escriben estado via python3")
-    Rel(hooks, core, "Ejecutan lógica de negocio")
-    Rel(mcp, sqlite, "Lee/escribe memoria persistente")
-    Rel(core, sqlite, "Gestiona memoria, sync e informes")
-    Rel(hooks, core, "Capturan eventos y consultan estado/configuración")
-    Rel(core, github, "Consulta releases para actualización")
+    Rel(user, claude, "Пишет команды, проверяет результаты")
+    Rel(claude, commands, "Внедряет command как system prompt")
+    Rel(commands, agents, "Вызывают агентов через инструмент Agent")
+    Rel(commands, core, "Читают/пишут состояние через python3")
+    Rel(hooks, core, "Выполняют бизнес-логику")
+    Rel(mcp, sqlite, "Читает/пишет постоянную память")
+    Rel(core, sqlite, "Управляет памятью, sync и отчётами")
+    Rel(hooks, core, "Захватывают события и читают состояние/конфигурацию")
+    Rel(core, github, "Запрашивает releases для обновления")
 
     UpdateRelStyle(user, claude, $offsetY="-20")
 ```
 
 ---
 
-## Flujo completo de `/alfred-dev:feature`
+## Полный процесс `/alfred-dev:feature`
 
-El flujo de feature es el mas completo del sistema: 6 fases base mas una fase 1b condicional de estilo visual, con gates entre ellas, multiples agentes y coordinación entre hooks, core y MCP. En la práctica hablamos de un flujo de hasta 7 fases. El siguiente diagrama de secuencia muestra el recorrido completo desde que el usuario escribe el comando hasta que se genera el entregable final.
+Процесс feature самый полный в системе: 6 базовых фаз и условная фаза 1b визуального стиля, с gates между ними, несколькими агентами и координацией между хуками, core и MCP. На практике это процесс до 7 фаз. Диаграмма последовательности ниже показывает весь путь от момента, когда пользователь пишет команду, до создания итогового результата.
 
-Es importante entender que este flujo no es un script que se ejecuta de una vez: cada fase es una conversacion entre Claude y el usuario donde los agentes aportan su expertise y las gates determinan si se puede avanzar. El orquestador mantiene el estado para que el flujo pueda reanudarse si se interrumpe.
+Важно понимать, что этот процесс не скрипт, который выполняется за один раз: каждая фаза это разговор между Claude и пользователем, где агенты вносят свою экспертизу, а gates определяют, можно ли идти дальше. Оркестратор хранит состояние, чтобы процесс можно было продолжить после прерывания.
 
 ```mermaid
 sequenceDiagram
-    box rgb(240, 248, 255) Usuario
-        participant U as Desarrollador
+    box rgb(240, 248, 255) Пользователь
+        participant U as Разработчик
     end
     box rgb(255, 248, 240) Claude Code
         participant CC as Claude Code CLI
     end
-    box rgb(240, 255, 240) Capa de comandos
+    box rgb(240, 255, 240) Слой команд
         participant CMD as feature.md
     end
-    box rgb(255, 240, 245) Capa de integración
+    box rgb(255, 240, 245) Слой интеграции
         participant HK as Hooks
         participant MCP as MCP Server
     end
-    box rgb(245, 245, 255) Capa core
+    box rgb(245, 245, 255) Слой core
         participant ORC as orchestrator.py
     end
-    box rgb(255, 255, 240) Agentes
+    box rgb(255, 255, 240) Агенты
         participant PO as product-owner
         participant AR as architect
         participant SO as security-officer
@@ -205,155 +205,155 @@ sequenceDiagram
         participant DO as devops-engineer
     end
 
-    U->>CC: /alfred-dev:feature "nueva funcionalidad"
-    CC->>CMD: Carga feature.md como system prompt
-    CC->>HK: SessionStart -> session-bootstrap.sh (bootstrap local)
-    CC->>HK: SessionStart -> session-start.sh (contexto)
+    U->>CC: /alfred-dev:feature "новая функциональность"
+    CC->>CMD: Загружает feature.md как system prompt
+    CC->>HK: SessionStart -> session-bootstrap.sh (локальный bootstrap)
+    CC->>HK: SessionStart -> session-start.sh (контекст)
 
-    Note over ORC: Fase 1: Producto
+    Note over ORC: Фаза 1: Продукт
 
-    CMD->>ORC: create_session("feature", descripción)
-    ORC-->>CMD: Estado inicial (fase: producto)
-    CMD->>PO: Agent: análisis de requisitos, PRD
-    PO-->>CMD: PRD con historias de usuario
-    CMD->>U: Presenta PRD
-    U->>CMD: Aprueba / solicita cambios
+    CMD->>ORC: create_session("feature", описание)
+    ORC-->>CMD: Начальное состояние (фаза: producto)
+    CMD->>PO: Agent: анализ требований, PRD
+    PO-->>CMD: PRD с пользовательскими историями
+    CMD->>U: Показывает PRD
+    U->>CMD: Одобряет / просит изменений
     CMD->>ORC: check_gate(resultado="aprobado")
-    ORC-->>CMD: Gate usuario superada
+    ORC-->>CMD: Пользовательская gate пройдена
     CMD->>ORC: advance_phase() -> arquitectura
-    HK->>MCP: activity-capture.py registra evento
+    HK->>MCP: activity-capture.py регистрирует событие
 
-    Note over ORC: Fase 2: Arquitectura
+    Note over ORC: Фаза 2: Архитектура
 
-    par Agentes en paralelo
-        CMD->>AR: Agent: diseño técnico
+    par Агенты параллельно
+        CMD->>AR: Agent: техническое проектирование
         CMD->>SO: Agent: threat model
     end
-    AR-->>CMD: Propuesta arquitectonica
-    SO-->>CMD: Informe de seguridad
-    CMD->>U: Presenta diseño + threat model
-    U->>CMD: Aprueba
+    AR-->>CMD: Архитектурное предложение
+    SO-->>CMD: Отчёт по безопасности
+    CMD->>U: Показывает проект + threat model
+    U->>CMD: Одобряет
     CMD->>ORC: check_gate(resultado="aprobado")
-    ORC-->>CMD: Gate usuario superada
+    ORC-->>CMD: Пользовательская gate пройдена
     CMD->>ORC: advance_phase() -> desarrollo
 
-    Note over ORC: Fase 3: Desarrollo
+    Note over ORC: Фаза 3: Разработка
 
-    CMD->>SD: Agent: implementacion TDD
-    SD-->>CMD: Código + tests
-    HK->>HK: secret-guard.py vigila escrituras
-    HK->>HK: quality-gate.py vigila tests
+    CMD->>SD: Agent: реализация по TDD
+    SD-->>CMD: Код + тесты
+    HK->>HK: secret-guard.py следит за записью
+    HK->>HK: quality-gate.py следит за тестами
     CMD->>ORC: check_gate(tests_ok=true)
-    ORC-->>CMD: Gate automático superada
+    ORC-->>CMD: Автоматическая gate пройдена
     CMD->>ORC: advance_phase() -> calidad
 
-    Note over ORC: Fase 4: Calidad
+    Note over ORC: Фаза 4: Качество
 
-    par Agentes en paralelo
+    par Агенты параллельно
         CMD->>QA: Agent: test plan, code review
         CMD->>SO: Agent: OWASP scan, SBOM
     end
-    QA-->>CMD: Informe QA
-    SO-->>CMD: Informe seguridad
+    QA-->>CMD: Отчёт QA
+    SO-->>CMD: Отчёт по безопасности
     CMD->>ORC: check_gate(tests_ok=true, security_ok=true)
-    ORC-->>CMD: Gate automático+seguridad superada
+    ORC-->>CMD: Gate автоматика+безопасность пройдена
     CMD->>ORC: advance_phase() -> documentación
 
-    Note over ORC: Fase 5: Documentación
+    Note over ORC: Фаза 5: Документация
 
-    CMD->>TW: Agent: documentación API, arquitectura, guias
-    TW-->>CMD: Documentación generada
+    CMD->>TW: Agent: документация API, архитектура, руководства
+    TW-->>CMD: Документация создана
     CMD->>ORC: check_gate(resultado="aprobado")
-    ORC-->>CMD: Gate libre superada
+    ORC-->>CMD: Свободная gate пройдена
     CMD->>ORC: advance_phase() -> entrega
 
-    Note over ORC: Fase 6: Entrega
+    Note over ORC: Фаза 6: Поставка
 
-    CMD->>DO: Agent: CI/CD, empaquetado y preparacion de merge
-    CMD->>SO: Agent: validación final
-    DO-->>CMD: Artefacto de entrega
-    SO-->>CMD: Visto bueno final
-    CMD->>U: Solicita aprobacion final
-    U->>CMD: Aprueba
+    CMD->>DO: Agent: CI/CD, упаковка и подготовка merge
+    CMD->>SO: Agent: финальная валидация
+    DO-->>CMD: Артефакт поставки
+    SO-->>CMD: Финальное одобрение
+    CMD->>U: Запрашивает финальное одобрение
+    U->>CMD: Одобряет
     CMD->>ORC: check_gate(resultado="aprobado", security_ok=true)
-    ORC-->>CMD: Gate usuario+seguridad superada
+    ORC-->>CMD: Gate пользователь+безопасность пройдена
     CMD->>ORC: advance_phase() -> completado
-    HK->>MCP: Registra finalizacion del flujo
+    HK->>MCP: Регистрирует завершение процесса
 
-    CMD->>U: Flujo completado. Artefacto listo.
+    CMD->>U: Процесс завершён. Артефакт готов.
 ```
 
 ---
 
-## Decisiones de diseño
+## Проектные решения
 
-Esta sección documenta las decisiones arquitectonicas mas relevantes del plugin, con el razonamiento detrás de cada una. Entender el «por que» es tan importante como entender el «que»: cuando alguien necesite cambiar algo, sabra que restricciones condicionaron la eleccion original y podra evaluar si siguen siendo validas.
+Этот раздел описывает самые важные архитектурные решения плагина и причины каждого из них. Понимать «почему» так же важно, как понимать «что»: когда кому-то понадобится что-то изменить, он будет знать, какие ограничения определили исходный выбор, и сможет оценить, действуют ли они до сих пор.
 
-### Por que Python y no JavaScript para el core
+### Почему Python, а не JavaScript для core
 
-La eleccion de Python para la capa core no fue arbitraria. Python viene preinstalado en macOS y en la mayoria de distribuciones Linux, lo que significa que el plugin funciona sin instalar nada adicional. No hay `node_modules`, no hay build step, no hay dependencias que resolver antes de la primera ejecución.
+Выбор Python для слоя core не случаен. Python предустановлен в macOS и в большинстве дистрибутивов Linux, поэтому плагин работает без установки чего-либо дополнительно. Нет `node_modules`, нет шага сборки, нет зависимостей, которые нужно разрешить до первого запуска.
 
-Además, el modulo `sqlite3` forma parte de la biblioteca estandar de Python, lo que permite usar una base de datos real sin dependencias externas. Los hooks y el servidor MCP son scripts ligeros que se ejecutan como subprocesos del CLI de Claude Code, no como modulos npm que necesiten empaquetado. Python tiene mejor soporte para scripting de sistema (manejo de ficheros, procesos, señales) que JavaScript en este contexto de uso.
+Кроме того, модуль `sqlite3` входит в стандартную библиотеку Python, что позволяет использовать настоящую базу данных без внешних зависимостей. Хуки и сервер MCP: лёгкие скрипты, которые запускаются как подпроцессы CLI Claude Code, а не npm-модули, которым нужна упаковка. В этом сценарии Python лучше поддерживает системный скриптинг (работа с файлами, процессами, сигналами), чем JavaScript.
 
-### Por que SQLite y no un fichero JSON para la memoria
+### Почему SQLite, а не JSON-файл для памяти
 
-La memoria del proyecto almacena decisiones de diseño, commits, iteraciones y eventos con relaciones entre ellos (un commit puede implementar varias decisiones, una decisión pertenece a una iteracion, etc.). Un fichero JSON plano no soporta consultas eficientes sobre estos datos, ni índices, ni transacciones atomicas, ni busqueda full-text.
+Память проекта хранит проектные решения, коммиты, итерации и события со связями между ними (коммит может реализовывать несколько решений, решение принадлежит итерации и т. д.). Плоский JSON-файл не поддерживает эффективные запросы по этим данным, индексы, атомарные транзакции и полнотекстовый поиск.
 
-SQLite es una base de datos relacional completa que viene incluida con Python. No requiere servidor, no requiere configuración y el fichero `.db` se puede copiar, respaldar o borrar como cualquier otro fichero. Con la extensión FTS5 (Full-Text Search) se pueden hacer busquedas textuales eficientes sobre decisiones, commits y eventos con contenido, algo imposible con un JSON plano sin cargar todo en memoria.
+SQLite: полноценная реляционная база данных, которая идёт вместе с Python. Ей не нужен сервер, не нужна настройка, а файл `.db` можно копировать, бэкапить или удалять, как любой другой файл. С расширением FTS5 (Full-Text Search) можно эффективно искать текст по решениям, коммитам и событиям с содержимым. С плоским JSON это невозможно без загрузки всего в память.
 
-### Por que MCP stdio y no herramientas directas
+### Почему MCP stdio, а не прямые инструменты
 
-El protocolo MCP (Model Context Protocol) permite que Claude Code invoque herramientas externas como si fueran nativas de su interfaz. Un servidor MCP stdio es un proceso persistente que Claude Code lanza al inicio de sesión y mantiene vivo durante toda la conversacion.
+Протокол MCP (Model Context Protocol) позволяет Claude Code вызывать внешние инструменты так, будто они встроены в его интерфейс. Сервер MCP stdio: постоянный процесс, который Claude Code запускает в начале сессии и держит живым весь разговор.
 
-La alternativa seria ejecutar `python3 -c "..."` cada vez que un agente necesite consultar la memoria. Esto implicaria abrir y cerrar la conexión SQLite en cada invocación, sin estado compartido entre llamadas. Con un servidor MCP persistente, la conexión se abre una sola vez, el índice FTS5 se carga en memoria y las consultas posteriores son significativamente mas rapidas. Además, el servidor puede mantener caches y realizar purgas de mantenimiento en segundo plano.
+Альтернатива: запускать `python3 -c "..."` каждый раз, когда агенту нужно обратиться к памяти. Это означало бы открывать и закрывать соединение SQLite при каждом вызове, без общего состояния между вызовами. С постоянным сервером MCP соединение открывается один раз, индекс FTS5 загружается в память, и последующие запросы заметно быстрее. Кроме того, сервер может держать кэши и выполнять фоновую очистку.
 
-### Por que los agentes viven en `agents/`
+### Почему агенты лежат в `agents/`
 
-Los agentes de nucleo (alfred, product-owner, selina, architect, senior-dev, security-officer, qa-engineer, devops-engineer y tech-writer) se invocan programaticamente desde los commands mediante la herramienta Agent de Claude Code. El manifiesto no declara la clave `agents`: Claude Code descubre los agentes desde el directorio `agents/`, que es el formato que carga correctamente en la CLI actual.
+Агенты ядра (alfred, product-owner, designer, architect, senior-dev, security-officer, qa-engineer, devops-engineer и tech-writer) вызываются программно из commands через инструмент Agent в Claude Code. Манифест не объявляет ключ `agents`: Claude Code находит агентов в каталоге `agents/`, и именно этот формат корректно загружается в текущем CLI.
 
-El único opcional es lucius. Vive en el mismo directorio `agents/` y se activa o desactiva desde `/alfred-dev:ajustes`. El kanban y la trazabilidad los escribe el runtime, no un agente `project-manager`.
+Единственный опциональный агент: cto. Он лежит в том же каталоге `agents/` и включается или выключается через `/alfred-dev:ajustes`. Kanban и трассируемость записывает runtime, а не агент `project-manager`.
 
-### El patron de estado
+### Паттерн состояния
 
-Todo el estado del flujo en curso se persiste en un único fichero JSON plano: `.claude/alfred-dev-state.json`. Este fichero es el eje de coordinación de todo el sistema:
+Всё состояние текущего процесса хранится в одном плоском JSON-файле: `.claude/alfred-dev-state.json`. Этот файл: ось координации всей системы:
 
-- Los commands lo leen para saber en que fase estamos y que agentes invocar.
-- Los hooks lo leen para decidir si bloquear una accion o dejarla pasar.
-- El servidor MCP lo lee para asociar eventos a la iteracion correcta.
-- El orquestador lo escribe con escritura atomica (write + rename) para evitar corrupcion.
+- Commands читают его, чтобы знать, в какой мы фазе и каких агентов вызывать.
+- Хуки читают его, чтобы решить, блокировать действие или пропустить.
+- Сервер MCP читает его, чтобы привязывать события к правильной итерации.
+- Оркестратор пишет его атомарной записью (write + rename), чтобы избежать повреждения.
 
-Es un diseño deliberadamente simple: un solo fichero, sin procesos en segundo plano, sin base de datos para el estado transitorio. La base de datos SQLite se reserva exclusivamente para la memoria histórica del proyecto (decisiones, commits, eventos). El estado transitorio (en que fase estamos, que fases se han completado, que artefactos se han generado) vive en JSON porque es efimero y su estructura es plana.
+Это намеренно простой дизайн: один файл, без фоновых процессов, без базы данных для временного состояния. База SQLite отведена только под историческую память проекта (решения, коммиты, события). Временное состояние (в какой мы фазе, какие фазы завершены, какие артефакты созданы) живёт в JSON, потому что оно эфемерно и его структура плоская.
 
-### Flujo de datos completo
+### Полный поток данных
 
-Desde que el usuario escribe `/alfred-dev:feature` hasta que se genera el artefacto final, los datos atraviesan todas las capas del sistema en este orden:
+От момента, когда пользователь пишет `/alfred-dev:feature`, до создания итогового артефакта данные проходят все слои системы в таком порядке:
 
-1. **Usuario** -- escribe el comando con su descripción.
-2. **Claude Code** -- localiza el command correspondiente y lo carga como system prompt.
-3. **Command** (`feature.md`) -- define las fases, los agentes y las gates del flujo.
-4. **Core** (`orchestrator.py`) -- crea la sesión, persiste el estado, evalua gates.
-5. **Agentes** -- se invocan como subagentes Agent con su system prompt especializado.
-6. **Hooks** -- vigilan la ejecución: bloquean secretos, comprueban tests, capturan eventos.
-7. **MCP** (`memory_server.py`) -- registra decisiones, commits y eventos en SQLite.
-8. **Artefacto** -- el resultado final (código, documentación, release) se entrega al usuario.
+1. **Пользователь** -- пишет команду со своим описанием.
+2. **Claude Code** -- находит соответствующий command и загружает его как system prompt.
+3. **Command** (`feature.md`) -- определяет фазы, агентов и gates процесса.
+4. **Core** (`orchestrator.py`) -- создаёт сессию, сохраняет состояние, оценивает gates.
+5. **Агенты** -- вызываются как субагенты Agent со своим специализированным system prompt.
+6. **Хуки** -- следят за выполнением: блокируют секреты, проверяют тесты, захватывают события.
+7. **MCP** (`memory_server.py`) -- регистрирует решения, коммиты и события в SQLite.
+8. **Артефакт** -- итоговый результат (код, документация, релиз) передаётся пользователю.
 
 ---
 
-## Maquina de estados del orquestador
+## Конечный автомат оркестратора
 
-El orquestador (`core/orchestrator.py`) implementa una maquina de estados que gestiona el avance entre fases dentro de cada flujo. Cada transición esta controlada por una gate cuyo tipo determina las condiciones que deben cumplirse para avanzar.
+Оркестратор (`core/orchestrator.py`) реализует конечный автомат, который управляет переходом между фазами внутри каждого процесса. Каждый переход контролирует gate, тип которой определяет условия перехода.
 
-Existen 5 tipos de gate:
+Есть 5 типов gate:
 
-| Tipo de gate | Condiciones |
-|--------------|-------------|
-| `libre` | Se supera con resultado «aprobado». Sin validaciones adicionales. |
-| `usuario` | Requiere aprobacion explícita del usuario. |
-| `automático` | Requiere resultado favorable y que los tests pasen. |
-| `usuario+seguridad` | Requiere aprobacion del usuario y visto bueno del security-officer. |
-| `automático+seguridad` | Requiere tests verdes, seguridad OK y resultado favorable. |
+| Тип gate | Условия |
+|----------|---------|
+| `libre` | Проходит с результатом «aprobado». Без дополнительных проверок. |
+| `usuario` | Требует явного одобрения пользователя. |
+| `automático` | Требует положительного результата и прохождения тестов. |
+| `usuario+seguridad` | Требует одобрения пользователя и согласия security-officer. |
+| `automático+seguridad` | Требует зелёных тестов, OK по безопасности и положительного результата. |
 
-El siguiente diagrama muestra la maquina de estados del flujo **feature**, que es el mas completo del sistema. Los otros flujos (fix, spike, ship, audit) siguen el mismo patron con distinto número de fases y agentes.
+Диаграмма ниже показывает конечный автомат процесса **feature**, самого полного в системе. Остальные процессы (fix, spike, ship, audit) следуют тому же паттерну с другим числом фаз и агентов.
 
 ```mermaid
 stateDiagram-v2
@@ -361,16 +361,16 @@ stateDiagram-v2
 
     [*] --> producto: create_session("feature")
 
-    state "Fase 1: Producto" as producto
-    state "Fase 1b: Estilo visual" as estilo_visual
-    state "Fase 2: Arquitectura" as arquitectura
-    state "Fase 3: Desarrollo" as desarrollo
-    state "Fase 4: Calidad" as calidad
-    state "Fase 5: Documentación" as documentación
-    state "Fase 6: Entrega" as entrega
+    state "Фаза 1: Продукт" as producto
+    state "Фаза 1b: Визуальный стиль" as estilo_visual
+    state "Фаза 2: Архитектура" as arquitectura
+    state "Фаза 3: Разработка" as desarrollo
+    state "Фаза 4: Качество" as calidad
+    state "Фаза 5: Документация" as documentación
+    state "Фаза 6: Поставка" as entrega
 
-    producto --> estilo_visual: gate_producto [usuario + frontend]
-    producto --> arquitectura: gate_producto [sin frontend]
+    producto --> estilo_visual: gate_producto [usuario + фронтенд]
+    producto --> arquitectura: gate_producto [без фронтенда]
     estilo_visual --> arquitectura: gate_estilo [usuario]
     arquitectura --> desarrollo: gate_arquitectura [usuario+seguridad]
     desarrollo --> calidad: gate_desarrollo [automático]
@@ -379,44 +379,44 @@ stateDiagram-v2
     entrega --> [*]: gate_entrega [usuario+seguridad]
 
     note right of producto
-        Agentes: product-owner
-        Genera PRD con historias de usuario
+        Агенты: product-owner
+        Создаёт PRD с пользовательскими историями
     end note
 
     note right of arquitectura
-        Agentes: architect + security-officer (paralelo)
-        Diseño técnico + threat model
+        Агенты: architect + security-officer (параллельно)
+        Техническое проектирование + threat model
     end note
 
     note right of desarrollo
-        Agentes: senior-dev
-        Implementacion TDD rojo-verde-refactor
+        Агенты: senior-dev
+        Реализация по TDD красный-зелёный-рефакторинг
     end note
 
     note right of calidad
-        Agentes: qa-engineer + security-officer (paralelo)
+        Агенты: qa-engineer + security-officer (параллельно)
         Code review + OWASP + SBOM
     end note
 
     note right of documentación
-        Agentes: tech-writer
-        API docs + guias + arquitectura
+        Агенты: tech-writer
+        API docs + руководства + архитектура
     end note
 
     note right of entrega
-        Agentes: devops-engineer + security-officer
-        CI/CD + empaquetado + validación final
+        Агенты: devops-engineer + security-officer
+        CI/CD + упаковка + финальная валидация
     end note
 ```
 
-### Los otros flujos del orquestador
+### Остальные процессы оркестратора
 
-Además de feature, el orquestador define 4 flujos adicionales, cada uno disenado para un tipo de tarea distinto:
+Кроме feature оркестратор определяет 4 дополнительных процесса, каждый для своего типа задачи:
 
-**Flujo fix** (3 fases): diagnóstico de la causa raiz, correccion con test de regresión, y validación completa con seguridad. Las gates avanzan de aprobacion del usuario (diagnóstico) a automático (correccion) y terminan con automático+seguridad (validación).
+**Процесс fix** (3 фазы): диагностика первопричины, исправление с регрессионным тестом и полная валидация с проверкой безопасности. Gates идут от одобрения пользователя (диагностика) к автоматической (исправление) и заканчиваются автоматикой+безопасностью (валидация).
 
-**Flujo spike** (2 fases): exploracion libre donde el architect y el senior-dev investigan en paralelo con gate libre, seguida de consolidacion de conclusiones con gate de usuario. Es el único flujo donde la primera gate no bloquea el avance.
+**Процесс spike** (2 фазы): свободное исследование, где architect и senior-dev параллельно изучают вопрос со свободной gate, затем сведение выводов с пользовательской gate. Это единственный процесс, где первая gate не блокирует переход.
 
-**Flujo ship** (4 fases): auditoria final en paralelo (QA + seguridad), documentación de release, empaquetado con versionado semántico, y despliegue a produccion con gate de usuario+seguridad. Este flujo es el mas restrictivo porque un error en la release afecta a todos los usuarios.
+**Процесс ship** (4 фазы): финальный параллельный аудит (QA + безопасность), документация релиза, упаковка с семантическим версионированием и развёртывание в production с gate пользователь+безопасность. Этот процесс самый строгий, потому что ошибка в релизе затрагивает всех пользователей.
 
-**Flujo audit** (1 fase): auditoria paralela con 4 agentes simultaneos (qa-engineer, security-officer, architect, tech-writer) y una única gate de tipo automático+seguridad. Es el flujo mas rápido y se usa tanto de forma independiente como al cierre de sprint.
+**Процесс audit** (1 фаза): параллельный аудит четырьмя агентами одновременно (qa-engineer, security-officer, architect, tech-writer) и одна gate типа автоматика+безопасность. Это самый быстрый процесс. Его запускают и отдельно, и в конце спринта.

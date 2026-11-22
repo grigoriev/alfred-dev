@@ -287,7 +287,7 @@ class TestDispatchWrite(_DBTestCase):
 
         events = self._get_events("file_written")
         self.assertIn("app.js", events[0].get("summary", ""))
-        self.assertIn("3 lineas", events[0].get("summary", ""))
+        self.assertIn("строк: 3", events[0].get("summary", ""))
 
     def test_content_contains_file_content(self):
         """El campo content almacena el contenido completo del fichero."""
@@ -385,7 +385,7 @@ class TestDispatchWrite(_DBTestCase):
         _capture._dispatch_write(self._db, data)
 
         events = self._get_events("file_written")
-        self.assertIn("1 lineas", events[0].get("summary", ""))
+        self.assertIn("строк: 1", events[0].get("summary", ""))
         payload = self._parse_payload(events[0])
         self.assertEqual(payload["lines"], 1)
 
@@ -448,7 +448,7 @@ class TestDispatchEdit(_DBTestCase):
 
         events = self._get_events("file_edited")
         summary = events[0].get("summary", "")
-        self.assertIn("2 lineas reemplazadas por 3", summary)
+        self.assertIn("строк заменено: 2, новых: 3", summary)
 
     def test_content_contains_diff(self):
         """El campo content almacena el diff old/new."""
@@ -1131,7 +1131,7 @@ class TestDispatchCompact(_DBTestCase):
 
         events = self._get_events("context_compacted")
         self.assertEqual(len(events), 1)
-        self.assertIn("compactado", events[0].get("summary", ""))
+        self.assertIn("сжат", events[0].get("summary", ""))
 
     def test_payload_has_source(self):
         """El payload incluye la fuente del evento."""
@@ -1164,7 +1164,7 @@ class TestDispatchStop(_DBTestCase):
 
         events = self._get_events("session_ended")
         self.assertEqual(len(events), 1)
-        self.assertIn("finalizada", events[0].get("summary", ""))
+        self.assertIn("завершена", events[0].get("summary", ""))
 
     def test_closes_active_iteration(self):
         """Si hay iteracion activa, la cierra."""
@@ -1441,7 +1441,7 @@ class TestDispatchRead(_DBTestCase):
 
         events = self._get_events("file_read")
         summary = events[0].get("summary", "")
-        self.assertIn("lineas 10-60", summary)
+        self.assertIn("строки 10-60", summary)
 
     def test_summary_with_only_offset(self):
         """El summary indica la linea de inicio cuando solo hay offset."""
@@ -1449,7 +1449,7 @@ class TestDispatchRead(_DBTestCase):
         _capture._dispatch_read(self._db, data)
 
         events = self._get_events("file_read")
-        self.assertIn("desde linea 100", events[0].get("summary", ""))
+        self.assertIn("со строки 100", events[0].get("summary", ""))
 
     def test_summary_with_only_limit(self):
         """El summary indica el limite cuando solo hay limit."""
@@ -1457,7 +1457,7 @@ class TestDispatchRead(_DBTestCase):
         _capture._dispatch_read(self._db, data)
 
         events = self._get_events("file_read")
-        self.assertIn("primeras 20 lineas", events[0].get("summary", ""))
+        self.assertIn("первые строки: 20", events[0].get("summary", ""))
 
     def test_offset_zero_is_preserved_in_summary_and_payload(self):
         """offset=0 es valido y no debe perderse por una comprobacion truthy."""
@@ -1473,7 +1473,7 @@ class TestDispatchRead(_DBTestCase):
         events = self._get_events("file_read")
         summary = events[0].get("summary", "")
         payload = self._parse_payload(events[0])
-        self.assertIn("lineas 0-20", summary)
+        self.assertIn("строки 0-20", summary)
         self.assertEqual(payload["offset"], 0)
         self.assertEqual(payload["limit"], 20)
 
@@ -1531,7 +1531,7 @@ class TestDispatchGlob(_DBTestCase):
         events = self._get_events("glob_search")
         summary = events[0].get("summary", "")
         self.assertIn("*.ts", summary)
-        self.assertIn("3 resultados", summary)
+        self.assertIn("результатов: 3", summary)
 
     def test_content_stores_file_list(self):
         """El content almacena la lista de ficheros encontrados."""
@@ -1560,7 +1560,7 @@ class TestDispatchGlob(_DBTestCase):
         content = events[0].get("content", "")
         self.assertTrue(payload["content_truncated"])
         self.assertGreater(payload["content_lines"], 80)
-        self.assertIn("contenido recortado", content)
+        self.assertIn("содержимое обрезано", content)
         self.assertNotEqual(content, long_list)
 
     def test_empty_pattern_creates_no_event(self):
@@ -1613,7 +1613,7 @@ class TestDispatchGrep(_DBTestCase):
         events = self._get_events("grep_search")
         summary = events[0].get("summary", "")
         self.assertIn("import\\s+os", summary)
-        self.assertIn("3 coincidencias", summary)
+        self.assertIn("совпадений: 3", summary)
 
     def test_payload_includes_filters(self):
         """El payload incluye filtros de tipo y glob cuando se usan."""
@@ -1638,7 +1638,7 @@ class TestDispatchGrep(_DBTestCase):
 
         events = self._get_events("grep_search")
         summary = events[0].get("summary", "")
-        self.assertIn("filtro=*.tsx", summary)
+        self.assertIn("фильтр=*.tsx", summary)
 
     def test_empty_pattern_creates_no_event(self):
         """Un patron vacio no crea evento."""
@@ -1662,7 +1662,7 @@ class TestDispatchGrep(_DBTestCase):
         payload = self._parse_payload(events[0])
         content = events[0].get("content", "")
         self.assertTrue(payload["content_truncated"])
-        self.assertIn("contenido recortado", content)
+        self.assertIn("содержимое обрезано", content)
         self.assertNotEqual(content, output)
 
 
@@ -1717,7 +1717,7 @@ class TestDispatchAgent(_DBTestCase):
         content = events[0].get("content", "")
         self.assertIn("--- prompt ---", content)
         self.assertIn("Analiza esto", content)
-        self.assertIn("--- resultado ---", content)
+        self.assertIn("--- результат ---", content)
         self.assertIn("Resultado del analisis", content)
 
     def test_default_subagent_type(self):
@@ -1796,7 +1796,7 @@ class TestDispatchWebFetch(_DBTestCase):
         payload = self._parse_payload(events[0])
         content = events[0].get("content", "")
         self.assertTrue(payload["content_truncated"])
-        self.assertIn("contenido recortado", content)
+        self.assertIn("содержимое обрезано", content)
         self.assertNotEqual(content, response)
 
 
@@ -1863,7 +1863,7 @@ class TestDispatchWebSearch(_DBTestCase):
         payload = self._parse_payload(events[0])
         content = events[0].get("content", "")
         self.assertTrue(payload["content_truncated"])
-        self.assertIn("contenido recortado", content)
+        self.assertIn("содержимое обрезано", content)
         self.assertNotEqual(content, results)
 
 
@@ -1970,7 +1970,7 @@ class TestPrepareHighVolumeContent(unittest.TestCase):
         text = "".join(f"linea {i}\n" for i in range(200))
         content, meta = _capture._prepare_high_volume_content(text)
         self.assertTrue(meta["content_truncated"])
-        self.assertIn("contenido recortado", content)
+        self.assertIn("содержимое обрезано", content)
         self.assertLess(len(content), len(text))
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera docs/style-direction.md a partir de la elección de Designer."""
+"""Generates docs/style-direction.md from the Designer choice."""
 
 from __future__ import annotations
 
@@ -15,16 +15,16 @@ from core.designer_style_direction import write_style_direction_artifact
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Generar docs/style-direction.md desde la elección de Designer")
-    parser.add_argument("--project-dir", required=True, help="Ruta raíz del proyecto")
-    parser.add_argument("--visual-path", required=True, help="Ruta a session_dir o state_dir del servidor visual")
+    parser = argparse.ArgumentParser(description="Generate docs/style-direction.md from the Designer choice")
+    parser.add_argument("--project-dir", required=True, help="Project root path")
+    parser.add_argument("--visual-path", required=True, help="Path to session_dir or state_dir of the visual server")
     parser.add_argument(
         "--proposals-file",
-        help="Ruta opcional al sidecar JSON de propuestas. Si se omite, se autodetecta.",
+        help="Optional path to the proposals JSON sidecar. Detected automatically if omitted.",
     )
     parser.add_argument(
         "--choice",
-        help="Sobrescribe la elección registrada y fuerza una opción concreta del sidecar.",
+        help="Override the recorded choice and force a given sidecar option.",
     )
     return parser
 

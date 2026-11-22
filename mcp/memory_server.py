@@ -1,47 +1,46 @@
 #!/usr/bin/env python3
 """
-Servidor MCP stdio para la memoria persistente de Alfred Dev.
+Stdio MCP server for the persistent Alfred Dev memory.
 
-Implementa el protocolo Model Context Protocol sobre stdin/stdout usando
-exclusivamente la biblioteca estandar de Python (json, sys, logging).
-El transporte stdio moderno de MCP usa JSON-RPC 2.0 con un mensaje JSON por
-linea. El servidor mantiene lectura compatible con el framing historico
-Content-Length para herramientas antiguas.
+Implements the Model Context Protocol over stdin/stdout with only the Python
+standard library (json, sys, logging). The modern MCP stdio transport uses
+JSON-RPC 2.0 with one JSON message per line. The server can also read the
+legacy Content-Length framing for older tools.
 
-El servidor expone quince herramientas que permiten a los agentes de Alfred
-consultar, registrar y gestionar la base de datos de memoria del proyecto:
+The server exposes fifteen tools that let Alfred agents query, record and
+manage the project memory database:
 
-    Consulta (10 originales):
-    - memory_search: busqueda textual con filtros temporales, por tags y estado.
-    - memory_log_decision: registra una decision de diseno formal con etiquetas.
-    - memory_log_commit: registra un commit con ficheros afectados.
-    - memory_get_iteration: detalle de una iteracion (o la ultima).
-    - memory_get_timeline: cronologia de eventos de una iteracion.
-    - memory_stats: estadisticas generales de la memoria.
+    Query (10 original):
+    - memory_search: text search with time, tag and status filters.
+    - memory_log_decision: records a formal design decision with tags.
+    - memory_log_commit: records a commit with the changed files.
+    - memory_get_iteration: details of one iteration (or the latest).
+    - memory_get_timeline: event timeline of one iteration.
+    - memory_stats: general memory statistics.
     - memory_log_decision / memory_manage_iteration / memory_log_event / memory_log_commit
-    - memory_link_decisions: vincula dos decisiones relacionadas.
-    - memory_get_decisions: listado filtrado de decisiones.
+    - memory_link_decisions: links two related decisions.
+    - memory_get_decisions: filtered list of decisions.
 
-    Gestion (5 nuevas en v0.2.3):
-    - memory_update_decision: actualiza estado y etiquetas de una decision.
-    - memory_link_decisions: crea relaciones entre decisiones.
-    - memory_health: validacion de integridad de la base de datos.
-    - memory_export: exporta decisiones a Markdown (formato ADR).
-    - memory_import: importa desde historial Git o ficheros ADR.
+    Management (5 new in v0.2.3):
+    - memory_update_decision: updates the status and tags of a decision.
+    - memory_link_decisions: creates relations between decisions.
+    - memory_health: checks database integrity.
+    - memory_export: exports decisions to Markdown (ADR format).
+    - memory_import: imports from Git history or ADR files.
 
-Ciclo de vida:
-    Claude Code lanza este proceso al inicio de sesion y lo mantiene vivo.
-    Al arrancar, el servidor resuelve la ruta de la DB relativa al directorio
-    de trabajo (``$PWD/.claude/alfred-memory.db``), abre la conexion, asegura
-    el esquema y queda a la escucha de invocaciones MCP por stdin.
+Lifecycle:
+    Claude Code starts this process at session start and keeps it alive.
+    At startup the server resolves the DB path relative to the working
+    directory (``$PWD/.claude/alfred-memory.db``), opens the connection,
+    ensures the schema and waits for MCP calls on stdin.
 
-Seguridad:
-    La sanitizacion de secretos la realiza MemoryDB internamente. Este servidor
-    se limita a pasar los parametros recibidos a la API de core/memory.py.
+Security:
+    MemoryDB sanitizes secrets internally. This server only passes the
+    received parameters to the core/memory.py API.
 
-Uso:
-    No esta pensado para ejecutarse manualmente. Claude Code lo gestiona a
-    traves de la configuracion MCP declarada en ``.mcp.json``.
+Usage:
+    Do not run it by hand. Claude Code manages it through the MCP
+    configuration in ``.mcp.json``.
 """
 
 import json
@@ -52,11 +51,11 @@ import traceback
 from typing import Any, Dict, List, Optional
 
 # ---------------------------------------------------------------------------
-# Configuracion de logging
+# Logging configuration
 # ---------------------------------------------------------------------------
-# Los logs van a stderr para no interferir con el protocolo MCP que viaja
-# por stdout. Por defecto solo emitimos warnings: algunos health-checks de MCP
-# tratan cualquier ruido temprano en stderr como una señal de fallo de conexión.
+# Logs go to stderr so they do not interfere with the MCP protocol on
+# stdout. By default we emit only warnings: some MCP health checks treat
+# any early stderr noise as a connection failure.
 
 logging.basicConfig(
     stream=sys.stderr,
@@ -84,7 +83,7 @@ _EVENT_PAYLOAD_MAX = 8000
 
 
 def _bounded_text(value: Any, maximum: int) -> tuple[Optional[str], bool, int]:
-    """Normaliza texto MCP y recorta entradas demasiado grandes."""
+    """Normalize MCP text and truncate inputs that are too large."""
     if value is None:
         return None, False, 0
 
@@ -102,7 +101,7 @@ def _bounded_text(value: Any, maximum: int) -> tuple[Optional[str], bool, int]:
 def _bounded_event_payload(
     value: Any,
 ) -> tuple[Optional[Dict[str, Any]], bool, int]:
-    """Limita payloads de eventos recibidos por MCP sin perder trazabilidad."""
+    """Limit event payloads received over MCP without losing traceability."""
     if value is None:
         return None, False, 0
     if not isinstance(value, dict):
@@ -125,7 +124,7 @@ def _bounded_event_payload(
 
 
 def _load_plugin_version() -> str:
-    """Lee la version publicada del plugin para exponerla por MCP."""
+    """Read the published plugin version to expose it over MCP."""
     plugin_path = os.path.join(_PLUGIN_ROOT, ".claude-plugin", "plugin.json")
     try:
         with open(plugin_path, "r", encoding="utf-8") as fh:
@@ -141,10 +140,10 @@ def _bounded_limit(
     maximum: int,
 ) -> tuple[int, bool, Optional[int]]:
     """
-    Normaliza limites recibidos por MCP para evitar salidas/cargas enormes.
+    Normalize limits received over MCP to prevent huge outputs or loads.
 
-    Devuelve ``(limit, capped, requested)``. ``requested`` queda a ``None``
-    cuando el cliente no envio un valor interpretable.
+    Returns ``(limit, capped, requested)``. ``requested`` is ``None``
+    when the client did not send a usable value.
     """
     if value is None:
         return default, False, None
@@ -161,10 +160,10 @@ def _bounded_limit(
     return requested, False, requested
 
 # ---------------------------------------------------------------------------
-# Importacion de MemoryDB
+# MemoryDB import
 # ---------------------------------------------------------------------------
-# El servidor necesita importar core.memory, que vive en la raiz del plugin.
-# Se anade al sys.path la raiz del plugin (el directorio padre de mcp/).
+# The server imports core.memory, which lives in the plugin root.
+# Add the plugin root (the parent directory of mcp/) to sys.path.
 
 _PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _PLUGIN_ROOT not in sys.path:
@@ -175,11 +174,11 @@ from core.memory_config import load_memory_config  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
-# Definicion de herramientas
+# Tool definitions
 # ---------------------------------------------------------------------------
-# Cada herramienta se describe con name, description e inputSchema (JSON
-# Schema draft-07). El servidor devuelve esta lista cuando recibe el metodo
-# ``tools/list`` y la usa para despachar en ``tools/call``.
+# Each tool has a name, a description and an inputSchema (JSON Schema
+# draft-07). The server returns this list for the ``tools/list`` method
+# and uses it to dispatch ``tools/call``.
 
 _TOOLS: List[Dict[str, Any]] = [
     {
@@ -656,12 +655,12 @@ _TOOLS: List[Dict[str, Any]] = [
     },
 ]
 
-# Mapa de nombre a indice para acceso rapido en tools/call
+# Set of tool names for fast lookup in tools/call
 _TOOL_NAMES = {t["name"] for t in _TOOLS}
 
 
 # ---------------------------------------------------------------------------
-# Transporte JSON-RPC sobre stdio
+# JSON-RPC transport over stdio
 # ---------------------------------------------------------------------------
 
 _TRANSPORT_MODE = "jsonl"
@@ -669,40 +668,40 @@ _TRANSPORT_MODE = "jsonl"
 
 def _read_message() -> Optional[Dict[str, Any]]:
     """
-    Lee un mensaje JSON-RPC de stdin.
+    Read one JSON-RPC message from stdin.
 
-    MCP stdio actual envia un objeto JSON por linea:
+    Current MCP stdio sends one JSON object per line:
         {"jsonrpc":"2.0","id":1,"method":"initialize"}\\n
 
-    Para compatibilidad tambien se acepta el framing historico tipo LSP:
+    For compatibility it also accepts the legacy LSP-style framing:
         Content-Length: <N>\\r\\n
         \\r\\n
-        <N bytes de JSON>
+        <N bytes of JSON>
 
     Returns:
-        Diccionario con el mensaje parseado, o None si stdin se cierra.
+        Dict with the parsed message, or None if stdin closes.
 
     Raises:
-        ValueError: si el mensaje no tiene un formato esperado.
+        ValueError: if the message does not have the expected format.
     """
     global _TRANSPORT_MODE
 
     while True:
         first_line = sys.stdin.buffer.readline()
 
-        # Si stdin se cierra, terminar
+        # Stop if stdin closes
         if not first_line:
             return None
 
         if first_line.strip():
             break
 
-    # JSONL moderno: un mensaje JSON-RPC completo por linea.
+    # Modern JSONL: one complete JSON-RPC message per line.
     if first_line.lstrip().startswith(b"{"):
         _TRANSPORT_MODE = "jsonl"
         return json.loads(first_line.decode("utf-8"))
 
-    # Framing heredado: bloque de cabeceras seguido del cuerpo exacto.
+    # Legacy framing: header block followed by the exact body.
     content_length: Optional[int] = None
     header_lines = [first_line]
 
@@ -723,17 +722,17 @@ def _read_message() -> Optional[Dict[str, Any]]:
                     f"Некорректный заголовок Content-Length: {line_str!r}"
                 ) from exc
 
-        # Ignorar otros encabezados (ej. Content-Type)
+        # Ignore other headers (for example Content-Type)
 
     if content_length is None:
         preview = first_line.decode("utf-8", errors="replace").strip()
         raise ValueError(f"Некорректное MCP-сообщение: {preview!r}")
 
-    # Leer el cuerpo exacto
+    # Read the exact body
     body = sys.stdin.buffer.read(content_length)
     if len(body) < content_length:
         _log.warning(
-            "Тело обрезано: ожидалось %d байт, получено %d",
+            "Body truncated: expected %d bytes, got %d",
             content_length,
             len(body),
         )
@@ -745,14 +744,14 @@ def _read_message() -> Optional[Dict[str, Any]]:
 
 def _write_message(msg: Dict[str, Any]) -> None:
     """
-    Escribe un mensaje JSON-RPC a stdout.
+    Write one JSON-RPC message to stdout.
 
-    Por defecto usa JSONL, que es el transporte stdio MCP actual. Si el
-    cliente envio el mensaje con framing Content-Length, responde igual para
-    conservar compatibilidad con probes antiguos.
+    Uses JSONL by default, which is the current MCP stdio transport. If the
+    client sent the message with Content-Length framing, reply the same way
+    to stay compatible with old probes.
 
     Args:
-        msg: diccionario con el mensaje JSON-RPC a enviar.
+        msg: dict with the JSON-RPC message to send.
     """
     body = json.dumps(msg, ensure_ascii=False).encode("utf-8")
     if _TRANSPORT_MODE == "content-length":
@@ -765,14 +764,14 @@ def _write_message(msg: Dict[str, Any]) -> None:
 
 def _make_response(request_id: Any, result: Any) -> Dict[str, Any]:
     """
-    Construye una respuesta JSON-RPC 2.0 exitosa.
+    Build a successful JSON-RPC 2.0 response.
 
     Args:
-        request_id: el ID del request original.
-        result: datos del resultado.
+        request_id: ID of the original request.
+        result: result data.
 
     Returns:
-        Diccionario con la respuesta formateada.
+        Dict with the formatted response.
     """
     return {
         "jsonrpc": "2.0",
@@ -788,9 +787,9 @@ def _make_error(
     data: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """
-    Construye una respuesta JSON-RPC 2.0 de error.
+    Build a JSON-RPC 2.0 error response.
 
-    Codigos de error estandar:
+    Standard error codes:
         -32700  Parse error
         -32600  Invalid Request
         -32601  Method not found
@@ -798,13 +797,13 @@ def _make_error(
         -32603  Internal error
 
     Args:
-        request_id: el ID del request original (puede ser None).
-        code: codigo numerico del error.
-        message: descripcion legible del error.
-        data: datos adicionales opcionales.
+        request_id: ID of the original request (can be None).
+        code: numeric error code.
+        message: readable error description.
+        data: optional extra data.
 
     Returns:
-        Diccionario con la respuesta de error formateada.
+        Dict with the formatted error response.
     """
     error: Dict[str, Any] = {"code": code, "message": message}
     if data is not None:
@@ -817,37 +816,37 @@ def _make_error(
 
 
 # ---------------------------------------------------------------------------
-# Servidor MCP
+# MCP server
 # ---------------------------------------------------------------------------
 
 
 class MemoryMCPServer:
     """
-    Servidor MCP stdio para la memoria persistente de Alfred Dev.
+    Stdio MCP server for the persistent Alfred Dev memory.
 
-    Gestiona el ciclo de vida de la conexion con la base de datos SQLite
-    y despacha los mensajes JSON-RPC recibidos por stdin a los handlers
-    correspondientes. Las respuestas se escriben por stdout en JSONL MCP
-    moderno o, si el cliente lo usa, en framing Content-Length heredado.
+    Manages the lifecycle of the SQLite database connection and dispatches
+    the JSON-RPC messages from stdin to the matching handlers. Responses go
+    to stdout as modern MCP JSONL or, if the client uses it, with legacy
+    Content-Length framing.
 
-    El servidor soporta cuatro metodos del protocolo MCP:
-        - ``initialize``: negociacion de capacidades.
-        - ``notifications/initialized``: confirmacion del cliente.
-        - ``tools/list``: listado de herramientas disponibles.
-        - ``tools/call``: invocacion de una herramienta concreta.
+    The server supports four MCP protocol methods:
+        - ``initialize``: capability negotiation.
+        - ``notifications/initialized``: client confirmation.
+        - ``tools/list``: list of available tools.
+        - ``tools/call``: call of one tool.
 
     Args:
-        db_path: ruta al fichero SQLite de la memoria. Si no existe, se crea
-                 automaticamente con el esquema completo.
-        retention_days: dias de retencion para la purga de eventos antiguos.
-                        Si es 0 o negativo, no se ejecuta la purga.
+        db_path: path to the SQLite memory file. If it does not exist, it is
+                 created with the full schema.
+        retention_days: retention days for the purge of old events.
+                        If 0 or negative, no purge runs.
     """
 
-    # Diccionario explicito de handlers por herramienta.
-    # Usar un diccionario en vez de getattr dinamico tiene dos ventajas:
-    # 1. Superficie de ataque reducida: solo se exponen los handlers listados.
-    # 2. Mantenibilidad: si falta un handler, es visible aqui de un vistazo.
-    _TOOL_HANDLERS: Dict[str, Any] = {}  # Se inicializa al final de la clase
+    # Explicit dict of handlers per tool.
+    # A dict instead of dynamic getattr has two benefits:
+    # 1. Smaller attack surface: only the listed handlers are exposed.
+    # 2. Maintainability: a missing handler is easy to see here.
+    _TOOL_HANDLERS: Dict[str, Any] = {}  # Set at the end of the class
 
     def __init__(self, db_path: str, retention_days: int = 365) -> None:
         self._db: Optional[MemoryDB] = None
@@ -857,57 +856,57 @@ class MemoryMCPServer:
         self._project_dir = os.getcwd()
 
     def _memory_config(self) -> Dict[str, Any]:
-        """Carga la configuracion efectiva de memoria del proyecto actual."""
+        """Load the effective memory configuration of the current project."""
         return load_memory_config(self._project_dir)
 
     def _ensure_db(self) -> MemoryDB:
         """
-        Abre la conexion con la DB de forma perezosa.
+        Open the DB connection lazily.
 
-        La apertura se difiere hasta que realmente se necesita para evitar
-        crear la DB si el cliente nunca invoca herramientas (por ejemplo,
-        si solo hace initialize + shutdown).
+        The open is deferred until it is needed, so the DB is not created
+        if the client never calls a tool (for example, if it only does
+        initialize + shutdown).
 
         Returns:
-            Instancia de MemoryDB lista para operar.
+            MemoryDB instance ready to use.
 
         Raises:
-            RuntimeError: si la ruta de la DB no es accesible.
+            RuntimeError: if the DB path is not accessible.
         """
         if self._db is not None:
             return self._db
 
-        _log.info("Открываю базу данных: %s", self._db_path)
+        _log.info("Opening database: %s", self._db_path)
         try:
             self._db = MemoryDB(self._db_path)
         except Exception as exc:
-            _log.error("Ошибка при открытии базы данных: %s", exc)
+            _log.error("Failed to open database: %s", exc)
             raise RuntimeError(
                 f"Не удалось открыть базу данных: {exc}"
             ) from exc
 
-        # Purgar eventos antiguos si procede
+        # Purge old events if needed
         if self._retention_days > 0:
             try:
                 purged = self._db.purge_old_events(self._retention_days)
                 if purged > 0:
                     _log.info(
-                        "Удалено %d событий старше %d дней",
+                        "Purged %d events older than %d days",
                         purged,
                         self._retention_days,
                     )
             except Exception as exc:
-                _log.warning("Ошибка при очистке событий: %s", exc)
+                _log.warning("Failed to purge events: %s", exc)
 
         return self._db
 
     def _resolve_project_path(self, path: Optional[str], default: str) -> str:
         """
-        Resuelve rutas MCP dentro del proyecto actual y bloquea escapes.
+        Resolve MCP paths inside the current project and block escapes.
 
-        Las tools de memoria trabajan con artefactos del proyecto. Aceptamos
-        rutas relativas normales y rutas absolutas que apunten al proyecto,
-        pero rechazamos ``..``/symlinks que salgan de ``self._project_dir``.
+        The memory tools work with project artifacts. We accept normal
+        relative paths and absolute paths inside the project, but reject
+        ``..``/symlinks that leave ``self._project_dir``.
         """
         raw = path if isinstance(path, str) and path.strip() else default
         candidate = raw if os.path.isabs(raw) else os.path.join(self._project_dir, raw)
@@ -937,19 +936,19 @@ class MemoryMCPServer:
 
         return candidate_real
 
-    # --- Handlers de protocolo MCP -----------------------------------------
+    # --- MCP protocol handlers --------------------------------------------
 
     def _handle_initialize(
         self, request_id: Any, params: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Responde al metodo ``initialize`` con la informacion del servidor.
+        Answer the ``initialize`` method with the server information.
 
-        Devuelve el nombre, la version y las capacidades soportadas. En este
-        caso, el servidor solo expone herramientas (``tools``).
+        Returns the name, the version and the supported capabilities. This
+        server exposes only tools (``tools``).
         """
         self._initialized = True
-        _log.info("Клиент запросил инициализацию")
+        _log.info("Client requested initialization")
         protocol_version = str(params.get("protocolVersion") or "2025-06-18")
         return _make_response(request_id, {
             "protocolVersion": protocol_version,
@@ -966,37 +965,36 @@ class MemoryMCPServer:
         self, request_id: Any, _params: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Responde al metodo ``tools/list`` con el catalogo de herramientas.
+        Answer the ``tools/list`` method with the tool catalog.
 
-        Cada herramienta incluye su nombre, descripcion y el JSON Schema
-        de sus parametros de entrada.
+        Each tool includes its name, description and the JSON Schema
+        of its input parameters.
         """
-        _log.debug("Запрошен список инструментов")
+        _log.debug("Tool list requested")
         return _make_response(request_id, {"tools": _TOOLS})
 
     def _handle_tools_call(
         self, request_id: Any, params: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Despacha una invocacion de herramienta al metodo correspondiente.
+        Dispatch a tool call to the matching method.
 
-        Valida que la herramienta exista, abre la DB si es necesario y
-        delega la ejecucion al metodo ``_call_<nombre_herramienta>``.
-        El resultado se serializa como JSON y se devuelve en un bloque
-        ``content`` con tipo ``text``.
+        Checks that the tool exists, opens the DB if needed and delegates
+        to the ``_call_<tool_name>`` method. The result is serialized as
+        JSON and returned in a ``content`` block of type ``text``.
 
         Args:
-            request_id: ID del request JSON-RPC.
-            params: debe contener ``name`` (str) y opcionalmente ``arguments`` (dict).
+            request_id: ID of the JSON-RPC request.
+            params: must contain ``name`` (str) and optionally ``arguments`` (dict).
 
         Returns:
-            Respuesta JSON-RPC con el resultado o un error.
+            JSON-RPC response with the result or an error.
         """
         tool_name: str = params.get("name", "")
         arguments: Dict[str, Any] = params.get("arguments", {})
 
-        _log.info("Вызов инструмента: %s", tool_name)
-        _log.debug("Аргументы: %s", arguments)
+        _log.info("Tool call: %s", tool_name)
+        _log.debug("Arguments: %s", arguments)
 
         if tool_name not in _TOOL_NAMES:
             return _make_error(
@@ -1005,7 +1003,7 @@ class MemoryMCPServer:
                 f"Неизвестный инструмент: {tool_name}",
             )
 
-        # Abrir la DB si aun no esta abierta
+        # Open the DB if it is not open yet
         try:
             db = self._ensure_db()
         except RuntimeError as exc:
@@ -1015,9 +1013,9 @@ class MemoryMCPServer:
                 str(exc),
             )
 
-        # Despachar al handler concreto mediante diccionario explicito.
-        # Se evita getattr dinamico para reducir superficie de ataque y
-        # facilitar el mantenimiento: si un handler falta, es visible aqui.
+        # Dispatch to the handler through the explicit dict.
+        # No dynamic getattr: this reduces the attack surface and helps
+        # maintenance, because a missing handler is visible here.
         handler = self._TOOL_HANDLERS.get(tool_name)
         if handler is None:
             return _make_error(
@@ -1027,14 +1025,14 @@ class MemoryMCPServer:
             )
 
         try:
-            # _TOOL_HANDLERS guarda funciones de clase no enlazadas para que
-            # el mapa sea estable y verificable. Al despachar desde una
-            # instancia hay que pasar self explicitamente.
+            # _TOOL_HANDLERS stores unbound class functions so the map is
+            # stable and verifiable. When dispatching from an instance,
+            # pass self explicitly.
             result = handler(self, db, arguments)
             text_content = json.dumps(result, ensure_ascii=False, indent=2)
-            # Si el handler devuelve {"error": ...}, marcamos isError para
-            # que el consumidor MCP distinga errores de validacion de
-            # resultados exitosos (protocolo MCP tools/call).
+            # If the handler returns {"error": ...}, set isError so the
+            # MCP consumer can tell validation errors from successful
+            # results (MCP tools/call protocol).
             is_error = isinstance(result, dict) and "error" in result
             return _make_response(request_id, {
                 "content": [
@@ -1044,7 +1042,7 @@ class MemoryMCPServer:
             })
         except Exception as exc:
             _log.error(
-                "Ошибка при выполнении %s: %s\n%s",
+                "Error while running %s: %s\n%s",
                 tool_name,
                 exc,
                 traceback.format_exc(),
@@ -1055,23 +1053,23 @@ class MemoryMCPServer:
                 f"Ошибка в {tool_name}: {exc}",
             )
 
-    # --- Implementacion de cada herramienta --------------------------------
+    # --- Tool implementations ---------------------------------------------
 
     def _call_memory_search(
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Ejecuta una busqueda textual en decisiones y commits.
+        Run a text search over decisions and commits.
 
-        La busqueda aprovecha FTS5 si esta disponible en el entorno SQLite;
-        en caso contrario, utiliza LIKE como fallback transparente.
+        The search uses FTS5 if the SQLite build has it. Otherwise it
+        uses LIKE as a transparent fallback.
 
         Args:
-            db: instancia de MemoryDB abierta.
-            args: ``query`` (str, obligatorio), ``limit`` (int), ``iteration_id`` (int).
+            db: open MemoryDB instance.
+            args: ``query`` (str, required), ``limit`` (int), ``iteration_id`` (int).
 
         Returns:
-            Diccionario con la lista de resultados y metadatos de la busqueda.
+            Dict with the result list and search metadata.
         """
         query: str = args.get("query", "")
         limit, limit_capped, requested_limit = _bounded_limit(
@@ -1115,17 +1113,17 @@ class MemoryMCPServer:
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Registra una decision de diseno en la memoria.
+        Record a design decision in memory.
 
-        Los campos ``title`` y ``chosen`` son obligatorios. El resto son
-        opcionales y enriquecen la trazabilidad de la decision.
+        The ``title`` and ``chosen`` fields are required. The others are
+        optional and add traceability to the decision.
 
         Args:
-            db: instancia de MemoryDB abierta.
-            args: parametros de la decision segun el inputSchema.
+            db: open MemoryDB instance.
+            args: decision parameters as in the inputSchema.
 
         Returns:
-            Diccionario con el ID de la decision creada y confirmacion.
+            Dict with the ID of the new decision and a confirmation.
         """
         title: str = args.get("title", "")
         chosen: str = args.get("chosen", "")
@@ -1163,20 +1161,20 @@ class MemoryMCPServer:
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Registra un commit y opcionalmente lo vincula a decisiones.
+        Record a commit and optionally link it to decisions.
 
-        Si el SHA ya existe en la base de datos, la operacion se ignora
-        (idempotencia). Las vinculaciones con decisiones se crean como
-        enlaces de tipo ``implements``.
+        If the SHA already exists in the database, the operation is skipped
+        (idempotent). Links to decisions are created with the
+        ``implements`` type.
 
         Args:
-            db: instancia de MemoryDB abierta.
-            args: ``sha`` (str, obligatorio), ``message`` (str),
+            db: open MemoryDB instance.
+            args: ``sha`` (str, required), ``message`` (str),
                   ``author`` (str), ``committed_at`` (str ISO),
                   ``decision_ids`` (list[int]), ``iteration_id`` (int).
 
         Returns:
-            Diccionario con el resultado del registro.
+            Dict with the result of the record.
         """
         sha: str = args.get("sha", "")
 
@@ -1202,7 +1200,7 @@ class MemoryMCPServer:
             committed_at=args.get("committed_at"),
         )
 
-        # Vincular con decisiones si se proporcionaron
+        # Link to decisions if any were given
         decision_ids: List[int] = args.get("decision_ids", [])
         linked: List[int] = []
 
@@ -1213,7 +1211,7 @@ class MemoryMCPServer:
                     linked.append(did)
                 except Exception as exc:
                     _log.warning(
-                        "Не удалось привязать commit %d к решению %d: %s",
+                        "Failed to link commit %d to decision %d: %s",
                         commit_id,
                         did,
                         exc,
@@ -1236,37 +1234,37 @@ class MemoryMCPServer:
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Obtiene los datos completos de una iteracion.
+        Get the full data of an iteration.
 
-        Si no se proporciona un ID, intenta devolver la iteracion activa.
-        Si no hay activa, devuelve la mas reciente (mayor ID).
+        If no ID is given, try to return the active iteration.
+        If none is active, return the latest one (highest ID).
 
         Args:
-            db: instancia de MemoryDB abierta.
-            args: ``id`` (int, opcional).
+            db: open MemoryDB instance.
+            args: ``id`` (int, optional).
 
         Returns:
-            Diccionario con los datos de la iteracion o un mensaje si no existe.
+            Dict with the iteration data, or a message if it does not exist.
         """
         iteration_id: Optional[int] = args.get("id")
 
         if iteration_id is not None:
             iteration = db.get_iteration(iteration_id)
         else:
-            # Intentar la activa primero, si no la ultima
+            # Try the active one first, then the latest
             iteration = db.get_active_iteration()
             if iteration is None:
-                # Buscar la mas reciente por ID descendente
+                # Find the latest one by descending ID
                 stats = db.get_stats()
                 total = stats.get("total_iterations", 0)
                 if total > 0:
-                    # Obtener la de mayor ID mediante busqueda directa
+                    # Get the one with the highest ID by direct lookup
                     iteration = self._get_latest_iteration(db)
 
         if iteration is None:
             return {"iteration": None, "message": "Записанных итераций нет."}
 
-        # La tool promete la iteracion completa; evitar techos silenciosos.
+        # The tool promises the full iteration: avoid silent caps.
         decisions = list(db.iter_decisions(iteration_id=iteration["id"]))
 
         return {
@@ -1278,17 +1276,17 @@ class MemoryMCPServer:
     @staticmethod
     def _get_latest_iteration(db: MemoryDB) -> Optional[Dict[str, Any]]:
         """
-        Obtiene la iteracion mas reciente de la base de datos.
+        Get the latest iteration from the database.
 
-        Se usa como fallback cuando no hay iteracion activa y el usuario
-        no especifica un ID concreto. Delega en el metodo publico de
-        MemoryDB para mantener la encapsulacion.
+        Used as a fallback when no iteration is active and the user gives
+        no ID. Delegates to the public MemoryDB method to keep
+        encapsulation.
 
         Args:
-            db: instancia de MemoryDB abierta.
+            db: open MemoryDB instance.
 
         Returns:
-            Diccionario con la iteracion mas reciente, o None si no hay ninguna.
+            Dict with the latest iteration, or None if there is none.
         """
         return db.get_latest_iteration()
 
@@ -1296,27 +1294,26 @@ class MemoryMCPServer:
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Obtiene la cronologia de eventos de una iteracion.
+        Get the event timeline of an iteration.
 
-        Los eventos se devuelven ordenados cronologicamente (del mas antiguo
-        al mas reciente), permitiendo reconstruir la secuencia completa del
-        flujo de trabajo.
+        Events come in chronological order (oldest first), so the full
+        workflow sequence can be rebuilt.
 
         Args:
-            db: instancia de MemoryDB abierta.
-            args: ``iteration_id`` (int, obligatorio).
+            db: open MemoryDB instance.
+            args: ``iteration_id`` (int, required).
 
         Returns:
-            Diccionario con la lista de eventos y metadatos.
+            Dict with the event list and metadata.
         """
         iteration_id: Optional[int] = args.get("iteration_id")
 
         if iteration_id is None:
             return {"error": "Поле 'iteration_id' обязательно."}
 
-        # La tool publica anuncia la cronologia completa. get_timeline() en
-        # MemoryDB tiene un limite defensivo por defecto para usos generales,
-        # asi que aqui elevamos el tope al total real de eventos.
+        # The public tool promises the full timeline. get_timeline() in
+        # MemoryDB has a defensive default limit for general use, so here
+        # we raise the cap to the real number of events.
         total_events = db.count_events(iteration_id=iteration_id)
         events = db.get_timeline(iteration_id, limit=max(total_events, 1))
         return {
@@ -1329,17 +1326,17 @@ class MemoryMCPServer:
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Devuelve estadisticas generales de la memoria del proyecto.
+        Return general statistics of the project memory.
 
-        Incluye contadores de cada tipo de registro, el modo de busqueda
-        activo (FTS5 o LIKE), la version del esquema y la fecha de creacion.
+        Includes counters for each record type, the active search mode
+        (FTS5 or LIKE), the schema version and the creation date.
 
         Args:
-            db: instancia de MemoryDB abierta.
-            args: sin parametros (se ignora).
+            db: open MemoryDB instance.
+            args: no parameters (ignored).
 
         Returns:
-            Diccionario con todas las estadisticas.
+            Dict with all statistics.
         """
         stats = db.get_stats()
         stats["fts_enabled"] = db.fts_enabled
@@ -1350,19 +1347,19 @@ class MemoryMCPServer:
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Gestiona el ciclo de vida de iteraciones.
+        Manage the iteration lifecycle.
 
-        Soporta dos acciones: ``start`` para iniciar una nueva iteracion
-        y ``complete`` para cerrar una existente. Si se intenta iniciar
-        una iteracion cuando ya hay una activa, se devuelve un error.
+        Supports two actions: ``start`` starts a new iteration and
+        ``complete`` closes an existing one. Starting an iteration while
+        another one is active returns an error.
 
         Args:
-            db: instancia de MemoryDB abierta.
-            args: ``action`` (str, obligatorio), ``command`` (str),
+            db: open MemoryDB instance.
+            args: ``action`` (str, required), ``command`` (str),
                   ``description`` (str), ``iteration_id`` (int).
 
         Returns:
-            Diccionario con el resultado de la operacion.
+            Dict with the result of the operation.
         """
         action: str = args.get("action", "")
 
@@ -1371,7 +1368,7 @@ class MemoryMCPServer:
             if not command:
                 return {"error": "Поле 'command' обязательно для action='start'."}
 
-            # Verificar que no hay iteracion activa
+            # Check that no iteration is active
             active = db.get_active_iteration()
             if active is not None:
                 return {
@@ -1414,20 +1411,20 @@ class MemoryMCPServer:
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Registra un evento arbitrario en la cronologia de una iteracion.
+        Record an arbitrary event in the timeline of an iteration.
 
-        Los eventos se vinculan a una iteracion. Si no se proporciona
-        ``iteration_id``, se usa la iteracion activa. Si no hay activa,
-        se devuelve un error.
+        Events are linked to an iteration. If ``iteration_id`` is not
+        given, the active iteration is used. If none is active, an error
+        is returned.
 
         Args:
-            db: instancia de MemoryDB abierta.
-            args: ``event_type`` (str, obligatorio), ``phase`` (str),
+            db: open MemoryDB instance.
+            args: ``event_type`` (str, required), ``phase`` (str),
                   ``payload`` (dict), ``summary`` (str), ``content`` (str),
                   ``iteration_id`` (int).
 
         Returns:
-            Diccionario con el ID del evento registrado.
+            Dict with the ID of the recorded event.
         """
         event_type_value = args.get("event_type")
         if not isinstance(event_type_value, str) or not event_type_value.strip():
@@ -1482,8 +1479,8 @@ class MemoryMCPServer:
         )
 
         if content is None and payload is not None:
-            # La tool pública promete trazabilidad útil; si no se aporta
-            # contenido indexable, usamos el payload serializado como fallback.
+            # The public tool promises useful traceability. If no indexable
+            # content is given, use the serialized payload as a fallback.
             content, content_truncated, content_chars = _bounded_text(
                 json.dumps(payload, ensure_ascii=False, default=str),
                 _EVENT_CONTENT_MAX,
@@ -1531,17 +1528,16 @@ class MemoryMCPServer:
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Lista las decisiones de diseno registradas en la memoria.
+        List the design decisions recorded in memory.
 
-        Las decisiones se devuelven ordenadas de la mas reciente a la
-        mas antigua. Se pueden filtrar por iteracion.
+        Decisions come newest first. They can be filtered by iteration.
 
         Args:
-            db: instancia de MemoryDB abierta.
-            args: ``iteration_id`` (int, opcional), ``limit`` (int).
+            db: open MemoryDB instance.
+            args: ``iteration_id`` (int, optional), ``limit`` (int).
 
         Returns:
-            Diccionario con la lista de decisiones y metadatos.
+            Dict with the decision list and metadata.
         """
         iteration_id: Optional[int] = args.get("iteration_id")
         limit, limit_capped, requested_limit = _bounded_limit(
@@ -1576,17 +1572,17 @@ class MemoryMCPServer:
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Elimina eventos antiguos de la memoria.
+        Delete old events from memory.
 
-        Solo se purgan eventos: las decisiones e iteraciones se conservan
-        siempre. El numero de dias de retencion determina el corte temporal.
+        Only events are purged: decisions and iterations are always kept.
+        The number of retention days sets the cutoff.
 
         Args:
-            db: instancia de MemoryDB abierta.
-            args: ``retention_days`` (int, obligatorio).
+            db: open MemoryDB instance.
+            args: ``retention_days`` (int, required).
 
         Returns:
-            Diccionario con el numero de eventos eliminados.
+            Dict with the number of deleted events.
         """
         retention_days: Optional[int] = args.get("retention_days")
 
@@ -1612,18 +1608,17 @@ class MemoryMCPServer:
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Actualiza el estado o las etiquetas de una decision existente.
+        Update the status or the tags of an existing decision.
 
-        Permite marcar decisiones como ``superseded`` o ``deprecated`` y
-        anadir etiquetas de clasificacion. Ambos cambios son opcionales y
-        se aplican de forma independiente.
+        Can mark decisions as ``superseded`` or ``deprecated`` and add
+        classification tags. Both changes are optional and independent.
 
         Args:
-            db: instancia de MemoryDB abierta.
-            args: ``id`` (int, obligatorio), ``status`` (str), ``tags`` (list[str]).
+            db: open MemoryDB instance.
+            args: ``id`` (int, required), ``status`` (str), ``tags`` (list[str]).
 
         Returns:
-            Diccionario con confirmacion o error si falta el ID.
+            Dict with a confirmation, or an error if the ID is missing.
         """
         decision_id: Optional[int] = args.get("id")
 
@@ -1651,19 +1646,19 @@ class MemoryMCPServer:
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Crea una relacion dirigida entre dos decisiones.
+        Create a directed relation between two decisions.
 
-        Documenta que una decision sustituye, depende, contradice o se
-        relaciona con otra. La operacion es idempotente: si la relacion
-        ya existe, no se duplica.
+        Records that a decision supersedes, depends on, contradicts or
+        relates to another one. The operation is idempotent: an existing
+        relation is not duplicated.
 
         Args:
-            db: instancia de MemoryDB abierta.
+            db: open MemoryDB instance.
             args: ``source_id`` (int), ``target_id`` (int), ``link_type`` (str).
-                  Los tres campos son obligatorios.
+                  All three fields are required.
 
         Returns:
-            Diccionario con confirmacion o error si faltan campos.
+            Dict with a confirmation, or an error if fields are missing.
         """
         source_id: Optional[int] = args.get("source_id")
         target_id: Optional[int] = args.get("target_id")
@@ -1693,18 +1688,17 @@ class MemoryMCPServer:
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Valida la integridad de la base de datos de memoria.
+        Check the integrity of the memory database.
 
-        Delega en ``MemoryDB.check_health()`` y devuelve el resultado
-        directamente, que incluye version del esquema, estado de FTS5,
-        permisos y tamano del fichero.
+        Delegates to ``MemoryDB.check_health()`` and returns its result
+        as is: schema version, FTS5 status, permissions and file size.
 
         Args:
-            db: instancia de MemoryDB abierta.
-            args: sin parametros (se ignora).
+            db: open MemoryDB instance.
+            args: no parameters (ignored).
 
         Returns:
-            Diccionario con el informe de salud de la base de datos.
+            Dict with the database health report.
         """
         return db.check_health()
 
@@ -1712,20 +1706,20 @@ class MemoryMCPServer:
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Exporta las decisiones a un fichero Markdown con formato ADR-like.
+        Export the decisions to an ADR-like Markdown file.
 
-        Por ahora solo soporta el formato ``markdown``. El fichero de
-        salida incluye fecha, estado, etiquetas, contexto, decision
-        elegida, alternativas y justificacion de cada decision.
+        Only the ``markdown`` format is supported for now. For each
+        decision the output file has the date, status, tags, context,
+        chosen option, alternatives and rationale.
 
         Args:
-            db: instancia de MemoryDB abierta.
-            args: ``format`` (str, obligatorio), ``path`` (str),
+            db: open MemoryDB instance.
+            args: ``format`` (str, required), ``path`` (str),
                   ``iteration_id`` (int).
 
         Returns:
-            Diccionario con el numero de decisiones exportadas, la ruta
-            y el formato.
+            Dict with the number of exported decisions, the path
+            and the format.
         """
         fmt: str = args.get("format", "")
         path: Optional[str] = args.get("path")
@@ -1756,20 +1750,19 @@ class MemoryMCPServer:
         self, db: MemoryDB, args: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Importa datos en la memoria desde fuentes externas.
+        Import data into memory from external sources.
 
-        Soporta dos fuentes: ``git`` para importar el historial de commits
-        de un repositorio, y ``adr`` para importar ficheros ADR como
-        decisiones. La operacion es idempotente para commits (los SHA
-        duplicados se ignoran).
+        Supports two sources: ``git`` imports the commit history of a
+        repository, and ``adr`` imports ADR files as decisions. The
+        operation is idempotent for commits (duplicate SHAs are skipped).
 
         Args:
-            db: instancia de MemoryDB abierta.
-            args: ``source`` (str, obligatorio), ``path`` (str),
-                  ``limit`` (int, solo para git).
+            db: open MemoryDB instance.
+            args: ``source`` (str, required), ``path`` (str),
+                  ``limit`` (int, git only).
 
         Returns:
-            Diccionario con el numero de registros importados y la fuente.
+            Dict with the number of imported records and the source.
         """
         source: str = args.get("source", "")
         path: Optional[str] = args.get("path")
@@ -1811,14 +1804,14 @@ class MemoryMCPServer:
             })
         return payload
 
-    # --- Diccionario de handlers (inicializacion) -------------------------
-    # Se define aqui, despues de todos los metodos _call_*, para que las
-    # referencias a self.<metodo> resuelvan correctamente en tiempo de
-    # ejecucion. El placeholder vacio del inicio de la clase se sobreescribe.
+    # --- Handler dict (initialization) ------------------------------------
+    # Defined here, after all _call_* methods, so the references to
+    # self.<method> resolve correctly at runtime. This replaces the empty
+    # placeholder at the top of the class.
 
     @classmethod
     def _init_handlers(cls) -> Dict[str, Any]:
-        """Construye el diccionario de handlers MCP."""
+        """Build the MCP handler dict."""
         return {
             "memory_search": cls._call_memory_search,
             "memory_log_decision": cls._call_memory_log_decision,
@@ -1837,16 +1830,16 @@ class MemoryMCPServer:
             "memory_import": cls._call_memory_import,
         }
 
-    # --- Bucle principal ---------------------------------------------------
+    # --- Main loop --------------------------------------------------------
 
     def _run_fastmcp(self) -> bool:
-        """Arranca el servidor con el SDK oficial si esta instalado."""
+        """Start the server with the official SDK if it is installed."""
         try:
             from mcp.server.fastmcp import FastMCP
         except ImportError:
             _log.warning(
-                "Пакет 'mcp' недоступен. "
-                "Установи официальный SDK (pip install mcp), иначе будет использован собственный транспорт."
+                "Package 'mcp' is not available. "
+                "Install the official SDK (pip install mcp). Using the built-in transport."
             )
             return False
 
@@ -1868,7 +1861,7 @@ class MemoryMCPServer:
 
             mcp.tool(name=tool_name)(_bind(tool_name, handler, description))
 
-        _log.info("MCP-сервер alfred-memory запущен через FastMCP")
+        _log.info("alfred-memory MCP server started with FastMCP")
         _log.info("DB path: %s", self._db_path)
         try:
             mcp.run()
@@ -1878,14 +1871,14 @@ class MemoryMCPServer:
         return True
 
     def run(self) -> None:
-        """Bucle principal: SDK oficial FastMCP, con fallback stdio propio."""
+        """Main loop: official FastMCP SDK, with a built-in stdio fallback."""
         if self._run_fastmcp():
             return
         self._run_legacy_stdio()
 
     def _run_legacy_stdio(self) -> None:
-        """Transporte stdio propio (compatibilidad si falta el paquete mcp)."""
-        _log.info("MCP-сервер alfred-memory запущен")
+        """Built-in stdio transport (fallback if the mcp package is missing)."""
+        _log.info("alfred-memory MCP server started")
         _log.info("DB path: %s", self._db_path)
 
         try:
@@ -1893,43 +1886,43 @@ class MemoryMCPServer:
                 try:
                     message = _read_message()
                 except ValueError as exc:
-                    _log.error("Ошибка чтения сообщения: %s", exc)
-                    # Intentar enviar error de parse si es posible
+                    _log.error("Failed to read message: %s", exc)
+                    # Try to send a parse error if possible
                     _write_message(_make_error(None, -32700, str(exc)))
                     continue
                 except Exception as exc:
                     _log.error(
-                        "Непредвиденная ошибка чтения stdin: %s\n%s",
+                        "Unexpected error while reading stdin: %s\n%s",
                         exc,
                         traceback.format_exc(),
                     )
                     break
 
-                # stdin cerrado: el proceso padre termino
+                # stdin closed: the parent process exited
                 if message is None:
-                    _log.info("Stdin закрыт. Сервер завершает работу.")
+                    _log.info("Stdin closed. Server is shutting down.")
                     break
 
-                _log.debug("Получено сообщение: %s", json.dumps(message)[:200])
+                _log.debug("Received message: %s", json.dumps(message)[:200])
 
-                # Extraer campos del mensaje JSON-RPC
+                # Extract the JSON-RPC message fields
                 method: str = message.get("method", "")
                 request_id = message.get("id")
                 params: Dict[str, Any] = message.get("params", {})
 
-                # Las notificaciones no tienen id y no requieren respuesta
+                # Notifications have no id and need no response
                 is_notification = request_id is None
 
-                # Despachar segun el metodo
+                # Dispatch by method
                 response: Optional[Dict[str, Any]] = None
 
                 if method == "initialize":
                     response = self._handle_initialize(request_id, params)
 
                 elif method == "notifications/initialized":
-                    # Notificacion de confirmacion del cliente. No requiere
-                    # respuesta segun el protocolo.
-                    _log.info("Клиент подтвердил инициализацию")
+                    # Client confirmation notification. The protocol needs
+                    # no response.
+                    _log.info("Client confirmed initialization")
 
                 elif method == "tools/list":
                     response = self._handle_tools_list(request_id, params)
@@ -1938,12 +1931,12 @@ class MemoryMCPServer:
                     response = self._handle_tools_call(request_id, params)
 
                 elif method == "ping":
-                    # Metodo de heartbeat: responder con un objeto vacio
+                    # Heartbeat method: reply with an empty object
                     response = _make_response(request_id, {})
 
                 else:
-                    # Metodo desconocido: si es una peticion con id, devolver
-                    # error. Si es notificacion, ignorar silenciosamente.
+                    # Unknown method: return an error for a request with an
+                    # id. Ignore a notification silently.
                     if not is_notification:
                         response = _make_error(
                             request_id,
@@ -1952,38 +1945,38 @@ class MemoryMCPServer:
                         )
                     else:
                         _log.debug(
-                            "Уведомление пропущено: %s", method
+                            "Notification skipped: %s", method
                         )
 
-                # Enviar respuesta solo si es una peticion (tiene id)
+                # Send a response only for a request (it has an id)
                 if response is not None and not is_notification:
                     _write_message(response)
                     _log.debug(
-                        "Ответ отправлен для id=%s", request_id
+                        "Response sent for id=%s", request_id
                     )
 
         except KeyboardInterrupt:
-            _log.info("Получено прерывание. Сервер завершает работу.")
+            _log.info("Interrupt received. Server is shutting down.")
         finally:
             if self._db is not None:
-                _log.info("Закрываю соединение с базой данных")
+                _log.info("Closing database connection")
                 self._db.close()
 
-        _log.info("MCP-сервер alfred-memory остановлен")
+        _log.info("alfred-memory MCP server stopped")
 
 
 # ---------------------------------------------------------------------------
-# Punto de entrada
+# Entry point
 # ---------------------------------------------------------------------------
 
 
-# Inicializar el diccionario de handlers despues de que todos los metodos
-# _call_* esten definidos. Esto sobreescribe el placeholder vacio.
+# Initialize the handler dict after all _call_* methods are defined.
+# This replaces the empty placeholder.
 MemoryMCPServer._TOOL_HANDLERS = MemoryMCPServer._init_handlers()
 
 
 def resolve_retention_days(project_dir: str) -> int:
-    """Resuelve la retencion efectiva desde env o config del proyecto."""
+    """Resolve the effective retention from env or the project config."""
     retention_str = os.environ.get("ALFRED_MEMORY_RETENTION_DAYS")
     if retention_str is None:
         retention_value = load_memory_config(project_dir).get(
@@ -1998,17 +1991,16 @@ def resolve_retention_days(project_dir: str) -> int:
 
 def main() -> None:
     """
-    Punto de entrada del servidor MCP.
+    MCP server entry point.
 
-    Resuelve la ruta de la base de datos relativa al directorio de trabajo
-    actual (donde Claude Code ejecuta el proceso) y arranca el bucle
-    principal del servidor.
+    Resolves the database path relative to the current working directory
+    (where Claude Code runs the process) and starts the main server loop.
     """
-    # La DB vive en el directorio .claude/ del proyecto donde se ejecuta
-    # Claude Code, no en el directorio del plugin.
+    # The DB lives in the .claude/ directory of the project where Claude
+    # Code runs, not in the plugin directory.
     db_path = os.path.join(os.getcwd(), ".claude", "alfred-memory.db")
 
-    # Dias de retencion configurables via variable de entorno (fallback 365)
+    # Retention days, configurable with an env variable (fallback 365)
     retention_days = resolve_retention_days(os.getcwd())
 
     server = MemoryMCPServer(db_path=db_path, retention_days=retention_days)

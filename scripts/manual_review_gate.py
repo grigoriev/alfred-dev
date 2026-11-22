@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gate de revisión humana para la matriz manual de Alfred Dev 0.7.0."""
+"""Human review gate for the Alfred Dev 0.7.0 manual matrix."""
 
 from __future__ import annotations
 
@@ -33,6 +33,7 @@ SENSITIVE_REVIEW_KEY_RE = re.compile(
     r"(?i)(password|passwd|api_key|apikey|api_secret|secret_key"
     r"|auth_token|access_token|private_key)"
 )
+# Generic notes that do not show a real review (English, Spanish, Russian).
 GENERIC_REVIEW_NOTES = {
     "ok",
     "okay",
@@ -53,24 +54,31 @@ GENERIC_REVIEW_NOTES = {
     "si",
     "sí",
     "yes",
+    "ок",
+    "да",
+    "готово",
+    "проверено",
+    "одобрено",
+    "всё ок",
+    "все ок",
 }
 MIN_REVIEW_NOTE_CHARS = 24
 MIN_REVIEW_NOTE_WORDS = 4
 
 
 class ReviewGateError(AssertionError):
-    """La evidencia manual no puede aprobar publicación."""
+    """The manual evidence cannot approve the release."""
 
 
 def _load_json(path: Path) -> dict:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
-        raise ReviewGateError(f"No existe {path}") from exc
+        raise ReviewGateError(f"{path} does not exist") from exc
     except json.JSONDecodeError as exc:
-        raise ReviewGateError(f"{path} no contiene JSON valido: {exc}") from exc
+        raise ReviewGateError(f"{path} does not contain valid JSON: {exc}") from exc
     if not isinstance(payload, dict):
-        raise ReviewGateError(f"{path} debe contener un objeto JSON")
+        raise ReviewGateError(f"{path} must contain a JSON object")
     return payload
 
 
@@ -93,7 +101,7 @@ def _manual_smoke_module():
         ROOT / "scripts" / "manual_smoke.py",
     )
     if spec is None or spec.loader is None:
-        raise ReviewGateError("No se pudo cargar scripts/manual_smoke.py")
+        raise ReviewGateError("Could not load scripts/manual_smoke.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -121,7 +129,7 @@ def _coverage_problems(
     expected_coverage: dict[str, list[str]],
 ) -> list[str]:
     if not isinstance(actual_coverage, dict):
-        return [f"{coverage_key} debe ser un objeto"]
+        return [f"{coverage_key} must be an object"]
 
     problems: list[str] = []
     actual_keys = set(actual_coverage)
@@ -136,14 +144,14 @@ def _coverage_problems(
     ]
 
     if missing_keys:
-        problems.append(f"{coverage_key} no incluye claves actuales: {missing_keys}")
+        problems.append(f"{coverage_key} does not include current keys: {missing_keys}")
     if extra_keys:
-        problems.append(f"{coverage_key} contiene claves obsoletas/desconocidas: {extra_keys}")
+        problems.append(f"{coverage_key} contains obsolete/unknown keys: {extra_keys}")
     if empty_or_invalid:
-        problems.append(f"{coverage_key} incompleto: {empty_or_invalid}")
+        problems.append(f"{coverage_key} is incomplete: {empty_or_invalid}")
     if mismatched_values:
         problems.append(
-            f"{coverage_key} no coincide con matriz actual en: {mismatched_values}"
+            f"{coverage_key} does not match the current matrix in: {mismatched_values}"
         )
     return problems
 
@@ -215,8 +223,8 @@ def build_review_template(evidence_path: Path) -> dict:
     evidence_secret_findings = _iter_secret_findings(evidence, "evidence")
     if evidence_secret_findings:
         raise ReviewGateError(
-            "No se crea plantilla de revisión con evidencia que contiene "
-            "posibles secretos reales: "
+            "Review template not created: evidence contains "
+            "possible real secrets: "
             + ", ".join(evidence_secret_findings[:8])
         )
     manual_smoke = _manual_smoke_module()
@@ -253,7 +261,7 @@ def build_review_template(evidence_path: Path) -> dict:
 
 def write_review_template(evidence_path: Path, review_path: Path) -> list[str]:
     if review_path.exists():
-        raise ReviewGateError(f"{review_path} ya existe; no se sobrescribe")
+        raise ReviewGateError(f"{review_path} already exists; not overwritten")
     payload = build_review_template(evidence_path)
     review_path.parent.mkdir(parents=True, exist_ok=True)
     review_path.write_text(
@@ -262,8 +270,8 @@ def write_review_template(evidence_path: Path, review_path: Path) -> list[str]:
     )
     review_path.chmod(0o600)
     return [
-        f"plantilla creada en {review_path}",
-        "rellena reviewer, reviewed_at, approved=true y cada cases.*.approved=true tras revisar la evidencia",
+        f"template created at {review_path}",
+        "fill in reviewer, reviewed_at, approved=true and each cases.*.approved=true after you review the evidence",
     ]
 
 
@@ -284,49 +292,49 @@ def validate_review(
 
     problems: list[str] = []
     if evidence.get("version") != VERSION:
-        problems.append(f"evidence.version debe ser {VERSION}")
+        problems.append(f"evidence.version must be {VERSION}")
     if review.get("version") != VERSION:
-        problems.append(f"review.version debe ser {VERSION}")
+        problems.append(f"review.version must be {VERSION}")
     evidence_secret_findings = _iter_secret_findings(evidence, "evidence")
     review_secret_findings = _iter_secret_findings(review, "review")
     if evidence_secret_findings:
         problems.append(
-            "evidence contiene posibles secretos reales: "
+            "evidence contains possible real secrets: "
             + ", ".join(evidence_secret_findings[:8])
         )
     if review_secret_findings:
         problems.append(
-            "review contiene posibles secretos reales: "
+            "review contains possible real secrets: "
             + ", ".join(review_secret_findings[:8])
         )
     if expected_plugin_source and evidence.get("plugin_source") != expected_plugin_source:
         problems.append(
-            "evidence.plugin_source no coincide con el origen esperado: "
+            "evidence.plugin_source does not match the expected source: "
             f"{evidence.get('plugin_source')!r} != {expected_plugin_source!r}"
         )
     review_evidence_file = str(review.get("evidence_file", "")).strip()
     if not review_evidence_file:
-        problems.append("review.evidence_file es obligatorio")
+        problems.append("review.evidence_file is required")
     elif not _same_evidence_reference(review_evidence_file, evidence_path):
-        problems.append("review.evidence_file no coincide con el evidence pasado al gate")
+        problems.append("review.evidence_file does not match the evidence passed to the gate")
     if review.get("evidence_sha256") != evidence_sha256:
-        problems.append("review.evidence_sha256 no coincide con la evidencia actual")
+        problems.append("review.evidence_sha256 does not match the current evidence")
     if not evidence_plugin_dir.is_dir():
-        problems.append("evidence.plugin_dir no existe o no es un directorio")
+        problems.append("evidence.plugin_dir does not exist or is not a directory")
     else:
         current_surface = manual_smoke._plugin_surface_snapshot(evidence_plugin_dir)
         if evidence_surface.get("roots") != current_surface.get("roots"):
-            problems.append("evidence.plugin_surface.roots no coincide con el plugin actual")
+            problems.append("evidence.plugin_surface.roots does not match the current plugin")
         if evidence_surface.get("sha256") != current_surface.get("sha256"):
-            problems.append("evidence.plugin_surface.sha256 no coincide con el plugin actual")
+            problems.append("evidence.plugin_surface.sha256 does not match the current plugin")
         if evidence_surface.get("file_count") != current_surface.get("file_count"):
-            problems.append("evidence.plugin_surface.file_count no coincide con el plugin actual")
+            problems.append("evidence.plugin_surface.file_count does not match the current plugin")
     if review.get("approved") is not True:
-        problems.append("review.approved debe ser true")
+        problems.append("review.approved must be true")
     if not str(review.get("reviewer", "")).strip():
-        problems.append("review.reviewer es obligatorio")
+        problems.append("review.reviewer is required")
     if not str(review.get("reviewed_at", "")).strip():
-        problems.append("review.reviewed_at es obligatorio")
+        problems.append("review.reviewed_at is required")
     if require_current_auth_preflight:
         current_preflight = manual_smoke._auth_preflight()
         if current_preflight.get("status") != "ok":
@@ -335,22 +343,22 @@ def validate_review(
             if isinstance(diagnosis, dict) and diagnosis.get("code"):
                 diagnosis_code = f" ({diagnosis.get('code')})"
             problems.append(
-                "preflight actual de Claude CLI no esta ok: "
+                "current Claude CLI preflight is not ok: "
                 f"{current_preflight.get('status')}{diagnosis_code}; "
                 f"{current_preflight.get('reason')}"
             )
 
     counts = evidence.get("counts") or {}
     if counts.get("failed", 0) != 0 or counts.get("blocked_auth", 0) != 0:
-        problems.append(f"evidence contiene fallos o bloqueos: {counts}")
+        problems.append(f"evidence contains failures or blocks: {counts}")
     if counts.get("total") != len(required_case_ids):
         problems.append(
-            "evidence no cubre todos los casos manuales: "
+            "evidence does not cover all manual cases: "
             f"{counts.get('total')} != {len(required_case_ids)}"
         )
     if counts.get("needs_human_review") != len(required_case_ids):
         problems.append(
-            "evidence.needs_human_review debe cubrir todos los casos manuales: "
+            "evidence.needs_human_review must cover all manual cases: "
             f"{counts.get('needs_human_review')} != {len(required_case_ids)}"
         )
 
@@ -365,7 +373,7 @@ def validate_review(
 
     evidence_cases = evidence.get("cases")
     if not isinstance(evidence_cases, list):
-        problems.append("evidence.cases debe ser una lista")
+        problems.append("evidence.cases must be a list")
         evidence_case_ids: set[str] = set()
     else:
         invalid_entries = [
@@ -374,7 +382,7 @@ def validate_review(
             if not isinstance(case, dict) or not case.get("case_id")
         ]
         if invalid_entries:
-            problems.append(f"evidence.cases contiene entradas invalidas: {invalid_entries}")
+            problems.append(f"evidence.cases contains invalid entries: {invalid_entries}")
         case_id_list = [
             str(case.get("case_id"))
             for case in evidence_cases
@@ -389,10 +397,10 @@ def validate_review(
             if case_id_list.count(case_id) > 1
         })
         if duplicate_case_ids:
-            problems.append(f"evidence.cases contiene case_id duplicados: {duplicate_case_ids}")
+            problems.append(f"evidence.cases contains duplicate case_id values: {duplicate_case_ids}")
         if len(evidence_cases) != len(required_case_ids):
             problems.append(
-                "evidence.cases debe tener exactamente un registro por caso manual: "
+                "evidence.cases must have exactly one record per manual case: "
                 f"{len(evidence_cases)} != {len(required_case_ids)}"
             )
         bad_status_cases = [
@@ -404,7 +412,7 @@ def validate_review(
         ]
         if bad_status_cases:
             problems.append(
-                "evidence.cases deben estar en needs_human_review: "
+                "evidence.cases must be in needs_human_review: "
                 f"{bad_status_cases}"
             )
         stale_cases = []
@@ -425,19 +433,19 @@ def validate_review(
                 stale_cases.append(f"{case_id}: {', '.join(mismatched_fields)}")
         if stale_cases:
             problems.append(
-                "evidence.cases desalineados con matriz actual: "
+                "evidence.cases out of sync with the current matrix: "
                 f"{stale_cases}"
             )
     missing_cases = sorted(required_case_ids - evidence_case_ids)
     extra_cases = sorted(evidence_case_ids - required_case_ids)
     if missing_cases:
-        problems.append(f"evidence.cases no incluye: {missing_cases}")
+        problems.append(f"evidence.cases does not include: {missing_cases}")
     if extra_cases:
-        problems.append(f"evidence.cases contiene casos desconocidos: {extra_cases}")
+        problems.append(f"evidence.cases contains unknown cases: {extra_cases}")
 
     reviewed_cases = review.get("cases")
     if not isinstance(reviewed_cases, dict):
-        problems.append("review.cases debe ser un objeto por case_id")
+        problems.append("review.cases must be an object keyed by case_id")
         reviewed_case_ids: set[str] = set()
     else:
         reviewed_case_ids = set(reviewed_cases)
@@ -448,7 +456,7 @@ def validate_review(
             or reviewed_cases[case_id].get("approved") is not True
         ]
         if not_approved:
-            problems.append(f"review.cases sin approved=true: {not_approved}")
+            problems.append(f"review.cases without approved=true: {not_approved}")
         missing_notes = [
             case_id
             for case_id in sorted(required_case_ids)
@@ -456,7 +464,7 @@ def validate_review(
             and not str(reviewed_cases[case_id].get("notes", "")).strip()
         ]
         if missing_notes:
-            problems.append(f"review.cases sin notes humanas: {missing_notes}")
+            problems.append(f"review.cases without human notes: {missing_notes}")
         low_quality_notes = [
             case_id
             for case_id in sorted(required_case_ids)
@@ -466,7 +474,7 @@ def validate_review(
         ]
         if low_quality_notes:
             problems.append(
-                "review.cases con notes humanas demasiado genericas o cortas: "
+                "review.cases has human notes that are too generic or short: "
                 f"{low_quality_notes}"
             )
         note_to_case_ids: dict[str, list[str]] = {}
@@ -485,7 +493,7 @@ def validate_review(
         ]
         if repeated_notes:
             problems.append(
-                "review.cases contiene notes humanas repetidas sin revision caso por caso: "
+                "review.cases contains repeated human notes without a case-by-case review: "
                 f"{repeated_notes}"
             )
         stale_review_cases = []
@@ -504,28 +512,28 @@ def validate_review(
                 stale_review_cases.append(f"{case_id}: {', '.join(mismatched_fields)}")
         if stale_review_cases:
             problems.append(
-                "review.cases desalineados con matriz actual: "
+                "review.cases out of sync with the current matrix: "
                 f"{stale_review_cases}"
             )
     missing_review = sorted(required_case_ids - reviewed_case_ids)
     extra_review = sorted(reviewed_case_ids - required_case_ids)
     if missing_review:
-        problems.append(f"review.cases no incluye: {missing_review}")
+        problems.append(f"review.cases does not include: {missing_review}")
     if extra_review:
-        problems.append(f"review.cases contiene casos desconocidos: {extra_review}")
+        problems.append(f"review.cases contains unknown cases: {extra_review}")
 
     if problems:
         raise ReviewGateError("; ".join(problems))
 
     return [
-        f"evidencia manual {evidence_path} cubre {len(required_case_ids)} casos",
-        f"plugin_source verificado: {evidence.get('plugin_source')}",
-        f"revision humana {review_path} aprobada por {review['reviewer']}",
-        f"review.evidence_sha256 coincide: {evidence_sha256}",
-        f"review.evidence_file coincide: {review_evidence_file}",
-        "coverage maps coinciden con la matriz manual actual",
-        "review.cases coincide con la matriz manual actual",
-        "evidence/review sin patrones de secretos reales",
+        f"manual evidence {evidence_path} covers {len(required_case_ids)} cases",
+        f"plugin_source verified: {evidence.get('plugin_source')}",
+        f"human review {review_path} approved by {review['reviewer']}",
+        f"review.evidence_sha256 matches: {evidence_sha256}",
+        f"review.evidence_file matches: {review_evidence_file}",
+        "coverage maps match the current manual matrix",
+        "review.cases matches the current manual matrix",
+        "evidence/review have no real secret patterns",
     ]
 
 
@@ -534,23 +542,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--init-template",
         action="store_true",
-        help="Crea una plantilla de revision humana a partir de la evidencia.",
+        help="Create a human review template from the evidence.",
     )
     parser.add_argument(
         "--expect-plugin-source",
         choices=("worktree", "installed-cache", "explicit"),
-        help="Exige que evidence.plugin_source coincida con el origen revisado.",
+        help="Require evidence.plugin_source to match the reviewed source.",
     )
     parser.add_argument(
         "--require-current-auth-preflight",
         action="store_true",
         help=(
-            "Antes de aprobar, ejecuta un preflight actual de claude -p para "
-            "evitar validar evidencias antiguas con autenticacion rota."
+            "Before approval, run a current claude -p preflight so old "
+            "evidence is not validated with broken authentication."
         ),
     )
-    parser.add_argument("evidence", help="JSON generado por scripts/manual_smoke.py")
-    parser.add_argument("review", help="JSON de revision humana caso por caso")
+    parser.add_argument("evidence", help="JSON written by scripts/manual_smoke.py")
+    parser.add_argument("review", help="Case-by-case human review JSON")
     args = parser.parse_args(argv)
 
     try:

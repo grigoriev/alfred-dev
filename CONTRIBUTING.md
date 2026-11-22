@@ -1,46 +1,46 @@
-# Guía de contribución
+# Руководство по участию
 
-Alfred Dev es un plugin de Claude Code: 10 agentes, 11 skills planas, 18 comandos publicados, hooks y un núcleo Python. Esta guía resume cómo contribuir. El detalle operativo está en [docs/contributing.md](docs/contributing.md).
+Alfred Dev это плагин Claude Code: 10 агентов, 11 плоских skills, 18 опубликованных команд, хуки и ядро на Python. Это руководство кратко описывает, как внести вклад. Подробности работы описаны в [docs/contributing.md](docs/contributing.md).
 
-## Requisitos previos
+## Требования
 
-- Python 3.10 o superior.
-- Claude Code instalado y configurado.
+- Python 3.10 или новее.
+- Установленный и настроенный Claude Code.
 - git.
 
-El runtime Python usa la biblioteca estándar. `requirements.txt` declara FastMCP (`mcp`) como dependencia opcional del servidor de memoria.
+Рантайм Python использует стандартную библиотеку. `requirements.txt` объявляет FastMCP (`mcp`) как необязательную зависимость сервера памяти.
 
-## Superficie 0.7.0
+## Поверхность 0.7.0
 
 ```
 alfred-dev/
-  .claude-plugin/         # plugin.json (18 comandos) y marketplace.json
-  agents/                 # 10 agentes (8 de núcleo + Designer + CTO)
-  commands/               # 18 slash /alfred-dev:* + helpers internos
-  skills/                 # 11 skills planas (SKILL.md)
-  hooks/                  # 10 scripts del ciclo de vida + hooks.json
-  core/                   # Motor de orquestación, memoria e informes
-  mcp/                    # Servidor MCP stdio (memoria persistente)
-  templates/              # 8 plantillas de artefactos
-  tests/                  # Tests y contratos de release (pytest)
+  .claude-plugin/         # plugin.json (18 команд) и marketplace.json
+  agents/                 # 10 агентов (8 базовых + Designer + CTO)
+  commands/               # 18 slash-команд /alfred-dev:* + внутренние helpers
+  skills/                 # 11 плоских skills (SKILL.md)
+  hooks/                  # 10 скриптов жизненного цикла + hooks.json
+  core/                   # Движок оркестрации, памяти и отчётов
+  mcp/                    # MCP-сервер stdio (постоянная память)
+  templates/              # 8 шаблонов артефактов
+  tests/                  # Тесты и контракты релиза (pytest)
 ```
 
-La entrada pública es `/alfred-dev:alfred`. No hay alias global `/alfred`.
+Публичная точка входа: `/alfred-dev:alfred`. Глобального алиаса `/alfred` нет.
 
-## Cómo validar
+## Как проверить
 
 ```bash
 python3 -m pytest tests/ -q
 python3 scripts/release_audit.py
 ```
 
-Si el cambio toca la superficie pública, revisa también `README.md`, `docs/` y los tests de contrato (`test_public_surface_contract.py`, `test_version_consistency.py`).
+Если изменение затрагивает публичную поверхность, проверь также `README.md`, `docs/` и контрактные тесты (`test_public_surface_contract.py`, `test_version_consistency.py`).
 
-## Añadir un componente
+## Как добавить компонент
 
-- **Agente:** `agents/<nombre>.md` con frontmatter (`name`, `description`, `model: inherit`, `tools`). Claude Code los descubre desde `agents/`. No hace falta registrarlos en `plugin.json`.
-- **Skill:** `skills/<nombre>/SKILL.md` con `name` coincidente. Si tiene efectos laterales, `disable-model-invocation: true`.
-- **Comando publicado:** `commands/<nombre>.md` y añadirlo a `.claude-plugin/plugin.json`.
-- **Hook:** script en `hooks/` y registro en `hooks/hooks.json` (`command` + `args`). Tests en `tests/test_<nombre>.py`.
+- **Агент:** `agents/<имя>.md` с frontmatter (`name`, `description`, `model: inherit`, `tools`). Claude Code находит агентов в `agents/`. Регистрировать их в `plugin.json` не нужно.
+- **Skill:** `skills/<имя>/SKILL.md` с совпадающим `name`. Если у skill есть побочные эффекты, добавь `disable-model-invocation: true`.
+- **Опубликованная команда:** `commands/<имя>.md`, затем добавь её в `.claude-plugin/plugin.json`.
+- **Хук:** скрипт в `hooks/` и регистрация в `hooks/hooks.json` (`command` + `args`). Тесты в `tests/test_<имя>.py`.
 
-Más detalle: [docs/contributing.md](docs/contributing.md), [docs/release.md](docs/release.md).
+Подробнее: [docs/contributing.md](docs/contributing.md), [docs/release.md](docs/release.md).

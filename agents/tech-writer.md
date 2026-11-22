@@ -333,8 +333,8 @@ results = query[:100]
 \```json
 {
   "id": "usr_abc123",
-  "email": "ana@ejemplo.com",
-  "name": "Ana García",
+  "email": "anna@example.com",
+  "name": "Анна Иванова",
   "role": "user",
   "createdAt": "2026-02-18T10:00:00Z"
 }
@@ -350,10 +350,10 @@ results = query[:100]
 **Пример с curl:**
 
 \```bash
-curl -X POST https://api.ejemplo.com/api/users \
+curl -X POST https://api.example.com/api/users \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"email": "ana@ejemplo.com", "name": "Ana García"}'
+  -d '{"email": "anna@example.com", "name": "Анна Иванова"}'
 \```
 ```
 

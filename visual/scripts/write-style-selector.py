@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera las pantallas guiadas de selección de Designer."""
+"""Generates the Designer guided selection screens."""
 
 from __future__ import annotations
 
@@ -16,15 +16,15 @@ from core.designer_style_selector import write_style_selector_html
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generar la pantalla de sistema base o la de tipografía/paleta de Designer"
+        description="Generate the Designer base system screen or the typography/palette screen"
     )
-    parser.add_argument("--visual-path", required=True, help="Ruta a session_dir o state_dir del servidor visual")
+    parser.add_argument("--visual-path", required=True, help="Path to session_dir or state_dir of the visual server")
     parser.add_argument(
         "--style-id",
-        help="Si se indica, renderiza la segunda pantalla con combinaciones de tipografía y paleta para esa familia.",
+        help="If set, renders the second screen with typography and palette combinations for that family.",
     )
-    parser.add_argument("--title", help="Título opcional para la pantalla.")
-    parser.add_argument("--subtitle", help="Subtítulo opcional para la pantalla.")
+    parser.add_argument("--title", help="Optional screen title.")
+    parser.add_argument("--subtitle", help="Optional screen subtitle.")
     return parser
 
 

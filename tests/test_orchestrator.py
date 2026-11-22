@@ -209,8 +209,8 @@ class TestSession(unittest.TestCase):
             board = load_kanban_board(tmpdir)
 
         diagnostico = next(task for task in board["done"] if task["title"].startswith("fix:diagnostico"))
-        self.assertIn("resultado 'aprobado'", diagnostico["notes"])
-        self.assertIn("Artefactos:", diagnostico["body"])
+        self.assertIn("результатом 'одобрено'", diagnostico["notes"])
+        self.assertIn("Артефакты:", diagnostico["body"])
         self.assertIn("docs/diag.md", diagnostico["body"])
         self.assertTrue(any(task["title"].startswith("fix:correccion") for task in board["in-progress"]))
 
@@ -230,22 +230,22 @@ class TestSession(unittest.TestCase):
                 traceability = fh.read()
             loaded = load_state(state_path)
 
-        self.assertIn("Flujo: `feature`.", current)
-        self.assertIn("Siguiente comando recomendado: /alfred-dev:resume", current)
-        self.assertIn("Gate pendiente: `usuario`.", current)
-        self.assertIn("Fases completadas: 0/7.", progress)
-        self.assertIn("Kanban visible:", progress)
-        self.assertIn("## Fases del flujo", progress)
-        self.assertIn("`producto` -> `en curso` · gate `usuario`", progress)
-        self.assertIn("Gate pendiente:", traceability)
-        self.assertIn("Riesgo principal:", traceability)
-        self.assertIn("## Criterios y evidencia por fase", traceability)
+        self.assertIn("Процесс: `feature`.", current)
+        self.assertIn("Рекомендуемая следующая команда: /alfred-dev:resume", current)
+        self.assertIn("Незакрытая gate: `usuario`.", current)
+        self.assertIn("Завершено фаз: 0/7.", progress)
+        self.assertIn("Видимый kanban:", progress)
+        self.assertIn("## Фазы процесса", progress)
+        self.assertIn("`producto` -> `в работе` · gate `usuario`", progress)
+        self.assertIn("Незакрытая gate:", traceability)
+        self.assertIn("Главный риск:", traceability)
+        self.assertIn("## Критерии и подтверждения по фазам", traceability)
         self.assertIn("### `producto`", traceability)
         self.assertIn(
-            "Criterios visibles: Análisis de requisitos y definición del alcance funcional de la nueva característica; Cerrar la gate `usuario` sin bloqueos abiertos.",
+            "Видимые критерии: Анализ требований и определение функционального объёма новой feature; Закрыть gate `usuario` без открытых блокеров.",
             traceability,
         )
-        self.assertIn("## Verificación manual", traceability)
+        self.assertIn("## Ручная проверка", traceability)
         self.assertIn(CURRENT_RELATIVE_PATH, loaded["artefactos"])
         self.assertIn(PROGRESS_MD_RELATIVE_PATH, loaded["artefactos"])
         self.assertIn(TRACEABILITY_MD_RELATIVE_PATH, loaded["artefactos"])
@@ -269,15 +269,15 @@ class TestSession(unittest.TestCase):
                 traceability = fh.read()
             loaded = load_state(state_path)
 
-        self.assertIn("Estado: completado y verificado.", current)
-        self.assertIn("Siguiente comando recomendado: /alfred", current)
-        self.assertIn("Verificación/UAT: aprobada.", progress)
-        self.assertIn("Artefactos acumulados: 6.", progress)
-        self.assertIn("## Fases del flujo", progress)
-        self.assertIn("`ejecucion_acotada` -> `aprobado`", progress)
-        self.assertIn("UAT actual: aprobada.", traceability)
-        self.assertIn("## Verificación manual", traceability)
-        self.assertIn("Estado de verify: `done`.", traceability)
+        self.assertIn("Статус: завершено и проверено.", current)
+        self.assertIn("Рекомендуемая следующая команда: /alfred", current)
+        self.assertIn("Проверка/UAT: одобрена.", progress)
+        self.assertIn("Накоплено артефактов: 6.", progress)
+        self.assertIn("## Фазы процесса", progress)
+        self.assertIn("`ejecucion_acotada` -> `одобрено`", progress)
+        self.assertIn("Текущая UAT: одобрена.", traceability)
+        self.assertIn("## Ручная проверка", traceability)
+        self.assertIn("Статус verify: `done`.", traceability)
         self.assertIn("docs/cambio.md", traceability)
         self.assertIn(UAT_MD_RELATIVE_PATH, traceability)
         self.assertIn(UAT_MD_RELATIVE_PATH, loaded["artefactos"])
@@ -311,14 +311,14 @@ class TestSession(unittest.TestCase):
                 traceability = fh.read()
 
         self.assertIn(
-            "Especialistas opcionales activos: secuencial: `cto`.",
+            "Активные опциональные специалисты: последовательно: `cto`.",
             current,
         )
         self.assertIn(
-            "`calidad` -> `en curso` · gate `automatico+seguridad` · opcionales secuencial: `cto`",
+            "`calidad` -> `в работе` · gate `automatico+seguridad` · опциональные последовательно: `cto`",
             progress,
         )
-        self.assertIn("- Opcionales secuenciales: `cto`.", traceability)
+        self.assertIn("- Опциональные последовательно: `cto`.", traceability)
 
     def test_save_state_operational_docs_show_release_optionals_for_ship(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -337,7 +337,7 @@ class TestSession(unittest.TestCase):
             }
 
             expectations = [
-                ("auditoria_final", 0, "secuencial: `cto`"),
+                ("auditoria_final", 0, "последовательно: `cto`"),
             ]
 
             for phase_name, phase_number, expected_summary in expectations:
@@ -354,14 +354,14 @@ class TestSession(unittest.TestCase):
 
                 self.assertIn(expected_summary, current)
                 self.assertIn(expected_summary, progress)
-                if "paralelo" in expected_summary:
+                if "параллельно" in expected_summary:
                     self.assertIn(
-                        f"- Opcionales en paralelo: `{expected_summary.split('`')[1]}`.",
+                        f"- Опциональные параллельно: `{expected_summary.split('`')[1]}`.",
                         traceability,
                     )
                 else:
                     self.assertIn(
-                        f"- Opcionales secuenciales: `{expected_summary.split('`')[1]}`.",
+                        f"- Опциональные последовательно: `{expected_summary.split('`')[1]}`.",
                         traceability,
                     )
 
@@ -399,14 +399,14 @@ class TestSession(unittest.TestCase):
         self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
         self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
         self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", current)
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", progress)
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", traceability)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
         self.assertIn(
-            "`calidad` -> `pendiente` · gate `automatico+seguridad` · opcionales secuencial: `cto`",
+            "`calidad` -> `ожидает` · gate `automatico+seguridad` · опциональные последовательно: `cto`",
             progress,
         )
-        self.assertIn("- Opcionales secuenciales: `cto`.", traceability)
+        self.assertIn("- Опциональные последовательно: `cto`.", traceability)
 
     def test_fix_flow_uses_persisted_optional_agents_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -431,14 +431,14 @@ class TestSession(unittest.TestCase):
         self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
         self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
         self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", current)
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", progress)
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", traceability)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
         self.assertIn(
-            "`validacion` -> `pendiente` · gate `automatico+seguridad` · opcionales secuencial: `cto`",
+            "`validacion` -> `ожидает` · gate `automatico+seguridad` · опциональные последовательно: `cto`",
             progress,
         )
-        self.assertIn("- Opcionales secuenciales: `cto`.", traceability)
+        self.assertIn("- Опциональные последовательно: `cto`.", traceability)
 
     def test_ship_flow_uses_persisted_optional_agents_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -463,15 +463,15 @@ class TestSession(unittest.TestCase):
         self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
         self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
         self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", current)
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", progress)
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", traceability)
-        self.assertIn("Especialistas opcionales activos: secuencial: `cto`.", current)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
+        self.assertIn("Активные опциональные специалисты: последовательно: `cto`.", current)
         self.assertIn(
-            "`auditoria_final` -> `en curso` · gate `automatico+seguridad` · opcionales secuencial: `cto`",
+            "`auditoria_final` -> `в работе` · gate `automatico+seguridad` · опциональные последовательно: `cto`",
             progress,
         )
-        self.assertIn("- Opcionales secuenciales: `cto`.", traceability)
+        self.assertIn("- Опциональные последовательно: `cto`.", traceability)
 
     def test_quick_flow_uses_persisted_optional_agents_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -496,14 +496,14 @@ class TestSession(unittest.TestCase):
         self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
         self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
         self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", current)
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", progress)
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", traceability)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
         self.assertIn(
-            "`validacion_rapida` -> `pendiente` · gate `automatico+seguridad` · opcionales secuencial: `cto`",
+            "`validacion_rapida` -> `ожидает` · gate `automatico+seguridad` · опциональные последовательно: `cto`",
             progress,
         )
-        self.assertIn("- Opcionales secuenciales: `cto`.", traceability)
+        self.assertIn("- Опциональные последовательно: `cto`.", traceability)
 
     def test_audit_flow_uses_persisted_optional_agents_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -528,15 +528,15 @@ class TestSession(unittest.TestCase):
         self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
         self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
         self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", current)
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", progress)
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", traceability)
-        self.assertIn("Especialistas opcionales activos: secuencial: `cto`.", current)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
+        self.assertIn("Активные опциональные специалисты: последовательно: `cto`.", current)
         self.assertIn(
-            "`auditoria_paralela` -> `en curso` · gate `automatico+seguridad` · opcionales secuencial: `cto`",
+            "`auditoria_paralela` -> `в работе` · gate `automatico+seguridad` · опциональные последовательно: `cto`",
             progress,
         )
-        self.assertIn("- Opcionales secuenciales: `cto`.", traceability)
+        self.assertIn("- Опциональные последовательно: `cto`.", traceability)
 
     def test_spike_flow_marks_persisted_optionals_as_on_demand_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -561,23 +561,23 @@ class TestSession(unittest.TestCase):
         self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
         self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
         self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", current)
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", progress)
-        self.assertIn("- Origen del equipo runtime: configuración persistida.", traceability)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", current)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", progress)
+        self.assertIn("- Источник runtime-команды: сохранённая конфигурация.", traceability)
         self.assertIn(
-            "- Opcionales activos solo bajo demanda en este flujo: `cto`.",
+            "- Опциональные агенты в этом процессе только по запросу: `cto`.",
             current,
         )
         self.assertIn(
-            "- Opcionales activos solo bajo demanda en este flujo: `cto`.",
+            "- Опциональные агенты в этом процессе только по запросу: `cto`.",
             progress,
         )
         self.assertIn(
-            "- Opcionales activos solo bajo demanda en este flujo: `cto`.",
+            "- Опциональные агенты в этом процессе только по запросу: `cto`.",
             traceability,
         )
-        self.assertIn("`exploracion` -> `en curso` · gate `libre`", progress)
-        self.assertIn("`conclusiones` -> `pendiente` · gate `usuario`", progress)
+        self.assertIn("`exploracion` -> `в работе` · gate `libre`", progress)
+        self.assertIn("`conclusiones` -> `ожидает` · gate `usuario`", progress)
 
     def test_save_state_operational_docs_show_cto_for_audit(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -606,9 +606,9 @@ class TestSession(unittest.TestCase):
             with open(os.path.join(tmpdir, TRACEABILITY_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 traceability = fh.read()
 
-        self.assertIn("Especialistas opcionales activos: secuencial: `cto`.", current)
-        self.assertIn("secuencial: `cto`", progress)
-        self.assertIn("- Opcionales secuenciales: `cto`.", traceability)
+        self.assertIn("Активные опциональные специалисты: последовательно: `cto`.", current)
+        self.assertIn("последовательно: `cto`", progress)
+        self.assertIn("- Опциональные последовательно: `cto`.", traceability)
 
     def test_save_state_marks_skipped_phase_task_as_done(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -629,10 +629,10 @@ class TestSession(unittest.TestCase):
 
         producto = next(task for task in board["done"] if task["title"].startswith("feature:producto"))
         estilo = next(task for task in board["done"] if task["title"].startswith("feature:estilo_visual"))
-        self.assertIn("resultado 'aprobado'", producto["notes"])
-        self.assertIn("saltada", estilo["notes"])
+        self.assertIn("результатом 'одобрено'", producto["notes"])
+        self.assertIn("пропущена", estilo["notes"])
         self.assertIn("Gate: usuario", producto["body"])
-        self.assertIn("Estado de fase: saltada", estilo["body"])
+        self.assertIn("Статус фазы: пропущена", estilo["body"])
         self.assertTrue(any(task["title"].startswith("feature:arquitectura") for task in board["in-progress"]))
 
     def test_ship_empaquetado_has_no_optional_agents(self):
@@ -662,7 +662,7 @@ class TestSession(unittest.TestCase):
 
         producto = next(task for task in board["done"] if task["title"].startswith("feature:producto"))
         self.assertIn("Gate: usuario", producto["body"])
-        self.assertIn("Iteraciones internas: 2", producto["body"])
+        self.assertIn("Внутренних итераций: 2", producto["body"])
         self.assertIn("docs/producto.md", producto["body"])
 
     def test_save_state_enriches_estilo_visual_with_artifact_and_choice_evidence(self):
@@ -704,7 +704,7 @@ class TestSession(unittest.TestCase):
         estilo_task = next(task for task in board["done"] if task["title"].startswith("feature:estilo_visual"))
         self.assertIn("docs/style-direction.md", estilo_task["body"])
         self.assertIn("Editorial cálido", estilo_task["notes"])
-        self.assertIn("Elección visual", estilo_task["evidence"])
+        self.assertIn("Визуальный выбор", estilo_task["evidence"])
 
 
 class TestGates(unittest.TestCase):
@@ -727,7 +727,7 @@ class TestGates(unittest.TestCase):
         session = advance_phase(session)  # arquitectura -> desarrollo
         result = check_gate(session, resultado="aprobado", tests_ok=False)
         self.assertFalse(result["passed"])
-        self.assertIn("tests", result["reason"].lower())
+        self.assertIn("тесты", result["reason"].lower())
 
     def test_automatic_gate_passes_when_tests_ok(self):
         """Las gates automáticas dejan pasar si tests y resultado OK."""
@@ -748,7 +748,7 @@ class TestGates(unittest.TestCase):
         # Fase de calidad: gate automático+seguridad
         result = check_gate(session, resultado="aprobado", security_ok=False)
         self.assertFalse(result["passed"])
-        self.assertIn("seguridad", result["reason"].lower())
+        self.assertIn("безопасности", result["reason"].lower())
 
     def test_advance_phase_propagates_tests_ok(self):
         """advance_phase propaga tests_ok a check_gate."""
@@ -886,7 +886,7 @@ class TestRunFlow(unittest.TestCase):
         self.assertIn("Alfred Dev", captured.getvalue())
         # Verifica que el motivo del descarte se registra en la sesión
         self.assertIsNotNone(session["equipo_sesion_error"])
-        self.assertIn("no pasó la validación", session["equipo_sesion_error"])
+        self.assertIn("не прошла проверку", session["equipo_sesion_error"])
 
     def test_tc18_comando_desconocido_lanza_valueerror(self):
         """TC-18: run_flow con comando desconocido lanza ValueError."""
@@ -985,7 +985,7 @@ class TestRunFlow(unittest.TestCase):
         self.assertEqual(session["equipo_sesion"]["fuente"], "config_persistida")
         self.assertTrue(session["equipo_sesion"]["opcionales_activos"]["cto"])
         self.assertIsNotNone(session["equipo_sesion_error"])
-        self.assertIn("Se aplicó la configuración persistida", session["equipo_sesion_error"])
+        self.assertIn("Применена сохранённая конфигурация", session["equipo_sesion_error"])
 
     def test_quick_flow_uses_optional_agents_on_light_phases(self):
         """quick integra CTO solo en la validación rápida."""
@@ -1119,7 +1119,7 @@ class TestLoopIterativo(unittest.TestCase):
         session["fase_numero"] = -1
         result = should_retry_phase(session, resultado="rechazado")
         self.assertEqual(result["action"], "escalate")
-        self.assertIn("inválido", result["reason"])
+        self.assertIn("Недопустимое", result["reason"])
 
 
 class TestAutopilot(unittest.TestCase):
@@ -1220,7 +1220,7 @@ class TestAutopilot(unittest.TestCase):
         self.assertEqual(session["fase_actual"], "despliegue")
         result = is_autopilot_gate_passable(session, security_ok=True)
         self.assertFalse(result["passed"])
-        self.assertIn("confirmación explícita del usuario", result["reason"])
+        self.assertIn("явного подтверждения пользователя", result["reason"])
 
 
 class TestCompletedSessionGuards(unittest.TestCase):
@@ -1241,14 +1241,14 @@ class TestCompletedSessionGuards(unittest.TestCase):
         session["fase_numero"] = 999
         result = check_gate(session, resultado="aprobado")
         self.assertFalse(result["passed"])
-        self.assertIn("fuera de rango", result["reason"])
+        self.assertIn("вне диапазона", result["reason"])
 
     def test_check_gate_negative_fase_numero_is_invalid(self):
         session = create_session("feature", "Test")
         session["fase_numero"] = -1
         result = check_gate(session, resultado="aprobado")
         self.assertFalse(result["passed"])
-        self.assertIn("negativo", result["reason"])
+        self.assertIn("отрицательным", result["reason"])
 
     def test_advance_phase_rejects_invalid_phase_index(self):
         session = create_session("feature", "Test")

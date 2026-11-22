@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-Libreria de verificacion de evidencia para Alfred Dev.
+Evidence verification library for Alfred Dev.
 
-Contiene las funciones de deteccion y almacenamiento de evidencia de
-tests separadas del punto de entrada del hook. Esto permite que otros
-modulos (tests, stop-hook, orchestrator) importen las funciones sin
-ejecutar el hook.
+Holds the test evidence detection and storage functions, kept apart
+from the hook entry point. Other modules (tests, stop-hook, orchestrator)
+can import these functions without running the hook.
 
-El hook ``evidence-guard.py`` importa desde aqui y solo añade el
-punto de entrada ``main()`` con lectura de stdin.
+The ``evidence-guard.py`` hook imports from here and only adds the
+``main()`` entry point that reads stdin.
 """
 
 import json
@@ -19,15 +18,15 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
-# --- Constantes ---
+# --- Constants ---
 
-# Fichero donde se registra la evidencia de tests.
+# File that stores the test evidence.
 _EVIDENCE_FILENAME = "alfred-evidence.json"
 
-# Tiempo maximo (en segundos) para considerar una evidencia como reciente.
-EVIDENCE_MAX_AGE_SECONDS = 600  # 10 minutos
+# Maximum age (in seconds) for evidence to count as recent.
+EVIDENCE_MAX_AGE_SECONDS = 600  # 10 minutes
 
-# Patrones de runners de tests.
+# Test runner patterns.
 _CMD_POS = r"(?:^|[;&|])\s*"
 
 TEST_RUNNERS = [
@@ -56,65 +55,65 @@ TEST_RUNNERS = [
     r"\bgradle\s+test\b",
 ]
 
-# Patrones de fallo en salida de tests.
-# Se buscan en contexto de salida de runners, así que usamos patrones
-# específicos para evitar falsos positivos con palabras como «fail-safe»
-# o «OK» en texto genérico.
+# Failure patterns in test output.
+# They are matched against runner output, so the patterns are specific
+# to avoid false positives with words such as "fail-safe" or "OK" in
+# generic text.
 FAILURE_PATTERNS = [
-    r"(?<!\d )\bFAIL[ED]*\b(?![-_])",  # FAIL, FAILED pero no fail-safe, fail_over ni "0 failed"
-    r"[1-9]\d*\s+failures?\b",       # "1 failure", "3 failures" (excluye "0 failures")
+    r"(?<!\d )\bFAIL[ED]*\b(?![-_])",  # FAIL, FAILED but not fail-safe, fail_over or "0 failed"
+    r"[1-9]\d*\s+failures?\b",       # "1 failure", "3 failures" (excludes "0 failures")
     r"\bfailing\b",
     r"[Tt]ests?\s+failed",
-    r"ERRORS?\s*[:=]",              # "ERRORS:" o "ERROR=" pero no "ERROR" suelto
-    r"Assertion(?:Error|Failed)",    # AssertionError → typo corregido a ambas formas
+    r"ERRORS?\s*[:=]",              # "ERRORS:" or "ERROR=" but not a bare "ERROR"
+    r"Assertion(?:Error|Failed)",    # AssertionError and AssertionFailed
     r"test\s+result:\s+FAILED",
     r"Build\s+FAILED",
-    r"[1-9]\d*\s+failed",            # "1 failed", "3 failed" (excluye "0 failed")
+    r"[1-9]\d*\s+failed",            # "1 failed", "3 failed" (excludes "0 failed")
     r"not\s+ok\s+\d+",              # TAP format: "not ok 1 - test name"
 ]
 
-# Patrones de exito en salida de tests.
+# Success patterns in test output.
 SUCCESS_PATTERNS = [
     r"\d+\s+passed",
     r"[Tt]ests?\s+passed",
     r"test\s+result:\s+ok\b",
     r"All\s+tests\s+passed",
     r"\d+\s+passing\b",
-    r"\bPASS(?:ED)?\b",             # PASS o PASSED
+    r"\bPASS(?:ED)?\b",             # PASS or PASSED
     r"\d+\s+tests?\s+complete",
-    r"[Tt]ests?\s+run:\s+\d+",      # "Tests run: N" — formato JUnit/Maven/TestNG
-    r"(?m)^ok\s+\S+",               # go test: "ok  github.com/foo/bar 0.003s" (multiline para anclar ^)
+    r"[Tt]ests?\s+run:\s+\d+",      # "Tests run: N": JUnit/Maven/TestNG format
+    r"(?m)^ok\s+\S+",               # go test: "ok  github.com/foo/bar 0.003s" (multiline to anchor ^)
 ]
 
 
-# --- Funciones de deteccion ---
+# --- Detection functions ---
 
 def is_test_command(command: str) -> bool:
-    """Determina si un comando corresponde a la ejecucion de tests.
+    """Check if a command runs tests.
 
     Args:
-        command: comando Bash ejecutado (cadena completa).
+        command: the Bash command that ran (full string).
 
     Returns:
-        True si el comando coincide con un runner de tests.
+        True if the command matches a test runner.
     """
     return any(re.search(pattern, command) for pattern in TEST_RUNNERS)
 
 
 def detect_test_result(output: str, exit_code: Optional[Any] = None) -> str:
-    """Analiza la salida de un comando de tests para determinar el resultado.
+    """Analyze the output of a test command to find the result.
 
-    Los patrones de fallo tienen prioridad sobre los de exito para
-    cubrir el caso de tests parciales (3 passed, 1 failed). Si la salida
-    no permite decidir pero el runner devolvio un codigo de salida distinto
-    de cero, se considera fallo igualmente.
+    Failure patterns take priority over success patterns to cover
+    partial runs (3 passed, 1 failed). If the output is not conclusive
+    but the runner returned a non-zero exit code, the result is a
+    failure.
 
     Args:
-        output: salida completa del comando (stdout + stderr).
-        exit_code: codigo de salida del proceso, si esta disponible.
+        output: full command output (stdout + stderr).
+        exit_code: process exit code, if available.
 
     Returns:
-        ``"pass"``, ``"fail"`` o ``"unknown"``.
+        ``"pass"``, ``"fail"`` or ``"unknown"``.
     """
     has_fail = any(
         re.search(pattern, output, re.IGNORECASE)
@@ -138,16 +137,16 @@ def detect_test_result(output: str, exit_code: Optional[Any] = None) -> str:
     return "unknown"
 
 
-# --- Gestion del fichero de evidencia ---
+# --- Evidence file management ---
 
 def _evidence_path(project_dir: Optional[str] = None) -> str:
-    """Calcula la ruta del fichero de evidencia."""
+    """Compute the path of the evidence file."""
     base = project_dir or os.getcwd()
     return os.path.join(base, ".claude", _EVIDENCE_FILENAME)
 
 
 def _load_evidence(project_dir: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Carga el registro de evidencia existente."""
+    """Load the existing evidence records."""
     path = _evidence_path(project_dir)
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -182,7 +181,7 @@ def _save_evidence(
     records: List[Dict[str, Any]],
     project_dir: Optional[str] = None,
 ) -> None:
-    """Guarda el registro de evidencia. Trunca a 50 registros."""
+    """Save the evidence records. Keep the last 50 records."""
     path = _evidence_path(project_dir)
     dir_path = os.path.dirname(path)
     os.makedirs(dir_path, exist_ok=True)
@@ -205,12 +204,12 @@ def record_evidence(
     result: str,
     project_dir: Optional[str] = None,
 ) -> None:
-    """Registra una ejecucion de tests como evidencia.
+    """Record a test run as evidence.
 
     Args:
-        command: comando de tests ejecutado.
-        result: resultado detectado (``"pass"``, ``"fail"``, ``"unknown"``).
-        project_dir: directorio del proyecto.
+        command: the test command that ran.
+        result: detected result (``"pass"``, ``"fail"``, ``"unknown"``).
+        project_dir: project directory.
     """
     records = _load_evidence(project_dir)
     records.append({
@@ -225,17 +224,17 @@ def get_evidence(
     max_age_seconds: Optional[int] = EVIDENCE_MAX_AGE_SECONDS,
     project_dir: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Consulta el estado actual de la evidencia de tests.
+    """Return the current state of the test evidence.
 
     Args:
-        max_age_seconds: ventana temporal en segundos. Si es ``None``, se
-            devuelven todos los registros sin filtrar por antiguedad, lo que
-            resulta util para informes de sesion completos.
-        project_dir: directorio del proyecto.
+        max_age_seconds: time window in seconds. If ``None``, all records
+            are returned with no age filter, which is useful for full
+            session reports.
+        project_dir: project directory.
 
     Returns:
-        Diccionario con ``has_evidence``, ``all_passing``, ``last_result``,
-        ``count`` y ``records``.
+        Dict with ``has_evidence``, ``all_passing``, ``last_result``,
+        ``count`` and ``records``.
     """
     records = _load_evidence(project_dir)
     now = datetime.now(timezone.utc)
@@ -286,7 +285,7 @@ def get_evidence(
 
 
 def clear_evidence(project_dir: Optional[str] = None) -> None:
-    """Limpia el fichero de evidencia."""
+    """Remove the evidence file."""
     path = _evidence_path(project_dir)
     try:
         if os.path.exists(path):

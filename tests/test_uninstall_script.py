@@ -120,7 +120,7 @@ class TestUninstallSh(unittest.TestCase):
             self.assertNotIn("alfred-dev", known)
             self.assertNotIn("alfred-dev@alfred-dev", installed.get("plugins", {}))
             self.assertNotIn("alfred-dev@alfred-dev", settings.get("enabledPlugins", {}))
-            self.assertIn("Alfred Dev desinstalado", result.stdout)
+            self.assertIn("Alfred Dev удалён", result.stdout)
 
 
 class TestUninstallPs1(unittest.TestCase):
@@ -132,8 +132,8 @@ class TestUninstallPs1(unittest.TestCase):
             "Envuelve Test-Path entre parentesis o extrae un helper.",
         )
         self.assertIn("function Test-EmptyDirectory", text)
-        self.assertIn("Alias global /alfred eliminado", text)
-        self.assertIn("Shim de comando global /alfred eliminado", text)
+        self.assertIn("Глобальный alias /alfred удалён", text)
+        self.assertIn("Глобальный shim команды /alfred удалён", text)
 
     def test_powershell_scripts_do_not_use_bare_colon_after_variables(self):
         pattern = re.compile(r'"[^"\n]*\$([A-Za-z_][A-Za-z0-9_]*)\:')

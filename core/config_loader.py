@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-Cargador de configuración del plugin Alfred Dev.
+Config loader for the Alfred Dev plugin.
 
-Este módulo se encarga de leer la configuración del usuario desde un fichero
-.local.md con frontmatter YAML, detectar automáticamente el stack tecnológico
-del proyecto y fusionar todo con unos valores por defecto sensatos.
+This module reads the user config from a .local.md file with YAML
+frontmatter, detects the project tech stack and merges everything with
+sensible defaults.
 
-El diseño busca funcionar sin dependencias externas: incluye un parser YAML
-básico como fallback para entornos donde PyYAML no esté disponible.
+It works without external dependencies: it includes a basic YAML parser as a
+fallback for environments without PyYAML.
 
-Funciones públicas:
-    - load_config(path): carga y fusiona configuración desde un fichero .local.md
-    - load_project_config(project_dir): carga la config local y aplica detección de stack
-    - detect_stack(project_dir): detecta runtime, lenguaje, framework y ORM
+Public functions:
+    - load_config(path): load and merge config from a .local.md file
+    - load_project_config(project_dir): load the local config and apply stack detection
+    - detect_stack(project_dir): detect runtime, language, framework and ORM
 """
 
 import json
@@ -36,7 +36,7 @@ from core.optional_agents import (
     order_optional_agent_names,
 )
 
-# Se intenta importar PyYAML; si no está disponible, se usa el parser básico
+# Try to import PyYAML. If it is not available, use the basic parser.
 try:
     import yaml
 
@@ -87,16 +87,16 @@ _LEGACY_AUTONOMY_KEY_ALIASES = {
 _SECURITY_PHASES = ("arquitectura", "calidad", "entrega")
 
 
-# --- Configuración por defecto ---
-# Estos valores representan el comportamiento base del plugin cuando el usuario
-# no ha definido ninguna preferencia. Cada sección controla un aspecto distinto:
+# --- Default config ---
+# These values define the base plugin behavior when the user has set no
+# preference. Each section controls a different aspect:
 #
-# - autonomía: cuánto puede decidir el plugin por su cuenta
-# - proyecto: metadatos del proyecto (se rellenan con detect_stack)
-# - compliance: reglas de cumplimiento y estilo
-# - integraciones: servicios externos habilitados
-# - personalidad: tono y nivel de sarcasmo del agente
-# - notas: texto libre del usuario con preferencias adicionales
+# - autonomia: how much the plugin can decide on its own
+# - proyecto: project metadata (detect_stack fills it)
+# - compliance: compliance and style rules
+# - integraciones: enabled external services
+# - personalidad: agent tone and sarcasm level
+# - notas: free user text with extra preferences
 
 DEFAULT_CONFIG = {
     "autonomia": dict(_CANONICAL_AUTONOMY_DEFAULTS),
@@ -125,9 +125,9 @@ DEFAULT_CONFIG = {
         "celebrar_victorias": True,
         "insultar_malas_practicas": True,
     },
-    # Agentes opcionales: predefinidos que el usuario activa según su proyecto.
-    # Todos desactivados por defecto; se activan con /alfred-dev:ajustes o por
-    # descubrimiento contextual al iniciar el plugin en un proyecto nuevo.
+    # Optional agents: predefined agents that the user enables per project.
+    # All are off by default. /alfred-dev:ajustes or contextual discovery on
+    # the first plugin start in a new project turns them on.
     "agentes_opcionales": build_optional_agent_flags(),
     "memoria": dict(DEFAULT_MEMORY_CONFIG),
     "notas": "",
@@ -149,8 +149,8 @@ _BOOTSTRAP_LOCAL_CONFIG_PATCH = {
     },
 }
 _BOOTSTRAP_LOCAL_CONFIG_NOTE = (
-    "Este fichero se genera automáticamente en la primera sesión.\n"
-    "Puedes personalizarlo con `/alfred-dev:ajustes`."
+    "Этот файл создаётся автоматически в первой сессии.\n"
+    "Ты можешь настроить его через `/alfred-dev:ajustes`."
 )
 _CONFIG_SECTION_ORDER = (
     "autonomia",
@@ -162,45 +162,57 @@ _CONFIG_SECTION_ORDER = (
     "personalidad",
 )
 _CONFIG_SECTION_LABELS = {
-    "autonomia": "Autonomía por fase",
-    "proyecto": "Proyecto",
-    "agentes_opcionales": "Agentes opcionales",
-    "memoria": "Memoria persistente",
+    "autonomia": "Автономность по фазам",
+    "proyecto": "Проект",
+    "agentes_opcionales": "Опциональные агенты",
+    "memoria": "Постоянная память",
     "compliance": "Compliance",
-    "integraciones": "Integraciones",
-    "personalidad": "Personalidad",
+    "integraciones": "Интеграции",
+    "personalidad": "Личность",
 }
 _CONFIG_SECTION_MENU_EXIT = {
     "label": "Salir sin cambios",
-    "description": "Mantener la configuración actual por ahora",
+    "description": "Пока оставить текущую конфигурацию",
 }
+# Stack dicts store the Spanish sentinels "desconocido" and "ninguno".
+# Map them to Russian only when a summary shows them to the user.
+_STACK_SENTINEL_LABELS = {
+    "desconocido": "не определён",
+    "ninguno": "нет",
+}
+
+
+def _render_stack_value(value: Any) -> str:
+    """Return a stack value for display. Map stored sentinels to Russian."""
+    text = str(value)
+    return _STACK_SENTINEL_LABELS.get(text, text)
 
 
 def load_config(path):
     """
-    Carga la configuración del plugin desde un fichero .local.md.
+    Load the plugin config from a .local.md file.
 
-    El fichero utiliza frontmatter YAML (delimitado por ---) para los valores
-    de configuración y el cuerpo Markdown para notas en texto libre. Si el
-    fichero no existe o no se puede leer, se devuelven los valores por defecto.
+    The file uses YAML frontmatter (delimited by ---) for config values and
+    the Markdown body for free-text notes. If the file does not exist or
+    cannot be read, the defaults are returned.
 
-    La fusión es recursiva: los valores del fichero sobreescriben solo las
-    claves que definen, manteniendo el resto de los defaults intactos.
+    The merge is recursive: file values override only the keys they define.
+    All other defaults stay intact.
 
     Args:
-        path: ruta absoluta o relativa al fichero de configuración.
+        path: absolute or relative path to the config file.
 
     Returns:
-        dict con la configuración fusionada. Siempre contiene todas las claves
-        de DEFAULT_CONFIG aunque el fichero no defina ninguna.
+        dict with the merged config. It always contains all DEFAULT_CONFIG
+        keys, also when the file defines none.
 
-    Ejemplo:
-        >>> config = load_config("/proyecto/.dev-vago.local.md")
+    Example:
+        >>> config = load_config("/project/.claude/alfred-dev.local.md")
         >>> config["autonomia"]["producto"]
         'autonomo'
     """
-    # Se parte siempre de una copia profunda de los defaults para no mutar
-    # el diccionario global entre llamadas
+    # Always start from a deep copy of the defaults so that calls do not
+    # mutate the global dict
     config = copy.deepcopy(DEFAULT_CONFIG)
 
     if not os.path.isfile(path):
@@ -211,8 +223,8 @@ def load_config(path):
             content = f.read()
     except (OSError, IOError) as e:
         print(
-            f"[Alfred Dev] Aviso: no se pudo leer '{path}': {e}. "
-            f"Se usarán los valores por defecto.",
+            f"[Alfred Dev] Предупреждение: не удалось прочитать '{path}': {e}. "
+            f"Используются значения по умолчанию.",
             file=sys.stderr,
         )
         return config
@@ -225,15 +237,15 @@ def load_config(path):
             config = _deep_merge(config, _normalize_loaded_config(parsed))
         elif parsed is not None:
             print(
-                f"[Alfred Dev] Aviso: el frontmatter de '{path}' no es un diccionario. "
-                f"Se ignorará la configuración del fichero.",
+                f"[Alfred Dev] Предупреждение: frontmatter в '{path}' не является словарём. "
+                f"Настройки из файла игнорируются.",
                 file=sys.stderr,
             )
 
-    # Se extraen las notas del cuerpo Markdown.
-    # Se busca cualquier sección cuyo título contenga "Notas" (h1-h6).
-    # Todo el contenido desde esa cabecera hasta la siguiente cabecera
-    # del mismo nivel o hasta el final del documento se considera notas.
+    # Extract the notes from the Markdown body.
+    # Find any section whose heading contains "Notas" (h1-h6).
+    # All content from that heading to the next heading of the same level,
+    # or to the end of the document, counts as notes.
     notas = _extract_notes(body)
     if notas:
         config["notas"] = notas
@@ -242,16 +254,16 @@ def load_config(path):
 
 
 def load_project_config(project_dir: str) -> Dict[str, Any]:
-    """Carga la configuración efectiva de un proyecto combinando config + stack.
+    """Load the effective config of a project: config plus stack.
 
-    La detección automática rellena la sección ``proyecto`` cuando el usuario
-    no la ha sobreescrito explícitamente en ``.claude/alfred-dev.local.md``.
+    Automatic detection fills the ``proyecto`` section when the user has not
+    overridden it explicitly in ``.claude/alfred-dev.local.md``.
 
     Args:
-        project_dir: ruta al directorio raíz del proyecto.
+        project_dir: path to the project root directory.
 
     Returns:
-        Configuración fusionada y lista para consumo operativo.
+        Merged config, ready for operational use.
     """
     config_path = os.path.join(project_dir, ".claude", "alfred-dev.local.md")
     config = load_config(config_path)
@@ -272,7 +284,7 @@ def load_project_config(project_dir: str) -> Dict[str, Any]:
 
 
 def get_active_optional_agents(config: Dict[str, Any]) -> List[str]:
-    """Devuelve los agentes opcionales activos en orden canónico."""
+    """Return the active optional agents in canonical order."""
     opcionales = config.get("agentes_opcionales", {})
     if not isinstance(opcionales, dict):
         return []
@@ -291,21 +303,21 @@ def build_equipo_sesion_from_config(
     *,
     source: str = "config_persistida",
 ) -> Optional[Dict[str, Any]]:
-    """Construye el ``equipo_sesion`` runtime a partir de la config efectiva.
+    """Build the runtime ``equipo_sesion`` from the effective config.
 
-    Esta función traduce la configuración persistida del proyecto al mismo
-    contrato estructural que usa la composición dinámica. Así evitamos que
-    runtime, hooks y documentación operativa mantengan dos fuentes de verdad
-    distintas sobre qué opcionales están activos.
+    This function maps the persisted project config to the same structural
+    contract that dynamic composition uses. This way runtime, hooks and
+    operational docs do not keep two different sources of truth about which
+    optional agents are active.
 
     Args:
-        config: configuración efectiva ya fusionada.
-        source: valor de ``fuente`` a registrar en la sesión.
+        config: effective, already merged config.
+        source: value of ``fuente`` to record in the session.
 
     Returns:
-        Un diccionario ``equipo_sesion`` listo para runtime, o ``None`` si no
-        hay nada operativo que inyectar (sin opcionales activos y memoria
-        desactivada).
+        An ``equipo_sesion`` dict ready for runtime, or ``None`` if there is
+        nothing operational to inject (no active optional agents and memory
+        off).
     """
     flags = build_optional_agent_flags()
     raw_optionals = config.get("agentes_opcionales", {})
@@ -337,7 +349,7 @@ def build_project_equipo_sesion(
     *,
     source: str = "config_persistida",
 ) -> Optional[Dict[str, Any]]:
-    """Carga la config del proyecto y deriva su ``equipo_sesion`` runtime."""
+    """Load the project config and derive its runtime ``equipo_sesion``."""
     config = load_project_config(project_dir)
     return build_equipo_sesion_from_config(config, source=source)
 
@@ -347,10 +359,10 @@ def build_config_section_summaries(
     *,
     project_dir: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Describe la configuración actual por secciones con resúmenes canónicos.
+    """Describe the current config per section with canonical summaries.
 
-    Esta estructura está pensada para que `/alfred-dev:ajustes` pueda mostrar el
-    estado actual en un menú navegable sin volver a reconstruir frases a mano.
+    `/alfred-dev:ajustes` uses this structure to show the current state in a
+    navigable menu without building the phrases by hand again.
     """
     effective_config = _deep_merge(
         DEFAULT_CONFIG,
@@ -374,7 +386,7 @@ def build_config_section_menu(
     project_dir: Optional[str] = None,
     include_exit_option: bool = True,
 ) -> Dict[str, Any]:
-    """Construye el menú principal navegable de `/alfred-dev:ajustes`."""
+    """Build the main navigable menu of `/alfred-dev:ajustes`."""
     options: List[Dict[str, str]] = []
     if include_exit_option:
         options.append(dict(_CONFIG_SECTION_MENU_EXIT))
@@ -387,7 +399,7 @@ def build_config_section_menu(
             }
         )
 
-    question = "¿Qué sección quieres modificar ahora?"
+    question = "Какую секцию хочешь изменить сейчас?"
     header = "Config"
 
     return {
@@ -410,13 +422,13 @@ def apply_config_section_update(
     section_name: str,
     values: Any,
 ) -> Dict[str, Any]:
-    """Aplica un cambio sobre una sección canónica y devuelve la config final.
+    """Apply a change to a canonical section and return the final config.
 
-    Usa la misma normalización que `load_config()` para que `/alfred-dev:ajustes`
-    pueda actualizar solo una sección sin perder orden, defaults ni aliases.
+    It uses the same normalization as `load_config()`, so `/alfred-dev:ajustes`
+    can update one section without losing order, defaults or aliases.
     """
     if section_name not in _CONFIG_SECTION_ORDER:
-        raise KeyError(f"Sección de configuración desconocida: {section_name}")
+        raise KeyError(f"Неизвестная секция конфигурации: {section_name}")
 
     effective_config = _deep_merge(
         DEFAULT_CONFIG,
@@ -433,11 +445,11 @@ def build_config_section_change_preview(
     *,
     project_dir: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Resume el cambio efectivo de una sección antes de persistirlo.
+    """Summarize the effective change of a section before it is saved.
 
-    Devuelve el resumen canónico antes/después y la configuración actualizada
-    para que `/alfred-dev:ajustes` pueda confirmar el cambio sin reconstruirlo
-    a mano ni reimplementar la normalización.
+    Return the canonical before/after summary and the updated config, so
+    `/alfred-dev:ajustes` can confirm the change without building it by hand
+    or implementing the normalization again.
     """
     effective_config = _deep_merge(
         DEFAULT_CONFIG,
@@ -478,10 +490,10 @@ def update_config_section(
     notes: Optional[str] = None,
     include_defaults: bool = True,
 ) -> Dict[str, Any]:
-    """Actualiza una sección concreta de un `.local.md` de forma canónica.
+    """Update one section of a `.local.md` file in canonical form.
 
-    El flujo es siempre el mismo: cargar, normalizar, aplicar el patch por
-    sección, persistir y devolver un preview estructurado del cambio.
+    The flow is always the same: load, normalize, apply the section patch,
+    save and return a structured preview of the change.
     """
     current_config = load_config(path)
     preview = build_config_section_change_preview(
@@ -506,7 +518,7 @@ def update_project_config_section(
     notes: Optional[str] = None,
     include_defaults: bool = True,
 ) -> Dict[str, Any]:
-    """Actualiza una sección de la config persistida del proyecto."""
+    """Update one section of the persisted project config."""
     path = os.path.join(project_dir, ".claude", "alfred-dev.local.md")
     return update_config_section(
         path,
@@ -523,11 +535,10 @@ def render_config_markdown(
     notes: Optional[str] = None,
     include_defaults: bool = True,
 ) -> str:
-    """Serializa una configuración al formato canónico ``.local.md``.
+    """Serialize a config to the canonical ``.local.md`` format.
 
-    El frontmatter se escribe con claves canónicas y orden estable para que
-    el runtime, los hooks y `/alfred-dev:ajustes` compartan exactamente el
-    mismo formato base.
+    The frontmatter uses canonical keys and a stable order, so the runtime,
+    the hooks and `/alfred-dev:ajustes` share exactly the same base format.
     """
     normalized_input = _normalize_loaded_config(config)
     if include_defaults:
@@ -560,7 +571,7 @@ def save_config(
     notes: Optional[str] = None,
     include_defaults: bool = True,
 ) -> None:
-    """Escribe una configuración canónica en disco."""
+    """Write a canonical config to disk."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
     content = render_config_markdown(
         config,
@@ -578,7 +589,7 @@ def save_project_config(
     notes: Optional[str] = None,
     include_defaults: bool = True,
 ) -> str:
-    """Guarda la configuración del proyecto en ``.claude/alfred-dev.local.md``."""
+    """Save the project config to ``.claude/alfred-dev.local.md``."""
     path = os.path.join(project_dir, ".claude", "alfred-dev.local.md")
     save_config(path, config, notes=notes, include_defaults=include_defaults)
     return path
@@ -589,17 +600,18 @@ def ensure_bootstrap_local_config(
     *,
     default_note: str = _BOOTSTRAP_LOCAL_CONFIG_NOTE,
 ) -> bool:
-    """Garantiza una config local mínima canónica para el primer arranque.
+    """Make sure a minimal canonical local config exists for the first start.
 
-    Reglas:
-    - Si el fichero no existe, lo crea con autonomía por fases y memoria activa.
-    - Si existe pero no tiene frontmatter, envuelve el contenido existente en una
-      config canónica mínima y conserva el texto como notas.
-    - Si existe con frontmatter, solo añade las secciones top-level ausentes
-      (`autonomia` y `memoria`) sin pisar preferencias explícitas.
+    Rules:
+    - If the file does not exist, create it with per-phase autonomy and
+      memory on.
+    - If it exists without frontmatter, wrap the existing content in a minimal
+      canonical config and keep the text as notes.
+    - If it exists with frontmatter, add only the missing top-level sections
+      (`autonomia` and `memoria`) and do not overwrite explicit preferences.
 
     Returns:
-        ``True`` si ha escrito cambios; ``False`` si el fichero ya estaba listo.
+        ``True`` if it wrote changes. ``False`` if the file was already ready.
     """
     if not os.path.exists(path):
         save_config(
@@ -654,7 +666,7 @@ def ensure_bootstrap_project_config(
     *,
     default_note: str = _BOOTSTRAP_LOCAL_CONFIG_NOTE,
 ) -> str:
-    """Aplica el bootstrap canónico sobre `.claude/alfred-dev.local.md`."""
+    """Apply the canonical bootstrap to `.claude/alfred-dev.local.md`."""
     path = os.path.join(project_dir, ".claude", "alfred-dev.local.md")
     ensure_bootstrap_local_config(path, default_note=default_note)
     return path
@@ -666,7 +678,7 @@ def _describe_config_section(
     *,
     project_stack: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Construye una descripción humana y estable de una sección."""
+    """Build a stable, human-readable description of a section."""
     if section_name == "autonomia":
         autonomy = config.get("autonomia", {})
         autonomy_counts = {"interactivo": 0, "semi-autonomo": 0, "autonomo": 0}
@@ -676,16 +688,16 @@ def _describe_config_section(
                 autonomy_counts[level] += 1
 
         if autonomy_counts["autonomo"] == len(_CANONICAL_AUTONOMY_DEFAULTS):
-            summary = "Autopilot completo en las 6 fases."
+            summary = "Полный autopilot во всех 6 фазах."
         else:
             parts = []
             if autonomy_counts["interactivo"]:
-                parts.append(f"{autonomy_counts['interactivo']} interactivas")
+                parts.append(f"интерактивных: {autonomy_counts['interactivo']}")
             if autonomy_counts["semi-autonomo"]:
-                parts.append(f"{autonomy_counts['semi-autonomo']} semi-autónomas")
+                parts.append(f"полуавтономных: {autonomy_counts['semi-autonomo']}")
             if autonomy_counts["autonomo"]:
-                parts.append(f"{autonomy_counts['autonomo']} autónomas")
-            summary = "Autonomía por fase: " + ", ".join(parts) + "."
+                parts.append(f"автономных: {autonomy_counts['autonomo']}")
+            summary = "Автономность по фазам: " + ", ".join(parts) + "."
 
         details = [
             {
@@ -710,7 +722,7 @@ def _describe_config_section(
             project.get("test_runner", "desconocido"),
             project.get("bundler", "desconocido"),
         ]
-        summary = " / ".join(str(value) for value in fields) + "."
+        summary = " / ".join(_render_stack_value(value) for value in fields) + "."
         details = [
             {"name": key, "value": project.get(key, DEFAULT_CONFIG["proyecto"][key])}
             for key in DEFAULT_CONFIG["proyecto"]
@@ -722,8 +734,8 @@ def _describe_config_section(
                 if project.get(key, DEFAULT_CONFIG["proyecto"][key]) != project_stack.get(key)
                 and project.get(key, DEFAULT_CONFIG["proyecto"][key]) != DEFAULT_CONFIG["proyecto"][key]
             ]
-            summary += " Detectado automáticamente." if not overrides else (
-                " Override manual en " + ", ".join(overrides) + "."
+            summary += " Определён автоматически." if not overrides else (
+                " Задано вручную: " + ", ".join(overrides) + "."
             )
     elif section_name == "agentes_opcionales":
         active_names = get_active_optional_agents(config)
@@ -737,16 +749,15 @@ def _describe_config_section(
                 for agent_name in active_names
                 if not get_optional_integrations()[agent_name]["fases"]
             ]
-            noun = "activo" if len(active_names) == 1 else "activos"
-            summary = f"{len(active_names)} {noun}: {active_labels}."
+            summary = f"Активных: {len(active_names)} ({active_labels})."
             if on_demand_names:
                 on_demand_labels = ", ".join(
                     get_optional_agent_display_label(agent_name)
                     for agent_name in on_demand_names
                 )
-                summary += f" Bajo demanda: {on_demand_labels}."
+                summary += f" По запросу: {on_demand_labels}."
         else:
-            summary = "Ningún opcional activo."
+            summary = "Нет активных опциональных агентов."
         details = [
             {"name": agent_name, "value": bool(config["agentes_opcionales"].get(agent_name, False))}
             for agent_name in build_optional_agent_flags()
@@ -755,13 +766,13 @@ def _describe_config_section(
         memory = config.get("memoria", {})
         if memory.get("enabled"):
             summary = (
-                "Activa con sync nativa "
-                f"({memory.get('sync_commits_limit', DEFAULT_MEMORY_CONFIG['sync_commits_limit'])} commits), "
-                f"decisiones={'sí' if memory.get('capture_decisions', True) else 'no'} "
-                f"y commits={'sí' if memory.get('capture_commits', True) else 'no'}."
+                "Активна с нативной синхронизацией "
+                f"({memory.get('sync_commits_limit', DEFAULT_MEMORY_CONFIG['sync_commits_limit'])} коммитов), "
+                f"решения={'да' if memory.get('capture_decisions', True) else 'нет'}, "
+                f"коммиты={'да' if memory.get('capture_commits', True) else 'нет'}."
             )
         else:
-            summary = "Inactiva; no registrará nuevas decisiones ni commits."
+            summary = "Неактивна: новые решения и коммиты не записываются."
         details = [
             {"name": key, "value": memory.get(key, DEFAULT_MEMORY_CONFIG.get(key))}
             for key in DEFAULT_MEMORY_CONFIG
@@ -770,8 +781,8 @@ def _describe_config_section(
         compliance = config.get("compliance", {})
         summary = (
             f"estilo={compliance.get('estilo', 'auto')}, "
-            f"lint={'activo' if compliance.get('lint', True) else 'desactivado'}, "
-            f"format_on_save={'activo' if compliance.get('format_on_save', True) else 'desactivado'}."
+            f"lint={'вкл' if compliance.get('lint', True) else 'выкл'}, "
+            f"format_on_save={'вкл' if compliance.get('format_on_save', True) else 'выкл'}."
         )
         details = [
             {"name": key, "value": compliance.get(key, DEFAULT_CONFIG["compliance"][key])}
@@ -780,7 +791,7 @@ def _describe_config_section(
     elif section_name == "integraciones":
         integrations = config.get("integraciones", {})
         summary = ", ".join(
-            f"{key}={'activo' if integrations.get(key, DEFAULT_CONFIG['integraciones'][key]) else 'desactivado'}"
+            f"{key}={'вкл' if integrations.get(key, DEFAULT_CONFIG['integraciones'][key]) else 'выкл'}"
             for key in DEFAULT_CONFIG["integraciones"]
         ) + "."
         details = [
@@ -791,7 +802,7 @@ def _describe_config_section(
         personality = config.get("personalidad", {})
         summary = (
             f"idioma={personality.get('idioma', 'es')}, "
-            f"sarcasmo={personality.get('nivel_sarcasmo', 3)}/5, "
+            f"nivel_sarcasmo={personality.get('nivel_sarcasmo', 3)}/5, "
             f"verbosidad={personality.get('verbosidad', 'normal')}."
         )
         details = [
@@ -799,7 +810,7 @@ def _describe_config_section(
             for key in DEFAULT_CONFIG["personalidad"]
         ]
     else:
-        raise KeyError(f"Sección de configuración desconocida: {section_name}")
+        raise KeyError(f"Неизвестная секция конфигурации: {section_name}")
 
     return {
         "section": section_name,
@@ -810,7 +821,7 @@ def _describe_config_section(
 
 
 def is_autopilot_configured(config: Dict[str, Any]) -> bool:
-    """Indica si la autonomía por fases activa autopilot por configuración."""
+    """Tell if the per-phase autonomy config turns on autopilot."""
     autonomia = config.get("autonomia", {})
     if not isinstance(autonomia, dict):
         return False
@@ -825,15 +836,15 @@ def is_autopilot_enabled_for_project(
     project_dir: str,
     state_path: Optional[str] = None,
 ) -> bool:
-    """Resuelve si el proyecto debe operar en autopilot por config o estado.
+    """Decide if the project must run in autopilot by config or state.
 
     Args:
-        project_dir: ruta al directorio raíz del proyecto.
-        state_path: ruta opcional al fichero de estado. Si no se pasa, usa
+        project_dir: path to the project root directory.
+        state_path: optional path to the state file. If not given, use
             ``.claude/alfred-dev-state.json``.
 
     Returns:
-        True si la config habilita autopilot o si el estado persistido lo marca.
+        True if the config enables autopilot or the persisted state marks it.
     """
     config = load_project_config(project_dir)
     if is_autopilot_configured(config):
@@ -861,27 +872,27 @@ def is_autopilot_enabled_for_project(
 
 def detect_stack(project_dir):
     """
-    Detecta el stack tecnológico de un proyecto analizando ficheros clave.
+    Detect the tech stack of a project from its key files.
 
-    Examina la presencia de ficheros como package.json, tsconfig.json,
-    pyproject.toml, Cargo.toml, go.mod, pom.xml, composer.json,
-    ficheros .csproj o Package.swift para inferir el runtime, lenguaje,
-    framework y ORM del proyecto.
+    Check for files such as package.json, tsconfig.json, pyproject.toml,
+    Cargo.toml, go.mod, pom.xml, composer.json, .csproj files or
+    Package.swift to infer the runtime, language, framework and ORM of the
+    project.
 
-    La detección de frameworks y ORMs se hace leyendo las dependencias
-    declaradas en los manifiestos del proyecto (package.json para Node,
-    pyproject.toml para Python, etc.).
+    Framework and ORM detection reads the dependencies declared in the
+    project manifests (package.json for Node, pyproject.toml for Python,
+    etc.).
 
     Args:
-        project_dir: ruta al directorio raíz del proyecto.
+        project_dir: path to the project root directory.
 
     Returns:
-        dict con las claves: runtime, lenguaje, framework, orm, test_runner,
-        bundler. Los valores no detectados se devuelven como 'desconocido'
-        o 'ninguno' según corresponda.
+        dict with the keys: runtime, lenguaje, framework, orm, test_runner,
+        bundler. Values that are not detected come back as 'desconocido' or
+        'ninguno', as applicable.
 
-    Ejemplo:
-        >>> stack = detect_stack("/mi-proyecto-next")
+    Example:
+        >>> stack = detect_stack("/my-next-project")
         >>> stack["framework"]
         'next'
     """
@@ -894,10 +905,10 @@ def detect_stack(project_dir):
         "bundler": "desconocido",
     }
 
-    # --- Detección de runtime y lenguaje ---
-    # El orden importa: se comprueba primero lo más específico.
-    # Si hay package.json es un proyecto Node; la presencia de tsconfig.json
-    # lo eleva a TypeScript.
+    # --- Runtime and language detection ---
+    # Order matters: check the most specific case first.
+    # A package.json means a Node project. A tsconfig.json makes it
+    # TypeScript.
 
     has_package_json = os.path.isfile(os.path.join(project_dir, "package.json"))
     has_tsconfig = os.path.isfile(os.path.join(project_dir, "tsconfig.json"))
@@ -917,9 +928,9 @@ def detect_stack(project_dir):
     has_dotnet = _has_root_file_with_suffix(project_dir, (".csproj", ".sln"))
     has_package_swift = os.path.isfile(os.path.join(project_dir, "Package.swift"))
 
-    # Un package.json junto a otro manifiesto fuerte (pom.xml, go.mod, ...)
-    # suele servir solo para assets del frontend. Node define el stack solo
-    # si declara un framework o si no hay otro manifiesto fuerte.
+    # A package.json next to another strong manifest (pom.xml, go.mod, ...)
+    # usually serves only frontend assets. Node defines the stack only if it
+    # declares a framework or if there is no other strong manifest.
     has_other_strong_manifest = any((
         has_pyproject, has_setup_py, has_cargo, has_go_mod, has_gemfile,
         has_mix, has_pom, has_gradle, has_composer, has_dotnet, has_package_swift,
@@ -971,7 +982,7 @@ def detect_stack(project_dir):
     return stack
 
 
-# --- Frameworks con interfaz de usuario ---
+# --- Frameworks with a user interface ---
 
 _FRONTEND_FRAMEWORKS = frozenset({
     "next", "nuxt", "astro", "remix", "gatsby",
@@ -990,23 +1001,23 @@ _FRONTEND_FRAMEWORK_ALIASES = {
 
 def has_frontend(stack: dict) -> bool:
     """
-    Determina si el stack del proyecto incluye un framework con interfaz de usuario.
+    Tell if the project stack includes a framework with a user interface.
 
-    Se usa como condicion de activacion para el agente Designer (la estilista),
-    que solo interviene en proyectos que tienen una capa visual.
+    This is the activation condition for the Designer agent, which works
+    only on projects with a visual layer.
 
     Args:
-        stack: Diccionario de stack devuelto por ``detect_stack``.
-               Se espera que contenga la clave ``"framework"``.
+        stack: stack dict returned by ``detect_stack``.
+               It is expected to contain the ``"framework"`` key.
 
     Returns:
-        ``True`` si el framework pertenece al conjunto de frameworks frontend
-        conocidos; ``False`` en caso contrario o si la clave no existe.
+        ``True`` if the framework is in the set of known frontend
+        frameworks. ``False`` otherwise or if the key does not exist.
 
     Example:
-        >>> stack = detect_stack("/ruta/al/proyecto")
+        >>> stack = detect_stack("/path/to/project")
         >>> if has_frontend(stack):
-        ...     # Activar fase de estilo visual
+        ...     # Enable the visual style phase
         ...     pass
     """
     raw_framework = str(stack.get("framework", "desconocido") or "desconocido").strip().lower()
@@ -1014,23 +1025,23 @@ def has_frontend(stack: dict) -> bool:
     return normalized_framework in _FRONTEND_FRAMEWORKS
 
 
-# --- Funciones internas ---
+# --- Internal functions ---
 
 
 def _find_first_match(candidates, deps):
     """
-    Busca la primera coincidencia entre una lista de candidatos y un conjunto de dependencias.
+    Find the first match between a list of candidates and a set of dependencies.
 
-    Recorre los candidatos en orden y devuelve el primero que aparezca como
-    clave en el diccionario/conjunto de dependencias. Se usa para detectar
-    frameworks, ORMs, test runners y bundlers por prioridad.
+    Walk the candidates in order and return the first one that is a key in
+    the dependency dict or set. Used to detect frameworks, ORMs, test
+    runners and bundlers by priority.
 
     Args:
-        candidates: lista de nombres de paquetes a buscar, en orden de prioridad.
-        deps: diccionario o conjunto de dependencias donde buscar.
+        candidates: list of package names to find, in priority order.
+        deps: dict or set of dependencies to search.
 
     Returns:
-        str con el nombre del paquete encontrado, o None si no hay coincidencia.
+        str with the name of the found package, or None if nothing matches.
     """
     for candidate in candidates:
         if candidate in deps:
@@ -1089,7 +1100,7 @@ def _looks_like_kotlin_project(project_dir):
 
 
 def _extract_python_dependency_names(text):
-    """Extrae nombres normalizados de dependencias Python desde texto libre."""
+    """Extract normalized Python dependency names from free text."""
     names = set()
     for raw_line in text.splitlines():
         line = raw_line.split("#", 1)[0].strip()
@@ -1112,17 +1123,17 @@ def _extract_python_dependency_names(text):
 
 def _normalize_scoped_package(name):
     """
-    Normaliza un nombre de paquete con scope (@org/paquete) a su forma base.
+    Normalize a scoped package name (@org/package) to its base form.
 
-    Elimina el prefijo '@' y se queda con la parte del scope (sin el nombre
-    del sub-paquete). Por ejemplo: '@nestjs/core' -> 'nestjs', '@prisma/client' -> 'prisma'.
-    Los paquetes sin scope se devuelven tal cual.
+    Remove the '@' prefix and keep the scope part (without the sub-package
+    name). For example: '@nestjs/core' -> 'nestjs', '@prisma/client' -> 'prisma'.
+    Packages without a scope come back unchanged.
 
     Args:
-        name: nombre del paquete npm.
+        name: npm package name.
 
     Returns:
-        str con el nombre normalizado.
+        str with the normalized name.
     """
     if name.startswith("@"):
         return name.replace("@", "").split("/")[0]
@@ -1131,21 +1142,20 @@ def _normalize_scoped_package(name):
 
 def _parse_frontmatter(content):
     """
-    Extrae el frontmatter YAML y el cuerpo Markdown de un texto.
+    Extract the YAML frontmatter and the Markdown body from a text.
 
-    El frontmatter debe estar delimitado por líneas que contengan
-    exactamente '---'. El primer delimitador debe ser la primera línea
-    no vacía del documento.
+    Lines that contain exactly '---' must delimit the frontmatter. The first
+    delimiter must be the first non-empty line of the document.
 
     Args:
-        content: texto completo del fichero.
+        content: full file text.
 
     Returns:
-        tupla (frontmatter_str, body_str). Si no hay frontmatter,
-        frontmatter_str será una cadena vacía.
+        tuple (frontmatter_str, body_str). If there is no frontmatter,
+        frontmatter_str is an empty string.
     """
-    # Se busca el patrón ---\n...\n--- al principio del contenido.
-    # El grupo central usa .*? (lazy) para detenerse en el primer cierre ---.
+    # Find the ---\n...\n--- pattern at the start of the content.
+    # The middle group uses .*? (lazy) to stop at the first closing ---.
     match = re.match(
         r"\A(?:\ufeff)?(?:[ \t]*\n)*---[ \t]*\n(.*?)\n---[ \t]*\n?(.*)",
         content,
@@ -1157,7 +1167,7 @@ def _parse_frontmatter(content):
 
 
 def _has_top_level_frontmatter_section(frontmatter: str, section: str) -> bool:
-    """Indica si un frontmatter crudo contiene una sección top-level."""
+    """Tell if a raw frontmatter contains a top-level section."""
     target = f"{section}:"
     for line in frontmatter.splitlines():
         stripped = line.strip()
@@ -1169,7 +1179,7 @@ def _has_top_level_frontmatter_section(frontmatter: str, section: str) -> bool:
 
 
 def _strip_accents(value: str) -> str:
-    """Normaliza una cadena Unicode retirando acentos para comparaciones."""
+    """Normalize a Unicode string by removing accents, for comparisons."""
     return "".join(
         char
         for char in unicodedata.normalize("NFKD", value)
@@ -1178,7 +1188,7 @@ def _strip_accents(value: str) -> str:
 
 
 def _normalize_identifier(value: Any) -> Any:
-    """Convierte claves humanas a un identificador estable para alias internos."""
+    """Convert human-written keys to a stable identifier for internal aliases."""
     if not isinstance(value, str):
         return value
 
@@ -1188,7 +1198,7 @@ def _normalize_identifier(value: Any) -> Any:
 
 
 def _normalize_autonomy_value(value: Any) -> Any:
-    """Canaliza variantes como 'autónomo' o 'semi autónomo' al formato ASCII."""
+    """Map variants such as 'autónomo' or 'semi autónomo' to the ASCII format."""
     if not isinstance(value, str):
         return value
 
@@ -1197,7 +1207,7 @@ def _normalize_autonomy_value(value: Any) -> Any:
 
 
 def _normalize_autonomy_section(section: Dict[str, Any]) -> Dict[str, Any]:
-    """Compatibiliza esquemas antiguos de autonomía con el esquema por fases."""
+    """Adapt old autonomy schemas to the per-phase schema."""
     primary: Dict[str, Any] = {}
     legacy: Dict[str, Any] = {}
     security_value: Optional[Any] = None
@@ -1233,7 +1243,7 @@ def _normalize_autonomy_section(section: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _normalize_loaded_config(parsed: Dict[str, Any]) -> Dict[str, Any]:
-    """Normaliza alias históricos y secciones documentadas a la forma canónica."""
+    """Normalize legacy aliases and documented sections to the canonical form."""
     normalized: Dict[str, Any] = {}
 
     for raw_key, raw_value in parsed.items():
@@ -1263,22 +1273,21 @@ def _normalize_loaded_config(parsed: Dict[str, Any]) -> Dict[str, Any]:
 
 def _deep_merge(base, override):
     """
-    Fusiona dos diccionarios de forma recursiva.
+    Merge two dicts recursively.
 
-    Los valores del diccionario 'override' sobreescriben los de 'base'.
-    Cuando ambos valores son diccionarios, se fusionan recursivamente
-    en lugar de reemplazar el diccionario completo. Esto permite que el
-    usuario defina solo las claves que quiere cambiar sin perder los
-    valores por defecto del resto.
+    Values from 'override' replace the values from 'base'. When both values
+    are dicts, they merge recursively instead of replacing the whole dict.
+    This lets the user set only the keys to change and keep the defaults of
+    all other keys.
 
     Args:
-        base: diccionario base (se copia, no se muta).
-        override: diccionario con los valores que sobreescriben.
+        base: base dict (copied, not mutated).
+        override: dict with the overriding values.
 
     Returns:
-        dict nuevo con la fusión de ambos.
+        new dict with both merged.
 
-    Ejemplo:
+    Example:
         >>> _deep_merge({"a": {"x": 1, "y": 2}}, {"a": {"x": 99}})
         {'a': {'x': 99, 'y': 2}}
     """
@@ -1293,38 +1302,36 @@ def _deep_merge(base, override):
 
 def _parse_yaml(text):
     """
-    Parsea un texto YAML y devuelve un diccionario.
+    Parse a YAML text and return a dict.
 
-    Intenta usar PyYAML si está disponible. En caso contrario, recurre
-    a un parser básico que soporta el subconjunto de YAML necesario
-    para la configuración del plugin: diccionarios anidados con valores
-    escalares (strings, números, booleanos).
+    Use PyYAML if it is available. Otherwise fall back to a basic parser
+    that supports the YAML subset the plugin config needs: nested dicts
+    with scalar values (strings, numbers, booleans).
 
-    El parser básico no soporta listas, anclas, aliases ni otros
-    constructos avanzados de YAML. Para configuraciones complejas
-    se recomienda instalar PyYAML.
+    The basic parser does not support lists, anchors, aliases or other
+    advanced YAML constructs. For complex configs, install PyYAML.
 
     Args:
-        text: cadena con contenido YAML.
+        text: string with YAML content.
 
     Returns:
-        dict con los valores parseados, o dict vacío si el parseo falla.
+        dict with the parsed values, or an empty dict if parsing fails.
     """
     if _HAS_YAML:
         try:
             result = yaml.safe_load(text)
             if not isinstance(result, dict):
                 print(
-                    "[Alfred Dev] Aviso: el frontmatter YAML no es un diccionario. "
-                    "Se ignorará la configuración del fichero.",
+                    "[Alfred Dev] Предупреждение: YAML frontmatter не является словарём. "
+                    "Настройки из файла игнорируются.",
                     file=sys.stderr,
                 )
                 return {}
             return result
         except yaml.YAMLError as e:
             print(
-                f"[Alfred Dev] Error de sintaxis en el frontmatter YAML: {e}. "
-                f"Se ignorará la configuración del fichero.",
+                f"[Alfred Dev] Ошибка: синтаксическая ошибка в YAML frontmatter: {e}. "
+                f"Настройки из файла игнорируются.",
                 file=sys.stderr,
             )
             return {}
@@ -1334,38 +1341,38 @@ def _parse_yaml(text):
 
 def _basic_yaml_parse(text):
     """
-    Parser YAML minimalista sin dependencias externas.
+    Minimal YAML parser without external dependencies.
 
-    Soporta el subconjunto necesario para la configuración del plugin:
-    - Pares clave: valor
-    - Anidamiento por indentación (espacios)
-    - Valores escalares: strings, enteros, floats, booleanos, null
+    It supports the subset the plugin config needs:
+    - key: value pairs
+    - Nesting by indentation (spaces)
+    - Scalar values: strings, integers, floats, booleans, null
 
-    No soporta listas, strings multilínea, anclas ni aliases. Esto es
-    un fallback para entornos sin PyYAML; en producción se recomienda
-    tener PyYAML instalado.
+    It does not support lists, multiline strings, anchors or aliases. It is
+    a fallback for environments without PyYAML. In production, install
+    PyYAML.
 
     Args:
-        text: cadena con contenido YAML básico.
+        text: string with basic YAML content.
 
     Returns:
-        dict con los valores parseados.
+        dict with the parsed values.
     """
     result = {}
-    # Pila para rastrear el nivel de anidamiento actual.
-    # Cada elemento es (indent_level, dict_referencia)
+    # Stack that tracks the current nesting level.
+    # Each item is (indent_level, dict_reference)
     stack = [(0, result)]
 
     for line in text.split("\n"):
-        # Se ignoran líneas vacías y comentarios
+        # Skip empty lines and comments
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
 
-        # Se calcula la indentación para determinar el nivel
+        # Compute the indentation to find the level
         indent = len(line) - len(line.lstrip())
 
-        # Se busca el patrón clave: valor
+        # Find the key: value pattern
         match = re.match(r"^(\w[\w\-]*):\s*(.*)", stripped)
         if not match:
             continue
@@ -1373,17 +1380,17 @@ def _basic_yaml_parse(text):
         key = match.group(1)
         raw_value = match.group(2).strip()
 
-        # Se retrocede en la pila hasta encontrar el padre correcto
+        # Pop the stack until the correct parent is found
         while len(stack) > 1 and stack[-1][0] >= indent:
             stack.pop()
 
         parent = stack[-1][1]
 
         if raw_value:
-            # Es un par clave: valor escalar
+            # A key: scalar value pair
             parent[key] = _coerce_yaml_value(raw_value)
         else:
-            # Es una clave que abre un diccionario anidado
+            # A key that opens a nested dict
             new_dict = {}
             parent[key] = new_dict
             stack.append((indent, new_dict))
@@ -1393,23 +1400,23 @@ def _basic_yaml_parse(text):
 
 def _coerce_yaml_value(value):
     """
-    Convierte un valor YAML en cadena al tipo Python correspondiente.
+    Convert a YAML string value to the matching Python type.
 
-    Reglas de conversión:
+    Conversion rules:
     - 'true'/'false' (case insensitive) -> bool
     - 'null'/'~' -> None
-    - Números enteros -> int
-    - Números decimales -> float
-    - Strings entre comillas -> string sin comillas
-    - Todo lo demás -> string tal cual
+    - Integers -> int
+    - Decimals -> float
+    - Quoted strings -> string without quotes
+    - Everything else -> string as is
 
     Args:
-        value: cadena con el valor YAML crudo.
+        value: string with the raw YAML value.
 
     Returns:
-        valor Python convertido al tipo apropiado.
+        Python value converted to the correct type.
     """
-    # Booleanos
+    # Booleans
     if value.lower() == "true":
         return True
     if value.lower() == "false":
@@ -1419,13 +1426,13 @@ def _coerce_yaml_value(value):
     if value.lower() in ("null", "~"):
         return None
 
-    # Strings entrecomillados: se eliminan las comillas externas
+    # Quoted strings: remove the outer quotes
     if (value.startswith('"') and value.endswith('"')) or (
         value.startswith("'") and value.endswith("'")
     ):
         return value[1:-1]
 
-    # Enteros
+    # Integers
     try:
         return int(value)
     except ValueError:
@@ -1442,21 +1449,21 @@ def _coerce_yaml_value(value):
 
 def _extract_notes(body):
     """
-    Extrae el contenido de la sección de notas del cuerpo Markdown.
+    Extract the content of the notes section from the Markdown body.
 
-    Busca una cabecera (h1-h6) cuyo texto contenga 'Notas' y extrae
-    todo el contenido hasta la siguiente cabecera del mismo nivel o
-    hasta el final del documento.
+    Find a heading (h1-h6) whose text contains 'Notas' and extract all
+    content up to the next heading of the same level or to the end of the
+    document.
 
     Args:
-        body: texto Markdown (sin frontmatter).
+        body: Markdown text (without frontmatter).
 
     Returns:
-        str con el contenido de la sección de notas, o cadena vacía
-        si no se encuentra ninguna sección con ese título.
+        str with the content of the notes section, or an empty string if
+        no section with that heading exists.
     """
-    # Se busca una línea que empiece con # y contenga "Notas".
-    # Se usa [^\n]*? (lazy) para evitar backtracking excesivo en líneas largas.
+    # Find a line that starts with # and contains "Notas".
+    # Use [^\n]*? (lazy) to prevent excessive backtracking on long lines.
     pattern = re.compile(r"^(#{1,6})\s+[^\n]*?[Nn]otas[^\n]*$", re.MULTILINE)
     match = pattern.search(body)
     if not match:
@@ -1465,7 +1472,7 @@ def _extract_notes(body):
     header_level = len(match.group(1))
     start = match.end()
 
-    # Se busca la siguiente cabecera del mismo nivel o superior
+    # Find the next heading of the same or a higher level
     next_header = re.compile(
         r"^#{1," + str(header_level) + r"}\s+", re.MULTILINE
     )
@@ -1483,7 +1490,7 @@ def _ordered_dict_items(
     data: Dict[str, Any],
     template: Optional[Dict[str, Any]] = None,
 ) -> List[Tuple[str, Any]]:
-    """Devuelve items en orden estable siguiendo un template si existe."""
+    """Return items in a stable order that follows a template if one exists."""
     seen = set()
     items: List[Tuple[str, Any]] = []
 
@@ -1502,7 +1509,7 @@ def _ordered_dict_items(
 
 
 def _render_yaml_scalar(value: Any) -> str:
-    """Renderiza un escalar Python a una forma YAML simple y estable."""
+    """Render a Python scalar as simple, stable YAML."""
     if isinstance(value, bool):
         return "true" if value else "false"
     if value is None:
@@ -1526,7 +1533,7 @@ def _render_yaml_mapping(
     *,
     indent: int = 0,
 ) -> str:
-    """Renderiza un diccionario simple como YAML estable."""
+    """Render a simple dict as stable YAML."""
     lines: List[str] = []
     prefix = " " * indent
 
@@ -1549,14 +1556,14 @@ def _render_yaml_mapping(
 
 def _detect_node_details(project_dir, stack):
     """
-    Detecta framework, ORM, test runner y bundler en un proyecto Node.
+    Detect framework, ORM, test runner and bundler in a Node project.
 
-    Lee el package.json y analiza tanto 'dependencies' como
-    'devDependencies' para identificar las herramientas del proyecto.
+    Read package.json and check both 'dependencies' and 'devDependencies'
+    to identify the project tools.
 
     Args:
-        project_dir: ruta al directorio del proyecto.
-        stack: diccionario de stack que se modifica in-place.
+        project_dir: path to the project directory.
+        stack: stack dict, modified in place.
     """
     pkg_path = os.path.join(project_dir, "package.json")
     try:
@@ -1564,20 +1571,20 @@ def _detect_node_details(project_dir, stack):
             pkg = json.load(f)
     except (OSError, IOError, json.JSONDecodeError) as e:
         print(
-            f"[Alfred Dev] Aviso: no se pudo leer '{pkg_path}': {e}. "
-            f"La detección de framework será incompleta.",
+            f"[Alfred Dev] Предупреждение: не удалось прочитать '{pkg_path}': {e}. "
+            f"Определение framework будет неполным.",
             file=sys.stderr,
         )
         return
 
-    # Se unifican todas las dependencias para buscar en un solo paso
+    # Merge all dependencies to search in one pass
     all_deps = {
         **pkg.get("dependencies", {}),
         **pkg.get("devDependencies", {}),
     }
 
-    # Frameworks: si conviven frontend y backend, priorizamos la UI para que
-    # las fases condicionales y sugerencias reflejen la presencia real de interfaz.
+    # Frameworks: if frontend and backend coexist, prefer the UI, so that
+    # conditional phases and suggestions reflect a real interface.
     frontend_frameworks = [
         "next", "nuxt", "astro", "remix", "gatsby", "svelte",
         "solid-js", "qwik", "vue", "react", "angular", "@angular/core",
@@ -1592,7 +1599,7 @@ def _detect_node_details(project_dir, stack):
     if found:
         stack["framework"] = _normalize_scoped_package(found)
 
-    # ORMs y query builders
+    # ORMs and query builders
     orms = [
         "drizzle-orm", "prisma", "@prisma/client", "typeorm",
         "sequelize", "knex", "mongoose", "mikro-orm", "@mikro-orm/core",
@@ -1600,7 +1607,7 @@ def _detect_node_details(project_dir, stack):
 
     found = _find_first_match(orms, all_deps)
     if found:
-        # Se simplifica: @prisma/client -> prisma, drizzle-orm -> drizzle
+        # Simplify: @prisma/client -> prisma, drizzle-orm -> drizzle
         name = _normalize_scoped_package(found)
         stack["orm"] = name.replace("-orm", "").replace("-client", "")
 
@@ -1626,18 +1633,18 @@ def _detect_node_details(project_dir, stack):
 
 def _detect_python_details(project_dir, stack):
     """
-    Detecta framework, ORM y test runner en un proyecto Python.
+    Detect framework, ORM and test runner in a Python project.
 
-    Lee pyproject.toml (de forma básica, sin parser TOML completo)
-    y requirements.txt para identificar las dependencias.
+    Read pyproject.toml (basic reading, no full TOML parser) and
+    requirements.txt to identify the dependencies.
 
     Args:
-        project_dir: ruta al directorio del proyecto.
-        stack: diccionario de stack que se modifica in-place.
+        project_dir: path to the project directory.
+        stack: stack dict, modified in place.
     """
     deps_text = ""
 
-    # Se intenta leer pyproject.toml para extraer dependencias
+    # Try to read pyproject.toml to extract dependencies
     pyproject_path = os.path.join(project_dir, "pyproject.toml")
     if os.path.isfile(pyproject_path):
         try:
@@ -1645,12 +1652,12 @@ def _detect_python_details(project_dir, stack):
                 deps_text += f.read()
         except (OSError, IOError) as e:
             print(
-                f"[Alfred Dev] Aviso: no se pudo leer '{pyproject_path}': {e}. "
-                f"La detección de framework será incompleta.",
+                f"[Alfred Dev] Предупреждение: не удалось прочитать '{pyproject_path}': {e}. "
+                f"Определение framework будет неполным.",
                 file=sys.stderr,
             )
 
-    # Se complementa con requirements.txt si existe
+    # Add requirements.txt if it exists
     reqs_path = os.path.join(project_dir, "requirements.txt")
     if os.path.isfile(reqs_path):
         try:
@@ -1658,14 +1665,14 @@ def _detect_python_details(project_dir, stack):
                 deps_text += "\n" + f.read()
         except (OSError, IOError) as e:
             print(
-                f"[Alfred Dev] Aviso: no se pudo leer '{reqs_path}': {e}. "
-                f"La detección de framework será incompleta.",
+                f"[Alfred Dev] Предупреждение: не удалось прочитать '{reqs_path}': {e}. "
+                f"Определение framework будет неполным.",
                 file=sys.stderr,
             )
 
     dependency_names = _extract_python_dependency_names(deps_text)
 
-    # Frameworks Python (orden = prioridad)
+    # Python frameworks (order = priority)
     py_frameworks = [
         "fastapi", "django", "flask", "starlette",
         "litestar", "sanic", "tornado", "aiohttp",
@@ -1675,8 +1682,8 @@ def _detect_python_details(project_dir, stack):
     if found:
         stack["framework"] = found
 
-    # ORMs Python: se usan tuplas solo cuando la clave de busqueda
-    # difiere del nombre que se asigna (django -> django-orm)
+    # Python ORMs: each tuple maps the search key to the assigned name
+    # where they differ (django -> django-orm)
     py_orms = [
         ("sqlalchemy", "sqlalchemy"),
         ("sqlmodel", "sqlmodel"),
@@ -1691,7 +1698,7 @@ def _detect_python_details(project_dir, stack):
             stack["orm"] = orm_name
             break
 
-    # Test runners Python
+    # Python test runners
     py_test_runners = ["pytest", "unittest", "nose"]
 
     found = _find_first_match(py_test_runners, dependency_names)
@@ -1700,7 +1707,7 @@ def _detect_python_details(project_dir, stack):
 
 
 def _detect_jvm_details(project_dir, stack):
-    """Detecta framework y runner en proyectos Java/Kotlin."""
+    """Detect framework and runner in Java/Kotlin projects."""
     text = _root_file_text(
         project_dir,
         (
@@ -1731,7 +1738,7 @@ def _detect_jvm_details(project_dir, stack):
 
 
 def _detect_php_details(project_dir, stack):
-    """Detecta framework, ORM y runner en proyectos PHP con Composer."""
+    """Detect framework, ORM and runner in PHP projects with Composer."""
     composer_path = os.path.join(project_dir, "composer.json")
     try:
         with open(composer_path, "r", encoding="utf-8") as f:
@@ -1763,7 +1770,7 @@ def _detect_php_details(project_dir, stack):
 
 
 def _detect_dotnet_details(project_dir, stack):
-    """Detecta framework, ORM y runner en proyectos C#/.NET."""
+    """Detect framework, ORM and runner in C#/.NET projects."""
     parts = []
     try:
         root_names = os.listdir(project_dir)
@@ -1790,7 +1797,7 @@ def _detect_dotnet_details(project_dir, stack):
 
 
 def _detect_swift_details(project_dir, stack):
-    """Detecta framework y runner en proyectos Swift Package Manager."""
+    """Detect framework and runner in Swift Package Manager projects."""
     text = _read_text_if_exists(os.path.join(project_dir, "Package.swift")).lower()
     if "vapor" in text:
         stack["framework"] = "vapor"
@@ -1798,22 +1805,22 @@ def _detect_swift_details(project_dir, stack):
         stack["test_runner"] = "swift-test"
 
 
-# --- Descubrimiento contextual de agentes opcionales ----------------------
+# --- Contextual discovery of optional agents ------------------------------
 
 
 def _has_github_remote(project_dir):
-    """Comprueba si el proyecto tiene un remote de GitHub configurado.
+    """Check if the project has a GitHub remote.
 
-    Lee directamente el fichero .git/config para evitar dependencias de
-    subprocesos. Solo considera válido un remote cuya URL apunte a GitHub,
-    para no sugerir ``github-manager`` en repositorios de GitLab, Bitbucket
-    u otras forjas.
+    Read the .git/config file directly to avoid subprocess dependencies.
+    Accept only a remote whose URL points to GitHub, so that
+    ``github-manager`` is not suggested for GitLab, Bitbucket or other
+    forges.
 
     Args:
-        project_dir: ruta al directorio raíz del proyecto.
+        project_dir: path to the project root directory.
 
     Returns:
-        True si hay al menos un remote de GitHub, False en caso contrario.
+        True if there is at least one GitHub remote, False otherwise.
     """
     git_config = os.path.join(project_dir, ".git", "config")
     if not os.path.isfile(git_config):
@@ -1824,30 +1831,30 @@ def _has_github_remote(project_dir):
             return "github.com:" in content or "github.com/" in content
     except (OSError, IOError) as e:
         print(
-            f"[Alfred Dev] Aviso: no se pudo leer .git/config: {e}",
+            f"[Alfred Dev] Предупреждение: не удалось прочитать .git/config: {e}",
             file=sys.stderr,
         )
         return False
 
 
 def _has_public_html(project_dir):
-    """Detecta si el proyecto tiene contenido web público.
+    """Detect if the project has public web content.
 
-    Busca indicadores comunes de sitios web estáticos o landing pages:
-    ficheros HTML en la raíz o en directorios típicos (public/, site/, dist/).
+    Look for common signs of static websites or landing pages: HTML files
+    in the root or in typical directories (public/, site/, dist/).
 
     Args:
-        project_dir: ruta al directorio raíz del proyecto.
+        project_dir: path to the project root directory.
 
     Returns:
-        True si se detectan ficheros HTML públicos, False en caso contrario.
+        True if public HTML files are found, False otherwise.
     """
-    # Ficheros HTML directos en la raíz
+    # HTML files directly in the root
     for name in ("index.html", "index.htm"):
         if os.path.isfile(os.path.join(project_dir, name)):
             return True
 
-    # Directorios típicos de contenido público
+    # Typical public content directories
     for dirname in ("public", "site", "dist", "docs"):
         dirpath = os.path.join(project_dir, dirname)
         if os.path.isdir(dirpath):
@@ -1859,21 +1866,21 @@ def _has_public_html(project_dir):
 
 
 def _scan_dir_for_sources(dirpath, source_extensions, skip_dirs, errors, max_depth, depth=0):
-    """Cuenta ficheros de código fuente en un directorio de forma recursiva.
+    """Count source files in a directory recursively.
 
-    Recursion controlada por profundidad para evitar latencia excesiva en
-    proyectos con node_modules u otros directorios de dependencias grandes.
+    A depth limit controls the recursion to prevent high latency in
+    projects with node_modules or other large dependency directories.
 
     Args:
-        dirpath: directorio a escanear.
-        source_extensions: conjunto de extensiones de código fuente.
-        skip_dirs: conjunto de nombres de directorio a ignorar.
-        errors: lista mutable donde se acumulan errores de acceso.
-        max_depth: profundidad máxima de recursión desde el directorio raíz.
-        depth: profundidad actual (0 = directorio raíz).
+        dirpath: directory to scan.
+        source_extensions: set of source file extensions.
+        skip_dirs: set of directory names to skip.
+        errors: mutable list that collects access errors.
+        max_depth: maximum recursion depth from the root directory.
+        depth: current depth (0 = root directory).
 
     Returns:
-        int con el número de ficheros de código fuente encontrados.
+        int with the number of source files found.
     """
     count = 0
     try:
@@ -1890,17 +1897,17 @@ def _scan_dir_for_sources(dirpath, source_extensions, skip_dirs, errors, max_dep
 
 
 def _count_source_files(project_dir):
-    """Cuenta ficheros de código fuente en el proyecto (hasta 2 niveles de profundidad).
+    """Count source files in the project (up to 2 levels deep).
 
-    Recorre hasta 2 niveles de profundidad para evitar latencia excesiva
-    en proyectos con node_modules o directorios de dependencias grandes.
-    Ignora directorios de dependencias y artefactos conocidos.
+    Walk at most 2 levels deep to prevent high latency in projects with
+    node_modules or large dependency directories. Skip known dependency and
+    artifact directories.
 
     Args:
-        project_dir: ruta al directorio raíz del proyecto.
+        project_dir: path to the project root directory.
 
     Returns:
-        int con el número de ficheros de código fuente encontrados.
+        int with the number of source files found.
     """
     source_extensions = {
         ".py", ".js", ".ts", ".jsx", ".tsx", ".rs", ".go",
@@ -1915,24 +1922,24 @@ def _count_source_files(project_dir):
     count = _scan_dir_for_sources(project_dir, source_extensions, skip_dirs, scan_errors, max_depth=2)
     if scan_errors:
         print(
-            f"[Alfred Dev] Aviso: no se pudieron escanear {len(scan_errors)} "
-            f"directorios. El conteo de ficheros puede ser parcial.",
+            f"[Alfred Dev] Предупреждение: не удалось просканировать каталоги "
+            f"({len(scan_errors)}). Подсчёт файлов может быть неполным.",
             file=sys.stderr,
         )
     return count
 
 
 def _is_memory_enabled(project_dir):
-    """Comprueba si la memoria persistente está habilitada en la configuración local.
+    """Check if persistent memory is enabled in the local config.
 
-    Delegamos en el parser canónico de ``core.memory_config`` para evitar
-    discrepancias entre la detección de sugerencias y el runtime real.
+    Delegate to the canonical parser in ``core.memory_config`` so that
+    suggestion detection and the real runtime do not disagree.
 
     Args:
-        project_dir: ruta al directorio raíz del proyecto.
+        project_dir: path to the project root directory.
 
     Returns:
-        True si la memoria está habilitada, False en caso contrario.
+        True if memory is enabled, False otherwise.
     """
     try:
         from core.memory_config import is_memory_enabled
@@ -1943,20 +1950,19 @@ def _is_memory_enabled(project_dir):
 
 
 def _has_i18n_signals(project_dir):
-    """Detecta señales de internacionalización en el proyecto.
+    """Detect internationalization signals in the project.
 
-    Busca directorios o ficheros típicos de i18n: carpetas ``i18n``,
-    ``locales``, ``translations``, ficheros ``*.po``, ``*.xliff`` o
-    ficheros de configuración de i18n como ``next-i18next.config.*``,
-    ``vue-i18n``, etc.
+    Look for typical i18n directories or files: ``i18n``, ``locales``,
+    ``translations`` folders, ``*.po``, ``*.xliff`` files, or i18n config
+    files such as ``next-i18next.config.*``, ``vue-i18n``, etc.
 
     Args:
-        project_dir: ruta al directorio raíz del proyecto.
+        project_dir: path to the project root directory.
 
     Returns:
-        True si se detectan señales de internacionalización.
+        True if internationalization signals are found.
     """
-    # Directorios típicos de i18n
+    # Typical i18n directories
     i18n_dirs = ("i18n", "locales", "translations", "lang", "langs")
     for d in i18n_dirs:
         if os.path.isdir(os.path.join(project_dir, d)):
@@ -1964,7 +1970,7 @@ def _has_i18n_signals(project_dir):
         if os.path.isdir(os.path.join(project_dir, "src", d)):
             return True
 
-    # Ficheros de configuración de i18n
+    # i18n config files
     i18n_files = (
         "next-i18next.config.js",
         "next-i18next.config.mjs",
@@ -1981,19 +1987,19 @@ def _has_i18n_signals(project_dir):
 
 
 def _build_suggestion_checks(stack, project_dir):
-    """Evalúa las señales del proyecto y devuelve los checks de sugerencia.
+    """Evaluate the project signals and return the suggestion checks.
 
-    Cada elemento describe un agente opcional candidato con su condición
-    de activación y la razón legible para el usuario. El orden determina
-    la prioridad de presentación en la UI de configuración.
+    Each item describes a candidate optional agent with its activation
+    condition and a reason the user can read. The order sets the display
+    priority in the config UI.
 
     Args:
-        stack: diccionario de stack detectado por ``detect_stack``.
-        project_dir: ruta al directorio raíz del proyecto.
+        stack: stack dict detected by ``detect_stack``.
+        project_dir: path to the project root directory.
 
     Returns:
-        Lista de tuplas ``(nombre_agente, condicion_bool, razon)``
-        listas para filtrar contra la configuración activa.
+        List of ``(agent_name, condition_bool, reason)`` tuples, ready to
+        filter against the active config.
     """
     checks = {}
     return [
@@ -2003,29 +2009,28 @@ def _build_suggestion_checks(stack, project_dir):
 
 
 def suggest_optional_agents(project_dir, current_config=None):
-    """Analiza el proyecto y sugiere agentes opcionales relevantes.
+    """Analyze the project and suggest relevant optional agents.
 
-    Examina el stack tecnológico, la presencia de base de datos, frontend,
-    contenido web público, remote GitHub y tamaño del proyecto para recomendar
-    qué agentes opcionales podrían ser útiles.
+    Check the tech stack, database, frontend, public web content, GitHub
+    remote and project size to recommend which optional agents can help.
 
-    Solo sugiere agentes que no estén ya activados en la configuración actual.
+    Suggest only agents that are not already enabled in the current config.
 
     Args:
-        project_dir: ruta al directorio raíz del proyecto.
-        current_config: diccionario de configuración actual (opcional).
-            Si se proporciona, se filtran los agentes ya activos.
+        project_dir: path to the project root directory.
+        current_config: current config dict (optional).
+            If given, already active agents are filtered out.
 
     Returns:
-        Lista de tuplas (nombre_agente, razon) con las sugerencias.
-        Cada tupla contiene el identificador del agente y una cadena
-        explicando por qué se sugiere.
+        List of (agent_name, reason) tuples with the suggestions.
+        Each tuple contains the agent identifier and a string that explains
+        why it is suggested.
 
-    Ejemplo:
-        >>> suggestions = suggest_optional_agents("/mi-proyecto-next")
+    Example:
+        >>> suggestions = suggest_optional_agents("/my-next-project")
         >>> suggestions
-        [('ux-reviewer', 'Proyecto con frontend Next.js'),
-         ('github-manager', 'Repositorio con remote en GitHub')]
+        [('ux-reviewer', 'Проект с frontend на Next.js'),
+         ('github-manager', 'Репозиторий с remote на GitHub')]
     """
     if current_config is None:
         current_config = copy.deepcopy(DEFAULT_CONFIG)

@@ -38,7 +38,7 @@ class TestSessionEndCierre(unittest.TestCase):
             path = write_session_cierre(tmpdir)
             self.assertIsNotNone(path)
             text = open(path, encoding="utf-8").read()
-            self.assertIn("Cierre Alfred", text)
+            self.assertIn("Итог Alfred", text)
             self.assertIn("cambia el CTA", text)
 
     def test_hook_exits_zero(self):

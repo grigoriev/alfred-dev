@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para el cargador de configuración del plugin."""
+"""Tests for the plugin config loader."""
 
 import json
 import os
@@ -185,7 +185,7 @@ class TestLoadConfig(unittest.TestCase):
         self.assertTrue(equipo["infra"]["memoria"])
 
     def test_legacy_lucius_key_is_accepted_as_cto(self):
-        """Proyectos existentes con `agentes_opcionales.lucius` siguen funcionando."""
+        """Existing projects with `agentes_opcionales.lucius` keep working."""
         with tempfile.TemporaryDirectory() as tmpdir:
             claude_dir = os.path.join(tmpdir, ".claude")
             os.makedirs(claude_dir, exist_ok=True)
@@ -203,7 +203,7 @@ class TestLoadConfig(unittest.TestCase):
         self.assertNotIn("lucius", config["agentes_opcionales"])
         self.assertEqual(get_active_optional_agents(config), ["cto"])
         self.assertTrue(equipo["opcionales_activos"]["cto"])
-        # Alias directo sin normalizar y prioridad de la clave canonica.
+        # Direct alias without normalization, and priority of the canonical key.
         self.assertEqual(get_active_optional_agents({"agentes_opcionales": {"lucius": True}}), ["cto"])
         self.assertEqual(
             get_active_optional_agents({"agentes_opcionales": {"cto": False, "lucius": True}}),
@@ -297,7 +297,7 @@ class TestLoadConfig(unittest.TestCase):
         self.assertTrue(changed)
         self.assertTrue(reloaded["memoria"]["enabled"])
         self.assertEqual(reloaded["autonomia"]["producto"], "autonomo")
-        self.assertIn("Puedes personalizarlo con `/alfred-dev:ajustes`.", content)
+        self.assertIn("Ты можешь настроить его через `/alfred-dev:ajustes`.", content)
 
     def test_ensure_bootstrap_local_config_respects_explicit_memory_disable(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
@@ -354,10 +354,10 @@ class TestLoadConfig(unittest.TestCase):
         agents = next(section for section in summaries if section["section"] == "agentes_opcionales")
         memory = next(section for section in summaries if section["section"] == "memoria")
 
-        self.assertIn("interactivas", autonomy["summary"])
-        self.assertIn("1 activo", agents["summary"])
+        self.assertIn("интерактивных", autonomy["summary"])
+        self.assertIn("Активных: 1", agents["summary"])
         self.assertIn("CTO", agents["summary"])
-        self.assertIn("Activa con sync nativa", memory["summary"])
+        self.assertIn("Активна с нативной синхронизацией", memory["summary"])
 
     def test_build_config_section_menu_uses_current_summaries(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -377,25 +377,25 @@ class TestLoadConfig(unittest.TestCase):
         labels = [option["label"] for option in menu["options"]]
         project_option = next(
             option for option in menu["options"]
-            if option["label"] == "Proyecto"
+            if option["label"] == "Проект"
         )
         agents_option = next(
             option for option in menu["options"]
-            if option["label"] == "Agentes opcionales"
+            if option["label"] == "Опциональные агенты"
         )
 
         self.assertEqual(menu["header"], "Config")
-        self.assertEqual(menu["question"], "¿Qué sección quieres modificar ahora?")
+        self.assertEqual(menu["question"], "Какую секцию хочешь изменить сейчас?")
         self.assertEqual(menu["questions"][0]["header"], "Config")
         self.assertEqual(menu["questions"][0]["question"], menu["question"])
         self.assertEqual(menu["questions"][0]["options"], menu["options"])
         self.assertEqual(menu["questions"][0]["multiSelect"], False)
         self.assertEqual(labels[0], "Salir sin cambios")
-        self.assertIn("Autonomía por fase", labels)
-        self.assertIn("Proyecto", labels)
-        self.assertIn("Agentes opcionales", labels)
+        self.assertIn("Автономность по фазам", labels)
+        self.assertIn("Проект", labels)
+        self.assertIn("Опциональные агенты", labels)
         self.assertIn("next", project_option["description"])
-        self.assertIn("Detectado automáticamente.", project_option["description"])
+        self.assertIn("Определён автоматически.", project_option["description"])
         self.assertIn("CTO", agents_option["description"])
 
     def test_apply_config_section_update_normalizes_and_preserves_rest(self):
@@ -525,9 +525,9 @@ class TestLoadConfig(unittest.TestCase):
         )
 
         self.assertTrue(preview["changed"])
-        self.assertEqual(preview["label"], "Memoria persistente")
-        self.assertIn("Inactiva", preview["before"]["summary"])
-        self.assertIn("Activa con sync nativa", preview["after"]["summary"])
+        self.assertEqual(preview["label"], "Постоянная память")
+        self.assertIn("Неактивна", preview["before"]["summary"])
+        self.assertIn("Активна с нативной синхронизацией", preview["after"]["summary"])
         self.assertTrue(preview["updated_config"]["memoria"]["enabled"])
 
     def test_build_config_section_change_preview_detects_noop_updates(self):
@@ -769,7 +769,7 @@ class TestDetectStack(unittest.TestCase):
 
 
 class TestOptionalAgents(unittest.TestCase):
-    """Tests para el catalogo reducido de opcionales (solo CTO)."""
+    """Tests for the reduced optional agent catalog (CTO only)."""
 
     def test_default_config_has_optional_agents(self):
         self.assertIn("agentes_opcionales", DEFAULT_CONFIG)
@@ -825,8 +825,8 @@ class TestConfigCli(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("CONFIG_HEADLESS_MENU", result.stdout)
-            self.assertIn("Autonomía", result.stdout)
-            self.assertIn("Personalidad", result.stdout)
+            self.assertIn("Автономность", result.stdout)
+            self.assertIn("Личность", result.stdout)
             self.assertTrue(
                 os.path.isfile(os.path.join(tmpdir, ".claude", "alfred-dev.local.md"))
             )

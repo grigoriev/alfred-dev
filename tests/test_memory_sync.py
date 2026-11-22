@@ -225,7 +225,7 @@ class TestSyncAll(SyncTestBase):
         with open(os.path.join(self._memory_dir, "alfred-summary.md"), "r") as f:
             content = f.read()
 
-        self.assertIn("2 decisiones activas", content)
+        self.assertIn("Активных решений в проекте: 2", content)
         self.assertIn("Cache con Redis", content)
         self.assertIn("Autenticacion con sesiones", content)
         self.assertIn("source: alfred-memory", content)
@@ -281,7 +281,7 @@ class TestSyncAll(SyncTestBase):
 
         self.assertIn("arquitectura", content)
         self.assertIn("desarrollo", content)
-        self.assertIn("tras desarrollo", content)
+        self.assertIn("после desarrollo", content)
 
     def test_iteracion_escapa_fases_con_pipes_y_saltos(self):
         """La tabla de fases no debe romperse por contenido libre."""
@@ -459,8 +459,8 @@ class TestCommitsSync(SyncTestBase):
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        self.assertIn("histórico", content)
-        self.assertIn("incluyendo flujo activo e historial importado", content)
+        self.assertIn("история", content)
+        self.assertIn("включая активный процесс и импортированную историю", content)
 
     def test_summary_separa_commits_de_iteracion_e_historial(self):
         """El resumen no debe mezclar commits importados con commits del flujo."""
@@ -482,8 +482,8 @@ class TestCommitsSync(SyncTestBase):
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        self.assertIn("Hay 1 commit con vínculo a 1 iteracion.", content)
-        self.assertIn("Ademas hay 1 commit importado como historial de referencia.", content)
+        self.assertIn("Commits, связанных с итерациями: 1 (итераций: 1).", content)
+        self.assertIn("Импортированных commits в истории для справки: 1.", content)
 
     def test_commits_table_escapes_pipes_and_newlines(self):
         """La tabla Markdown debe seguir siendo valida con texto libre."""
@@ -551,7 +551,7 @@ class TestEdgeCases(unittest.TestCase):
         self.assertTrue(os.path.isfile(summary))
         with open(summary, "r") as f:
             content = f.read()
-        self.assertIn("0 decisiones activas", content)
+        self.assertIn("Активных решений в проекте: 0", content)
 
         # No debe haber ficheros de decision individual
         for entry in os.listdir(self._memory_dir):
@@ -737,7 +737,7 @@ class TestE2E(unittest.TestCase):
             # 5. Resumen con datos correctos
             with open(os.path.join(memory_dir, "alfred-summary.md"), "r") as f:
                 summary = f.read()
-            self.assertIn("2 decisiones activas", summary)
+            self.assertIn("Активных решений в проекте: 2", summary)
             self.assertIn("Framework web", summary)
 
             # 6. Archivar y re-sync
@@ -759,7 +759,7 @@ class TestE2E(unittest.TestCase):
             # 7. Resumen actualizado
             with open(os.path.join(memory_dir, "alfred-summary.md"), "r") as f:
                 summary2 = f.read()
-            self.assertIn("1 decisiones activas", summary2)
+            self.assertIn("Активных решений в проекте: 1", summary2)
 
             db.close()
         finally:

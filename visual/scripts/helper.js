@@ -1,38 +1,37 @@
 /**
- * helper.js — Cliente WebSocket para el visor de Designer.
+ * helper.js: WebSocket client for the Designer viewer.
  *
- * Se inyecta como script inline en cada pagina servida por server.cjs.
- * Gestiona la conexion WebSocket, la seleccion de opciones por parte
- * del usuario y la recarga automatica cuando el servidor notifica
- * cambios en el contenido.
+ * Injected as an inline script into every page that server.cjs serves.
+ * Handles the WebSocket connection, the option selection by the user,
+ * and the automatic reload when the server reports content changes.
  *
- * API publica expuesta en window:
- *   - window.toggleSelect(el) — Selecciona una opcion y deselecciona las demas.
- *   - window.selectedChoice   — Ultima eleccion seleccionada.
- *   - window.alfred           — { send(obj), choice(id, label) }
+ * Public API on window:
+ *   - window.toggleSelect(el) - Selects one option and deselects the others.
+ *   - window.selectedChoice   - Last selected choice.
+ *   - window.alfred           - { send(obj), choice(id, label) }
  */
 (function alfredHelper() {
   'use strict';
 
-  // -- Estado interno -------------------------------------------------------
+  // -- Internal state -------------------------------------------------------
 
   /** @type {WebSocket|null} */
   let ws = null;
 
-  /** @type {string|null} Ultima eleccion del usuario. */
+  /** @type {string|null} Last user choice. */
   let selectedChoice = null;
 
-  /** Cola de mensajes emitidos antes de que el socket este listo. */
+  /** Queue of messages sent before the socket is ready. */
   const pendingMessages = [];
 
-  /** Identificador del temporizador de reconexion. */
+  /** Reconnect timer ID. */
   let reconnectTimer = null;
 
-  /** Intervalo de reintento en milisegundos. */
+  /** Retry interval in milliseconds. */
   const RECONNECT_MS = 1000;
 
   /**
-   * Actualiza el indicador visual de conexion si existe en la pagina.
+   * Updates the connection indicator if the page has one.
    * @param {string} color
    * @param {string=} label
    */
@@ -44,7 +43,7 @@
   }
 
   /**
-   * Programa un unico intento de reconexion.
+   * Schedules a single reconnect attempt.
    */
   function scheduleReconnect() {
     if (reconnectTimer !== null) return;
@@ -55,7 +54,7 @@
   }
 
   /**
-   * Vuelca los mensajes pendientes cuando el socket ya esta abierto.
+   * Flushes pending messages once the socket is open.
    */
   function flushPendingMessages() {
     while (pendingMessages.length > 0 && ws && ws.readyState === WebSocket.OPEN) {
@@ -63,12 +62,12 @@
     }
   }
 
-  // -- Conexion WebSocket ---------------------------------------------------
+  // -- WebSocket connection -------------------------------------------------
 
   /**
-   * Establece la conexion WebSocket con reconexion automatica.
-   * Cuando el servidor envia {type:'reload'}, recarga la pagina completa
-   * para reflejar el contenido actualizado.
+   * Opens the WebSocket connection with automatic reconnect.
+   * When the server sends {type:'reload'}, reloads the full page
+   * to show the updated content.
    */
   function connect() {
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
@@ -80,7 +79,7 @@
     ws = new WebSocket(url);
 
     ws.onopen = function () {
-      setConnectionState('#27ae60', 'Conectado');
+      setConnectionState('#27ae60', 'Подключено');
       flushPendingMessages();
     };
 
@@ -91,23 +90,23 @@
           window.location.reload();
         }
       } catch (_) {
-        // Mensaje no JSON, ignorar
+        // Not a JSON message, ignore it
       }
     };
 
     ws.onclose = function () {
       ws = null;
-      setConnectionState('#d97706', 'Modo local');
+      setConnectionState('#d97706', 'Локальный режим');
       scheduleReconnect();
     };
 
     ws.onerror = function () {
-      // El evento close se dispara despues, ahi se reintenta
+      // The close event fires next and retries there
     };
   }
 
   /**
-   * Envia un evento de usuario por HTTP como fallback del WebSocket.
+   * Sends a user event over HTTP as a WebSocket fallback.
    * @param {object} obj
    */
   function postEvent(obj) {
@@ -124,11 +123,11 @@
     });
   }
 
-  // -- Envio de datos al servidor -------------------------------------------
+  // -- Send data to the server ---------------------------------------------
 
   /**
-   * Envia un objeto JSON al servidor a traves del WebSocket.
-   * @param {object} obj — Datos a enviar.
+   * Sends a JSON object to the server over the WebSocket.
+   * @param {object} obj - Data to send.
    */
   function send(obj) {
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -140,9 +139,9 @@
   }
 
   /**
-   * Registra una eleccion del usuario y la envia al servidor.
-   * @param {string} id — Identificador de la opcion (p. ej. "A", "B", "C").
-   * @param {string} label — Etiqueta legible de la opcion.
+   * Records a user choice and sends it to the server.
+   * @param {string} id - Option ID (for example "A", "B", "C").
+   * @param {string} label - Readable option label.
    */
   function choice(id, label) {
     selectedChoice = id;
@@ -153,16 +152,16 @@
     postEvent({ choice: id, label: label });
   }
 
-  // -- Seleccion visual de opciones ----------------------------------------
+  // -- Visual option selection ---------------------------------------------
 
   /**
-   * Selecciona un elemento de opcion y deselecciona sus hermanos.
-   * Busca el atributo data-choice para identificar la eleccion y
-   * el primer heading dentro del elemento para obtener la etiqueta legible.
-   * @param {HTMLElement} el — Elemento con atributo data-choice.
+   * Selects an option element and deselects its siblings.
+   * Reads the data-choice attribute to identify the choice and
+   * the first heading inside the element to get the readable label.
+   * @param {HTMLElement} el - Element with a data-choice attribute.
    */
   function toggleSelect(el) {
-    // Deseleccionar hermanos dentro del mismo contenedor
+    // Deselect siblings in the same container
     var parent = el.parentElement;
     if (parent) {
       var siblings = parent.querySelectorAll('[data-choice]');
@@ -171,26 +170,26 @@
       }
     }
 
-    // Seleccionar el elemento clicado
+    // Select the clicked element
     el.classList.add('selected');
 
     var id = el.getAttribute('data-choice');
     var explicitLabel = el.getAttribute('data-label');
     var heading = el.querySelector('h1, h2, h3, h4, h5, h6');
-    // Se usa textContent, nunca innerHTML, para evitar XSS si el contenido
-    // del encabezado contuviera HTML no confiable.
+    // Use textContent, never innerHTML, to prevent XSS if the heading
+    // contains untrusted HTML.
     var label = explicitLabel || (heading ? heading.textContent : id);
 
     choice(id, label);
 
-    // Actualizar barra indicadora
+    // Update the indicator bar
     var indicator = document.getElementById('alfred-indicator');
     if (indicator) {
-      indicator.textContent = 'Opcion ' + label + ' seleccionada — vuelve al terminal para continuar';
+      indicator.textContent = 'Выбран вариант ' + label + '. Вернись в терминал, чтобы продолжить';
     }
   }
 
-  // -- Captura de clics en opciones -----------------------------------------
+  // -- Capture clicks on options -------------------------------------------
 
   document.addEventListener('click', function (e) {
     var target = e.target.closest('[data-choice]');
@@ -200,7 +199,7 @@
     }
   });
 
-  // -- API publica ----------------------------------------------------------
+  // -- Public API -----------------------------------------------------------
 
   Object.defineProperty(window, 'selectedChoice', {
     get: function () { return selectedChoice; },
@@ -210,7 +209,7 @@
   window.toggleSelect = toggleSelect;
   window.alfred = { send: send, choice: choice };
 
-  // -- Arranque -------------------------------------------------------------
+  // -- Startup --------------------------------------------------------------
 
   connect();
 })();

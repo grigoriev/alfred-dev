@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Diagnostico humano para recuperar `claude -p` antes de la release."""
+"""Human-readable diagnosis to recover `claude -p` before the release."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def _manual_smoke_module():
         ROOT / "scripts" / "manual_smoke.py",
     )
     if spec is None or spec.loader is None:
-        raise RuntimeError("No se pudo cargar scripts/manual_smoke.py")
+        raise RuntimeError("Could not load scripts/manual_smoke.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -60,7 +60,7 @@ def _macos_keychain_commands(system_name: str) -> list[str]:
 def _script_oauth_fallback_commands() -> list[str]:
     return [
         "claude setup-token",
-        "export CLAUDE_CODE_OAUTH_TOKEN=...  # pegar solo en tu shell; no escribirlo en el repo",
+        "export CLAUDE_CODE_OAUTH_TOKEN=...  # paste only in your shell; do not write it to the repo",
         "npm run release:audit:manual:preflight",
     ]
 
@@ -87,12 +87,12 @@ def build_recovery_payload(preflight: dict, system_name: str | None = None) -> d
     fallback_commands: list[str] = []
     notes: list[str] = []
     if status == "ok":
-        notes.append("Claude CLI ya completa una llamada headless minima.")
+        notes.append("Claude CLI already completes a minimal headless call.")
     elif active_env:
         notes.append(
-            "Hay variables de credenciales/proveedor activas; pueden tener prioridad sobre el login de suscripcion."
+            "Credential/provider variables are active. They can take precedence over the subscription login."
         )
-        notes.append("Prueba el preflight en una terminal limpia o desactiva esas variables para esta sesion.")
+        notes.append("Run the preflight in a clean terminal or unset those variables for this session.")
         recovery_commands.extend(
             [
                 "npm run release:audit:manual:preflight",
@@ -101,17 +101,17 @@ def build_recovery_payload(preflight: dict, system_name: str | None = None) -> d
         )
     elif diagnosis_code == "first_party_oauth_token_rejected":
         notes.append(
-            "Claude informa login activo, pero claude -p recibe 401 antes de consumir tokens."
+            "Claude reports an active login, but claude -p gets 401 before it uses tokens."
         )
         notes.append(
-            "--bare no es una prueba valida para este caso: no lee OAuth de suscripcion ni CLAUDE_CODE_OAUTH_TOKEN."
+            "--bare is not a valid test for this case: it does not read subscription OAuth or CLAUDE_CODE_OAUTH_TOKEN."
         )
         if system == "Darwin":
             notes.append(
-                "En macOS Claude guarda credenciales en Keychain; si Keychain esta bloqueado o desincronizado, claude -p puede seguir devolviendo 401."
+                "On macOS, Claude stores credentials in Keychain. If Keychain is locked or out of sync, claude -p can keep returning 401."
             )
         notes.append(
-            "Si claude doctor no emite salida o queda colgado, no lo uses como gate: pasa a refrescar login o a setup-token."
+            "If claude doctor prints no output or hangs, do not use it as a gate. Refresh the login or use setup-token."
         )
         recovery_commands.extend(
             [
@@ -169,8 +169,8 @@ def build_recovery_payload(preflight: dict, system_name: str | None = None) -> d
         "notes": notes,
         "diagnostic_commands": diagnostic_commands,
         "debug_commands": [
-            "claude -p --safe-mode --no-session-persistence --max-budget-usd 0.01 --output-format json --debug-file /tmp/alfred-claude-debug.log 'responde solo OK'",
-            "python3 - <<'PY'\nfrom pathlib import Path\nprint(Path('/tmp/alfred-claude-debug.log').read_text(errors='replace')[-4000:])\nPY  # revisar y sanear antes de compartir",
+            "claude -p --safe-mode --no-session-persistence --max-budget-usd 0.01 --output-format json --debug-file /tmp/alfred-claude-debug.log 'reply only OK'",
+            "python3 - <<'PY'\nfrom pathlib import Path\nprint(Path('/tmp/alfred-claude-debug.log').read_text(errors='replace')[-4000:])\nPY  # review and sanitize before sharing",
         ],
         "recovery_commands": recovery_commands,
         "fallback_commands": fallback_commands,
@@ -241,10 +241,10 @@ def _write_json(path: Path, payload: dict) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--json", action="store_true", help="Imprime solo JSON.")
-    parser.add_argument("--output", help="Escribe un reporte JSON con permisos 0600.")
-    parser.add_argument("--strict", action="store_true", help="Devuelve no-cero si el preflight no esta ok.")
-    parser.add_argument("--timeout", type=int, default=45, help="Timeout del preflight en segundos.")
+    parser.add_argument("--json", action="store_true", help="Print only JSON.")
+    parser.add_argument("--output", help="Write a JSON report with 0600 permissions.")
+    parser.add_argument("--strict", action="store_true", help="Return non-zero if the preflight is not ok.")
+    parser.add_argument("--timeout", type=int, default=45, help="Preflight timeout in seconds.")
     args = parser.parse_args(argv)
 
     manual_smoke = _manual_smoke_module()

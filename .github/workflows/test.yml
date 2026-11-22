@@ -1,14 +1,13 @@
-# Pipeline de tests automaticos para Alfred Dev.
+# Automated test pipeline for Alfred Dev.
 #
-# Job test: pytest en Python 3.10-3.13. En 3.12 tambien corre
-# scripts/release_audit.py y cobertura (minimo 60%).
-# Job plugin: Linux, macOS y Windows. Instala Claude CLI, valida,
-# instala 0.7.0 desde el checkout (no desde GitHub main) y desinstala.
-# FastMCP (requirements.txt) es opcional y no se instala aqui.
+# Job test: pytest on Python 3.10-3.13. On 3.12 it also runs
+# scripts/release_audit.py and coverage (minimum 60%).
+# Job plugin: Linux, macOS and Windows. Installs Claude CLI, validates,
+# installs 0.7.0 from the checkout (not from GitHub main) and uninstalls.
+# FastMCP (requirements.txt) is optional and is not installed here.
 #
-# Seguridad: no se usa ningun input dinamico de usuario (issue titles,
-# PR bodies, commit messages) en bloques run:. Todos los comandos son
-# literales estaticos.
+# Security: no dynamic user input (issue titles, PR bodies, commit
+# messages) goes into run: blocks. All commands are static literals.
 
 name: Tests
 
@@ -32,22 +31,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Configurar Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Instalar dependencias de test
+      - name: Install test dependencies
         run: python3 -m pip install --quiet pytest
 
-      - name: Ejecutar tests
+      - name: Run tests
         run: python3 -m pytest tests/ -q --tb=short
 
-      - name: Auditoría de release 0.7.0
+      - name: Release audit 0.7.0
         if: matrix.python-version == '3.12'
         run: python3 scripts/release_audit.py
 
-      - name: Ejecutar tests con cobertura (solo 3.12)
+      - name: Run tests with coverage (3.12 only)
         if: matrix.python-version == '3.12'
         run: |
           python3 -m pip install --quiet coverage
@@ -55,7 +54,7 @@ jobs:
           coverage report --fail-under=60
           coverage html -d coverage-html
 
-      - name: Subir informe de cobertura
+      - name: Upload coverage report
         if: matrix.python-version == '3.12'
         uses: actions/upload-artifact@v4
         with:
@@ -82,14 +81,14 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: 1. Instalar Claude CLI (Linux / macOS)
+      - name: 1. Install Claude CLI (Linux / macOS)
         if: runner.os != 'Windows'
         run: |
           curl -fsSL https://claude.ai/install.sh | bash
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           echo "$HOME/.claude/local/bin" >> "$GITHUB_PATH"
 
-      - name: 1. Instalar Claude CLI (Windows)
+      - name: 1. Install Claude CLI (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -100,24 +99,24 @@ jobs:
             Add-Content $env:GITHUB_PATH "$env:LOCALAPPDATA\Programs\claude"
           }
 
-      - name: 2. Comprobar Claude CLI
+      - name: 2. Check Claude CLI
         run: |
           command -v claude
           claude --version
 
-      - name: 3. Validar marketplace
+      - name: 3. Validate marketplace
         run: claude plugin validate . --strict
 
-      - name: 4. Validar plugin
+      - name: 4. Validate plugin
         run: claude plugin validate .claude-plugin/plugin.json --strict
 
-      - name: 5. Registrar marketplace local
+      - name: 5. Register local marketplace
         run: claude plugin marketplace add "${{ github.workspace }}" --scope user
 
-      - name: 6. Instalar alfred-dev 0.7.0
+      - name: 6. Install alfred-dev 0.7.0
         run: claude plugin install alfred-dev@alfred-dev --scope user -y
 
-      - name: 7. Ver inventario instalado
+      - name: 7. Show installed inventory
         run: |
           claude plugin list
           claude plugin details alfred-dev@alfred-dev > "$RUNNER_TEMP/alfred-details.txt"
@@ -129,15 +128,15 @@ jobs:
           needed = ("0.7.0", "Skills (11)", "Agents (10)", "MCP servers (1)")
           missing = [item for item in needed if item not in text]
           if missing:
-              raise SystemExit("Inventario incompleto: " + ", ".join(missing))
-          print("inventario ok:", ", ".join(needed))
+              raise SystemExit("Incomplete inventory: " + ", ".join(missing))
+          print("inventory ok:", ", ".join(needed))
           '
 
-      - name: 8. Desinstalar (Linux / macOS)
+      - name: 8. Uninstall (Linux / macOS)
         if: runner.os != 'Windows'
         run: bash uninstall.sh
 
-      - name: 8. Validar sintaxis PowerShell
+      - name: 8. Validate PowerShell syntax
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -153,14 +152,14 @@ jobs:
               exit 1
             }
           }
-          Write-Host "sintaxis PowerShell ok: install.ps1 uninstall.ps1"
+          Write-Host "PowerShell syntax ok: install.ps1 uninstall.ps1"
 
-      - name: 8. Desinstalar (Windows)
+      - name: 8. Uninstall (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./uninstall.ps1
 
-      - name: 9. Comprobar que no queda el plugin
+      - name: 9. Check that the plugin is gone
         run: |
           python -c '
           import json
@@ -173,6 +172,6 @@ jobs:
               if isinstance(item, dict) and "alfred" in str(item.get("id", ""))
           ]
           if leftover:
-              raise SystemExit("Tras uninstall sigue habiendo: " + ", ".join(leftover))
-          print("uninstall ok: sin alfred-dev en claude plugin list")
+              raise SystemExit("Still present after uninstall: " + ", ".join(leftover))
+          print("uninstall ok: no alfred-dev in claude plugin list")
           '

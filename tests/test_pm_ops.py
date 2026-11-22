@@ -821,7 +821,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
         self.assertEqual(sorted(result["retired"][0].keys())[:2], ["id", "number"])
         self.assertIn("retired", payload)
         self.assertEqual(payload["retired"][0]["id"], "T-099")
-        self.assertIn("Issues retiradas por drift local: 1", markdown)
+        self.assertIn("Issues, снятых из-за локального drift: 1", markdown)
         self.assertIn("Tarea vieja", markdown)
 
     def test_sync_project_to_github_persists_remote_drift_repairs(self):
@@ -884,9 +884,9 @@ class TestGitHubSyncHelpers(unittest.TestCase):
 
         self.assertEqual(len(result["remote_drift"]), 2)
         self.assertEqual(len(payload["remote_drift"]), 2)
-        self.assertIn("Drift remoto corregido: 2", markdown)
-        self.assertIn("[T-010] Preparar labels de issues — #41 ya no existía en remoto; recreada como #301.", markdown)
-        self.assertIn("Issue paraguas SonIA Sync", markdown)
+        self.assertIn("Исправлено удалённого drift: 2", markdown)
+        self.assertIn("[T-010] Preparar labels de issues — #41 больше не существовал в remote; создан заново как #301.", markdown)
+        self.assertIn("Зонтичный issue SonIA Sync", markdown)
 
     def test_rendered_sync_markdown_includes_remote_drift_section(self):
         from core.continuity import render_github_sync_markdown  # noqa: E402
@@ -925,13 +925,13 @@ class TestGitHubSyncHelpers(unittest.TestCase):
             }
         )
 
-        self.assertIn("### Drift remoto corregido", markdown)
-        self.assertIn("[T-010] Preparar labels de issues — #101 ya no cuadraba; religada a #201.", markdown)
-        self.assertIn("Issue paraguas SonIA Sync — #9 ya no existía en remoto; recreada como #11.", markdown)
-        self.assertIn("Foco operativo actual: Cerrar la entrega", markdown)
-        self.assertIn("Fuente de la recomendación: estado operativo actual (`current`)", markdown)
-        self.assertIn("Siguiente paso recomendado: `/alfred-dev:ship`", markdown)
-        self.assertIn("Qué hacer ahora: Continúa con el cierre de release y la validación final.", markdown)
+        self.assertIn("### Исправленный удалённый drift", markdown)
+        self.assertIn("[T-010] Preparar labels de issues — #101 больше не совпадал; перепривязан к #201.", markdown)
+        self.assertIn("Зонтичный issue SonIA Sync — #9 больше не существовал в remote; создан заново как #11.", markdown)
+        self.assertIn("Текущий рабочий фокус: Cerrar la entrega", markdown)
+        self.assertIn("Источник рекомендации: estado operativo actual (`current`)", markdown)
+        self.assertIn("Рекомендуемый следующий шаг: `/alfred-dev:ship`", markdown)
+        self.assertIn("Что делать сейчас: Continúa con el cierre de release y la validación final.", markdown)
 
     def test_cli_sync_github_supports_end_to_end_with_fake_gh(self):
         with tempfile.TemporaryDirectory() as tmpdir:

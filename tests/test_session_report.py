@@ -29,7 +29,7 @@ class TestSectionPhases(unittest.TestCase):
     def test_no_phases(self):
         session = {"fases_completadas": []}
         result = _section_phases(session)
-        self.assertIn("No se completaron", result)
+        self.assertIn("не завершено ни одной фазы", result)
 
     def test_with_phases(self):
         session = {
@@ -43,7 +43,7 @@ class TestSectionPhases(unittest.TestCase):
         self.assertIn("producto", result)
         self.assertIn("arquitectura", result)
         self.assertIn("prd.md", result)
-        self.assertIn("detenido en fase **desarrollo**", result)
+        self.assertIn("остановлен в фазе **desarrollo**", result)
 
     def test_completed_flow(self):
         session = {
@@ -51,7 +51,7 @@ class TestSectionPhases(unittest.TestCase):
             "fase_actual": "completado",
         }
         result = _section_phases(session)
-        self.assertIn("flujo completado", result)
+        self.assertIn("процесс завершён", result)
 
     def test_escapes_markdown_table_cells(self):
         session = {
@@ -80,7 +80,7 @@ class TestSectionEvidence(unittest.TestCase):
     def test_no_tests_run(self):
         evidence = {"has_evidence": False, "records": []}
         result = _section_evidence(evidence)
-        self.assertIn("No se ejecutaron tests", result)
+        self.assertIn("тесты не запускались", result)
 
     def test_with_evidence(self):
         evidence = {
@@ -93,8 +93,8 @@ class TestSectionEvidence(unittest.TestCase):
             ],
         }
         result = _section_evidence(evidence)
-        self.assertIn("2 rondas de tests", result)
-        self.assertIn("todos verdes", result)
+        self.assertIn("Прогонов тестов: **2**", result)
+        self.assertIn("все зелёные", result)
 
     def test_with_failures(self):
         evidence = {
@@ -106,8 +106,8 @@ class TestSectionEvidence(unittest.TestCase):
             ],
         }
         result = _section_evidence(evidence)
-        self.assertIn("con fallos", result)
-        self.assertIn("FALLO", result)
+        self.assertIn("есть ошибки", result)
+        self.assertIn("ОШИБКА", result)
 
     def test_normalizes_commands_for_table(self):
         evidence = {
@@ -148,13 +148,13 @@ class TestSectionTeam(unittest.TestCase):
             },
         }
         result = _section_team(session)
-        self.assertIn("Origen runtime: **configuración persistida**.", result)
+        self.assertIn("Источник runtime: **сохранённая конфигурация**.", result)
         self.assertIn("data-engineer", result)
         self.assertIn("github-manager", result)
         self.assertIn("librarian", result)
         self.assertIn("performance-engineer", result)
         self.assertNotIn("ux-reviewer", result)
-        self.assertIn("Opcionales solo bajo demanda en este flujo:", result)
+        self.assertIn("Опциональные агенты только по запросу в этом процессе:", result)
         self.assertIn("- github-manager", result)
         self.assertIn("- librarian", result)
 
@@ -181,7 +181,7 @@ class TestEstimateDuration(unittest.TestCase):
 
     def test_missing_timestamps(self):
         result = _estimate_duration({})
-        self.assertEqual(result, "no disponible")
+        self.assertEqual(result, "нет данных")
 
     def test_short_duration(self):
         session = {
@@ -189,7 +189,7 @@ class TestEstimateDuration(unittest.TestCase):
             "actualizado_en": "2026-03-13T10:00:30+00:00",
         }
         result = _estimate_duration(session)
-        self.assertIn("30 segundos", result)
+        self.assertIn("30 сек.", result)
 
     def test_minutes_duration(self):
         session = {
@@ -197,7 +197,7 @@ class TestEstimateDuration(unittest.TestCase):
             "actualizado_en": "2026-03-13T10:15:00+00:00",
         }
         result = _estimate_duration(session)
-        self.assertIn("15 minutos", result)
+        self.assertIn("15 мин.", result)
 
     def test_hours_duration(self):
         session = {
@@ -205,7 +205,7 @@ class TestEstimateDuration(unittest.TestCase):
             "actualizado_en": "2026-03-13T12:30:00+00:00",
         }
         result = _estimate_duration(session)
-        self.assertIn("2h 30m", result)
+        self.assertIn("2 ч 30 мин.", result)
 
     def test_negative_duration_returns_unavailable(self):
         session = {
@@ -213,7 +213,7 @@ class TestEstimateDuration(unittest.TestCase):
             "actualizado_en": "2026-03-13T10:00:00+00:00",
         }
         result = _estimate_duration(session)
-        self.assertEqual(result, "no disponible")
+        self.assertEqual(result, "нет данных")
 
 
 class TestGenerateReport(unittest.TestCase):
@@ -322,7 +322,7 @@ class TestSectionMode(unittest.TestCase):
     def test_interactive(self):
         session = {}
         result = _section_mode(session)
-        self.assertIn("interactivo", result.lower())
+        self.assertIn("интерактивный", result.lower())
 
 
 class TestSectionIterations(unittest.TestCase):
@@ -404,9 +404,9 @@ class TestGenerateReportExtended(unittest.TestCase):
         report_path = generate_report(session, project_dir=self.tmpdir, completed=False)
         with open(report_path) as f:
             content = f.read()
-        self.assertIn("interrumpida", content.lower())
-        self.assertIn("## Resumen ejecutivo", content)
-        self.assertIn("Comando: `/alfred-dev:resume`", content)
+        self.assertIn("прервана", content.lower())
+        self.assertIn("## Краткое резюме", content)
+        self.assertIn("Команда: `/alfred-dev:resume`", content)
 
     def test_header_fields_are_single_line(self):
         session = {
@@ -421,8 +421,8 @@ class TestGenerateReportExtended(unittest.TestCase):
         report_path = generate_report(session, project_dir=self.tmpdir)
         with open(report_path, encoding="utf-8") as f:
             content = f.read()
-        self.assertIn("# Informe de sesion: feature with noise", content)
-        self.assertIn("**Descripcion:** Linea 1 Linea 2", content)
+        self.assertIn("# Отчёт о сессии: feature with noise", content)
+        self.assertIn("**Описание:** Linea 1 Linea 2", content)
 
     def test_filenames_do_not_collide_within_same_second(self):
         class SequencedDateTime(datetime):
@@ -482,11 +482,11 @@ class TestGenerateReportExtended(unittest.TestCase):
         with open(report_path, encoding="utf-8") as f:
             content = f.read()
 
-        self.assertIn("- Estado general: flujo completado en estado.", content)
-        self.assertIn("- Fases registradas: 2 (1 saltada(s), 1 con reintentos).", content)
-        self.assertIn("- Tests: sin datos de evidencia.", content)
-        self.assertIn("- Verificación/UAT: pendiente.", content)
-        self.assertIn("Comando: `/alfred-dev:verify`", content)
+        self.assertIn("- Общее состояние: процесс завершён по состоянию.", content)
+        self.assertIn("- Зарегистрировано фаз: 2 (пропущено: 1, с повторами: 1).", content)
+        self.assertIn("- Тесты: нет данных о прогонах.", content)
+        self.assertIn("- Проверка/UAT: в ожидании.", content)
+        self.assertIn("Команда: `/alfred-dev:verify`", content)
 
     def test_completed_report_reflects_approved_uat(self):
         os.makedirs(os.path.join(self.tmpdir, ".claude"), exist_ok=True)
@@ -520,10 +520,10 @@ class TestGenerateReportExtended(unittest.TestCase):
         with open(report_path, encoding="utf-8") as f:
             content = f.read()
 
-        self.assertIn("- Verificación/UAT: aprobada. UAT aprobada. Registrada el 2026-03-14T10:20:00+00:00.", content)
-        self.assertIn("- Foco: Continuar después del cierre del flujo", content)
-        self.assertIn("- Fuente: cierre de sesión (`report`)", content)
-        self.assertIn("Comando: `/alfred`", content)
+        self.assertIn("- Проверка/UAT: одобрена. UAT одобрена. Зарегистрирована 2026-03-14T10:20:00+00:00.", content)
+        self.assertIn("- Фокус: Продолжить после закрытия процесса", content)
+        self.assertIn("- Источник: закрытие сессии (`report`)", content)
+        self.assertIn("Команда: `/alfred`", content)
 
     def test_completed_report_reflects_rejected_uat(self):
         os.makedirs(os.path.join(self.tmpdir, ".claude"), exist_ok=True)
@@ -557,9 +557,9 @@ class TestGenerateReportExtended(unittest.TestCase):
         with open(report_path, encoding="utf-8") as f:
             content = f.read()
 
-        self.assertIn("- Verificación/UAT: rechazada. UAT rechazada. El caso borde de cupones sigue fallando", content)
-        self.assertIn("- Foco: Continuar después del cierre del flujo", content)
-        self.assertIn("Comando: `/alfred`", content)
+        self.assertIn("- Проверка/UAT: отклонена. UAT отклонена. El caso borde de cupones sigue fallando", content)
+        self.assertIn("- Фокус: Продолжить после закрытия процесса", content)
+        self.assertIn("Команда: `/alfred`", content)
 
     def test_interrupted_report_uses_structured_resume_guidance(self):
         session = {
@@ -576,10 +576,10 @@ class TestGenerateReportExtended(unittest.TestCase):
         with open(report_path, encoding="utf-8") as f:
             content = f.read()
 
-        self.assertIn("- Foco: Retomar la sesión en curso", content)
-        self.assertIn("- Fuente: sesión activa (`state`)", content)
-        self.assertIn("Comando: `/alfred-dev:resume`", content)
-        self.assertIn("Qué hacer ahora: Reanuda la sesión donde se quedó", content)
+        self.assertIn("- Фокус: Продолжить текущую сессию", content)
+        self.assertIn("- Источник: активная сессия (`state`)", content)
+        self.assertIn("Команда: `/alfred-dev:resume`", content)
+        self.assertIn("Что делать сейчас: Продолжи сессию с места остановки", content)
 
     def test_completed_report_includes_matching_memory_decisions(self):
         from core.memory import MemoryDB
@@ -634,8 +634,8 @@ class TestGenerateReportExtended(unittest.TestCase):
         with open(report_path, encoding="utf-8") as f:
             content = f.read()
 
-        self.assertIn("- Decisiones en memoria: 2 vinculada(s) a la sesión.", content)
-        self.assertIn("## Decisiones destacadas", content)
+        self.assertIn("- Решений в памяти, связанных с сессией: 2.", content)
+        self.assertIn("## Ключевые решения", content)
         self.assertIn("Usar provider OAuth existente", content)
         self.assertIn("Reutilizar el provider corporativo", content)
         self.assertIn("Cerrar el fallback visual antiguo", content)

@@ -66,7 +66,7 @@ class TestClaudeAuthRecovery(unittest.TestCase):
         self.assertIn("claude setup-token", payload["fallback_commands"])
         self.assertIn("CLAUDE_CODE_OAUTH_TOKEN", " ".join(payload["fallback_commands"]))
         self.assertIn("debug-file", " ".join(payload["debug_commands"]))
-        self.assertIn("doctor no emite salida", " ".join(payload["notes"]))
+        self.assertIn("doctor prints no output", " ".join(payload["notes"]))
         self.assertIn("ANTHROPIC_API_KEY", payload["credential_precedence"])
         self.assertIn("Credential env: none", formatted)
         self.assertIn("Platform: Darwin", formatted)
@@ -94,7 +94,7 @@ class TestClaudeAuthRecovery(unittest.TestCase):
 
         self.assertEqual(payload["active_credential_env"], ["ANTHROPIC_API_KEY"])
         self.assertNotIn("claude auth logout", payload["recovery_commands"])
-        self.assertIn("terminal limpia", " ".join(payload["notes"]))
+        self.assertIn("clean terminal", " ".join(payload["notes"]))
 
     def test_main_writes_private_report_and_strict_fails_on_blocked_auth(self):
         recovery = _load_module()

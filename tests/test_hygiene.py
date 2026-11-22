@@ -78,7 +78,7 @@ class TestHygiene(unittest.TestCase):
             text = render_cierre_markdown(cierre)
             self.assertIn("cambia el CTA", text)
             self.assertIn("pytest tests/test_cta.py", text)
-            self.assertIn("Cierre Alfred", text)
+            self.assertIn("Итог Alfred", text)
 
 
 if __name__ == "__main__":

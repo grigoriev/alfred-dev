@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Genera un reporte Markdown de apoyo para revisar evidencias manuales.
+"""Write a Markdown helper report to review manual evidence.
 
-Este script no aprueba la release ni modifica la plantilla de review. Solo
-resume la evidencia y marca riesgos para que una persona revise con menos
-friccion antes de usar scripts/manual_review_gate.py.
+This script does not approve the release and does not change the review
+template. It only summarizes the evidence and flags risks, so a person can
+review with less friction before using scripts/manual_review_gate.py.
 """
 
 from __future__ import annotations
@@ -28,8 +28,11 @@ RISK_TERMS = (
     "traceback",
     "reached maximum budget",
     "maximum budget",
+    # Spanish and Russian terms match model output in either language.
     "incoherencia",
     "no se pudo",
+    "несоответств",
+    "не удалось",
     "failed",
     "error",
     "exception",
@@ -38,18 +41,18 @@ RISK_TERMS = (
 
 
 class ManualReviewReportError(AssertionError):
-    """No se pudo construir el reporte de revision asistida."""
+    """Could not build the assisted review report."""
 
 
 def _load_json(path: Path) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
-        raise ManualReviewReportError(f"No existe {path}") from exc
+        raise ManualReviewReportError(f"{path} does not exist") from exc
     except json.JSONDecodeError as exc:
-        raise ManualReviewReportError(f"{path} no contiene JSON valido: {exc}") from exc
+        raise ManualReviewReportError(f"{path} does not contain valid JSON: {exc}") from exc
     if not isinstance(payload, dict):
-        raise ManualReviewReportError(f"{path} debe contener un objeto JSON")
+        raise ManualReviewReportError(f"{path} must contain a JSON object")
     return payload
 
 
@@ -105,7 +108,7 @@ def _manual_review_gate_module():
         ROOT / "scripts" / "manual_review_gate.py",
     )
     if spec is None or spec.loader is None:
-        raise ManualReviewReportError("No se pudo cargar scripts/manual_review_gate.py")
+        raise ManualReviewReportError("Could not load scripts/manual_review_gate.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -127,7 +130,7 @@ def _review_quality_flags(review: dict[str, Any]) -> list[str]:
 
     reviewed_cases = review.get("cases")
     if not isinstance(reviewed_cases, dict):
-        flags.append("review.cases debe ser un objeto por case_id")
+        flags.append("review.cases must be an object keyed by case_id")
         return flags
 
     missing_notes: list[str] = []
@@ -154,7 +157,7 @@ def _review_quality_flags(review: dict[str, Any]) -> list[str]:
         if len(case_ids) > 1
     ]
     if invalid_cases:
-        flags.append(f"cases_invalidos: {_case_list(invalid_cases)}")
+        flags.append(f"cases_invalid: {_case_list(invalid_cases)}")
     if missing_notes:
         flags.append(f"notes_missing: {_case_list(missing_notes)}")
     if low_quality_notes:
@@ -168,30 +171,30 @@ def _review_quality_flags(review: dict[str, Any]) -> list[str]:
 def _plugin_surface_flags(evidence: dict[str, Any]) -> list[str]:
     surface = evidence.get("plugin_surface")
     if not isinstance(surface, dict):
-        return ["evidence.plugin_surface debe ser un objeto"]
+        return ["evidence.plugin_surface must be an object"]
 
     plugin_dir_text = str(evidence.get("plugin_dir") or "").strip()
     if not plugin_dir_text:
-        return ["evidence.plugin_dir es obligatorio para comparar la superficie actual"]
+        return ["evidence.plugin_dir is required to compare the current surface"]
 
     plugin_dir = Path(plugin_dir_text).expanduser()
     if not plugin_dir.is_dir():
-        return [f"evidence.plugin_dir no existe o no es directorio: {_clip(plugin_dir, 180)}"]
+        return [f"evidence.plugin_dir does not exist or is not a directory: {_clip(plugin_dir, 180)}"]
 
     gate = _manual_review_gate_module()
     manual_smoke = gate._manual_smoke_module()
     current_surface = manual_smoke._plugin_surface_snapshot(plugin_dir)
     checks = (
-        ("roots", "evidence.plugin_surface.roots no coincide con el plugin actual"),
-        ("file_count", "evidence.plugin_surface.file_count no coincide con el plugin actual"),
-        ("sha256", "evidence.plugin_surface.sha256 no coincide con el plugin actual"),
+        ("roots", "evidence.plugin_surface.roots does not match the current plugin"),
+        ("file_count", "evidence.plugin_surface.file_count does not match the current plugin"),
+        ("sha256", "evidence.plugin_surface.sha256 does not match the current plugin"),
     )
     flags: list[str] = []
     for key, message in checks:
         if surface.get(key) != current_surface.get(key):
             flags.append(
                 f"{message} "
-                f"(evidencia={_clip(surface.get(key), 160)}, actual={_clip(current_surface.get(key), 160)})"
+                f"(evidence={_clip(surface.get(key), 160)}, current={_clip(current_surface.get(key), 160)})"
             )
     return flags
 
@@ -210,19 +213,19 @@ def build_report(
     surface = evidence.get("plugin_surface") if isinstance(evidence.get("plugin_surface"), dict) else {}
 
     lines: list[str] = [
-        "# Reporte asistido de revision manual",
+        "# Assisted manual review report",
         "",
-        "> Este reporte no aprueba la release. Es una ayuda de lectura; la aprobacion real sigue en `scripts/manual_review_gate.py` y requiere revision humana explicita.",
+        "> This report does not approve the release. It is a reading aid. The real approval stays in `scripts/manual_review_gate.py` and needs an explicit human review.",
         "",
-        "## Resumen",
+        "## Summary",
         "",
-        f"- Evidencia: `{evidence_path}`",
+        f"- Evidence: `{evidence_path}`",
         f"- Evidence SHA256: `{_sha256(evidence_path)}`",
         f"- Version: `{evidence.get('version', '-')}`",
         f"- Plugin source: `{evidence.get('plugin_source', '-')}`",
         f"- Plugin dir: `{evidence.get('plugin_dir', '-')}`",
         f"- Plugin surface SHA256: `{surface.get('sha256', '-')}`",
-        f"- Casos: total={counts.get('total', len(cases))}, needs_human_review={counts.get('needs_human_review', '-')}, failed={counts.get('failed', '-')}, blocked_auth={counts.get('blocked_auth', '-')}",
+        f"- Cases: total={counts.get('total', len(cases))}, needs_human_review={counts.get('needs_human_review', '-')}, failed={counts.get('failed', '-')}, blocked_auth={counts.get('blocked_auth', '-')}",
     ]
     auth = evidence.get("auth_preflight")
     if isinstance(auth, dict):
@@ -233,7 +236,7 @@ def build_report(
             ]
         )
     if review is None:
-        lines.append("- Review template: no suministrada")
+        lines.append("- Review template: not provided")
     else:
         lines.extend(
             [
@@ -246,13 +249,13 @@ def build_report(
     lines.extend(
         [
             "",
-            "## Superficie Del Plugin",
+            "## Plugin Surface",
             "",
         ]
     )
     surface_flags = _plugin_surface_flags(evidence)
     if not surface_flags:
-        lines.append("- Sin flags de superficie: la evidencia coincide con el plugin actual.")
+        lines.append("- No surface flags: the evidence matches the current plugin.")
     else:
         for flag in surface_flags:
             lines.append(f"- {flag}")
@@ -260,17 +263,17 @@ def build_report(
     lines.extend(
         [
             "",
-            "## Calidad De Review Humana",
+            "## Human Review Quality",
             "",
         ]
     )
     if review is None:
-        lines.append("- Sin plantilla de review suministrada.")
+        lines.append("- No review template provided.")
     else:
         review_flags = _review_quality_flags(review)
         if not review_flags:
             lines.append(
-                "- Sin flags automaticos de notas humanas. Sigue siendo necesaria revision caso por caso."
+                "- No automatic human note flags. A case-by-case review is still necessary."
             )
         else:
             for flag in review_flags:
@@ -281,12 +284,12 @@ def build_report(
     lines.extend(
         [
             "",
-            "## Flags De Riesgo",
+            "## Risk Flags",
             "",
         ]
     )
     if not flagged:
-        lines.append("- Sin flags automaticos. Sigue siendo necesaria revision humana caso por caso.")
+        lines.append("- No automatic flags. A case-by-case human review is still necessary.")
     else:
         for case_id, flags in sorted(flagged.items()):
             lines.append(f"- `{case_id}`: {', '.join(flags)}")
@@ -294,9 +297,9 @@ def build_report(
     lines.extend(
         [
             "",
-            "## Casos",
+            "## Cases",
             "",
-            "| Caso | Estado | Duracion | Coste | Flags | Preview |",
+            "| Case | Status | Duration | Cost | Flags | Preview |",
             "|---|---:|---:|---:|---|---|",
         ]
     )
@@ -315,11 +318,11 @@ def build_report(
     lines.extend(
         [
             "",
-            "## Siguiente Paso",
+            "## Next Step",
             "",
-            "- Revisar manualmente cada preview y los artefactos completos de los casos relevantes.",
-            "- Completar la plantilla de review con `reviewer`, `reviewed_at`, `approved=true` y `cases.*.approved=true` solo tras revision humana real.",
-            "- Ejecutar `npm run release:audit:manual:review` y `npm run release:audit:manual:review:installed` para el gate final.",
+            "- Review each preview and the full artifacts of the relevant cases by hand.",
+            "- Fill in the review template with `reviewer`, `reviewed_at`, `approved=true` and `cases.*.approved=true` only after a real human review.",
+            "- Run `npm run release:audit:manual:review` and `npm run release:audit:manual:review:installed` for the final gate.",
         ]
     )
     return "\n".join(lines).rstrip() + "\n"
@@ -330,21 +333,21 @@ def write_report(evidence_path: Path, review_path: Path | None, output_path: Pat
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(report, encoding="utf-8")
     output_path.chmod(0o600)
-    return [f"reporte creado en {output_path}", "este reporte no aprueba la release"]
+    return [f"report created at {output_path}", "this report does not approve the release"]
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("evidence", help="JSON generado por scripts/manual_smoke.py")
+    parser.add_argument("evidence", help="JSON written by scripts/manual_smoke.py")
     parser.add_argument(
         "review",
         nargs="?",
-        help="Plantilla/review JSON opcional generado por manual_review_gate.py",
+        help="Optional review/template JSON written by manual_review_gate.py",
     )
     parser.add_argument(
         "--output",
         required=True,
-        help="Ruta Markdown de salida para el reporte asistido",
+        help="Output Markdown path for the assisted report",
     )
     args = parser.parse_args(argv)
 

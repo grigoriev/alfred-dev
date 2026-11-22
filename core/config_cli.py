@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI determinista para la superficie de `/alfred-dev:config`."""
+"""Deterministic CLI for the `/alfred-dev:ajustes` surface."""
 
 from __future__ import annotations
 
@@ -42,15 +42,15 @@ def _build_summary(project_dir: Path, *, headless: bool) -> dict:
 
 def _render_markdown(summary: dict) -> str:
     lines: list[str] = [
-        "# Configuracion de Alfred Dev",
+        "# Конфигурация Alfred Dev",
         "",
-        f"- Config: `{summary['config_path']}`",
-        "- Estado del fichero: "
-        + ("creado/normalizado" if summary["created_or_normalized"] else "ya estaba listo"),
+        f"- Файл конфигурации: `{summary['config_path']}`",
+        "- Состояние файла: "
+        + ("создан или нормализован" if summary["created_or_normalized"] else "уже был готов"),
         "",
-        "## Secciones actuales",
+        "## Текущие секции",
         "",
-        "| Seccion | Resumen |",
+        "| Секция | Сводка |",
         "|---|---|",
     ]
     for section in summary["sections"]:
@@ -62,15 +62,15 @@ def _render_markdown(summary: dict) -> str:
                 "",
                 "CONFIG_HEADLESS_MENU",
                 "",
-                "En modo no interactivo no se espera una seleccion humana. "
-                "Este es el menu que debe mostrarse en una sesion interactiva:",
+                "В неинтерактивном режиме выбор пользователя не ожидается. "
+                "Это меню нужно показать в интерактивной сессии:",
                 "",
                 "```json",
                 json.dumps(summary["menu"], ensure_ascii=False, indent=2),
                 "```",
                 "",
-                "Para modificar valores, ejecuta `/alfred-dev:ajustes` en una sesion interactiva "
-                "o indica la seccion y el cambio de forma explicita.",
+                "Чтобы изменить значения, запусти `/alfred-dev:ajustes` в интерактивной сессии "
+                "или явно укажи секцию и изменение.",
             ]
         )
 
@@ -80,8 +80,8 @@ def _render_markdown(summary: dict) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("project_dir", nargs="?", default=".")
-    parser.add_argument("--json", action="store_true", help="Emite JSON estructurado.")
-    parser.add_argument("--headless", action="store_true", help="Incluye salida fallback para claude -p.")
+    parser.add_argument("--json", action="store_true", help="Выводит структурированный JSON.")
+    parser.add_argument("--headless", action="store_true", help="Добавляет fallback-вывод для claude -p.")
     args = parser.parse_args(argv)
 
     summary = _build_summary(Path(args.project_dir).resolve(), headless=args.headless)

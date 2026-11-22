@@ -115,35 +115,35 @@ digraph tdd_decision {
     rankdir=TB;
     node [shape=diamond];
 
-    start [label="Nueva funcionalidad\no cambio" shape=box];
-    has_test [label="Existe test\nque cubre esto?"];
-    write_test [label="Escribir test\nque falle" shape=box];
-    run_test [label="Test falla?"];
-    test_bad [label="El test no prueba\nnada nuevo. Reescribir." shape=box];
-    implement [label="Implementar código\nMÍNIMO" shape=box];
-    run_all [label="Todos los tests\npasan?"];
-    fix_code [label="Corregir hasta\nque pasen" shape=box];
-    refactor [label="Refactorizar?" shape=diamond];
-    do_refactor [label="Refactorizar\nsin cambiar comportamiento" shape=box];
-    run_again [label="Tests siguen\npasando?" shape=diamond];
+    start [label="Новая функциональность\nили изменение" shape=box];
+    has_test [label="Есть тест,\nкоторый это покрывает?"];
+    write_test [label="Написать тест,\nкоторый падает" shape=box];
+    run_test [label="Тест падает?"];
+    test_bad [label="Тест не проверяет\nничего нового. Переписать." shape=box];
+    implement [label="Реализовать\nМИНИМУМ кода" shape=box];
+    run_all [label="Все тесты\nпроходят?"];
+    fix_code [label="Исправлять, пока\nне пройдут" shape=box];
+    refactor [label="Рефакторить?" shape=diamond];
+    do_refactor [label="Рефакторинг\nбез изменения поведения" shape=box];
+    run_again [label="Тесты всё ещё\nпроходят?" shape=diamond];
     commit [label="Commit" shape=box];
 
     start -> has_test;
-    has_test -> write_test [label="no"];
-    has_test -> write_test [label="sí, pero\nno cubre\nel cambio"];
+    has_test -> write_test [label="нет"];
+    has_test -> write_test [label="да, но\nне покрывает\nизменение"];
     write_test -> run_test;
-    run_test -> implement [label="sí, falla"];
-    run_test -> test_bad [label="no, pasa"];
+    run_test -> implement [label="да, падает"];
+    run_test -> test_bad [label="нет, проходит"];
     test_bad -> write_test;
     implement -> run_all;
-    run_all -> refactor [label="sí"];
-    run_all -> fix_code [label="no"];
+    run_all -> refactor [label="да"];
+    run_all -> fix_code [label="нет"];
     fix_code -> run_all;
-    refactor -> do_refactor [label="sí"];
-    refactor -> commit [label="no"];
+    refactor -> do_refactor [label="да"];
+    refactor -> commit [label="нет"];
     do_refactor -> run_again;
-    run_again -> commit [label="sí"];
-    run_again -> do_refactor [label="no, arreglar"];
+    run_again -> commit [label="да"];
+    run_again -> do_refactor [label="нет, исправить"];
 }
 ```
 </HARD-GATE>

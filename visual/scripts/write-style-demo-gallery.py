@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera una galeria de demos visuales del catalogo de Designer."""
+"""Generates a gallery of visual demos from the Designer catalog."""
 
 from __future__ import annotations
 
@@ -16,15 +16,15 @@ from core.designer_style_demo import write_style_demo_gallery
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generar galería y landings simples del catálogo de sistemas de diseño de Designer"
+        description="Generate a gallery and simple landings from the Designer design system catalog"
     )
     parser.add_argument(
         "--visual-path",
         required=True,
-        help="Ruta a session_dir o state_dir del servidor visual",
+        help="Path to session_dir or state_dir of the visual server",
     )
-    parser.add_argument("--title", help="Titulo opcional para la galeria.")
-    parser.add_argument("--subtitle", help="Subtitulo opcional para la galeria.")
+    parser.add_argument("--title", help="Optional gallery title.")
+    parser.add_argument("--subtitle", help="Optional gallery subtitle.")
     return parser
 
 

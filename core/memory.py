@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
 """
-Capa de memoria persistente por proyecto para Alfred Dev.
+Persistent per-project memory layer for Alfred Dev.
 
-Este modulo proporciona almacenamiento SQLite local para conservar decisiones
-de diseno, eventos del flujo de trabajo y metadatos de commits entre sesiones.
-La trazabilidad completa (problema -> decision -> commit -> validacion) permite
-que Alfred y el Bibliotecario respondan preguntas historicas con evidencia real,
-no con inferencias.
+This module provides local SQLite storage that keeps design decisions,
+workflow events and commit metadata between sessions. Full traceability
+(problem -> decision -> commit -> validation) lets Alfred and the Librarian
+answer history questions with real evidence, not with guesses.
 
-La memoria es una capa lateral opcional: si no se activa, el flujo del plugin
-sigue igual que siempre. Cuando esta activa, cada proyecto tiene su propia base
-de datos en ``.claude/alfred-memory.db``.
+The memory is an optional side layer: if it is off, the plugin flow stays the
+same as always. When it is on, each project has its own database in
+``.claude/alfred-memory.db``.
 
-Componentes principales:
-    - sanitize_content(): limpia texto de posibles secretos antes de persistir.
-    - MemoryDB: clase que encapsula la conexion SQLite, el esquema y todas las
-      operaciones de lectura y escritura sobre la memoria.
+Main components:
+    - sanitize_content(): removes possible secrets from text before storage.
+    - MemoryDB: class that wraps the SQLite connection, the schema and all
+      read and write operations on the memory.
 
-Seguridad:
-    Todo texto que entra en la base de datos pasa por sanitize_content(), que
-    aplica los mismos patrones regex de secret-guard.sh. Los secretos detectados
-    se reemplazan por marcadores [REDACTED:<tipo>] para evitar fugas accidentales.
+Security:
+    All text that enters the database goes through sanitize_content(), which
+    applies the same regex patterns as secret-guard.sh. Detected secrets are
+    replaced by [REDACTED:<type>] markers to prevent accidental leaks.
 """
 
 import json
@@ -36,34 +35,33 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from core.secrets import SECRET_PATTERNS as _SECRET_PATTERNS
 
-# Version actual del esquema. Se almacena en la tabla meta y se usa
-# para detectar si es necesario aplicar migraciones en el futuro.
+# Current schema version. It is stored in the meta table and is used to
+# detect if migrations must run.
 _SCHEMA_VERSION = 4
 
-# Factor de margen para búsquedas con post-filtrado.
-# Cuando se aplican filtros temporales, por etiquetas o por estado, se piden
-# N * _FETCH_MARGIN resultados a SQLite para compensar los descartados
-# después del post-filtrado, y luego se truncan al límite original.
+# Margin factor for searches with post-filtering.
+# When time, tag or status filters apply, the code asks SQLite for
+# N * _FETCH_MARGIN results to make up for rows dropped by post-filtering,
+# then truncates to the original limit.
 _FETCH_MARGIN = 3
 
-# Version logica del contenido indexado en FTS. Sube cuando cambia el
-# conjunto de campos que deben quedar buscables y permite reconstruir
-# automaticamente indices heredados.
+# Logical version of the content indexed in FTS. Increase it when the set
+# of searchable fields changes. This rebuilds legacy indexes automatically.
 _FTS_CONTENT_VERSION = 2
 
-# Permisos del fichero de base de datos: solo lectura y escritura para el
-# propietario (equivalente a chmod 600). Se aplica tanto al .db como a los
-# ficheros auxiliares WAL y SHM.
+# Database file permissions: read and write for the owner only (same as
+# chmod 600). They apply to the .db file and to the WAL and SHM helper
+# files.
 _DB_PERMISSIONS = stat.S_IRUSR | stat.S_IWUSR
 
-# Migraciones de esquema. Cada entrada es una lista de sentencias SQL
-# que transforman la base de datos de la version N a la N+1. Se ejecutan
-# secuencialmente dentro de una transaccion. Antes de aplicar cualquier
-# migracion, se crea una copia de seguridad (.bak) del fichero.
+# Schema migrations. Each entry is a list of SQL statements that move the
+# database from version N to N+1. They run in sequence inside a
+# transaction. Before any migration runs, a backup copy (.bak) of the file
+# is made.
 _MIGRATIONS: Dict[int, List[str]] = {
     1: [
-        # v1 -> v2: etiquetas y estado en decisiones, ficheros en commits,
-        # tabla de relaciones entre decisiones.
+        # v1 -> v2: tags and status in decisions, files in commits,
+        # table of links between decisions.
         "ALTER TABLE decisions ADD COLUMN tags TEXT DEFAULT '[]'",
         "ALTER TABLE decisions ADD COLUMN status TEXT DEFAULT 'active'",
         "ALTER TABLE commits ADD COLUMN files TEXT DEFAULT '[]'",
@@ -77,14 +75,14 @@ _MIGRATIONS: Dict[int, List[str]] = {
         "CREATE INDEX IF NOT EXISTS idx_decision_links_target ON decision_links(target_id)",
     ],
     3: [
-        # v3 -> v4: columnas summary y content para captura total
+        # v3 -> v4: summary and content columns for full capture
         "ALTER TABLE events ADD COLUMN summary TEXT",
         "ALTER TABLE events ADD COLUMN content TEXT",
     ],
     2: [
-        # v2 -> v3: tablas gui_actions y pinned_items (obsoletas, eliminadas
-        # en v0.3.7). Se mantienen las sentencias CREATE para que la migracion
-        # siga siendo idempotente y las DB existentes no fallen.
+        # v2 -> v3: gui_actions and pinned_items tables (obsolete, removed
+        # in v0.3.7). The CREATE statements stay so the migration remains
+        # idempotent and existing DBs do not fail.
         "CREATE TABLE IF NOT EXISTS gui_actions ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT, action_type TEXT, payload TEXT, "
         "status TEXT, created_at TEXT, processed_at TEXT, processed_by TEXT)",
@@ -95,30 +93,30 @@ _MIGRATIONS: Dict[int, List[str]] = {
     ],
 }
 
-# Estados validos para decisiones. Se usa en update_decision_status
-# para validar la entrada antes de modificar la base de datos.
+# Valid decision statuses. update_decision_status uses them to validate
+# the input before it changes the database.
 _VALID_DECISION_STATUSES = {"active", "superseded", "deprecated"}
 
 
 def sanitize_content(text: Optional[str]) -> Optional[str]:
     """
-    Elimina posibles secretos del texto antes de persistirlo.
+    Remove possible secrets from text before storage.
 
-    Recorre los patrones de secretos conocidos (claves API, tokens, cadenas
-    de conexion, credenciales hardcodeadas) y reemplaza cada coincidencia
-    por un marcador ``[REDACTED:<tipo>]``. Esto garantiza que la memoria
-    del proyecto nunca almacene material sensible, incluso si un agente
-    intenta registrar texto que lo contenga.
+    Walks the known secret patterns (API keys, tokens, connection strings,
+    hardcoded credentials) and replaces each match with a
+    ``[REDACTED:<type>]`` marker. This makes sure the project memory never
+    stores sensitive material, even if an agent tries to log text that
+    contains it.
 
-    Los patrones son identicos a los del hook secret-guard.sh para mantener
-    coherencia en toda la cadena de seguridad del plugin.
+    The patterns are the same as in the secret-guard.sh hook, so the whole
+    plugin security chain stays consistent.
 
     Args:
-        text: texto a sanitizar. Si es None, se devuelve None sin mas.
+        text: text to sanitize. If None, None is returned as is.
 
     Returns:
-        Texto limpio con los secretos reemplazados por marcadores, o None
-        si la entrada era None.
+        Clean text with secrets replaced by markers, or None if the input
+        was None.
     """
     if text is None:
         return None
@@ -130,7 +128,7 @@ def sanitize_content(text: Optional[str]) -> Optional[str]:
 
 
 def _sanitize_json_value(value: Any) -> Any:
-    """Sanitiza strings dentro de estructuras JSON sin cambiar su forma."""
+    """Sanitize strings inside JSON structures without changing their shape."""
     if isinstance(value, str):
         return sanitize_content(value)
     if isinstance(value, dict):
@@ -146,10 +144,10 @@ def _sanitize_json_value(value: Any) -> Any:
 
 
 # ---------------------------------------------------------------------------
-# SQL de creacion del esquema
+# Schema creation SQL
 # ---------------------------------------------------------------------------
-# Se usa una cadena multilinea para mayor legibilidad. Las sentencias se
-# ejecutan dentro de una transaccion para garantizar atomicidad.
+# A multiline string keeps it readable. The statements run inside a
+# transaction for atomicity.
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -239,25 +237,24 @@ CREATE INDEX IF NOT EXISTS idx_decision_links_target ON decision_links(target_id
 
 class MemoryDB:
     """
-    Interfaz de acceso a la memoria persistente de un proyecto.
+    Access interface to the persistent memory of a project.
 
-    Encapsula una conexion SQLite con WAL activado y foreign keys habilitadas.
-    Gestiona el ciclo de vida del esquema (creacion, deteccion de FTS5,
-    versionado) y expone metodos de escritura y lectura para iteraciones,
-    decisiones, commits y eventos.
+    Wraps a SQLite connection with WAL and foreign keys on. Manages the
+    schema life cycle (creation, FTS5 detection, versioning) and exposes
+    write and read methods for iterations, decisions, commits and events.
 
-    El fichero de base de datos se crea con permisos 0600 (solo el propietario
-    puede leer y escribir) para proteger la informacion almacenada.
+    The database file is created with 0600 permissions (only the owner can
+    read and write) to protect the stored data.
 
     Args:
-        db_path: ruta absoluta o relativa al fichero SQLite.
+        db_path: absolute or relative path to the SQLite file.
     """
 
     def __init__(self, db_path: str) -> None:
         self._db_path = db_path
         self._fts_enabled = False
 
-        # Crear el directorio padre si no existe
+        # Create the parent directory if it does not exist
         parent = os.path.dirname(db_path)
         if parent:
             os.makedirs(parent, exist_ok=True)
@@ -265,7 +262,7 @@ class MemoryDB:
         self._conn = sqlite3.connect(db_path)
         self._conn.row_factory = sqlite3.Row
 
-        # Activar WAL para mejor concurrencia y foreign keys para integridad
+        # Turn on WAL for better concurrency and foreign keys for integrity
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA foreign_keys=ON")
         self._conn.execute("PRAGMA busy_timeout=5000")
@@ -273,28 +270,28 @@ class MemoryDB:
         self._ensure_schema()
         self._detect_fts5()
 
-        # Permisos 0600: solo el propietario puede leer y escribir.
-        # Se aplica despues de la creacion para cubrir el caso de DB nueva.
+        # 0600 permissions: only the owner can read and write.
+        # Applied after creation to cover the new DB case.
         try:
             os.chmod(db_path, _DB_PERMISSIONS)
         except OSError:
-            # En algunos sistemas de ficheros (ej. FAT32) chmod no funciona.
-            # No es critico: se continua sin permisos restrictivos.
+            # On some file systems (e.g. FAT32) chmod does not work.
+            # Not critical: continue without strict permissions.
             pass
 
-    # --- Gestion del esquema ------------------------------------------------
+    # --- Schema management -------------------------------------------------
 
     def _ensure_schema(self) -> None:
         """
-        Crea las tablas e indices si no existen.
+        Create the tables and indexes if they do not exist.
 
-        Si la base de datos es nueva, registra la version del esquema y la
-        fecha de creacion en la tabla meta. Si ya existe, se mantiene intacta
-        (las sentencias usan ``IF NOT EXISTS``).
+        If the database is new, record the schema version and the creation
+        date in the meta table. If it exists, it stays intact (the statements
+        use ``IF NOT EXISTS``).
         """
         self._conn.executescript(_SCHEMA_SQL)
 
-        # Registrar metadatos si es la primera vez
+        # Record metadata on the first run
         row = self._conn.execute(
             "SELECT value FROM meta WHERE key = 'schema_version'"
         ).fetchone()
@@ -310,33 +307,33 @@ class MemoryDB:
             )
             self._conn.commit()
         else:
-            # DB existente: comprobar si necesita migracion
+            # Existing DB: check if it needs a migration
             current = int(row[0])
             if current < _SCHEMA_VERSION:
                 self._run_migrations(current)
 
     def _run_migrations(self, current_version: int) -> None:
-        """Aplica migraciones pendientes de forma secuencial.
+        """Apply pending migrations in sequence.
 
-        Crea un backup del fichero antes de la primera migracion y ejecuta
-        cada paso dentro de una transaccion. Si una migracion falla, la
-        transaccion se revierte y la DB queda en el ultimo estado consistente.
+        Makes a backup of the file before the first migration and runs each
+        step inside a transaction. If a migration fails, the transaction is
+        rolled back and the DB stays in the last consistent state.
 
         Args:
-            current_version: version del esquema actual en la DB.
+            current_version: current schema version in the DB.
         """
-        # Solo migrar si hay versiones pendientes
+        # Migrate only if versions are pending
         pending = [v for v in sorted(_MIGRATIONS.keys()) if v >= current_version]
         if not pending:
             return
 
-        # Backup antes de migrar
+        # Backup before the migration
         bak_path = self._db_path + ".bak"
         try:
             shutil.copy2(self._db_path, bak_path)
         except OSError:
-            # Si no se puede hacer backup (permisos, disco lleno), continuar
-            # pero no abortar la migracion.
+            # If the backup fails (permissions, full disk), continue and do
+            # not abort the migration.
             pass
 
         for version in pending:
@@ -344,7 +341,7 @@ class MemoryDB:
             try:
                 for sql in statements:
                     self._conn.execute(sql)
-                # Actualizar la version en meta
+                # Update the version in meta
                 new_version = version + 1
                 self._conn.execute(
                     "UPDATE meta SET value = ? WHERE key = 'schema_version'",
@@ -357,29 +354,28 @@ class MemoryDB:
 
     def _detect_fts5(self) -> None:
         """
-        Comprueba si el entorno SQLite soporta FTS5 y crea la tabla virtual.
+        Check if the SQLite build supports FTS5 and create the virtual table.
 
-        Si FTS5 esta disponible, se crea la tabla ``memory_fts`` y los triggers
-        que la mantienen sincronizada con ``decisions`` y ``commits``. Si no
-        esta disponible, se registra el resultado para que las busquedas usen
-        el fallback con LIKE.
+        If FTS5 is available, create the ``memory_fts`` table and the triggers
+        that keep it in sync with ``decisions`` and ``commits``. If it is not
+        available, record the result so searches use the LIKE fallback.
         """
         try:
-            # Intentar crear una tabla FTS5 temporal para detectar soporte
+            # Try to create a temporary FTS5 table to detect support
             self._conn.execute(
                 "CREATE VIRTUAL TABLE IF NOT EXISTS _fts5_test "
                 "USING fts5(test_col)"
             )
             self._conn.execute("DROP TABLE IF EXISTS _fts5_test")
 
-            # FTS5 disponible: crear la tabla de busqueda real
+            # FTS5 is available: create the real search table
             self._conn.execute(
                 "CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts "
                 "USING fts5(source_type, source_id, content)"
             )
 
-            # Reinstalar triggers para garantizar que siempre indexan el
-            # conjunto de campos vigente aunque la DB venga de versiones previas.
+            # Reinstall the triggers so they always index the current set of
+            # fields, also when the DB comes from older versions.
             self._conn.executescript("""
                 DROP TRIGGER IF EXISTS fts_insert_decision;
                 DROP TRIGGER IF EXISTS fts_insert_commit;
@@ -414,10 +410,10 @@ class MemoryDB:
 
             self._fts_enabled = True
         except sqlite3.OperationalError:
-            # FTS5 no disponible: se usara LIKE como fallback
+            # FTS5 is not available: LIKE is the fallback
             self._fts_enabled = False
 
-        # Registrar el resultado en meta para que otros componentes lo sepan
+        # Record the result in meta for other components
         self._conn.execute(
             "INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)",
             ("fts_enabled", "1" if self._fts_enabled else "0"),
@@ -430,7 +426,7 @@ class MemoryDB:
 
     @staticmethod
     def _compose_decision_search_content(row: Dict[str, Any]) -> str:
-        """Construye el texto indexable de una decision."""
+        """Build the indexable text of a decision."""
         return " ".join(
             part
             for part in (
@@ -445,7 +441,7 @@ class MemoryDB:
 
     @staticmethod
     def _compose_commit_search_content(row: Dict[str, Any]) -> str:
-        """Construye el texto indexable de un commit."""
+        """Build the indexable text of a commit."""
         files_raw = row.get("files")
         files_text = ""
         if files_raw:
@@ -465,7 +461,7 @@ class MemoryDB:
 
     @staticmethod
     def _compose_event_search_content(row: Dict[str, Any]) -> str:
-        """Construye el texto indexable de un evento."""
+        """Build the indexable text of an event."""
         return " ".join(
             part
             for part in (
@@ -476,7 +472,7 @@ class MemoryDB:
         ).strip()
 
     def _expected_fts_counts(self) -> Dict[str, int]:
-        """Devuelve el numero esperado de entradas FTS por tipo."""
+        """Return the expected number of FTS entries per type."""
         decision_count = self._conn.execute(
             "SELECT COUNT(*) FROM decisions"
         ).fetchone()[0]
@@ -495,7 +491,7 @@ class MemoryDB:
         }
 
     def _fts_rebuild_required(self) -> bool:
-        """Detecta si el indice FTS necesita regenerarse."""
+        """Detect if the FTS index must be rebuilt."""
         row = self._conn.execute(
             "SELECT value FROM meta WHERE key = 'fts_content_version'"
         ).fetchone()
@@ -533,7 +529,7 @@ class MemoryDB:
         return any(self._conn.execute(sql).fetchone()[0] for sql in orphan_queries)
 
     def _rebuild_fts_index(self) -> None:
-        """Reconstruye completamente el indice FTS desde las tablas fuente."""
+        """Fully rebuild the FTS index from the source tables."""
         self._conn.execute("DELETE FROM memory_fts")
 
         decision_rows = self._conn.execute(
@@ -576,10 +572,10 @@ class MemoryDB:
 
     @property
     def fts_enabled(self) -> bool:
-        """Indica si la busqueda de texto completo (FTS5) esta activa."""
+        """Tell if full-text search (FTS5) is on."""
         return self._fts_enabled
 
-    # --- Escritura: iteraciones ---------------------------------------------
+    # --- Write: iterations --------------------------------------------------
 
     def start_iteration(
         self,
@@ -587,18 +583,18 @@ class MemoryDB:
         description: Optional[str] = None,
     ) -> int:
         """
-        Inicia una nueva iteracion de trabajo.
+        Start a new work iteration.
 
-        Cada iteracion representa un ciclo completo de un flujo (feature, fix,
-        spike, etc.). Al crearla queda en estado ``active`` hasta que se complete
-        o abandone.
+        Each iteration is one full cycle of a flow (feature, fix, spike,
+        etc.). It starts in the ``active`` status and stays there until it is
+        completed or abandoned.
 
         Args:
-            command: tipo de flujo (feature, fix, spike, ship, audit).
-            description: descripcion en lenguaje natural de la tarea.
+            command: flow type (feature, fix, spike, ship, audit).
+            description: natural language description of the task.
 
         Returns:
-            ID de la iteracion creada.
+            ID of the created iteration.
         """
         now = datetime.now(timezone.utc).isoformat()
         description = sanitize_content(description)
@@ -616,11 +612,11 @@ class MemoryDB:
         status: str = "completed",
     ) -> None:
         """
-        Marca una iteracion como completada o abandonada.
+        Mark an iteration as completed or abandoned.
 
         Args:
-            iteration_id: ID de la iteracion a cerrar.
-            status: estado final (``completed`` o ``abandoned``).
+            iteration_id: ID of the iteration to close.
+            status: final status (``completed`` or ``abandoned``).
         """
         now = datetime.now(timezone.utc).isoformat()
         self._conn.execute(
@@ -629,7 +625,7 @@ class MemoryDB:
         )
         self._conn.commit()
 
-    # --- Escritura: decisiones ----------------------------------------------
+    # --- Write: decisions ---------------------------------------------------
 
     def log_decision(
         self,
@@ -644,28 +640,28 @@ class MemoryDB:
         tags: Optional[List[str]] = None,
     ) -> int:
         """
-        Registra una decision de diseno.
+        Record a design decision.
 
-        Si no se proporciona ``iteration_id``, se vincula automaticamente a la
-        iteracion activa (si existe). Todos los campos de texto se sanitizan
-        antes de persistir. Las etiquetas se almacenan como JSON; si no se
-        proporcionan, se guarda una lista vacia.
+        If ``iteration_id`` is not given, the decision links to the active
+        iteration (if any). All text fields are sanitized before storage.
+        Tags are stored as JSON. If no tags are given, an empty list is
+        stored.
 
         Args:
-            title: titulo corto de la decision.
-            chosen: opcion elegida.
-            context: problema que se resolvia.
-            alternatives: lista de opciones descartadas.
-            rationale: justificacion de la eleccion.
-            impact: nivel de impacto (low, medium, high, critical).
-            phase: fase del flujo en la que se tomo la decision.
-            iteration_id: ID de la iteracion (auto-detectado si se omite).
-            tags: lista de etiquetas para clasificar la decision.
+            title: short title of the decision.
+            chosen: chosen option.
+            context: problem that the decision solved.
+            alternatives: list of rejected options.
+            rationale: reason for the choice.
+            impact: impact level (low, medium, high, critical).
+            phase: flow phase in which the decision was made.
+            iteration_id: iteration ID (detected if omitted).
+            tags: list of tags that classify the decision.
 
         Returns:
-            ID de la decision creada.
+            ID of the created decision.
         """
-        # Auto-vincular a la iteracion activa si no se especifica
+        # Link to the active iteration if none is given
         if iteration_id is None:
             active = self.get_active_iteration()
             if active is not None:
@@ -673,19 +669,19 @@ class MemoryDB:
 
         now = datetime.now(timezone.utc).isoformat()
 
-        # Sanitizar todos los campos de texto
+        # Sanitize all text fields
         title = sanitize_content(title) or title
         chosen = sanitize_content(chosen) or chosen
         context = sanitize_content(context)
         rationale = sanitize_content(rationale)
 
-        # Las alternativas se almacenan como JSON
+        # Alternatives are stored as JSON
         alt_json = None
         if alternatives is not None:
             sanitized_alts = [sanitize_content(a) or a for a in alternatives]
             alt_json = json.dumps(sanitized_alts, ensure_ascii=False)
 
-        # Las etiquetas se almacenan como JSON; lista vacia por defecto
+        # Tags are stored as JSON. The default is an empty list
         tags_json = json.dumps(tags or [], ensure_ascii=False)
 
         cursor = self._conn.execute(
@@ -701,27 +697,27 @@ class MemoryDB:
         self._conn.commit()
         return cursor.lastrowid
 
-    # --- Escritura: estado y etiquetas de decisiones -------------------------
+    # --- Write: decision status and tags -------------------------------------
 
     def update_decision_status(self, decision_id: int, status: str) -> None:
         """
-        Actualiza el estado de una decision existente.
+        Update the status of an existing decision.
 
-        Los estados validos son ``active``, ``superseded`` y ``deprecated``.
-        Cualquier otro valor provoca un ``ValueError`` para evitar estados
-        inconsistentes en la base de datos.
+        The valid statuses are ``active``, ``superseded`` and ``deprecated``.
+        Any other value raises ``ValueError`` to prevent inconsistent
+        statuses in the database.
 
         Args:
-            decision_id: ID de la decision a actualizar.
-            status: nuevo estado (debe estar en ``_VALID_DECISION_STATUSES``).
+            decision_id: ID of the decision to update.
+            status: new status (must be in ``_VALID_DECISION_STATUSES``).
 
         Raises:
-            ValueError: si el estado proporcionado no es valido.
+            ValueError: if the given status is not valid.
         """
         if status not in _VALID_DECISION_STATUSES:
             raise ValueError(
-                f"Estado no valido: '{status}'. "
-                f"Valores permitidos: {sorted(_VALID_DECISION_STATUSES)}"
+                f"Недопустимый статус: '{status}'. "
+                f"Допустимые значения: {sorted(_VALID_DECISION_STATUSES)}"
             )
         self._conn.execute(
             "UPDATE decisions SET status = ? WHERE id = ?",
@@ -733,28 +729,28 @@ class MemoryDB:
         self, decision_id: int, tags: List[str]
     ) -> None:
         """
-        Anade etiquetas a una decision sin duplicar las existentes.
+        Add tags to a decision without duplicating the existing ones.
 
-        Lee las etiquetas actuales, fusiona con las nuevas conservando el
-        orden de insercion y elimina duplicados. El resultado se persiste
-        de vuelta en la columna ``tags`` como JSON.
+        Reads the current tags, merges them with the new ones in insertion
+        order and removes duplicates. The result is stored back in the
+        ``tags`` column as JSON.
 
         Args:
-            decision_id: ID de la decision a etiquetar.
-            tags: lista de etiquetas nuevas a anadir.
+            decision_id: ID of the decision to tag.
+            tags: list of new tags to add.
         """
         row = self._conn.execute(
             "SELECT tags FROM decisions WHERE id = ?",
             (decision_id,),
         ).fetchone()
 
-        # Leer etiquetas actuales; si la decision no existe o no tiene,
-        # se parte de una lista vacia
+        # Read the current tags. If the decision does not exist or has no
+        # tags, start from an empty list
         existing: List[str] = []
         if row and row["tags"]:
             existing = json.loads(row["tags"])
 
-        # Merge sin duplicados conservando el orden de aparicion
+        # Merge without duplicates and keep the order of appearance
         merged = list(dict.fromkeys(existing + tags))
         merged_json = json.dumps(merged, ensure_ascii=False)
 
@@ -764,7 +760,7 @@ class MemoryDB:
         )
         self._conn.commit()
 
-    # --- Escritura: relaciones entre decisiones -----------------------------
+    # --- Write: links between decisions -------------------------------------
 
     def link_decisions(
         self,
@@ -773,17 +769,16 @@ class MemoryDB:
         link_type: str,
     ) -> None:
         """
-        Crea una relacion dirigida entre dos decisiones.
+        Create a directed link between two decisions.
 
-        La relacion va de ``source_id`` a ``target_id`` con un tipo que
-        describe la naturaleza del vinculo (p.ej. ``supersedes``, ``relates``,
-        ``depends_on``). Si la relacion ya existe, la operacion es idempotente
-        y no lanza excepcion.
+        The link goes from ``source_id`` to ``target_id`` with a type that
+        describes it (e.g. ``supersedes``, ``relates``, ``depends_on``). If
+        the link exists, the operation is idempotent and raises no exception.
 
         Args:
-            source_id: ID de la decision origen.
-            target_id: ID de la decision destino.
-            link_type: tipo de relacion entre las dos decisiones.
+            source_id: ID of the source decision.
+            target_id: ID of the target decision.
+            link_type: type of link between the two decisions.
         """
         now = datetime.now(timezone.utc).isoformat()
         try:
@@ -795,25 +790,25 @@ class MemoryDB:
             )
             self._conn.commit()
         except sqlite3.IntegrityError:
-            # La relacion ya existe: idempotencia
+            # The link exists: idempotent
             pass
 
     def get_decision_links(
         self, decision_id: int
     ) -> List[Dict[str, Any]]:
         """
-        Obtiene todas las relaciones en las que participa una decision.
+        Get all links that include a decision.
 
-        La busqueda es bidireccional: devuelve tanto los enlaces donde la
-        decision es origen como aquellos donde es destino. Esto permite
-        navegar el grafo de decisiones en ambas direcciones.
+        The lookup goes both ways: it returns links where the decision is the
+        source and links where it is the target. This lets callers walk the
+        decision graph in both directions.
 
         Args:
-            decision_id: ID de la decision a consultar.
+            decision_id: ID of the decision to query.
 
         Returns:
-            Lista de diccionarios con los campos ``source_id``, ``target_id``,
-            ``link_type`` y ``created_at`` de cada relacion encontrada.
+            List of dictionaries with the ``source_id``, ``target_id``,
+            ``link_type`` and ``created_at`` fields of each link found.
         """
         rows = self._conn.execute(
             "SELECT * FROM decision_links "
@@ -822,7 +817,7 @@ class MemoryDB:
         ).fetchall()
         return [dict(r) for r in rows]
 
-    # --- Escritura: commits -------------------------------------------------
+    # --- Write: commits -----------------------------------------------------
 
     def log_commit(
         self,
@@ -838,32 +833,32 @@ class MemoryDB:
         auto_link_iteration: bool = True,
     ) -> Optional[int]:
         """
-        Registra un commit en la memoria.
+        Record a commit in the memory.
 
-        Si el SHA ya existe, se ignora silenciosamente (idempotencia). Si no se
-        proporciona ``iteration_id``, se vincula a la iteracion activa. La lista
-        de ficheros modificados se serializa como JSON tras sanitizar cada ruta
-        para evitar fugas de informacion sensible en nombres de fichero.
+        If the SHA exists, it is ignored silently (idempotent). If
+        ``iteration_id`` is not given, the commit links to the active
+        iteration. The list of changed files is serialized as JSON after each
+        path is sanitized, to prevent leaks of sensitive data in file names.
 
         Args:
-            sha: hash SHA del commit.
-            message: mensaje del commit (se sanitiza).
-            author: autor del commit.
-            files_changed: numero de ficheros modificados.
-            insertions: lineas anadidas.
-            deletions: lineas eliminadas.
-            iteration_id: ID de la iteracion.
-            files: lista de rutas de ficheros modificados en el commit.
-            committed_at: fecha ISO 8601 real del commit. Si se omite,
-                se usa el instante actual de captura.
-            auto_link_iteration: si es ``False``, evita colgar el commit
-                a la iteracion activa cuando se trata de historial importado.
+            sha: SHA hash of the commit.
+            message: commit message (sanitized).
+            author: commit author.
+            files_changed: number of changed files.
+            insertions: added lines.
+            deletions: deleted lines.
+            iteration_id: iteration ID.
+            files: list of paths of the files changed in the commit.
+            committed_at: real ISO 8601 date of the commit. If omitted, the
+                current capture time is used.
+            auto_link_iteration: if ``False``, do not attach the commit to
+                the active iteration (for imported history).
 
         Returns:
-            ID del commit creado, o None si ya existia.
+            ID of the created commit, or None if it already existed.
         """
-        # Auto-vincular a la iteracion activa si no se especifica y el caller
-        # está registrando trabajo del flujo actual, no historial importado.
+        # Link to the active iteration if none is given and the caller logs
+        # work of the current flow, not imported history.
         if iteration_id is None and auto_link_iteration:
             active = self.get_active_iteration()
             if active is not None:
@@ -874,9 +869,9 @@ class MemoryDB:
         message = sanitize_content(message)
         author = sanitize_content(author)
 
-        # Serializar la lista de ficheros con sanitizacion preventiva.
-        # Se usa el valor original como fallback si sanitize_content
-        # devuelve None (caso de rutas sin secretos).
+        # Serialize the file list with preventive sanitization.
+        # The original value is the fallback if sanitize_content
+        # returns None.
         files_json = json.dumps(
             [sanitize_content(f) or f for f in (files or [])],
             ensure_ascii=False,
@@ -896,7 +891,7 @@ class MemoryDB:
             self._conn.commit()
             return cursor.lastrowid
         except sqlite3.IntegrityError:
-            # El SHA ya existe: idempotencia, no es un error
+            # The SHA exists: idempotent, not an error
             return None
 
     def link_commit_decision(
@@ -906,15 +901,15 @@ class MemoryDB:
         link_type: str = "implements",
     ) -> None:
         """
-        Vincula un commit con una decision.
+        Link a commit to a decision.
 
-        Permite establecer la trazabilidad entre decisiones de diseno y los
-        commits que las implementan, revierten o se relacionan con ellas.
+        Gives traceability between design decisions and the commits that
+        implement them, revert them or relate to them.
 
         Args:
-            commit_id: ID del commit.
-            decision_id: ID de la decision.
-            link_type: tipo de vinculo (implements, reverts, relates).
+            commit_id: commit ID.
+            decision_id: decision ID.
+            link_type: link type (implements, reverts, relates).
         """
         try:
             self._conn.execute(
@@ -924,10 +919,10 @@ class MemoryDB:
             )
             self._conn.commit()
         except sqlite3.IntegrityError:
-            # El vinculo ya existe: idempotencia
+            # The link exists: idempotent
             pass
 
-    # --- Escritura: eventos -------------------------------------------------
+    # --- Write: events ------------------------------------------------------
 
     def log_event(
         self,
@@ -939,22 +934,21 @@ class MemoryDB:
         iteration_id: Optional[int] = None,
     ) -> int:
         """
-        Registra un evento del flujo de trabajo.
+        Record a workflow event.
 
-        Los eventos capturan hechos mecanicos (fase completada, gate superada,
-        aprobacion del usuario) que complementan las decisiones con la
-        cronologia detallada del flujo.
+        Events capture mechanical facts (phase completed, gate passed, user
+        approval) that add the detailed flow timeline to the decisions.
 
         Args:
-            event_type: tipo de evento (phase_completed, gate_passed, etc.).
-            phase: fase del flujo en la que ocurrio.
-            payload: datos adicionales en formato diccionario.
-            summary: resumen breve del evento para consultas rapidas.
-            content: contenido completo del evento, indexado en FTS si esta habilitado.
-            iteration_id: ID de la iteracion (auto-detectado si se omite).
+            event_type: event type (phase_completed, gate_passed, etc.).
+            phase: flow phase in which it happened.
+            payload: extra data as a dictionary.
+            summary: short event summary for quick queries.
+            content: full event content, indexed in FTS if it is on.
+            iteration_id: iteration ID (detected if omitted).
 
         Returns:
-            ID del evento creado.
+            ID of the created event.
         """
         if iteration_id is None:
             active = self.get_active_iteration()
@@ -964,7 +958,7 @@ class MemoryDB:
         now = datetime.now(timezone.utc).isoformat()
         payload_json = None
         if payload is not None:
-            # Sanitizar payloads anidados por si contienen secretos.
+            # Sanitize nested payloads in case they contain secrets.
             sanitized = _sanitize_json_value(payload)
             payload_json = json.dumps(sanitized, ensure_ascii=False)
 
@@ -981,8 +975,8 @@ class MemoryDB:
              sanitized_summary, sanitized_content, now),
         )
 
-        # Indexar resumen y contenido para que eventos cortos tambien sean
-        # buscables por FTS sin depender del fallback LIKE.
+        # Index summary and content so short events are also searchable
+        # through FTS without the LIKE fallback.
         event_search_content = self._compose_event_search_content(
             {
                 "summary": sanitized_summary,
@@ -999,17 +993,17 @@ class MemoryDB:
         self._conn.commit()
         return cursor.lastrowid
 
-    # --- Lectura: iteraciones -----------------------------------------------
+    # --- Read: iterations ---------------------------------------------------
 
     def get_iteration(self, iteration_id: int) -> Optional[Dict[str, Any]]:
         """
-        Obtiene los datos completos de una iteracion por su ID.
+        Get the full data of an iteration by its ID.
 
         Args:
-            iteration_id: ID de la iteracion a consultar.
+            iteration_id: ID of the iteration to query.
 
         Returns:
-            Diccionario con los datos de la iteracion, o None si no existe.
+            Dictionary with the iteration data, or None if it does not exist.
         """
         row = self._conn.execute(
             "SELECT * FROM iterations WHERE id = ?", (iteration_id,)
@@ -1018,14 +1012,13 @@ class MemoryDB:
 
     def get_active_iteration(self) -> Optional[Dict[str, Any]]:
         """
-        Obtiene la iteracion activa mas reciente.
+        Get the most recent active iteration.
 
-        Solo puede haber una iteracion activa a la vez en el modelo normal
-        de uso. Si hay varias (por inconsistencia), se devuelve la mas
-        reciente por ID.
+        In normal use only one iteration is active at a time. If there are
+        several (an inconsistency), the most recent by ID is returned.
 
         Returns:
-            Diccionario con los datos de la iteracion activa, o None.
+            Dictionary with the active iteration data, or None.
         """
         row = self._conn.execute(
             "SELECT * FROM iterations WHERE status = 'active' "
@@ -1035,14 +1028,14 @@ class MemoryDB:
 
     def get_latest_iteration(self) -> Optional[Dict[str, Any]]:
         """
-        Obtiene la iteracion mas reciente independientemente de su estado.
+        Get the most recent iteration, whatever its status.
 
-        A diferencia de ``get_active_iteration``, no filtra por estado.
-        Util como fallback cuando no hay iteracion activa y se necesita
-        contexto de la ultima iteracion registrada.
+        Unlike ``get_active_iteration``, it does not filter by status. Useful
+        as a fallback when no iteration is active and the context of the last
+        recorded iteration is needed.
 
         Returns:
-            Diccionario con los datos de la iteracion mas reciente, o None.
+            Dictionary with the most recent iteration data, or None.
         """
         row = self._conn.execute(
             "SELECT * FROM iterations ORDER BY id DESC LIMIT 1"
@@ -1055,7 +1048,7 @@ class MemoryDB:
         offset: int = 0,
         status: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """Devuelve iteraciones recientes con soporte de paginacion."""
+        """Return recent iterations with pagination."""
         params: List[Any] = []
         where = ""
         if status is not None:
@@ -1070,7 +1063,7 @@ class MemoryDB:
         ).fetchall()
         return [dict(row) for row in rows]
 
-    # --- Lectura: decisiones ------------------------------------------------
+    # --- Read: decisions ----------------------------------------------------
 
     def get_decisions(
         self,
@@ -1081,26 +1074,25 @@ class MemoryDB:
         status: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Obtiene decisiones con filtros opcionales por iteracion, etiquetas y estado.
+        Get decisions with optional filters by iteration, tags and status.
 
-        La query SQL se construye dinamicamente en funcion de los filtros
-        proporcionados. El filtro de etiquetas compara contra el campo JSON
-        ``tags`` usando ``LIKE`` para cada etiqueta; basta con que una
-        coincida para incluir el registro (logica OR). El filtro de estado
-        aplica una comparacion exacta.
+        The SQL query is built from the given filters. The tag filter matches
+        the JSON ``tags`` field with ``LIKE`` for each tag. One match is
+        enough to include the row (OR logic). The status filter uses an exact
+        match.
 
         Args:
-            iteration_id: si se proporciona, solo decisiones de esa iteracion.
-            limit: numero maximo de resultados.
-            offset: desplazamiento para paginacion.
-            tags: lista de etiquetas; al menos una debe coincidir con las
-                del registro para que se incluya en los resultados.
-            status: si se proporciona, solo decisiones con este estado.
+            iteration_id: if given, only decisions of that iteration.
+            limit: maximum number of results.
+            offset: offset for pagination.
+            tags: list of tags. At least one must match the tags of the row
+                for the row to be included.
+            status: if given, only decisions with this status.
 
         Returns:
-            Lista de diccionarios con los datos de cada decision.
+            List of dictionaries with the data of each decision.
         """
-        # Construccion dinamica de la query SQL
+        # Build the SQL query from the filters
         conditions: List[str] = []
         params: List[Any] = []
 
@@ -1112,10 +1104,9 @@ class MemoryDB:
             conditions.append("status = ?")
             params.append(status)
 
-        # Para etiquetas se usa LIKE sobre el campo JSON. Se busca la
-        # presencia de al menos una etiqueta con logica OR. El patron
-        # '"%tag%"' se apoya en que las etiquetas se serializan como
-        # array JSON con comillas (p.ej. '["security", "api"]').
+        # Tags use LIKE on the JSON field. At least one tag must be present
+        # (OR logic). The '"%tag%"' pattern relies on tags being serialized
+        # as a JSON array with quotes (e.g. '["security", "api"]').
         if tags:
             tag_clauses = []
             for tag in tags:
@@ -1143,7 +1134,7 @@ class MemoryDB:
         tags: Optional[List[str]] = None,
         status: Optional[str] = None,
     ) -> Iterable[Dict[str, Any]]:
-        """Itera decisiones paginando para evitar techos silenciosos."""
+        """Iterate decisions page by page to avoid silent caps."""
         offset = 0
         while True:
             batch = self.get_decisions(
@@ -1162,7 +1153,7 @@ class MemoryDB:
             offset += batch_size
 
     def get_decision(self, decision_id: int) -> Optional[Dict[str, Any]]:
-        """Devuelve una decision por ID, o None si no existe."""
+        """Return a decision by ID, or None if it does not exist."""
         row = self._conn.execute(
             "SELECT * FROM decisions WHERE id = ?",
             (decision_id,),
@@ -1175,7 +1166,7 @@ class MemoryDB:
         offset: int = 0,
         iteration_id: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
-        """Devuelve commits recientes con soporte de paginacion."""
+        """Return recent commits with pagination."""
         params: List[Any] = []
         where = ""
         if iteration_id is not None:
@@ -1190,7 +1181,7 @@ class MemoryDB:
         ).fetchall()
         return [dict(row) for row in rows]
 
-    # --- Lectura: busqueda --------------------------------------------------
+    # --- Read: search -------------------------------------------------------
 
     def search(
         self,
@@ -1203,30 +1194,30 @@ class MemoryDB:
         status: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Busca en decisiones y commits por texto con filtros opcionales.
+        Search decisions and commits by text with optional filters.
 
-        Si FTS5 esta disponible, usa MATCH para busqueda de texto completo.
-        En caso contrario, usa LIKE como fallback (mas lento pero funcional).
+        If FTS5 is available, use MATCH for full-text search. Otherwise use
+        LIKE as a fallback (slower but it works).
 
-        Los resultados se enriquecen con el tipo de fuente y los datos
-        completos del registro original. Tras la busqueda inicial, se aplican
-        filtros de post-procesado sobre fechas, etiquetas y estado.
+        Results carry the source type and the full data of the original row.
+        After the first search, post-processing filters apply to dates, tags
+        and status.
 
         Args:
-            query: termino de busqueda.
-            limit: numero maximo de resultados.
-            iteration_id: si se proporciona, filtra por iteracion.
-            since: fecha ISO 8601 minima; excluye resultados cuyo
-                ``decided_at`` o ``committed_at`` sea anterior.
-            until: fecha ISO 8601 maxima; excluye resultados cuyo
-                ``decided_at`` o ``committed_at`` sea posterior.
-            tags: lista de etiquetas; para decisiones, al menos una debe
-                coincidir con las etiquetas del registro.
-            status: estado requerido; solo aplica a decisiones.
+            query: search term.
+            limit: maximum number of results.
+            iteration_id: if given, filter by iteration.
+            since: minimum ISO 8601 date. Excludes results whose
+                ``decided_at`` or ``committed_at`` is earlier.
+            until: maximum ISO 8601 date. Excludes results whose
+                ``decided_at`` or ``committed_at`` is later.
+            tags: list of tags. For decisions, at least one must match the
+                tags of the row.
+            status: required status. Applies to decisions only.
 
         Returns:
-            Lista de diccionarios con los resultados, cada uno con la clave
-            ``source_type`` ('decision' o 'commit') y los datos del registro.
+            List of result dictionaries, each with the ``source_type`` key
+            ('decision' or 'commit') and the row data.
         """
         results: List[Dict[str, Any]] = []
 
@@ -1245,7 +1236,7 @@ class MemoryDB:
 
     @staticmethod
     def _search_date_value(result: Dict[str, Any]) -> str:
-        """Devuelve la fecha relevante del resultado para desempates."""
+        """Return the relevant date of the result for tie-breaks."""
         source_type = result.get("source_type", "")
         if source_type == "decision":
             return str(result.get("decided_at", ""))
@@ -1255,14 +1246,14 @@ class MemoryDB:
 
     @staticmethod
     def _like_pattern(query: str) -> str:
-        """Escapa comodines de LIKE para tratar la consulta como texto literal."""
+        """Escape LIKE wildcards so the query is treated as literal text."""
         escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         return f"%{escaped}%"
 
     def _iter_search_field_values(
         self, result: Dict[str, Any]
     ) -> Iterable[Tuple[int, str]]:
-        """Expone campos buscables con pesos para ordenar relevancia."""
+        """Expose searchable fields with weights for relevance sorting."""
         source_type = result.get("source_type", "")
         fields = {
             "decision": [
@@ -1306,7 +1297,7 @@ class MemoryDB:
 
     @staticmethod
     def _search_match_signature(text: str, normalized_query: str) -> Optional[Tuple[int, int, int, int, int]]:
-        """Calcula una firma de match donde valores mayores son mejores."""
+        """Compute a match signature where larger values are better."""
         normalized_text = text.casefold()
         index = normalized_text.find(normalized_query)
         if index < 0:
@@ -1316,12 +1307,12 @@ class MemoryDB:
         starts = 1 if normalized_text.startswith(normalized_query) else 0
         word_boundary = 1 if re.search(rf"(?<!\w){re.escape(normalized_query)}", normalized_text) else 0
         occurrences = normalized_text.count(normalized_query)
-        # Indices mas cercanos al principio son mas relevantes.
+        # Indexes closer to the start are more relevant.
         position_score = max(0, 10_000 - index)
         return (exact, starts, word_boundary, occurrences, position_score)
 
     def _search_sort_key(self, result: Dict[str, Any], normalized_query: str) -> Tuple[Any, ...]:
-        """Construye una clave de ordenacion consistente entre FTS y LIKE."""
+        """Build a sort key that is consistent between FTS and LIKE."""
         best_match = (0, 0, 0, 0, 0, 0)
         for weight, text in self._iter_search_field_values(result):
             signature = self._search_match_signature(text, normalized_query)
@@ -1334,7 +1325,7 @@ class MemoryDB:
         raw_fts_rank = result.get("_fts_rank")
         fts_rank_score = 0.0
         if isinstance(raw_fts_rank, (int, float)):
-            # bm25() devuelve mejores resultados con valores menores.
+            # bm25() gives better results with smaller values.
             fts_rank_score = -float(raw_fts_rank)
 
         return (
@@ -1348,7 +1339,7 @@ class MemoryDB:
         self,
         results: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
-        """Deduplica por tipo+id y conserva la mejor info auxiliar disponible."""
+        """Deduplicate by type+id and keep the best helper data available."""
         deduped: Dict[Tuple[str, int], Dict[str, Any]] = {}
 
         for item in results:
@@ -1377,7 +1368,7 @@ class MemoryDB:
         fetch_limit: int,
         iteration_id: Optional[int],
     ) -> List[Dict[str, Any]]:
-        """Recoge candidatos LIKE de todas las fuentes sin sesgo por tipo."""
+        """Collect LIKE candidates from all sources with no type bias."""
         like_pattern = self._like_pattern(query)
         results: List[Dict[str, Any]] = []
 
@@ -1468,31 +1459,30 @@ class MemoryDB:
         status: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Aplica filtros de post-procesado sobre los resultados de busqueda.
+        Apply post-processing filters to the search results.
 
-        Este metodo centraliza la logica de filtrado que comparten tanto
-        la busqueda FTS5 como el fallback LIKE. Los filtros de fecha se
-        aplican a todos los tipos de resultado (decisiones y commits),
-        mientras que los filtros de etiquetas y estado solo afectan a
-        resultados de tipo ``decision``.
+        This method holds the filter logic that FTS5 search and the LIKE
+        fallback share. Date filters apply to all result types (decisions
+        and commits). Tag and status filters apply only to results of type
+        ``decision``.
 
         Args:
-            results: lista de resultados sin filtrar.
-            since: fecha ISO minima (inclusive).
-            until: fecha ISO maxima (inclusive).
-            tags: etiquetas requeridas (al menos una debe coincidir).
-            status: estado requerido para decisiones.
+            results: list of unfiltered results.
+            since: minimum ISO date (inclusive).
+            until: maximum ISO date (inclusive).
+            tags: required tags (at least one must match).
+            status: required status for decisions.
 
         Returns:
-            Lista filtrada de resultados.
+            Filtered list of results.
         """
         filtered: List[Dict[str, Any]] = []
 
         for r in results:
             source_type = r.get("source_type", "")
 
-            # --- Filtro por fecha ---
-            # Se usa decided_at para decisiones y committed_at para commits
+            # --- Date filter ---
+            # decided_at for decisions, committed_at for commits
             if source_type == "decision":
                 date_field = "decided_at"
             elif source_type == "event":
@@ -1506,9 +1496,9 @@ class MemoryDB:
             if until and record_date and record_date > until:
                 continue
 
-            # --- Filtros exclusivos de decisiones ---
+            # --- Decision-only filters ---
             if source_type == "decision":
-                # Filtro por etiquetas: al menos una debe coincidir
+                # Tag filter: at least one must match
                 if tags:
                     record_tags_raw = r.get("tags", "[]")
                     try:
@@ -1518,12 +1508,12 @@ class MemoryDB:
                     if not any(t in record_tags for t in tags):
                         continue
 
-                # Filtro por estado
+                # Status filter
                 if status and r.get("status") != status:
                     continue
 
-            # Commits y eventos no tienen tags ni status; si se
-            # especifican esos filtros, se excluyen.
+            # Commits and events have no tags or status. If those filters
+            # are given, they are excluded.
             elif source_type in {"commit", "event"} and (tags or status):
                 continue
 
@@ -1541,22 +1531,21 @@ class MemoryDB:
         tags: Optional[List[str]] = None,
         status: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """Ejecuta una busqueda con la estrategia dada y aplica post-filtros.
+        """Run a search with the given strategy and apply post-filters.
 
-        Centraliza la logica comun a FTS5 y LIKE: calculo de margen,
-        post-filtrado por fecha/etiquetas/estado y truncamiento al limite.
-        La estrategia de obtencion de resultados brutos se delega en
-        ``fetch_fn``, que recibe el ``fetch_limit`` calculado y devuelve
-        una lista de dicts con ``source_type`` incluido.
+        Holds the logic shared by FTS5 and LIKE: margin calculation,
+        post-filtering by date/tags/status and truncation to the limit.
+        ``fetch_fn`` gets the raw results: it receives the computed
+        ``fetch_limit`` and returns a list of dicts with ``source_type``.
 
         Args:
-            fetch_fn: funcion que recibe (fetch_limit: int) y devuelve
-                una lista de dicts con los resultados brutos.
-            limit: numero maximo de resultados finales.
-            since: fecha ISO minima (post-filtro).
-            until: fecha ISO maxima (post-filtro).
-            tags: etiquetas requeridas (post-filtro, solo decisiones).
-            status: estado requerido (post-filtro, solo decisiones).
+            fetch_fn: function that takes (fetch_limit: int) and returns a
+                list of dicts with the raw results.
+            limit: maximum number of final results.
+            since: minimum ISO date (post-filter).
+            until: maximum ISO date (post-filter).
+            tags: required tags (post-filter, decisions only).
+            status: required status (post-filter, decisions only).
         """
         fetch_limit = max(limit * _FETCH_MARGIN, limit)
 
@@ -1587,9 +1576,9 @@ class MemoryDB:
         tags: Optional[List[str]] = None,
         status: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """Busqueda con FTS5 MATCH, delegando post-filtrado a _execute_search."""
-        # FTS5 requiere escapar caracteres especiales en la query.
-        # Se envuelve entre comillas dobles para tratarla como frase literal.
+        """Search with FTS5 MATCH. _execute_search does the post-filtering."""
+        # FTS5 needs special characters in the query escaped.
+        # Double quotes wrap the query so it is a literal phrase.
         safe_query = '"' + query.replace('"', '""') + '"'
 
         def fetch(fetch_limit: int) -> List[Dict[str, Any]]:
@@ -1618,8 +1607,8 @@ class MemoryDB:
                     }
                 )
 
-            # FTS no cubre hoy algunos campos auxiliares como commit.files;
-            # complementamos con LIKE para que el contrato público sea estable.
+            # FTS does not cover some helper fields such as commit.files.
+            # LIKE fills the gap so the public contract stays stable.
             results.extend(self._search_like_candidates(query, fetch_limit, iteration_id))
             return results
 
@@ -1637,7 +1626,7 @@ class MemoryDB:
         tags: Optional[List[str]] = None,
         status: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """Busqueda con LIKE como fallback, delegando post-filtrado a _execute_search."""
+        """Search with LIKE as a fallback. _execute_search does the post-filtering."""
         def fetch(fetch_limit: int) -> List[Dict[str, Any]]:
             return self._search_like_candidates(query, fetch_limit, iteration_id)
 
@@ -1648,7 +1637,7 @@ class MemoryDB:
     def _fetch_source_record(
         self, source_type: str, source_id: int
     ) -> Optional[Dict[str, Any]]:
-        """Obtiene el registro completo de una fuente indexada en FTS."""
+        """Get the full row of a source indexed in FTS."""
         tables = {
             "decision": "decisions",
             "commit": "commits",
@@ -1662,7 +1651,7 @@ class MemoryDB:
         ).fetchone()
         return dict(row) if row else None
 
-    # --- Lectura: cronologia ------------------------------------------------
+    # --- Read: timeline -----------------------------------------------------
 
     def get_timeline(
         self,
@@ -1670,15 +1659,15 @@ class MemoryDB:
         limit: int = 100,
     ) -> List[Dict[str, Any]]:
         """
-        Obtiene la cronologia de eventos de una iteracion.
+        Get the event timeline of an iteration.
 
         Args:
-            iteration_id: ID de la iteracion.
-            limit: numero maximo de eventos.
+            iteration_id: iteration ID.
+            limit: maximum number of events.
 
         Returns:
-            Lista de diccionarios con los datos de cada evento, ordenados
-            cronologicamente.
+            List of dictionaries with the data of each event, in
+            chronological order.
         """
         rows = self._conn.execute(
             "SELECT * FROM events WHERE iteration_id = ? "
@@ -1695,7 +1684,7 @@ class MemoryDB:
         event_type: Optional[str] = None,
         ascending: bool = False,
     ) -> List[Dict[str, Any]]:
-        """Devuelve eventos recientes con filtros opcionales."""
+        """Return recent events with optional filters."""
         params: List[Any] = []
         conditions: List[str] = []
 
@@ -1725,7 +1714,7 @@ class MemoryDB:
         iteration_id: Optional[int] = None,
         event_type: Optional[str] = None,
     ) -> int:
-        """Cuenta eventos con los mismos filtros que get_events."""
+        """Count events with the same filters as get_events."""
         params: List[Any] = []
         conditions: List[str] = []
 
@@ -1748,7 +1737,7 @@ class MemoryDB:
         return int(row["cnt"]) if row else 0
 
     def get_event_counts_by_type(self, limit: int = 12) -> List[Dict[str, Any]]:
-        """Resume eventos agrupados por tipo, ordenados por frecuencia."""
+        """Summarize events grouped by type, sorted by frequency."""
         rows = self._conn.execute(
             "SELECT event_type, COUNT(*) AS total "
             "FROM events "
@@ -1759,65 +1748,64 @@ class MemoryDB:
         ).fetchall()
         return [dict(row) for row in rows]
 
-    # --- Lectura: estadisticas ----------------------------------------------
+    # --- Read: stats --------------------------------------------------------
 
     def get_stats(self) -> Dict[str, Any]:
         """
-        Devuelve estadisticas generales de la memoria del proyecto.
+        Return general stats of the project memory.
 
         Returns:
-            Diccionario con contadores (iteraciones, decisiones, commits,
-            eventos), estado de FTS5, version del esquema y fecha de creacion.
+            Dictionary with counters (iterations, decisions, commits,
+            events), FTS5 state, schema version and creation date.
         """
         stats: Dict[str, Any] = {}
 
-        # Contadores
+        # Counters
         for table in ("iterations", "decisions", "commits", "events"):
             row = self._conn.execute(
                 f"SELECT COUNT(*) as cnt FROM {table}"
             ).fetchone()
             stats[f"total_{table}"] = row["cnt"]
 
-        # Metadatos
+        # Metadata
         meta_rows = self._conn.execute("SELECT key, value FROM meta").fetchall()
         for row in meta_rows:
             stats[row["key"]] = row["value"]
 
         return stats
 
-    # --- Mantenimiento ------------------------------------------------------
+    # --- Maintenance --------------------------------------------------------
 
     def check_health(self) -> Dict[str, Any]:
-        """Valida la integridad de la base de datos de memoria.
+        """Validate the integrity of the memory database.
 
-        Ejecuta un conjunto de comprobaciones diagnosticas para detectar
-        problemas de configuracion, sincronizacion o capacidad antes de
-        que afecten al funcionamiento normal del plugin.
+        Runs a set of diagnostic checks to detect configuration, sync or
+        capacity problems before they affect the normal plugin operation.
 
-        Comprobaciones:
-            - Version del esquema correcta.
-            - FTS5 sincronizado (conteo en FTS vs tablas fuente).
-            - Permisos del fichero (0600).
-            - Tamano de la BD (aviso si > 50 MB).
+        Checks:
+            - Correct schema version.
+            - FTS5 in sync (FTS count vs source tables).
+            - File permissions (0600).
+            - DB size (warning if > 50 MB).
 
         Returns:
-            Diccionario con status (healthy, warnings, errors),
-            lista de issues y metadatos de la DB.
+            Dictionary with status (healthy, warnings, errors), the list of
+            issues and DB metadata.
         """
         issues: List[str] = []
 
-        # Version del esquema
+        # Schema version
         row = self._conn.execute(
             "SELECT value FROM meta WHERE key = 'schema_version'"
         ).fetchone()
         schema_version = row[0] if row else "unknown"
         if schema_version != str(_SCHEMA_VERSION):
             issues.append(
-                f"Version del esquema desactualizada: {schema_version} "
-                f"(esperada: {_SCHEMA_VERSION})"
+                f"Версия схемы устарела: {schema_version} "
+                f"(ожидалась: {_SCHEMA_VERSION})"
             )
 
-        # FTS5 sincronizado
+        # FTS5 in sync
         if self._fts_enabled:
             expected_counts = self._expected_fts_counts()
 
@@ -1828,8 +1816,8 @@ class MemoryDB:
                 ).fetchone()[0]
                 if actual != expected:
                     issues.append(
-                        f"FTS5 desincronizado en {source_type}: "
-                        f"{actual} entradas vs {expected} esperadas"
+                        f"FTS5 рассинхронизирован для {source_type}: "
+                        f"записей {actual}, ожидалось {expected}"
                     )
 
             unknown_sources = self._conn.execute(
@@ -1838,7 +1826,7 @@ class MemoryDB:
             ).fetchone()[0]
             if unknown_sources:
                 issues.append(
-                    f"FTS5 contiene {unknown_sources} entradas con source_type desconocido"
+                    f"FTS5 содержит записи с неизвестным source_type: {unknown_sources}"
                 )
 
             orphan_queries = {
@@ -1862,10 +1850,10 @@ class MemoryDB:
                 orphan_count = self._conn.execute(sql).fetchone()[0]
                 if orphan_count:
                     issues.append(
-                        f"FTS5 contiene {orphan_count} entradas huerfanas de {source_type}"
+                        f"FTS5 содержит осиротевшие записи {source_type}: {orphan_count}"
                     )
 
-        # Permisos del fichero
+        # File permissions
         permissions_ok = True
         try:
             mode = os.stat(self._db_path).st_mode
@@ -1873,13 +1861,13 @@ class MemoryDB:
             if perms != stat.S_IMODE(_DB_PERMISSIONS):
                 permissions_ok = False
                 issues.append(
-                    f"Permisos incorrectos: {oct(perms)} (esperado: 0600)"
+                    f"Неверные права доступа: {oct(perms)} (ожидалось: 0600)"
                 )
         except OSError:
             permissions_ok = False
-            issues.append("No se pudo verificar los permisos del fichero")
+            issues.append("Не удалось проверить права доступа к файлу")
 
-        # Tamano de la BD
+        # DB size
         size_bytes = 0
         try:
             size_bytes = os.path.getsize(self._db_path)
@@ -1889,13 +1877,13 @@ class MemoryDB:
                     size_bytes += os.path.getsize(aux_path)
             if size_bytes > 50 * 1024 * 1024:  # 50 MB
                 issues.append(
-                    f"Base de datos grande: {size_bytes / (1024*1024):.1f} MB"
+                    f"База данных слишком большая: {size_bytes / (1024*1024):.1f} MB"
                 )
         except OSError:
             pass
 
-        # Estado global: errores criticos (esquema o FTS) vs avisos menores
-        if any("desactualizada" in i or "desincronizado" in i for i in issues):
+        # Global status: critical errors (schema or FTS) vs minor warnings
+        if any("устарела" in i or "рассинхронизирован" in i for i in issues):
             status = "errors"
         elif issues:
             status = "warnings"
@@ -1913,16 +1901,16 @@ class MemoryDB:
 
     def purge_old_events(self, retention_days: int) -> int:
         """
-        Elimina eventos anteriores a la ventana de retencion.
+        Delete events older than the retention window.
 
-        Solo se purgan eventos: las decisiones e iteraciones se conservan
-        siempre por su alto valor para la trazabilidad.
+        Only events are purged. Decisions and iterations are always kept
+        because of their high value for traceability.
 
         Args:
-            retention_days: numero de dias de retencion.
+            retention_days: number of retention days.
 
         Returns:
-            Numero de eventos eliminados.
+            Number of deleted events.
         """
         cutoff = (
             datetime.now(timezone.utc) - timedelta(days=retention_days)
@@ -1946,28 +1934,27 @@ class MemoryDB:
         self._conn.commit()
         return cursor.rowcount
 
-    # --- Export e import ----------------------------------------------------
+    # --- Export and import --------------------------------------------------
 
     def export_decisions_markdown(
         self,
         path: str,
         iteration_id: Optional[int] = None,
     ) -> int:
-        """Exporta las decisiones a un fichero Markdown con formato ADR-like.
+        """Export the decisions to a Markdown file in an ADR-like format.
 
-        Genera un documento estructurado donde cada decision se presenta
-        como un registro de arquitectura (Architecture Decision Record),
-        incluyendo titulo, fecha, estado, etiquetas, contexto, decision
-        elegida, alternativas descartadas y justificacion.
+        Builds a structured document where each decision is an Architecture
+        Decision Record with title, date, status, tags, context, chosen
+        decision, rejected alternatives and rationale.
 
         Args:
-            path: ruta del fichero Markdown de destino. Se crea el
-                directorio padre si no existe.
-            iteration_id: si se proporciona, solo exporta decisiones
-                de esa iteracion.
+            path: path of the target Markdown file. The parent directory is
+                created if it does not exist.
+            iteration_id: if given, export only the decisions of that
+                iteration.
 
         Returns:
-            Numero de decisiones exportadas.
+            Number of exported decisions.
         """
         decisions = self.get_decisions(
             limit=1000, iteration_id=iteration_id,
@@ -1980,55 +1967,55 @@ class MemoryDB:
             )
 
         lines: List[str] = []
-        lines.append("# Registro de decisiones de arquitectura\n")
+        lines.append("# Журнал архитектурных решений\n")
         lines.append("")
 
         for dec in decisions:
             lines.append(f"## {dec['title']}")
             lines.append("")
-            lines.append(f"- **Fecha:** {dec.get('decided_at', 'N/A')}")
-            lines.append(f"- **Estado:** {dec.get('status', 'active')}")
+            lines.append(f"- **Дата:** {dec.get('decided_at', 'N/A')}")
+            lines.append(f"- **Статус:** {dec.get('status', 'active')}")
 
-            # Etiquetas
+            # Tags
             tags_raw = dec.get("tags", "[]")
             try:
                 tags = json.loads(tags_raw) if tags_raw else []
             except (json.JSONDecodeError, TypeError):
                 tags = []
             if tags:
-                lines.append(f"- **Etiquetas:** {', '.join(tags)}")
+                lines.append(f"- **Теги:** {', '.join(tags)}")
 
             lines.append("")
 
-            # Contexto
+            # Context
             if dec.get("context"):
-                lines.append("### Contexto")
+                lines.append("### Контекст")
                 lines.append("")
                 lines.append(dec["context"])
                 lines.append("")
 
-            # Decision elegida
-            lines.append("### Decision")
+            # Chosen decision
+            lines.append("### Решение")
             lines.append("")
             lines.append(dec["chosen"])
             lines.append("")
 
-            # Alternativas descartadas
+            # Rejected alternatives
             if dec.get("alternatives"):
                 try:
                     alts = json.loads(dec["alternatives"])
                 except (json.JSONDecodeError, TypeError):
                     alts = []
                 if alts:
-                    lines.append("### Alternativas descartadas")
+                    lines.append("### Отклонённые альтернативы")
                     lines.append("")
                     for alt in alts:
                         lines.append(f"- {alt}")
                     lines.append("")
 
-            # Justificacion
+            # Rationale
             if dec.get("rationale"):
-                lines.append("### Justificacion")
+                lines.append("### Обоснование")
                 lines.append("")
                 lines.append(dec["rationale"])
                 lines.append("")
@@ -2036,7 +2023,7 @@ class MemoryDB:
             lines.append("---")
             lines.append("")
 
-        # Crear directorio padre si no existe
+        # Create the parent directory if it does not exist
         parent = os.path.dirname(path)
         if parent:
             os.makedirs(parent, exist_ok=True)
@@ -2051,20 +2038,20 @@ class MemoryDB:
         repo_path: str,
         limit: int = 100,
     ) -> int:
-        """Importa el historial de commits de un repositorio Git.
+        """Import the commit history of a Git repository.
 
-        Ejecuta ``git log`` sobre el repositorio indicado y registra cada
-        commit en la memoria preservando su autor, fecha real y lista
-        de ficheros. La operacion es idempotente: los commits cuyo SHA
-        ya exista en la base de datos se ignoran silenciosamente.
+        Runs ``git log`` on the given repository and records each commit in
+        the memory with its author, real date and file list. The operation
+        is idempotent: commits whose SHA already exists in the database are
+        ignored silently.
 
         Args:
-            repo_path: ruta al directorio raiz del repositorio Git.
-            limit: numero maximo de commits a importar (por defecto 100).
+            repo_path: path to the root directory of the Git repository.
+            limit: maximum number of commits to import (default 100).
 
         Returns:
-            Numero de commits nuevos importados (excluye los que ya
-            existian en la base de datos).
+            Number of new imported commits (excludes the ones that already
+            existed in the database).
         """
         result = subprocess.run(
             [
@@ -2079,16 +2066,16 @@ class MemoryDB:
             check=True,
         )
 
-        # Parsear la salida: cada commit empieza con la linea de formato
-        # (contiene |), las lineas siguientes sin | son nombres de fichero,
-        # y una linea vacia separa bloques.
+        # Parse the output: each commit starts with the format line (it
+        # contains the \x1f separator), the next lines without it are file
+        # names, and an empty line separates blocks.
         new_count = 0
         current_commit: Optional[Dict[str, str]] = None
         current_files: List[str] = []
 
         for line in result.stdout.splitlines():
             if "\x1f" in line:
-                # Si hay un commit pendiente, registrarlo
+                # If a commit is pending, record it
                 if current_commit is not None:
                     commit_id = self.log_commit(
                         sha=current_commit["sha"],
@@ -2102,7 +2089,7 @@ class MemoryDB:
                     if commit_id is not None:
                         new_count += 1
 
-                # Nuevo commit
+                # New commit
                 parts = line.split("\x1f", 3)
                 current_commit = {
                     "sha": parts[0],
@@ -2112,11 +2099,11 @@ class MemoryDB:
                 }
                 current_files = []
             elif line.strip():
-                # Nombre de fichero
+                # File name
                 current_files.append(line.strip())
-            # Linea vacia: separador entre bloques (no hace nada especial)
+            # Empty line: block separator (nothing special to do)
 
-        # Registrar el ultimo commit pendiente
+        # Record the last pending commit
         if current_commit is not None:
             commit_id = self.log_commit(
                 sha=current_commit["sha"],
@@ -2133,20 +2120,20 @@ class MemoryDB:
         return new_count
 
     def import_adrs(self, adr_dir: str = "docs/adr") -> int:
-        """Importa ficheros ADR (Architecture Decision Records) como decisiones.
+        """Import ADR (Architecture Decision Record) files as decisions.
 
-        Recorre los ficheros ``*.md`` del directorio indicado y extrae
-        de cada uno el titulo (primer encabezado ``#``), el contexto
-        (seccion ``## Context`` o ``## Contexto``) y la decision
-        (seccion ``## Decision`` o ``## Decision``). Cada fichero se
-        registra como una nueva decision con la etiqueta ``imported-adr``.
+        Walks the ``*.md`` files of the given directory and extracts from
+        each one the title (first ``#`` heading), the context (section
+        ``## Context``, ``## Contexto`` or ``## Контекст``) and the decision
+        (section ``## Decision``, ``## Decisión`` or ``## Решение``). Each
+        file is recorded as a new decision with the ``imported-adr`` tag.
 
         Args:
-            adr_dir: ruta al directorio que contiene los ficheros ADR.
-                Por defecto ``docs/adr``.
+            adr_dir: path to the directory with the ADR files.
+                Default ``docs/adr``.
 
         Returns:
-            Numero de decisiones importadas.
+            Number of imported decisions.
         """
         adr_path = Path(adr_dir)
         if not adr_path.is_dir():
@@ -2157,10 +2144,10 @@ class MemoryDB:
             content = md_file.read_text(encoding="utf-8")
             title = self._extract_heading(content)
             context = self._extract_section(
-                content, ["## Context", "## Contexto"]
+                content, ["## Context", "## Contexto", "## Контекст"]
             )
             chosen = self._extract_section(
-                content, ["## Decision", u"## Decisi\u00f3n"]
+                content, ["## Decision", u"## Decisi\u00f3n", "## Решение"]
             )
 
             if title and chosen:
@@ -2176,14 +2163,14 @@ class MemoryDB:
 
     @staticmethod
     def _extract_heading(content: str) -> Optional[str]:
-        """Extrae el titulo del primer encabezado ``#`` del contenido Markdown.
+        """Extract the title from the first ``#`` heading of Markdown content.
 
         Args:
-            content: texto Markdown completo del fichero.
+            content: full Markdown text of the file.
 
         Returns:
-            Texto del titulo sin el marcador ``#``, o None si no se
-            encuentra ningun encabezado de nivel 1.
+            Title text without the ``#`` marker, or None if no level 1
+            heading is found.
         """
         for line in content.splitlines():
             stripped = line.strip()
@@ -2195,20 +2182,19 @@ class MemoryDB:
     def _extract_section(
         content: str, headers: List[str]
     ) -> Optional[str]:
-        """Extrae el cuerpo de una seccion Markdown identificada por su encabezado.
+        """Extract the body of a Markdown section found by its heading.
 
-        Busca cualquiera de los encabezados proporcionados y devuelve
-        el texto comprendido entre ese encabezado y el siguiente de
-        igual o mayor nivel.
+        Looks for any of the given headings and returns the text between
+        that heading and the next heading of the same or higher level.
 
         Args:
-            content: texto Markdown completo del fichero.
-            headers: lista de encabezados a buscar (p.ej.
+            content: full Markdown text of the file.
+            headers: list of headings to look for (e.g.
                 ``["## Context", "## Contexto"]``).
 
         Returns:
-            Texto de la seccion sin el encabezado, o None si no se
-            encuentra ninguno de los encabezados buscados.
+            Section text without the heading, or None if none of the
+            headings is found.
         """
         lines = content.splitlines()
         capture = False
@@ -2220,7 +2206,7 @@ class MemoryDB:
                 capture = True
                 continue
             if capture:
-                # Parar al encontrar otro encabezado de nivel 2 o superior
+                # Stop at the next heading of level 2 or higher
                 if stripped.startswith("## ") or stripped.startswith("# "):
                     break
                 result_lines.append(line)
@@ -2233,14 +2219,13 @@ class MemoryDB:
 
 
     def get_session_context(self) -> Dict[str, Any]:
-        """Genera el contexto estructurado para inyeccion al reanudar sesion.
+        """Build the structured context to inject when a session resumes.
 
-        Recopila la iteracion activa y las decisiones en un unico
-        diccionario que puede serializarse e inyectarse como contexto
-        en Claude Code.
+        Collects the active iteration and the decisions in one dictionary
+        that can be serialized and injected as context in Claude Code.
 
         Returns:
-            Diccionario con claves: iteration, decisions.
+            Dictionary with the keys: iteration, decisions.
         """
         active = self.get_active_iteration()
         decisions = []
@@ -2252,8 +2237,8 @@ class MemoryDB:
             "decisions": decisions,
         }
 
-    # --- Ciclo de vida ------------------------------------------------------
+    # --- Life cycle ---------------------------------------------------------
 
     def close(self) -> None:
-        """Cierra la conexion con la base de datos."""
+        """Close the database connection."""
         self._conn.close()

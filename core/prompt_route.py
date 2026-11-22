@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Clasifica un prompt en castellano y sugiere la ruta Alfred sin slash."""
+"""Classify a Spanish or Russian prompt and suggest the Alfred route without a slash."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def _has_slash_command(text: str) -> bool:
     return bool(re.search(r"(?m)^/alfred-dev:", text or ""))
 
 
-# Orden: el primero que encaja gana.
+# Order matters: the first match wins.
 _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     (
         "retomar",
@@ -230,7 +230,7 @@ _COMMAND_HINT = {
 
 
 def classify_prompt(text: str) -> Optional[Dict[str, str]]:
-    """Devuelve la ruta sugerida o None si no hay señal o ya hay slash."""
+    """Return the suggested route, or None if there is no signal or a slash command is present."""
     if not (text or "").strip() or _has_slash_command(text):
         return None
     folded = _fold(text)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lee la última elección válida registrada por el servidor visual de Designer."""
+"""Reads the last valid choice recorded by the Designer visual server."""
 
 from __future__ import annotations
 
@@ -16,8 +16,8 @@ from core.designer_visual import read_latest_style_choice, resolve_state_dir
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Leer la última elección visual de Designer")
-    parser.add_argument("path", help="Ruta a session_dir o state_dir del servidor visual")
+    parser = argparse.ArgumentParser(description="Read the last Designer visual choice")
+    parser.add_argument("path", help="Path to session_dir or state_dir of the visual server")
     return parser
 
 
@@ -32,7 +32,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = {
             "status": "pending",
             "state_dir": state_dir,
-            "message": "No hay ninguna elección válida registrada todavía.",
+            "message": "Пока нет ни одного записанного допустимого выбора.",
         }
     else:
         parsed_choice = parse_guided_choice(choice.get("choice"))

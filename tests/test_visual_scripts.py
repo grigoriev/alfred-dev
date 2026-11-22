@@ -118,7 +118,7 @@ class TestVisualScripts(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         payload = json.loads(result.stdout)
         self.assertEqual(payload["type"], "error")
-        self.assertIn("Falta valor para --project-dir", payload["message"])
+        self.assertIn("Нет значения для --project-dir", payload["message"])
 
     def test_start_server_escapes_unknown_argument_json(self):
         result = subprocess.run(

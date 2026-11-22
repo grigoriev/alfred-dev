@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests del gate de revision humana de la matriz manual."""
+"""Tests for the human review gate of the manual matrix."""
 
 from dataclasses import asdict
 import importlib.util
@@ -114,13 +114,13 @@ class TestManualReviewGate(unittest.TestCase):
 
             result = gate.validate_review(evidence_path, review_path)
 
-        self.assertIn("plugin_source verificado: worktree", result[1])
-        self.assertIn("revision humana", result[2])
-        self.assertIn("review.evidence_sha256 coincide", result[3])
-        self.assertIn("review.evidence_file coincide", result[4])
-        self.assertIn("coverage maps coinciden", result[5])
-        self.assertIn("review.cases coincide", result[6])
-        self.assertIn("sin patrones de secretos reales", result[7])
+        self.assertIn("plugin_source verified: worktree", result[1])
+        self.assertIn("human review", result[2])
+        self.assertIn("review.evidence_sha256 matches", result[3])
+        self.assertIn("review.evidence_file matches", result[4])
+        self.assertIn("coverage maps match", result[5])
+        self.assertIn("review.cases matches", result[6])
+        self.assertIn("no real secret patterns", result[7])
 
     def test_review_gate_can_require_current_auth_preflight(self):
         gate = _load_module(GATE_PATH, "manual_review_gate")
@@ -157,7 +157,7 @@ class TestManualReviewGate(unittest.TestCase):
             manual_smoke._auth_preflight = original_preflight
             gate._manual_smoke_module = original_module_loader
 
-        self.assertIn("preflight actual de Claude CLI no esta ok", str(context.exception))
+        self.assertIn("current Claude CLI preflight is not ok", str(context.exception))
         self.assertIn("first_party_oauth_token_rejected", str(context.exception))
 
     def test_review_gate_rejects_stale_plugin_surface_roots(self):
@@ -170,7 +170,7 @@ class TestManualReviewGate(unittest.TestCase):
 
         self._assert_rejects_evidence(
             mutate,
-            "evidence.plugin_surface.roots no coincide con el plugin actual",
+            "evidence.plugin_surface.roots does not match the current plugin",
         )
 
     def test_review_template_binds_cases_to_evidence_hash(self):
@@ -187,7 +187,7 @@ class TestManualReviewGate(unittest.TestCase):
             evidence_sha256 = gate._sha256(evidence_path)
             mode = stat.S_IMODE(review_path.stat().st_mode)
 
-        self.assertIn("plantilla creada", result[0])
+        self.assertIn("template created", result[0])
         self.assertEqual(template["evidence_sha256"], evidence_sha256)
         self.assertEqual(template["approved"], False)
         self.assertIn(case_ids[0], template["cases"])
@@ -210,7 +210,7 @@ class TestManualReviewGate(unittest.TestCase):
 
             self.assertFalse(review_path.exists())
 
-        self.assertIn("No se crea plantilla", str(context.exception))
+        self.assertIn("Review template not created", str(context.exception))
         self.assertIn("ANTHROPIC_KEY", str(context.exception))
 
     def test_review_gate_rejects_missing_case_approval(self):
@@ -248,7 +248,7 @@ class TestManualReviewGate(unittest.TestCase):
             with self.assertRaises(gate.ReviewGateError) as context:
                 gate.validate_review(evidence_path, review_path)
 
-        self.assertIn("notes humanas", str(context.exception))
+        self.assertIn("human notes", str(context.exception))
         self.assertIn(case_ids[0], str(context.exception))
 
     def test_review_gate_rejects_generic_human_notes(self):
@@ -267,7 +267,7 @@ class TestManualReviewGate(unittest.TestCase):
             with self.assertRaises(gate.ReviewGateError) as context:
                 gate.validate_review(evidence_path, review_path)
 
-        self.assertIn("demasiado genericas", str(context.exception))
+        self.assertIn("too generic", str(context.exception))
         self.assertIn(case_ids[0], str(context.exception))
 
     def test_review_gate_rejects_repeated_human_notes(self):
@@ -288,7 +288,7 @@ class TestManualReviewGate(unittest.TestCase):
             with self.assertRaises(gate.ReviewGateError) as context:
                 gate.validate_review(evidence_path, review_path)
 
-        self.assertIn("notes humanas repetidas", str(context.exception))
+        self.assertIn("repeated human notes", str(context.exception))
         self.assertIn(case_ids[0], str(context.exception))
         self.assertIn(case_ids[1], str(context.exception))
 
@@ -342,7 +342,7 @@ class TestManualReviewGate(unittest.TestCase):
             with self.assertRaises(gate.ReviewGateError) as context:
                 gate.validate_review(evidence_path, review_path)
 
-        self.assertIn("review.evidence_file es obligatorio", str(context.exception))
+        self.assertIn("review.evidence_file is required", str(context.exception))
 
     def test_review_gate_rejects_review_for_different_evidence_file(self):
         gate = _load_module(GATE_PATH, "manual_review_gate")
@@ -362,7 +362,7 @@ class TestManualReviewGate(unittest.TestCase):
                 gate.validate_review(evidence_path, review_path)
 
         self.assertIn("review.evidence_file", str(context.exception))
-        self.assertIn("no coincide", str(context.exception))
+        self.assertIn("does not match", str(context.exception))
 
     def test_review_gate_rejects_stale_plugin_surface_hash(self):
         gate = _load_module(GATE_PATH, "manual_review_gate")
@@ -390,7 +390,7 @@ class TestManualReviewGate(unittest.TestCase):
 
         self._assert_rejects_evidence(
             mutate,
-            "evidence contiene posibles secretos reales",
+            "evidence contains possible real secrets",
             "ANTHROPIC_KEY",
             "response_preview",
         )
@@ -403,7 +403,7 @@ class TestManualReviewGate(unittest.TestCase):
 
         self._assert_rejects_evidence(
             mutate,
-            "review contiene posibles secretos reales",
+            "review contains possible real secrets",
             "GITHUB_TOKEN",
             "notes",
         )
@@ -446,7 +446,7 @@ class TestManualReviewGate(unittest.TestCase):
             with self.assertRaises(gate.ReviewGateError) as context:
                 gate.validate_review(evidence_path, review_path)
 
-        self.assertIn("evidence.cases desalineados", str(context.exception))
+        self.assertIn("evidence.cases out of sync", str(context.exception))
         self.assertIn(case_ids[0], str(context.exception))
         self.assertIn("prompt", str(context.exception))
 
@@ -466,7 +466,7 @@ class TestManualReviewGate(unittest.TestCase):
             with self.assertRaises(gate.ReviewGateError) as context:
                 gate.validate_review(evidence_path, review_path)
 
-        self.assertIn("evidence.cases desalineados", str(context.exception))
+        self.assertIn("evidence.cases out of sync", str(context.exception))
         self.assertIn(case_ids[0], str(context.exception))
         self.assertIn("expected", str(context.exception))
 
@@ -486,7 +486,7 @@ class TestManualReviewGate(unittest.TestCase):
             with self.assertRaises(gate.ReviewGateError) as context:
                 gate.validate_review(evidence_path, review_path)
 
-        self.assertIn("review.cases desalineados", str(context.exception))
+        self.assertIn("review.cases out of sync", str(context.exception))
         self.assertIn(case_ids[0], str(context.exception))
         self.assertIn("expected", str(context.exception))
 
@@ -497,7 +497,7 @@ class TestManualReviewGate(unittest.TestCase):
         self._assert_rejects_evidence(
             mutate,
             "option_coverage",
-            "no incluye claves actuales",
+            "does not include current keys",
             "audit:sonarqube-docker-install-menu",
         )
 
@@ -508,7 +508,7 @@ class TestManualReviewGate(unittest.TestCase):
         self._assert_rejects_evidence(
             mutate,
             "option_coverage",
-            "no coincide con matriz actual",
+            "does not match the current matrix",
             "update:confirm-update-menu",
         )
 
@@ -519,7 +519,7 @@ class TestManualReviewGate(unittest.TestCase):
         self._assert_rejects_evidence(
             mutate,
             "runtime_coverage",
-            "claves obsoletas/desconocidas",
+            "obsolete/unknown keys",
             "update:scope-global",
         )
 
