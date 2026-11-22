@@ -73,9 +73,9 @@ curl -s --max-time 10 "https://api.github.com/repos/grigoriev/alfred-dev/release
 
 ## Шаг 3: сравнить версии
 
-Проверь, что `tag_name` имеет валидный формат semver: он должен соответствовать шаблону `v?X.Y.Z`, где X, Y, Z это числа (например, `v0.3.0` или `0.3.0`). Если не соответствует, покажи предупреждение и прекрати: формат релиза не тот, что ожидается.
+Проверь, что `tag_name` имеет валидный формат semver: он должен соответствовать шаблону `v?X.Y.Z(-ru)?`, где X, Y, Z это числа (например, `v0.3.0`, `0.3.0` или `v0.3.0-ru`). Суффикс `-ru` обозначает релиз русского форка, а не pre-release. Если не соответствует, покажи предупреждение и прекрати: формат релиза не тот, что ожидается.
 
-Нормализуй `tag_name` (без начальной `v`) и установленную версию в числовые
+Нормализуй `tag_name` (без начальной `v` и суффикса `-ru`) и установленную версию в числовые
 кортежи `(major, minor, patch)` и сравни их как настоящий semver. **Никогда не**
 сравнивай версии как простой текст (`0.10.0` больше, чем `0.9.0`).
 
@@ -84,7 +84,8 @@ curl -s --max-time 10 "https://api.github.com/repos/grigoriev/alfred-dev/release
 ```bash
 python3 - <<'PY'
 def parse(value):
-    return tuple(int(part) for part in value.strip().lstrip('v').split('.'))
+    value = value.strip().lstrip('v').removesuffix('-ru')
+    return tuple(int(part) for part in value.split('.'))
 
 installed = "VERSION_INSTALADA"
 latest = "TAG_NAME"
