@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-VERSION = "0.7.0"
+VERSION = "0.7.1"
 OLD_VERSION = "0.5" + ".3"
 INSTALLED_PLUGIN_DIR = Path.home() / ".claude" / "plugins" / "cache" / "alfred-dev" / "alfred-dev" / VERSION
 GLOBAL_ALFRED_ALIAS_FILE = Path.home() / ".claude" / "skills" / "alfred" / "SKILL.md"
@@ -4025,7 +4025,7 @@ def check_external(args: argparse.Namespace) -> list[str]:
             ],
             timeout=90,
         )
-        for needle in ("Alfred Dev (alfred-dev) 0.7.0", "Skills (11)", "Agents (10)", "MCP servers (1)", "Status: ✔ Connected"):
+        for needle in (f"Alfred Dev (alfred-dev) {VERSION}", "Skills (11)", "Agents (10)", "MCP servers (1)", "Status: ✔ Connected"):
             if needle not in details:
                 _fail(f"Claude smoke does not contain {needle!r}")
         ok.append("Claude CLI validates inventory and MCP")
