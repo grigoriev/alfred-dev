@@ -326,7 +326,7 @@ def next_adr_number(project_dir: str) -> int:
 
 def _slugify(title: str) -> str:
     normalized = title.strip().lower()
-    normalized = re.sub(r"[^a-z0-9áéíóúüñ]+", "-", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"[^a-z0-9áéíóúüñа-яё]+", "-", normalized, flags=re.IGNORECASE)
     normalized = re.sub(r"-+", "-", normalized).strip("-")
     return normalized or "decision"
 

@@ -67,6 +67,11 @@ class TestProjectDocs(unittest.TestCase):
             second = scaffold_adr(tmpdir, "Auth por sesión")
             self.assertEqual(second["number"], 2)
 
+    def test_adr_slug_keeps_cyrillic_title(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = scaffold_adr(tmpdir, "Выбрать SQLite для хранения")
+        self.assertEqual(result["path"], os.path.join("docs", "adr", "ADR-001-выбрать-sqlite-для-хранения.md"))
+
     def test_existing_user_docs_count_as_filled(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, "docs/project"), exist_ok=True)
