@@ -142,7 +142,7 @@ class TestContinuitySuggestions(unittest.TestCase):
                     "---\n"
                 )
 
-            result = start_quick_session(tmpdir, raw_request="Ajustar copy del signup")
+            result = start_quick_session(tmpdir, raw_request="Поправить текст регистрации")
             with open(
                 os.path.join(tmpdir, STATE_RELATIVE_PATH),
                 "r",
@@ -252,7 +252,7 @@ class TestContinuitySuggestions(unittest.TestCase):
     def test_active_quick_session_suggests_resume(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            start_quick_session(tmpdir, raw_request="ajuste pequeño en cabecera")
+            start_quick_session(tmpdir, raw_request="небольшая правка в шапке")
 
             suggestion = suggest_next_action(tmpdir)
 
@@ -353,7 +353,7 @@ class TestContinuitySuggestions(unittest.TestCase):
             with open(os.path.join(tmpdir, CODEBASE_MAP_RELATIVE_PATH), "w", encoding="utf-8") as fh:
                 fh.write("# map\n")
             with open(os.path.join(tmpdir, CURRENT_RELATIVE_PATH), "w", encoding="utf-8") as fh:
-                fh.write("# Current\n\n- Siguiente command recomendado: /alfred\n")
+                fh.write("# Current\n\n- Рекомендуемая следующая команда: /alfred\n")
 
             suggestion = suggest_next_action(tmpdir)
 
@@ -501,7 +501,7 @@ class TestContinuityHelpers(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, STATE_RELATIVE_PATH)
-            session = create_session("quick", "Ajustar copy login")
+            session = create_session("quick", "Поправить текст логина")
             while session["current_phase"] != "completed":
                 session = advance_phase(session, result="approved", artifacts=["docs/cambio.md"])
             save_state(session, state_path)
@@ -519,7 +519,7 @@ class TestContinuityHelpers(unittest.TestCase):
                     "verify",
                     tmpdir,
                     "--raw",
-                    "approved smoke manual correcto",
+                    "одобрено ручной smoke прошёл",
                 ],
                 capture_output=True,
                 text=True,
@@ -606,7 +606,7 @@ class TestContinuityHelpers(unittest.TestCase):
                     "discuss",
                     tmpdir,
                     "--raw",
-                    "refinar onboarding de login social",
+                    "уточнить онбординг со входом через соцсети",
                 ],
                 capture_output=True,
                 text=True,
@@ -625,7 +625,7 @@ class TestContinuityHelpers(unittest.TestCase):
                     "discuss",
                     tmpdir,
                     "--raw",
-                    "refinar onboarding de login social",
+                    "уточнить онбординг со входом через соцсети",
                     "--json",
                 ],
                 capture_output=True,
@@ -651,7 +651,7 @@ class TestContinuityHelpers(unittest.TestCase):
                     "quick",
                     tmpdir,
                     "--raw",
-                    "ajustar copy login",
+                    "поправить текст логина",
                 ],
                 capture_output=True,
                 text=True,
@@ -670,7 +670,7 @@ class TestContinuityHelpers(unittest.TestCase):
                     "quick",
                     tmpdir,
                     "--raw",
-                    "ajustar copy login",
+                    "поправить текст логина",
                     "--json",
                 ],
                 capture_output=True,
@@ -699,7 +699,7 @@ class TestContinuityHelpers(unittest.TestCase):
             result = start_flow_session(
                 tmpdir,
                 command="feature",
-                raw_request="sistema de login con email y password",
+                raw_request="система входа по email и паролю",
             )
 
             self.assertEqual(result["command"], "feature")
@@ -741,7 +741,7 @@ class TestContinuityHelpers(unittest.TestCase):
                     "--command",
                     "fix",
                     "--raw",
-                    "el login falla con password correcta",
+                    "логин падает при верном пароле",
                 ],
                 capture_output=True,
                 text=True,
@@ -760,7 +760,7 @@ class TestContinuityHelpers(unittest.TestCase):
                     "--command",
                     "fix",
                     "--raw",
-                    "el login falla con password correcta",
+                    "логин падает при верном пароле",
                     "--json",
                 ],
                 capture_output=True,
@@ -868,7 +868,7 @@ class TestContinuityHelpers(unittest.TestCase):
             self.assertTrue(needs_codebase_map(tmpdir))
 
     def test_pending_gate_comes_from_flow_definition(self):
-        session = create_session("feature", "Autenticación")
+        session = create_session("feature", "Аутентификация")
         self.assertEqual(get_pending_gate(session), "user")
 
     def test_public_command_maps_internal_keys(self):
@@ -1063,7 +1063,7 @@ class TestContinuityHelpers(unittest.TestCase):
     def test_write_uat_files_creates_pending_artifacts_for_completed_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            session = _complete_session("fix", "Bug de login")
+            session = _complete_session("fix", "Баг логина")
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             result = write_uat_files(tmpdir)
@@ -1081,7 +1081,7 @@ class TestContinuityHelpers(unittest.TestCase):
     def test_cli_verify_renders_markdown_by_default_and_json_on_demand(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            session = _complete_session("quick", "Ajustar copy login")
+            session = _complete_session("quick", "Поправить текст логина")
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             continuity_script = os.path.join(
@@ -1121,10 +1121,10 @@ class TestContinuityHelpers(unittest.TestCase):
             pending = write_uat_files(tmpdir)
             self.assertEqual(pending["status"], "pending")
 
-            approved = write_uat_files(tmpdir, raw_request="approved smoke manual correcto")
+            approved = write_uat_files(tmpdir, raw_request="одобрено ручной smoke прошёл")
             self.assertEqual(approved["status"], "approved")
 
-            rejected = write_uat_files(tmpdir, raw_request="rejected fallo al guardar user")
+            rejected = write_uat_files(tmpdir, raw_request="отклонено ошибка при сохранении пользователя")
             self.assertEqual(rejected["status"], "rejected")
 
             verify_suggestion = suggest_verify_action(tmpdir)
@@ -1137,13 +1137,13 @@ class TestContinuityHelpers(unittest.TestCase):
     def test_write_uat_files_approved_moves_task_to_done_and_clears_verify_task(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            active = start_quick_session(tmpdir, raw_request="Ajustar copy login")
-            session = _complete_session("quick", "Ajustar copy login")
+            active = start_quick_session(tmpdir, raw_request="Поправить текст логина")
+            session = _complete_session("quick", "Поправить текст логина")
             session["kanban_task_id"] = active["kanban_task_id"]
             session["kanban_verify_task_id"] = active["kanban_verify_task_id"]
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
-            result = write_uat_files(tmpdir, raw_request="approved smoke correcto")
+            result = write_uat_files(tmpdir, raw_request="одобрено smoke прошёл")
             board = load_kanban_board(tmpdir)
 
         self.assertEqual(result["status"], "approved")
@@ -1153,13 +1153,13 @@ class TestContinuityHelpers(unittest.TestCase):
     def test_write_uat_files_rejected_moves_task_to_blocked_and_clears_verify_task(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            active = start_quick_session(tmpdir, raw_request="Ajustar copy login")
-            session = _complete_session("quick", "Ajustar copy login")
+            active = start_quick_session(tmpdir, raw_request="Поправить текст логина")
+            session = _complete_session("quick", "Поправить текст логина")
             session["kanban_task_id"] = active["kanban_task_id"]
             session["kanban_verify_task_id"] = active["kanban_verify_task_id"]
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
-            result = write_uat_files(tmpdir, raw_request="rejected falta pulir mensaje")
+            result = write_uat_files(tmpdir, raw_request="отклонено нужно доработать сообщение")
             board = load_kanban_board(tmpdir)
 
         self.assertEqual(result["status"], "rejected")
@@ -1173,7 +1173,7 @@ class TestContinuityHelpers(unittest.TestCase):
             session = _complete_session("feature", "Checkout")
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
-            result = write_uat_files(tmpdir, raw_request="approved smoke correcto")
+            result = write_uat_files(tmpdir, raw_request="одобрено smoke прошёл")
             board = load_kanban_board(tmpdir)
 
         self.assertEqual(result["status"], "approved")
@@ -1184,12 +1184,12 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo"}, fh)
 
-            result = start_quick_session(tmpdir, raw_request="cambiar copy del login")
+            result = start_quick_session(tmpdir, raw_request="изменить текст логина")
 
             self.assertTrue(os.path.isfile(os.path.join(tmpdir, STATE_RELATIVE_PATH)))
             self.assertEqual(result["command"], "quick")
             self.assertEqual(result["phase"], "scoped_execution")
-            self.assertEqual(result["description"], "cambiar copy del login")
+            self.assertEqual(result["description"], "изменить текст логина")
             self.assertTrue(result["needs_codebase_map"])
             self.assertTrue(os.path.isfile(result["bypass_path"]))
 
@@ -1199,13 +1199,13 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, KANBAN_BACKLOG_RELATIVE_PATH), "w", encoding="utf-8") as fh:
                 fh.write(
                     "# Backlog\n\n"
-                    "### [T-010] cambiar copy del login\n\n"
+                    "### [T-010] изменить текст логина\n\n"
                     "- **Агент:** content-designer\n"
                 )
             with open(os.path.join(tmpdir, KANBAN_IN_PROGRESS_RELATIVE_PATH), "w", encoding="utf-8") as fh:
                 fh.write("# In Progress\n")
 
-            result = start_quick_session(tmpdir, raw_request="cambiar copy del login")
+            result = start_quick_session(tmpdir, raw_request="изменить текст логина")
             board = load_kanban_board(tmpdir)
 
         self.assertFalse(any(task["id"] == "T-010" for task in board["backlog"]))
@@ -1272,8 +1272,8 @@ class TestContinuityHelpers(unittest.TestCase):
             payload = {
                 "source_command": "discuss",
                 "prefetched_command": "discuss",
-                "description": "Refinar onboarding",
-                "actor": "user nuevo",
+                "description": "Уточнить онбординг",
+                "actor": "новый пользователь",
                 "recommended_command": "feature",
             }
             save_prefetch_result(tmpdir, payload)
@@ -1340,8 +1340,8 @@ class TestContinuityHelpers(unittest.TestCase):
             payload = {
                 "source_command": "discuss",
                 "prefetched_command": "discuss",
-                "description": "Refinar onboarding",
-                "actor": "user nuevo",
+                "description": "Уточнить онбординг",
+                "actor": "новый пользователь",
                 "recommended_command": "feature",
             }
             save_prefetch_result(tmpdir, payload)
@@ -1373,19 +1373,19 @@ class TestContinuityHelpers(unittest.TestCase):
     def test_prefetch_summaries_cover_discuss_and_quick(self):
         discuss_summary = render_discovery_summary(
             {
-                "description": "Refinar onboarding",
-                "actor": "user nuevo",
+                "description": "Уточнить онбординг",
+                "actor": "новый пользователь",
                 "recommended_command": "feature",
-                "scope_items": ["Clarificar el flujo principal de onboarding."],
-                "open_questions": ["Qué criterio de éxito marca que el onboarding quedó resuelto."],
-                "risks": ["Entrar a implementar sin cerrar alcance puede generar retrabajo."],
+                "scope_items": ["Прояснить основной процесс онбординга."],
+                "open_questions": ["Какой критерий успеха покажет, что онбординг готов."],
+                "risks": ["Реализация без согласованного объёма может привести к переделкам."],
             }
         )
         quick_summary = render_quick_setup_summary(
             {
                 "command": "quick",
                 "phase": "scoped_execution",
-                "description": "Ajustar copy",
+                "description": "Поправить текст",
                 "needs_codebase_map": False,
                 "next_command": "/alfred-dev:uat",
             }
@@ -1413,15 +1413,15 @@ class TestContinuityHelpers(unittest.TestCase):
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             with self.assertRaises(RuntimeError):
-                start_quick_session(tmpdir, raw_request="ajuste pequeño")
+                start_quick_session(tmpdir, raw_request="небольшая правка")
 
     def test_write_discovery_files_creates_refinement_artifacts(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             result = write_discovery_files(
                 tmpdir,
                 raw_request=(
-                    "Onboarding de user para una app SaaS B2B. "
-                    "Quiero aterrizar invitacion, primer acceso y checklist inicial."
+                    "Онбординг пользователя для SaaS-приложения B2B. "
+                    "Хочу проработать приглашение, первый вход и стартовый чек-лист."
                 ),
             )
 
@@ -1451,8 +1451,8 @@ class TestContinuityHelpers(unittest.TestCase):
                 fh.write("# Demo\n\nProject to validate helper-first memory.\n")
 
             write_codebase_map_files(tmpdir, raw_request="login")
-            write_discovery_files(tmpdir, raw_request="Refinar login social")
-            start_quick_session(tmpdir, raw_request="ajustar copy del login")
+            write_discovery_files(tmpdir, raw_request="Уточнить вход через соцсети")
+            start_quick_session(tmpdir, raw_request="поправить текст логина")
 
             db = MemoryDB(os.path.join(tmpdir, ".claude", "alfred-memory.db"))
             try:
@@ -1481,8 +1481,8 @@ class TestContinuityHelpers(unittest.TestCase):
                 fh.write("# Demo\n\nProject to validate helper-first artifacts.\n")
 
             write_codebase_map_files(tmpdir, raw_request="login")
-            write_discovery_files(tmpdir, raw_request="Refinar login social")
-            start_quick_session(tmpdir, raw_request="ajustar copy del login")
+            write_discovery_files(tmpdir, raw_request="Уточнить вход через соцсети")
+            start_quick_session(tmpdir, raw_request="поправить текст логина")
 
             with open(os.path.join(tmpdir, PROGRESS_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 progress_content = fh.read()
@@ -1496,14 +1496,14 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertIn("Рабочий процесс: `quick`.", progress_content)
         self.assertIn("Главный риск", traceability_content)
         self.assertIn("/alfred-dev:feature", backlog_content)
-        self.assertIn("ajustar copy del login", in_progress_content)
+        self.assertIn("поправить текст логина", in_progress_content)
 
     def test_start_quick_session_writes_current_and_progress_artifacts(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo"}, fh)
 
-            start_quick_session(tmpdir, raw_request="ajustar copy del login")
+            start_quick_session(tmpdir, raw_request="поправить текст логина")
 
             with open(os.path.join(tmpdir, CURRENT_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 current_content = fh.read()
@@ -1517,9 +1517,9 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertIn("Статус: активно.", current_content)
         self.assertIn("/alfred-dev:resume", current_content)
         self.assertIn("Рабочий процесс: `quick`.", progress_content)
-        self.assertIn("ajustar copy del login", progress_content)
+        self.assertIn("поправить текст логина", progress_content)
         self.assertIn("Видимый kanban:", progress_content)
-        self.assertIn("ajustar copy del login", in_progress_content)
+        self.assertIn("поправить текст логина", in_progress_content)
         self.assertIn("/alfred-dev:uat", backlog_content)
 
     def test_write_codebase_map_files_creates_brownfield_artifacts(self):
@@ -1537,7 +1537,7 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, "index.js"), "w", encoding="utf-8") as fh:
                 fh.write("console.log('hello')\n")
 
-            result = write_codebase_map_files(tmpdir, raw_request="autenticación")
+            result = write_codebase_map_files(tmpdir, raw_request="аутентификация")
 
             codebase_map_path = os.path.join(tmpdir, CODEBASE_MAP_RELATIVE_PATH)
             current_path = os.path.join(tmpdir, CURRENT_RELATIVE_PATH)
@@ -1638,7 +1638,7 @@ class TestContinuityHelpers(unittest.TestCase):
             save_state(create_session("feature", "User signup"), os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             with self.assertRaises(RuntimeError):
-                write_codebase_map_files(tmpdir, raw_request="Refinar onboarding")
+                write_codebase_map_files(tmpdir, raw_request="Уточнить онбординг")
 
     def test_write_discovery_files_blocks_active_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1646,7 +1646,7 @@ class TestContinuityHelpers(unittest.TestCase):
             save_state(create_session("feature", "User signup"), os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             with self.assertRaises(RuntimeError):
-                write_discovery_files(tmpdir, raw_request="Refinar onboarding")
+                write_discovery_files(tmpdir, raw_request="Уточнить онбординг")
 
     def test_build_progress_snapshot_summarizes_kanban_without_side_effects(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1658,9 +1658,9 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, "docs", "project", "traceability.md"), "w", encoding="utf-8") as fh:
                 fh.write("# Traceability\n\n- CA-01 without a linked test\n")
             with open(os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"), "w", encoding="utf-8") as fh:
-                fh.write("# Backlog\n\n- T-002 Pulir copy\n")
+                fh.write("# Backlog\n\n- T-002 Доработать текст\n")
             with open(os.path.join(tmpdir, "docs", "project", "kanban", "in-progress.md"), "w", encoding="utf-8") as fh:
-                fh.write("# In Progress\n\n- T-001 Ajustar login\n")
+                fh.write("# In Progress\n\n- T-001 Поправить логин\n")
             with open(os.path.join(tmpdir, "docs", "project", "kanban", "done.md"), "w", encoding="utf-8") as fh:
                 fh.write("# Done\n\n- T-000 Setup\n")
             with open(os.path.join(tmpdir, "docs", "project", "kanban", "blocked.md"), "w", encoding="utf-8") as fh:
@@ -1669,8 +1669,8 @@ class TestContinuityHelpers(unittest.TestCase):
             snapshot = build_progress_snapshot(tmpdir)
 
         self.assertEqual(snapshot["kanban"]["done"], ["T-000 Setup"])
-        self.assertEqual(snapshot["kanban"]["in_progress"], ["T-001 Ajustar login"])
-        self.assertEqual(snapshot["kanban"]["backlog"], ["T-002 Pulir copy"])
+        self.assertEqual(snapshot["kanban"]["in_progress"], ["T-001 Поправить логин"])
+        self.assertEqual(snapshot["kanban"]["backlog"], ["T-002 Доработать текст"])
         self.assertEqual(snapshot["kanban"]["progress_pct"], 33)
         self.assertIsNone(snapshot["bypass_path"])
 
@@ -1692,17 +1692,17 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"), "w", encoding="utf-8") as fh:
                 fh.write(
                     "# Backlog\n\n"
-                    "### [T-010] Diseñar login\n\n"
+                    "### [T-010] Спроектировать логин\n\n"
                     "- **Агент:** architect\n"
                     "- **Критерии:** CA-01, CA-02\n"
-                    "- **Заметки:** Flujo base\n"
+                    "- **Заметки:** Базовый процесс\n"
                 )
             with open(os.path.join(tmpdir, "docs", "project", "kanban", "in-progress.md"), "w", encoding="utf-8") as fh:
                 fh.write("# In Progress\n")
             with open(os.path.join(tmpdir, "docs", "project", "kanban", "done.md"), "w", encoding="utf-8") as fh:
                 fh.write(
                     "# Done\n\n"
-                    "### [T-011] Preparar esquema\n\n"
+                    "### [T-011] Подготовить схему\n\n"
                     "- **Агент:** data-engineer\n"
                     "- **Подтверждение:** tests/test_users.py::test_schema\n"
                 )
@@ -1711,8 +1711,8 @@ class TestContinuityHelpers(unittest.TestCase):
 
             snapshot = build_progress_snapshot(tmpdir)
 
-        self.assertEqual(snapshot["kanban"]["backlog"], ["[T-010] Diseñar login"])
-        self.assertEqual(snapshot["kanban"]["done"], ["[T-011] Preparar esquema"])
+        self.assertEqual(snapshot["kanban"]["backlog"], ["[T-010] Спроектировать логин"])
+        self.assertEqual(snapshot["kanban"]["done"], ["[T-011] Подготовить схему"])
         self.assertEqual(snapshot["kanban"]["total"], 2)
         self.assertEqual(snapshot["kanban"]["progress_pct"], 50)
 
@@ -1804,7 +1804,7 @@ class TestContinuityHelpers(unittest.TestCase):
         titles = [card["title"] for card in snapshot["project_signal_cards"]]
         self.assertNotIn("Current", titles)
         all_items = [item for card in snapshot["project_signal_cards"] for item in card["items"]]
-        self.assertFalse(any(item.startswith("Flujo operativo:") for item in all_items))
+        self.assertFalse(any(item.startswith("Рабочий процесс:") for item in all_items))
 
     def test_build_progress_snapshot_project_signal_cards_do_not_repeat_completed_state_or_next_step(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1824,15 +1824,15 @@ class TestContinuityHelpers(unittest.TestCase):
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             session = _complete_session("feature", "New checkout")
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
-            write_uat_files(tmpdir, raw_request="approved smoke manual correcto")
+            write_uat_files(tmpdir, raw_request="одобрено ручной smoke прошёл")
 
             snapshot = build_progress_snapshot(tmpdir)
 
         traceability_card = next(
             card for card in snapshot["project_signal_cards"] if card["title"] == "Трассируемость"
         )
-        self.assertFalse(any(item.startswith("UAT actual:") for item in traceability_card["items"]))
-        self.assertFalse(any(item.startswith("Objetivo trazado:") for item in traceability_card["items"]))
+        self.assertFalse(any(item.startswith("Текущая UAT:") for item in traceability_card["items"]))
+        self.assertFalse(any(item.startswith("Отслеживаемая цель:") for item in traceability_card["items"]))
 
     def test_build_progress_snapshot_project_signal_cards_use_russian_lane_titles(self):
         with tempfile.TemporaryDirectory() as tmpdir:

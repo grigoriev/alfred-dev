@@ -25,7 +25,7 @@ class TestClaudeCommandDiscovery(unittest.TestCase):
         discovery = _load_module()
         raw_output = (
             "\x1b[?25l/alfred\r\n"
-            "/alfred        (Alfred Dev) Alias global /alfred para abrir el asistente contextual\r\n"
+            "/alfred        (Alfred Dev) Контекстный ассистент Alfred Dev\r\n"
             "/alfred-dev:fix        (Alfred Dev) Bug fixes\r\n"
             "/alfred-dev:help       (Alfred Dev) Shows the available commands\r\n"
         )
@@ -55,8 +55,8 @@ class TestClaudeCommandDiscovery(unittest.TestCase):
         discovery = _load_module()
         raw_output = (
             "/alfred\r\n"
-            "/alfred        (Alfred Dev) Alias global /alfred para abrir el asistente contextual\r\n"
-            "/alfred        Alias global /alfred para abrir el asistente contextual\r\n"
+            "/alfred        (Alfred Dev) Контекстный ассистент Alfred Dev\r\n"
+            "/alfred        Контекстный ассистент Alfred Dev\r\n"
             "/alfred-dev:help       (Alfred Dev) Shows the available commands\r\n"
         )
 
@@ -79,10 +79,10 @@ class TestClaudeCommandDiscovery(unittest.TestCase):
         discovery = _load_module()
 
         cleaned = discovery.strip_terminal_control(
-            "\x1b]0;Claude\x07\x1b[31m/alfred\x1b[0m Alias global"
+            "\x1b]0;Claude\x07\x1b[31m/alfred\x1b[0m Контекстный ассистент"
         )
 
-        self.assertEqual(cleaned, "/alfred Alias global")
+        self.assertEqual(cleaned, "/alfred Контекстный ассистент")
 
 
 if __name__ == "__main__":

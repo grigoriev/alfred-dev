@@ -31,10 +31,6 @@ def _load_manual_smoke_module():
 
 
 class TestReleaseAuditScript(unittest.TestCase):
-    def _skip_without_site(self):
-        if not (Path(ROOT) / "site" / "package.json").is_file():
-            self.skipTest("The landing page lives in the Alfred-Astro branch")
-
     def test_default_release_audit_passes_local_contracts(self):
         """The default mode does not depend on the network or the Claude CLI."""
         release_audit = _load_release_audit_module()
@@ -869,26 +865,6 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("runtime prompts without legacy /alfred", result)
         self.assertIn("CTO does not pin a review model", result)
 
-    def test_public_claims_reject_absolute_gate_language(self):
-        """The public surface must not promise absolute gates without nuance."""
-        release_audit = _load_release_audit_module()
-        original_read = release_audit._read
-
-        def fake_read(path):
-            if path == "README.md":
-                return original_read(path) + "\nNo hay excepciones, no hay modo de saltárselas\n"
-            return original_read(path)
-
-        release_audit._read = fake_read
-        try:
-            with self.assertRaises(release_audit.AuditError) as context:
-                release_audit.check_public_claims()
-        finally:
-            release_audit._read = original_read
-
-        self.assertIn("README.md", str(context.exception))
-        self.assertIn("No hay excepciones", str(context.exception))
-
     def test_public_claims_reject_russian_absolute_gate_language(self):
         """The Russian README must not promise absolute gates without nuance either."""
         release_audit = _load_release_audit_module()
@@ -916,9 +892,9 @@ class TestReleaseAuditScript(unittest.TestCase):
 
         def fake_read(path):
             if path == "docs/agents/README.md":
-                return (
-                    original_read(path)
-                    + "\nEl resultado es previsible y reproducible: produce resultados consistentes porque no arrastra contexto.\n"
+                return original_read(path).replace(
+                    "Результат не обещается детерминированным",
+                    "Результат предсказуем и воспроизводим",
                 )
             return original_read(path)
 
@@ -930,46 +906,11 @@ class TestReleaseAuditScript(unittest.TestCase):
             release_audit._read = original_read
 
         self.assertIn("docs/agents/README.md", str(context.exception))
-        self.assertIn("previsible y reproducible", str(context.exception))
+        self.assertIn("Результат не обещается детерминированным", str(context.exception))
 
     def test_public_claims_reject_absolute_quality_overclaims(self):
         """TDD, security, UX and i18n must promise evidence, not total guarantees."""
         cases = [
-            (
-                "docs/flows.md",
-                "garantiza que cada linea de código tiene al menos un test",
-                "cada linea",
-            ),
-            (
-                "docs/skills.md",
-                "garantizar que el software sea usable por todas las personas",
-                "usable por todas",
-            ),
-            (
-                "docs/agents/security-officer.md",
-                "garantizar que el software cumple con los estandares de seguridad",
-                "estandares de seguridad",
-            ),
-            (
-                "agents/security-officer.md",
-                "garantiza que nada con vulnerabilidades conocidas llega a los usuarios",
-                "vulnerabilidades conocidas",
-            ),
-            (
-                "agents/alfred.md",
-                "Las HARD-GATES son condiciones que NUNCA se pueden saltar",
-                "NUNCA se pueden saltar",
-            ),
-            (
-                "agents/security-officer.md",
-                "bloqueantes absolutos. Sin excepciones",
-                "Sin excepciones",
-            ),
-            (
-                "hooks/session-start.sh",
-                "Las quality gates son infranqueables",
-                "infranqueables",
-            ),
             (
                 "agents/alfred.md",
                 "HARD-GATES это условия, которые НИКОГДА нельзя пропускать",
@@ -1015,8 +956,8 @@ class TestReleaseAuditScript(unittest.TestCase):
         def fake_read(path):
             if path == "docs/agents/README.md":
                 return (
-                    "Los agentes tambien aparecen en `plugin.json` para que "
-                    "la superficie publicada sea completa."
+                    "Агенты также объявлены в `plugin.json`, чтобы "
+                    "опубликованная поверхность была полной."
                 )
             return original_read(path)
 
@@ -1030,92 +971,6 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("docs/agents/README.md", str(context.exception))
         self.assertIn("plugin.json", str(context.exception))
 
-    def test_public_claims_reject_stale_core_counter_on_landing(self):
-        """The landing page must not go back to the frozen counter of six core modules."""
-        self._skip_without_site()
-        release_audit = _load_release_audit_module()
-        original_read = release_audit._read
-
-        def fake_read(path):
-            if path == "site/src/i18n/data.en.ts":
-                return original_read(path) + "\nconst stale = '6 core modules';\n"
-            return original_read(path)
-
-        release_audit._read = fake_read
-        try:
-            with self.assertRaises(release_audit.AuditError) as context:
-                release_audit.check_public_claims()
-        finally:
-            release_audit._read = original_read
-
-        self.assertIn("site/src/i18n/data.en.ts", str(context.exception))
-        self.assertIn("6 core modules", str(context.exception))
-
-    def test_public_claims_reject_sonarqube_without_confirmation_claim(self):
-        """SonarQube/Docker must not promise execution without human confirmation."""
-        self._skip_without_site()
-        release_audit = _load_release_audit_module()
-        original_read = release_audit._read
-
-        def fake_read(path):
-            if path == "site/src/i18n/data.en.ts":
-                return (
-                    original_read(path)
-                    + "\nconst stale = 'start SonarQube without asking the user for confirmation';\n"
-                )
-            return original_read(path)
-
-        release_audit._read = fake_read
-        try:
-            with self.assertRaises(release_audit.AuditError) as context:
-                release_audit.check_public_claims()
-        finally:
-            release_audit._read = original_read
-
-        self.assertIn("site/src/i18n/data.en.ts", str(context.exception))
-        self.assertIn("without asking the user for confirmation", str(context.exception))
-
-    def test_public_claims_reject_sonarqube_end_to_end_docker_claim(self):
-        """The landing page must not claim real SonarQube Docker without external evidence."""
-        self._skip_without_site()
-        release_audit = _load_release_audit_module()
-        original_read = release_audit._read
-
-        def fake_read(path):
-            if path == "site/src/i18n/data.en.ts":
-                return original_read(path) + "\nconst stale = 'Verified end-to-end with Docker';\n"
-            return original_read(path)
-
-        release_audit._read = fake_read
-        try:
-            with self.assertRaises(release_audit.AuditError) as context:
-                release_audit.check_public_claims()
-        finally:
-            release_audit._read = original_read
-
-        self.assertIn("site/src/i18n/data.en.ts", str(context.exception))
-        self.assertIn("Verified end-to-end with Docker", str(context.exception))
-
-    def test_public_claims_reject_changelog_docker_without_prompt_claim(self):
-        """The public changelog must not bring back Docker without confirmation."""
-        release_audit = _load_release_audit_module()
-        original_read = release_audit._read
-
-        def fake_read(path):
-            if path == "CHANGELOG.md":
-                return original_read(path) + "\nSonarQube sin prompt de confirmación al usuario\n"
-            return original_read(path)
-
-        release_audit._read = fake_read
-        try:
-            with self.assertRaises(release_audit.AuditError) as context:
-                release_audit.check_public_claims()
-        finally:
-            release_audit._read = original_read
-
-        self.assertIn("CHANGELOG.md", str(context.exception))
-        self.assertIn("sin prompt de confirmación al usuario", str(context.exception))
-
     def test_public_claims_reject_stale_manual_matrix_option_count(self):
         """The changelog must not keep the old count of manual options."""
         release_audit = _load_release_audit_module()
@@ -1125,7 +980,7 @@ class TestReleaseAuditScript(unittest.TestCase):
             if path == "CHANGELOG.md":
                 return original_read(path).replace(
                     "42 публичные опции и 4 runtime-контракта `/update`",
-                    "22 opciones/variantes documentadas",
+                    "22 опции/варианта задокументированы",
                     1,
                 )
             return original_read(path)
@@ -1140,26 +995,6 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("CHANGELOG.md", str(context.exception))
         self.assertIn("42 публичные опции", str(context.exception))
         self.assertIn("4 runtime-контракта", str(context.exception))
-
-    def test_public_claims_reject_keyword_based_dynamic_composition(self):
-        """The public dynamic composition must not promise keyword matching."""
-        release_audit = _load_release_audit_module()
-        original_read = release_audit._read
-
-        def fake_read(path):
-            if path == "README.md":
-                return original_read(path) + "\nmatching con keywords contextuales\n"
-            return original_read(path)
-
-        release_audit._read = fake_read
-        try:
-            with self.assertRaises(release_audit.AuditError) as context:
-                release_audit.check_public_claims()
-        finally:
-            release_audit._read = original_read
-
-        self.assertIn("README.md", str(context.exception))
-        self.assertIn("keywords contextuales", str(context.exception))
 
     def test_public_claims_reject_manual_only_skill_drift(self):
         """Sensitive skills must not go back to automatic activation."""
@@ -1496,26 +1331,6 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("synchronous hook without integer timeout", str(context.exception))
         self.assertIn("activity-capture.py", str(context.exception))
 
-    def test_hook_contracts_reject_spanish_decision_key_in_docs(self):
-        """The hooks doc must not teach JSON keys that Claude Code does not understand."""
-        release_audit = _load_release_audit_module()
-        original_read = release_audit._read
-
-        def fake_read(path):
-            text = original_read(path)
-            if path == "docs/hooks.md":
-                return text + '\nEjemplo obsoleto: {"decisión": "block"}\n'
-            return text
-
-        release_audit._read = fake_read
-        try:
-            with self.assertRaises(release_audit.AuditError) as context:
-                release_audit.check_hook_contracts()
-        finally:
-            release_audit._read = original_read
-
-        self.assertIn("decisión", str(context.exception))
-
     def test_hook_contracts_reject_nested_event_specific_hook_output_docs(self):
         """The doc must not teach hookSpecificOutput.<Event>.additionalContext."""
         release_audit = _load_release_audit_module()
@@ -1690,7 +1505,6 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("installers verify user scope after install", result)
         self.assertIn("installers clean inherited local/project scopes before the user install", result)
         self.assertIn("installers do not touch ~/.claude/skills or install a global /alfred alias", result)
-        self.assertNotIn("instalación local que limpiar", release_audit._read("uninstall.sh"))
         self.assertIn("update keeps semver and human menu, normalizes to user scope and documents reload/restart", result)
 
     def test_install_update_contracts_reject_new_stateful_cli_without_user_scope(self):
@@ -2205,7 +2019,7 @@ class TestReleaseAuditScript(unittest.TestCase):
 
         alias_case = manual_smoke.ManualCase(
             "alfred-alias",
-            "/alfred que toca hacer ahora?",
+            "/alfred что делать дальше?",
             "Must accept the short alias as an Alfred call.",
             commands=("alfred",),
             option_keys=("alfred:optional-prompt",),

@@ -216,27 +216,27 @@ def _infer_direction_flavor(proposal: Dict[str, Any]) -> str:
     text = _semantic_source_text(proposal)
     if _matches_any(
         text,
-        ["grafana", "datadog", "monitorizacion", "monitorización", "dark", "oscuro", "tiempo real", "24/7", "мониторинг", "темн", "тёмн", "реальном времени"],
+        ["grafana", "datadog", "dark", "dark mode", "real-time", "24/7", "мониторинг", "темн", "тёмн", "реальном времени"],
     ):
         return "technical"
     if _matches_any(
         text,
-        ["editorial", "premium", "lujo", "magazine", "revista", "serif", "cálid", "calid", "редакцион", "журнал", "премиал", "роскош", "тёпл", "тепл"],
+        ["editorial", "premium", "luxury", "magazine", "serif", "warm", "редакцион", "журнал", "премиал", "роскош", "тёпл", "тепл"],
     ):
         return "editorial"
     if _matches_any(
         text,
-        ["dashboard", "dato", "analítica", "analitica", "operativ", "enterprise", "métrica", "metrica", "дашборд", "данн", "аналитик", "операцион", "метрик"],
+        ["dashboard", "data", "analytics", "enterprise", "metric", "дашборд", "данн", "аналитик", "операцион", "метрик"],
     ):
         return "operational"
     if _matches_any(
         text,
-        ["minimal", "limpio", "clean", "airead", "sobrio", "negativo", "claridad", "linear", "notion", "attio", "saas moderno", "whitespace", "минимал", "чист", "воздушн", "сдержан", "негативн", "ясност"],
+        ["minimal", "clean", "negative space", "linear", "notion", "attio", "whitespace", "минимал", "чист", "воздушн", "сдержан", "негативн", "ясност"],
     ):
         return "minimal"
     if _matches_any(
         text,
-        ["vibrante", "expresiv", "energ", "bold", "experimental", "memorable", "impacto", "ярк", "выразительн", "энерг", "смел", "эксперимент", "запомина"],
+        ["vibrant", "expressive", "energ", "bold", "experimental", "memorable", "impact", "ярк", "выразительн", "энерг", "смел", "эксперимент", "запомина"],
     ):
         return "expressive"
     return "balanced"
@@ -321,7 +321,7 @@ def _signals_to_rationale_prefix(signals: List[str]) -> str:
         return ""
 
     lowered = [_lower_first(item) for item in cleaned]
-    need_prefixes = ("нужно ", "necesidad de ")
+    need_prefixes = ("нужно ",)
     if all(item.startswith(need_prefixes) for item in lowered):
         needs = [
             next(item[len(prefix):] for prefix in need_prefixes if item.startswith(prefix))

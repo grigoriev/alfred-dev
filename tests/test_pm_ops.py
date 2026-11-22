@@ -46,33 +46,33 @@ class TestPmHelpers(unittest.TestCase):
             os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
             """# Backlog
 
-### [T-001] Diseñar login
+### [T-001] Спроектировать логин
 
 - **История:** HU-01
 - **Критерии:** CA-01, CA-02
 - **Агент:** architect
 - **Зависимости:** нет
-- **Заметки:** Aterrizar el flujo base
+- **Заметки:** Проработать базовый процесс
 """,
         )
         _write(
             os.path.join(tmpdir, "docs", "project", "kanban", "in-progress.md"),
             """# In Progress
 
-### [T-002] Implementar endpoint POST /login
+### [T-002] Реализовать endpoint POST /login
 
 - **История:** HU-01
 - **Критерии:** CA-01, CA-03
 - **Агент:** senior-dev
 - **Зависимости:** T-001
-- **Заметки:** Pendiente de cerrar tests de error
+- **Заметки:** Осталось закрыть тесты ошибок
 """,
         )
         _write(
             os.path.join(tmpdir, "docs", "project", "kanban", "done.md"),
             """# Done
 
-### [T-003] Preparar esquema de usuarios
+### [T-003] Подготовить схему пользователей
 
 - **История:** HU-01
 - **Критерии:** CA-01
@@ -84,18 +84,18 @@ class TestPmHelpers(unittest.TestCase):
             os.path.join(tmpdir, "docs", "project", "kanban", "blocked.md"),
             """# Blocked
 
-### [T-004] Integrar sesión persistente
+### [T-004] Интегрировать постоянную сессию
 
 - **История:** HU-01
 - **Критерии:** CA-04
 - **Агент:** senior-dev
-- **Зависимости:** Decisión de cookies seguras
-- **Заметки:** Bloqueado por criterio legal pending
+- **Зависимости:** Решение по безопасным cookies
+- **Заметки:** Заблокировано до юридического решения
 """,
         )
         _write(
             os.path.join(tmpdir, "docs", "project", "progress.md"),
-            "# Progreso\n\n- Login base ya modelado\n- Queda cerrar la persistencia de sesión\n",
+            "# Прогресс\n\n- Базовый логин уже смоделирован\n- Осталось закрыть сохранение сессии\n",
         )
         _write(
             os.path.join(tmpdir, "docs", "project", "traceability.md"),
@@ -114,7 +114,7 @@ class TestPmHelpers(unittest.TestCase):
         self.assertEqual(board["backlog"][0]["id"], "T-001")
         self.assertEqual(board["in-progress"][0]["agent"], "senior-dev")
         self.assertEqual(board["done"][0]["evidence"], "tests/test_users.py::test_schema_users")
-        self.assertEqual(board["blocked"][0]["dependencies"], "Decisión de cookies seguras")
+        self.assertEqual(board["blocked"][0]["dependencies"], "Решение по безопасным cookies")
 
     def test_load_kanban_board_accepts_deeper_headings_and_bold_colon_outside(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -122,7 +122,7 @@ class TestPmHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-#### [T-101] Diseñar login
+#### [T-101] Спроектировать логин
 
 - **Агент**: architect
 - **Критерии**: CA-01, CA-02
@@ -144,7 +144,7 @@ class TestPmHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-- [ ] [T-102] Diseñar login
+- [ ] [T-102] Спроектировать логин
   - Агент: architect
   - Критерии: CA-01
   - Зависимости: нет
@@ -203,10 +203,10 @@ class TestPmHelpers(unittest.TestCase):
                 os.path.join(tmpdir, KANBAN_BACKLOG_RELATIVE_PATH),
                 """# Backlog
 
-### [T-001] Diseñar login
+### [T-001] Спроектировать логин
 
 - **Агент:** architect
-- **Заметки:** flujo base
+- **Заметки:** базовый процесс
 """,
             )
 
@@ -214,8 +214,8 @@ class TestPmHelpers(unittest.TestCase):
                 tmpdir,
                 KANBAN_BACKLOG_RELATIVE_PATH,
                 title="Backlog",
-                intro="Pendiente por atacar a continuación.",
-                items=["Validar con /alfred-dev:feature"],
+                intro="Что взять в работу дальше.",
+                items=["Проверить через /alfred-dev:feature"],
                 task_agent="alfred:test",
             )
 
@@ -226,11 +226,11 @@ class TestPmHelpers(unittest.TestCase):
 
         self.assertEqual(len(board["backlog"]), 2)
         self.assertEqual(board["backlog"][0]["id"], "T-001")
-        self.assertEqual(board["backlog"][0]["notes"], "flujo base")
+        self.assertEqual(board["backlog"][0]["notes"], "базовый процесс")
         self.assertEqual(board["backlog"][1]["id"], "T-002")
         self.assertEqual(board["backlog"][1]["agent"], "alfred:test")
-        self.assertEqual(board["backlog"][1]["title"], "Validar con /alfred-dev:feature")
-        self.assertIn("### [T-002] Validar con /alfred-dev:feature", markdown)
+        self.assertEqual(board["backlog"][1]["title"], "Проверить через /alfred-dev:feature")
+        self.assertIn("### [T-002] Проверить через /alfred-dev:feature", markdown)
 
     def test_create_and_move_kanban_task_preserve_id_and_metadata(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -239,9 +239,9 @@ class TestPmHelpers(unittest.TestCase):
             created = create_kanban_task(
                 tmpdir,
                 "backlog",
-                title="Preparar UAT final",
+                title="Подготовить финальный UAT",
                 agent="alfred:discuss",
-                notes="Pendiente al cerrar development.",
+                notes="Ждёт завершения development.",
             )
             moved = move_kanban_task(
                 tmpdir,
@@ -267,8 +267,8 @@ class TestPmHelpers(unittest.TestCase):
             content = render_standup_markdown(snapshot)
 
         self.assertIn("## Ежедневный standup", content)
-        self.assertIn("[T-002] Implementar endpoint POST /login", content)
-        self.assertIn("[T-004] Integrar sesión persistente", content)
+        self.assertIn("[T-002] Реализовать endpoint POST /login", content)
+        self.assertIn("[T-004] Интегрировать постоянную сессию", content)
         self.assertIn("/alfred-dev:uat", content)
 
     def test_standup_snapshot_lists_latest_done_tasks_first(self):
@@ -278,12 +278,12 @@ class TestPmHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "done.md"),
                 """# Done
 
-### [T-003] Preparar esquema de usuarios
+### [T-003] Подготовить схему пользователей
 
 - **Агент:** data-engineer
 - **Подтверждение:** tests/test_users.py::test_schema_users
 
-### [T-009] Cerrar UAT de login
+### [T-009] Закрыть UAT логина
 
 - **Агент:** qa-engineer
 - **Подтверждение:** docs/project/uat.md
@@ -292,7 +292,7 @@ class TestPmHelpers(unittest.TestCase):
 
             snapshot = build_standup_snapshot(tmpdir)
 
-        self.assertEqual(snapshot["focus"]["done"][0], "[T-009] Cerrar UAT de login — qa-engineer")
+        self.assertEqual(snapshot["focus"]["done"][0], "[T-009] Закрыть UAT логина — qa-engineer")
 
     def test_lane_snapshot_renders_blocked_tasks(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -301,7 +301,7 @@ class TestPmHelpers(unittest.TestCase):
             content = render_lane_markdown(snapshot)
 
         self.assertIn("Задачи в blocked", content)
-        self.assertIn("Decisión de cookies seguras", content)
+        self.assertIn("Решение по безопасным cookies", content)
 
     def test_validate_detects_warnings(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -310,7 +310,7 @@ class TestPmHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "done.md"),
                 """# Done
 
-### [T-003] Preparar esquema de usuarios
+### [T-003] Подготовить схему пользователей
 
 - **История:** HU-01
 - **Критерии:** CA-01
@@ -377,10 +377,10 @@ class TestPmHelpers(unittest.TestCase):
 
         self.assertIn(report["status"], {"ok", "warning"})
         self.assertFalse(
-            any("feature:visual_style" in warning and "done sin evidence" in warning for warning in report["warnings"])
+            any("visual_style отмечена как завершённая" in warning for warning in report["warnings"])
         )
 
-    def test_validate_warns_when_completed_estilo_visual_has_no_style_direction_artifact(self):
+    def test_validate_warns_when_completed_visual_style_has_no_style_direction_artifact(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
 
@@ -571,7 +571,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
             os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
             """# Backlog
 
-### [T-010] Preparar labels de issues
+### [T-010] Подготовить labels для issues
 
 - **Агент:** github-manager
 - **Критерии:** CA-10
@@ -581,7 +581,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
             os.path.join(tmpdir, "docs", "project", "kanban", "in-progress.md"),
             """# In Progress
 
-### [T-011] Sincronizar tablero
+### [T-011] Синхронизировать доску
 
 - **Агент:** project-manager
 - **Критерии:** CA-11
@@ -644,7 +644,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-### [T-010] Preparar labels de issues
+### [T-010] Подготовить labels для issues
 
 - **Агент:** github-manager
 """,
@@ -653,7 +653,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "in-progress.md"),
                 """# In Progress
 
-### [T-010] Sincronizar tablero
+### [T-010] Синхронизировать доску
 
 - **Агент:** project-manager
 """,
@@ -673,7 +673,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             _write(
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
-                "# Backlog\n\n- Preparar labels sin identificador\n",
+                "# Backlog\n\n- Подготовить labels без идентификатора\n",
             )
             _write(os.path.join(tmpdir, "docs", "project", "kanban", "in-progress.md"), "# In Progress\n")
             _write(os.path.join(tmpdir, "docs", "project", "kanban", "done.md"), "# Done\n")
@@ -757,9 +757,9 @@ class TestGitHubSyncHelpers(unittest.TestCase):
                         "version": 1,
                         "repo": "686f6c61/alfred-e2e",
                         "tasks": {
-                            "T-010": {"number": 101, "title": "[T-010] Preparar labels de issues"},
-                            "T-011": {"number": 102, "title": "[T-011] Sincronizar tablero"},
-                            "T-099": {"number": 199, "title": "[T-099] Tarea vieja"},
+                            "T-010": {"number": 101, "title": "[T-010] Подготовить labels для issues"},
+                            "T-011": {"number": 102, "title": "[T-011] Синхронизировать доску"},
+                            "T-099": {"number": 199, "title": "[T-099] Старая задача"},
                         },
                     },
                     ensure_ascii=False,
@@ -804,7 +804,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
                             "id": "T-099",
                             "number": 199,
                             "url": "https://github.com/686f6c61/alfred-e2e/issues/199",
-                            "title": "[T-099] Tarea vieja",
+                            "title": "[T-099] Старая задача",
                             "retired_at": "2026-03-22T00:00:00+00:00",
                         }
                     ],
@@ -822,7 +822,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
         self.assertIn("retired", payload)
         self.assertEqual(payload["retired"][0]["id"], "T-099")
         self.assertIn("Issues, снятых из-за локального drift: 1", markdown)
-        self.assertIn("Tarea vieja", markdown)
+        self.assertIn("Старая задача", markdown)
 
     def test_sync_project_to_github_persists_remote_drift_repairs(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -845,7 +845,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
                         "scope": "task",
                         "kind": "missing_remote_issue",
                         "task_id": "T-010",
-                        "title": "[T-010] Preparar labels de issues",
+                        "title": "[T-010] Подготовить labels для issues",
                         "previous_number": 41,
                         "resolution": "recreated",
                         "number": number,
@@ -885,7 +885,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
         self.assertEqual(len(result["remote_drift"]), 2)
         self.assertEqual(len(payload["remote_drift"]), 2)
         self.assertIn("Исправлено удалённого drift: 2", markdown)
-        self.assertIn("[T-010] Preparar labels de issues — #41 больше не существовал в remote; создан заново как #301.", markdown)
+        self.assertIn("[T-010] Подготовить labels для issues — #41 больше не существовал в remote; создан заново как #301.", markdown)
         self.assertIn("Зонтичный issue SonIA Sync", markdown)
 
     def test_rendered_sync_markdown_includes_remote_drift_section(self):

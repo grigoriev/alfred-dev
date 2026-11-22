@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Classify a Spanish or Russian prompt and suggest the Alfred route without a slash."""
+"""Classify a Russian prompt and suggest the Alfred route without a slash."""
 
 from __future__ import annotations
 
@@ -32,35 +32,30 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     (
         "resume",
         (
-            r"\b(sigue|seguir|continua|continuar|retoma|retomar)\b",
-            r"donde lo deje",
-            r"por donde iba",
             r"\bresume\b",
             r"\bпродолж\w*",
             r"\bдальше\b",
             r"\bвозобнов\w*",
             r"на чем (мы )?остановил",
-            r"\bвернемся к\b",
+            r"где (мы )?остановил",
+            r"\bвернемся к\b|\bвернись к\b",
         ),
     ),
     (
         "pause",
         (
-            r"\bpausa(r)?\b",
             r"\bпауз\w*",
             r"\bприостанов\w*",
             r"\bна сегодня все\b",
+            r"\bзакончим на сегодня\b",
         ),
     ),
     (
         "uat",
         (
             r"\buat\b",
-            r"aceptacion (manual|humana)",
-            r"aprobado por (el )?usuario",
-            r"rejected",
-            r"verificar (el )?entregable",
             r"\bприемк\w*",
+            r"ручн\w* проверк\w*",
             r"одобрено пользовател\w*",
             r"\bотклонен\w*",
             r"провер\w* результат\w*",
@@ -69,8 +64,6 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     (
         "ship",
         (
-            r"\b(despliega|desplegar|publica|publicar)\b",
-            r"\ba produccion\b",
             r"\brelease\b",
             r"\bship\b",
             r"\bрелиз\w*",
@@ -87,40 +80,32 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         (
             r"\bcto\b",
             r"\bтехническ\w* директор\w*",
-            r"\blucius\b",  # alias legacy
-            r"\bлюциус\w*",  # alias legacy
-            r"segunda opinion",
             r"второе мнение",
+            r"взгляд со стороны",
         ),
     ),
     (
         "audit",
         (
-            r"\baudi(t|ta|tar|toria)\b",
             r"\bowasp\b",
-            r"seguridad del (repo|proyecto)",
             r"\bаудит\w*",
-            r"безопасност\w* (репо|репозитория|проекта)",
+            r"безопасност\w* (репо|репозитория|проекта|кода)",
+            r"провер\w* безопасност\w*",
         ),
     ),
     (
         "map-codebase",
         (
-            r"\bmapea\b",
-            r"mapa del (repo|codigo|codebase)",
-            r"que hay en este repo",
             r"\bbrownfield\b",
             r"карт\w* (кодовой базы|кода|репо|репозитория)",
             r"что (есть )?в этом репо",
+            r"разбер\w* (в )?(репо|репозитори|код)",
         ),
     ),
     (
         "progress",
         (
-            r"como va( el proyecto)?\b",
-            r"que hay abierto",
             r"\bkanban\b",
-            r"estado del (flujo|proyecto)",
             r"\bстатус\w*",
             r"\bпрогресс\w*",
             r"как (идут дела|продвигается|там проект)",
@@ -132,9 +117,6 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     (
         "memory",
         (
-            r"que decidimos",
-            r"por que elegimos",
-            r"ultima decision",
             r"что (мы )?решили",
             r"почему (мы )?выбрали",
             r"последн\w* решени\w*",
@@ -143,10 +125,8 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     (
         "fix",
         (
-            r"\b(peta|falla|fallo|rompe|roto|bug|error|regresion)\b",
-            r"no funciona",
+            r"\b(bug|error|exception)\b",
             r"\b500\b",
-            r"\bexception\b",
             r"\bбаг\w*",
             r"\bошибк\w*",
             r"\bпада\w*",
@@ -154,6 +134,7 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
             r"\bсломал\w*",
             r"\bсломан\w*",
             r"не работает",
+            r"не (открывается|грузится|загружается)",
             r"\bрегресс\w*",
             r"\bкраш\w*|\bкрэш\w*",
         ),
@@ -161,14 +142,12 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     (
         "discuss",
         (
-            r"no se (si|que|como)",
-            r"que te parece",
-            r"\baterrizar\b",
-            r"\buna idea\b",
             r"не знаю,? (как|что|стоит ли|ли)",
             r"что (ты )?думаешь",
             r"как тебе",
             r"\bесть идея\b",
+            r"как (лучше|бы ты)",
+            r"\bпосоветуй\w*",
         ),
     ),
     (
@@ -183,23 +162,19 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     (
         "feature",
         (
-            r"nueva funcionalidad",
             r"\bfeature\b",
-            r"queremos que",
-            r"implementar (un|una|el|la)",
             r"\bфич\w*",
             r"\bдобав\w*",
             r"нов\w* функци\w*",
             r"хотим,? чтобы",
+            r"\bреализ\w*",
         ),
     ),
     (
         "quick",
         (
-            r"\b(cambia|cambiar|ajusta|ajustar|renombra|renombrar)\b",
             r"\btypo\b",
             r"\bcta\b",
-            r"texto del",
             r"\bпоменя\w*",
             r"\bизмени(ть)?\b",
             r"\bпоправ\w*",

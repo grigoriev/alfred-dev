@@ -29,7 +29,7 @@ ANSI_RE = re.compile(
     r"|\x1b[()][A-Za-z0-9]"
 )
 # Description markers of the /alfred entry in the command picker.
-ALIAS_MARKERS = ("alias global", "контекстный ассистент")
+ALIAS_MARKERS = ("контекстный ассистент",)
 
 
 @dataclass(frozen=True)
@@ -59,8 +59,7 @@ def strip_terminal_control(text: str) -> str:
 def _has_alias_marker(lowered: str, compact_lowered: str) -> bool:
     """Return True if the text has a description marker of the /alfred entry.
 
-    Accept the legacy Spanish alias text and the current Russian description
-    from commands/alfred.md.
+    Accept the current Russian description from commands/alfred.md.
     """
 
     return any(

@@ -33,25 +33,15 @@ SENSITIVE_REVIEW_KEY_RE = re.compile(
     r"(?i)(password|passwd|api_key|apikey|api_secret|secret_key"
     r"|auth_token|access_token|private_key)"
 )
-# Generic notes that do not show a real review (English, Spanish, Russian).
+# Generic notes that do not show a real review (English, Russian).
 GENERIC_REVIEW_NOTES = {
     "ok",
     "okay",
-    "vale",
     "approved",
-    "aprobada",
-    "revisado",
-    "revisada",
-    "todo ok",
-    "correcto",
-    "correcta",
     "lgtm",
     "pass",
     "passed",
     "done",
-    "hecha",
-    "si",
-    "sí",
     "yes",
     "ок",
     "да",

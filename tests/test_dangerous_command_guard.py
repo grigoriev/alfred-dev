@@ -239,7 +239,7 @@ class TestSafeAlfredHelpers(unittest.TestCase):
         self.assertFalse(_is_safe_alfred_helper_command(command))
 
     def test_rejects_real_shell_controls_outside_quotes(self):
-        self.assertTrue(_has_shell_controls_outside_quotes('echo hola && whoami'))
+        self.assertTrue(_has_shell_controls_outside_quotes('echo привет && whoami'))
         self.assertFalse(_has_shell_controls_outside_quotes('echo "hello && bye"'))
         self.assertFalse(_has_shell_controls_outside_quotes("echo 'a | b ; c > d'"))
 

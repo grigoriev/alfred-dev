@@ -6561,16 +6561,16 @@ def render_progress_markdown(snapshot: Dict[str, Any]) -> str:
 def _infer_primary_actor(description: str) -> str:
     normalized = _normalize_free_text(description)
     is_onboarding = "onboarding" in normalized or "онбординг" in normalized
-    if is_onboarding and ("desarroll" in normalized or "разработчик" in normalized):
+    if is_onboarding and ("developer" in normalized or "разработчик" in normalized):
         return "разработчик или технический участник"
     if is_onboarding or any(
         token in normalized
-        for token in ("registro", "primer acceso", "регистрац", "первый вход")
+        for token in ("signup", "first login", "регистрац", "первый вход")
     ):
         return "новый пользователь"
     if any(token in normalized for token in ("admin", "administr", "админ", "администр")):
         return "администратор"
-    if any(token in normalized for token in ("team", "operacion", "команд", "операц")):
+    if any(token in normalized for token in ("team", "operation", "команд", "операц")):
         return "внутренняя команда"
     return "основной актор требует уточнения"
 
@@ -6581,7 +6581,7 @@ def _infer_recommended_command(description: str) -> str:
     if any(
         token in normalized
         for token in (
-            "bug", "error", "fallo", "regresion", "arreglar", "corregir",
+            "bug", "error", "regression",
             "баг", "ошибк", "сбой", "регресс", "почини", "исправ", "пада", "сломал",
         )
     ):
@@ -6589,7 +6589,7 @@ def _infer_recommended_command(description: str) -> str:
     if any(
         token in normalized
         for token in (
-            "investig", "compar", "benchmark", "poc", "viable", "explorar",
+            "investig", "compar", "benchmark", "poc", "viable", "explore",
             "исследова", "исследуй", "сравни", "осуществим", "изучи",
         )
     ):
@@ -6597,7 +6597,7 @@ def _infer_recommended_command(description: str) -> str:
     if any(
         token in normalized
         for token in (
-            "copy", "texto", "ajuste pequeno", "ajuste menor", "cambio pequeno", "tooltip",
+            "copy", "tooltip", "typo",
             "текст", "опечатк", "небольшая правка", "мелкая правка", "небольшое изменение",
         )
     ):

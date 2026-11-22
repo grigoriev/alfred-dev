@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-VERSION = "0.8.0"
+VERSION = "0.8.1"
 OLD_VERSION = "0.5" + ".3"
 INSTALLED_PLUGIN_DIR = Path.home() / ".claude" / "plugins" / "cache" / "alfred-dev" / "alfred-dev" / VERSION
 GLOBAL_ALFRED_ALIAS_FILE = Path.home() / ".claude" / "skills" / "alfred" / "SKILL.md"
@@ -1362,7 +1362,6 @@ def check_public_claims() -> list[str]:
     alfred_agent = _read("agents/alfred.md")
     cto_agent = _read("agents/cto.md")
     agents_readme = _read("docs/agents/README.md")
-    has_site = _has_site()
     personality = _read("docs/personality.md")
     changelog = _read("CHANGELOG.md")
 
@@ -1430,23 +1429,6 @@ def check_public_claims() -> list[str]:
             "42 публичные опции",
             "4 runtime-контракта `/update`",
         ],
-        "site/src/i18n/data.es.ts": [
-            "displayName: \"Alfred Dev\"",
-            "Alfred Dev (alfred-dev)",
-            "namespace técnico",
-            "Claude Code 2.1.183",
-            "plugins, skills, hooks y MCP",
-            "claude update",
-        ],
-        "site/src/i18n/data.en.ts": [
-            "displayName: \"Alfred Dev\"",
-            "Alfred Dev (alfred-dev)",
-            "technical namespace",
-            "Claude Code 2.1.183",
-            "plugins, skills, hooks, and MCP",
-            "claude update",
-            "quality gates that require evidence before work can close",
-        ],
     }
     sources = {
         "README.md": readme,
@@ -1458,17 +1440,6 @@ def check_public_claims() -> list[str]:
         "agents/cto.md": cto_agent,
         "CHANGELOG.md": changelog,
     }
-    if has_site:
-        sources.update({
-            "site/src/i18n/data.es.ts": _read("site/src/i18n/data.es.ts"),
-            "site/src/i18n/data.en.ts": _read("site/src/i18n/data.en.ts"),
-        })
-    else:
-        required = {
-            path: needles
-            for path, needles in required.items()
-            if not path.startswith("site/")
-        }
     missing: list[str] = []
     for path, needles in required.items():
         for needle in needles:
@@ -1481,31 +1452,14 @@ def check_public_claims() -> list[str]:
         "README.md": [
             "### Skills (60)",
             "### Hooks (12)",
-            "### Core (6 modulos)",
-            "### Core (6 módulos)",
             "GPT-5.4",
             "--autopilot",
-            "keywords contextuales",
             "https://docs.anthropic.com/en/docs/claude-code",
-            "quality gates infranqueables",
-            "No hay excepciones, no hay modo de saltárselas",
-            # Russian equivalents: README is translated.
             "quality gates непреодолим",
             "Исключений нет",
         ],
-        "docs/architecture.md": ["Agentes de nucleo** (9)", "se registran igualmente en `plugin.json`"],
-        "docs/agents/README.md": [
-            "tambien aparecen en `plugin.json`",
-            "quality gates infranqueables",
-            "El resultado es previsible y reproducible",
-            "produce resultados consistentes porque no arrastra",
-        ],
         "commands/alfred.md": ["GPT-5.4"],
         "agents/alfred.md": [
-            "9 agentes de nucleo + 8 opcionales",
-            "reglas infranqueables",
-            "NUNCA se pueden saltar",
-            # Russian equivalents: agents/ is translated.
             "непреодолим",
             "НИКОГДА нельзя пропускать",
         ],
@@ -1514,68 +1468,13 @@ def check_public_claims() -> list[str]:
         "CHANGELOG.md": [
             "GPT-5.4",
             "gpt-5.4",
-            "22 opciones/variantes",
             "`codex review`",
             "approval: never",
-            "sin prompt de confirmación al usuario",
-            "ejecuta el scanner end-to-end",
-            "Quality gates infranqueables",
-        ],
-        "site/src/i18n/data.es.ts": [
-            "6 módulos core",
-            "GPT-5.4",
-            "codex review",
-            "approval: never",
-            "--autopilot",
-            "sin pedir confirmación al usuario",
-            "Verificado end-to-end con Docker",
-            "ejecuta el scanner end-to-end",
-            "No hay requisito de versión mínima específica",
-            "Cualquier versión de Claude Code",
-            "Claude Code instalado.",
-        ],
-        "site/src/i18n/data.en.ts": [
-            "6 core modules",
-            "GPT-5.4",
-            "modelo configurado por el usuario",
-            "codex review",
-            "approval: never",
-            "--autopilot",
-            "quality gates the workflow cannot skip",
-            "without asking the user for confirmation",
-            "Verified end-to-end with Docker",
-            "runs the scanner end-to-end",
-            "There is no specific minimum version requirement",
-            "Any version of Claude Code",
-            "Claude Code installed.",
-        ],
-        "site/src/components/BrutalistLandingPage.astro": [
-            "GPT-5.4",
-            "codex review",
-            "Los quality gates son infranqueables",
         ],
         "hooks/session-start.sh": [
-            "Las quality gates son infranqueables",
             "непреодолим",
         ],
-        "site/src/components/Footer.astro": ["https://docs.anthropic.com/en/docs/claude-code"],
-        "docs/skills.md": [
-            "garantizar que el resultado sea consistente, reproducible y de calidad profesional",
-            "procedimiento verificable y reproducible",
-            "garantizar que el software sea usable por todas las personas",
-        ],
-        "docs/flows.md": [
-            "garantiza que cada linea de código tiene al menos un test",
-            "garantiza que cada línea de código tiene al menos un test",
-        ],
-        "docs/agents/security-officer.md": [
-            "garantizar que el software cumple con los estandares de seguridad",
-        ],
         "agents/security-officer.md": [
-            "garantiza que nada con vulnerabilidades conocidas llega a los usuarios",
-            "bloqueantes absolutos. Sin excepciones",
-            "seguridad infranqueable",
-            # Russian equivalents: agents/ is translated.
             "Без исключений",
             "непреодолим",
             "ничто с известными уязвимостями",
@@ -1583,32 +1482,14 @@ def check_public_claims() -> list[str]:
     }
     stale_sources = {
         "README.md": readme,
-        "docs/skills.md": skills_doc,
-        "docs/flows.md": _read("docs/flows.md"),
-        "docs/agents/security-officer.md": _read("docs/agents/security-officer.md"),
         "agents/security-officer.md": _read("agents/security-officer.md"),
         "hooks/session-start.sh": _read("hooks/session-start.sh"),
-        "docs/architecture.md": architecture,
         "commands/alfred.md": help_command,
         "agents/alfred.md": alfred_agent,
-        "docs/agents/README.md": agents_readme,
         "agents/cto.md": cto_agent,
         "docs/personality.md": personality,
         "CHANGELOG.md": changelog,
     }
-    if has_site:
-        stale_sources.update({
-            "site/src/i18n/data.es.ts": _read("site/src/i18n/data.es.ts"),
-            "site/src/i18n/data.en.ts": _read("site/src/i18n/data.en.ts"),
-            "site/src/components/BrutalistLandingPage.astro": _read("site/src/components/BrutalistLandingPage.astro"),
-            "site/src/components/Footer.astro": _read("site/src/components/Footer.astro"),
-        })
-    else:
-        stale_exact = {
-            path: needles
-            for path, needles in stale_exact.items()
-            if not path.startswith("site/")
-        }
     stale_hits: list[str] = []
     for path, needles in stale_exact.items():
         for needle in needles:
@@ -1637,20 +1518,10 @@ def check_public_claims() -> list[str]:
     if legacy_runtime:
         _fail(f"Runtime prompts with legacy slash command: {legacy_runtime}")
 
-    surface_message = (
-        "README, landing, architecture, help and agents without old counters"
-        if has_site
-        else "README, architecture, help and agents without old counters"
-    )
-    display_name_message = (
-        "human displayName reflected in README, changelog and landing"
-        if has_site
-        else "human displayName reflected in README and changelog"
-    )
     return [
         "public inventory 10/11/18 verified",
-        surface_message,
-        display_name_message,
+        "README, architecture, help and agents without old counters",
+        "human displayName reflected in README and changelog",
         "sensitive skills keep explicit manual activation",
         "CTO does not pin a review model",
         "runtime prompts without legacy /alfred",
@@ -2010,7 +1881,6 @@ def check_flow_gate_claims() -> list[str]:
     flows_doc = _read("docs/flows.md")
     configuration_doc = _read("docs/configuration.md")
     readme = _read("README.md")
-    has_site = _has_site()
 
     free_gate_doc_requirements = {
         "docs/flows.md": (
@@ -2037,15 +1907,7 @@ def check_flow_gate_claims() -> list[str]:
                     f"{path}: free gate/docs without honest contract {_needle_label(needle)!r}"
                 )
     stale_free_gate_claims = {
-        "docs/flows.md": (
-            "Se supera siempre que el resultado sea favorable.",
-            "Avance automático con gate libre",
-        ),
-        "docs/configuration.md": (
-            "Se supera siempre que el resultado sea favorable.",
-        ),
         "README.md": (
-            "Todos los artefactos están documentados |",
             "Все артефакты задокументированы |",
         ),
     }
@@ -2071,29 +1933,16 @@ def check_flow_gate_claims() -> list[str]:
         "docs/hooks.md": ("Quality gates, проверяемые по подтверждению",),
         "docs/release.md": ("quality gates проверяемы по локальному контракту",),
     }
-    if has_site:
-        public_gate_sources["site/src/i18n/data.en.ts"] = _read("site/src/i18n/data.en.ts")
-        public_gate_requirements["site/src/i18n/data.en.ts"] = (
-            "quality gates that require evidence before work can close",
-        )
     for path, needles in public_gate_requirements.items():
         for needle in needles:
             if needle not in public_gate_sources[path]:
                 problems.append(f"{path}: gate claim without verifiable evidence {_needle_label(needle)!r}")
     public_gate_stale = {
         "README.md": (
-            "quality gates infranqueables",
-            "No hay excepciones, no hay modo de saltárselas",
             "quality gates непреодолим",
             "Исключений нет",
         ),
-        "docs/README.md": ("quality gates infranqueables",),
-        "docs/agents/README.md": ("quality gates infranqueables",),
-        "docs/hooks.md": ("quality gates infranqueables",),
-        "docs/release.md": ("quality gates son infranqueables",),
     }
-    if has_site:
-        public_gate_stale["site/src/i18n/data.en.ts"] = ("quality gates the workflow cannot skip",)
     for path, needles in public_gate_stale.items():
         for needle in needles:
             if needle in public_gate_sources[path]:
@@ -2344,8 +2193,6 @@ def check_hook_contracts() -> list[str]:
                 problems.append(f"{script_name}: wrapper does not contain {needle}")
 
     hooks_doc = _read("docs/hooks.md")
-    if '"decisión": "block"' in hooks_doc:
-        problems.append("docs/hooks.md uses the obsolete key \"decisión\" instead of decision")
     nested_hook_output = re.findall(
         r"hookSpecificOutput\.(?:"
         r"SessionStart|UserPromptSubmit|UserPromptExpansion|Stop|PreToolUse|PreCompact|PostToolUse|"
@@ -2805,9 +2652,6 @@ def check_install_update_contracts() -> list[str]:
             "CLI plugin without explicit user scope or allowed local/project cleanup: "
             + "; ".join(bad_scope)
         )
-
-    if "instalación local que limpiar" in uninstall_sh:
-        _fail("uninstall.sh must not describe Alfred Dev as a local install")
 
     return [
         "installers use explicit user scope",

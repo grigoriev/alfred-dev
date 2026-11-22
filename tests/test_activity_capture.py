@@ -715,7 +715,7 @@ class TestDispatchPrompt(_DBTestCase):
 
     def test_prompt_expansion_payload_keeps_command_metadata(self):
         """UserPromptExpansion must record the slash command metadata."""
-        text = "/alfred-dev:quick ajustar CTA"
+        text = "/alfred-dev:quick поправить CTA"
         data = {
             "hook_event_name": "UserPromptExpansion",
             "expansion_type": "slash_command",
@@ -761,7 +761,7 @@ class TestDispatchPrompt(_DBTestCase):
 
     def test_prefetches_explicit_map_codebase_prompt(self):
         """A helper-first slash command must leave the brownfield map ready."""
-        data = {"prompt": "/alfred-dev:map-codebase login y usuarios"}
+        data = {"prompt": "/alfred-dev:map-codebase логин и пользователи"}
 
         _capture._dispatch_prompt(self._db, data)
 
@@ -781,7 +781,7 @@ class TestDispatchPrompt(_DBTestCase):
         with open(os.path.join(self._tmpdir, "src", "index.js"), "w", encoding="utf-8") as fh:
             fh.write("console.log('hello');\n")
 
-        data = {"prompt": "/alfred añade login y usuarios"}
+        data = {"prompt": "/alfred добавь логин и пользователей"}
 
         _capture._dispatch_prompt(self._db, data)
 
@@ -801,7 +801,7 @@ class TestDispatchPrompt(_DBTestCase):
         session = _complete_session("feature", "Login and users")
         save_state(session, os.path.join(self._tmpdir, STATE_RELATIVE_PATH))
 
-        data = {"prompt": "/alfred añade login y usuarios"}
+        data = {"prompt": "/alfred добавь логин и пользователей"}
 
         _capture._dispatch_prompt(self._db, data)
 
@@ -815,7 +815,7 @@ class TestDispatchPrompt(_DBTestCase):
         """The first `/alfred-dev:quick` must leave the session and the bypass ready."""
         data = {
             "prompt": (
-                "/alfred-dev:quick ajustar copy del login\n"
+                "/alfred-dev:quick поправить текст логина\n"
                 "import subprocess\n"
                 "print('test wrapper')\n"
             )
@@ -829,7 +829,7 @@ class TestDispatchPrompt(_DBTestCase):
             state = json.load(fh)
 
         self.assertEqual(state["command"], "quick")
-        self.assertEqual(state["description"], "ajustar copy del login")
+        self.assertEqual(state["description"], "поправить текст логина")
         self.assertTrue(os.path.isfile(os.path.join(self._tmpdir, ".claude", "alfred-stop-hook-bypass.json")))
 
         prefetched = self._get_events("alfred_prefetched")
@@ -971,7 +971,7 @@ class TestHookScriptRuntime(unittest.TestCase):
             "expansion_type": "slash_command",
             "command_name": "alfred-dev:quick",
             "command_source": "plugin",
-            "prompt": "/alfred-dev:quick ajustar copy",
+            "prompt": "/alfred-dev:quick поправить текст",
         }
 
         result = subprocess.run(
@@ -1006,7 +1006,7 @@ class TestHookScriptRuntime(unittest.TestCase):
             "cwd": self._tmpdir,
             "permission_mode": "default",
             "hook_event_name": "UserPromptSubmit",
-            "prompt": "/alfred-dev:map-codebase login y usuarios",
+            "prompt": "/alfred-dev:map-codebase логин и пользователи",
         }
 
         proc = subprocess.run(
@@ -1045,7 +1045,7 @@ class TestHookScriptRuntime(unittest.TestCase):
             "cwd": self._tmpdir,
             "permission_mode": "default",
             "hook_event_name": "UserPromptSubmit",
-            "prompt": "/alfred añade login y usuarios",
+            "prompt": "/alfred добавь логин и пользователей",
         }
 
         proc = subprocess.run(
@@ -1309,12 +1309,12 @@ class TestProcessState(_DBTestCase):
     def test_session_iteration_is_upgraded_to_real_flow_iteration(self):
         """A generic session iteration must hand control to the real flow."""
         self._db.complete_iteration(self._it_id)
-        session_id = self._db.start_iteration("session", "Sesion general")
+        session_id = self._db.start_iteration("session", "Общая сессия")
 
         state_file = self._write_state({
             "command": "feature",
             "current_phase": "product",
-            "description": "implementar login social",
+            "description": "реализовать вход через соцсети",
             "completed_phases": [],
         })
 
@@ -1323,7 +1323,7 @@ class TestProcessState(_DBTestCase):
         active = self._db.get_active_iteration()
         self.assertIsNotNone(active)
         self.assertEqual(active["command"], "feature")
-        self.assertEqual(active["description"], "implementar login social")
+        self.assertEqual(active["description"], "реализовать вход через соцсети")
 
         session_iteration = self._db.get_iteration(session_id)
         self.assertEqual(session_iteration["status"], "abandoned")
@@ -1681,7 +1681,7 @@ class TestDispatchAgent(_DBTestCase):
                 "subagent_type": "Explore",
                 "prompt": "Find the AuthMiddleware class",
             },
-            "tool_result": {"output": "Encontrado en src/auth.py"},
+            "tool_result": {"output": "Найдено в src/auth.py"},
         }
         _capture._dispatch_agent(self._db, data)
 
@@ -1723,7 +1723,7 @@ class TestDispatchAgent(_DBTestCase):
     def test_default_subagent_type(self):
         """Without subagent_type, it uses general-purpose by default."""
         data = {
-            "tool_input": {"description": "generic task", "prompt": "haz algo"},
+            "tool_input": {"description": "generic task", "prompt": "сделай что-нибудь"},
             "tool_result": {},
         }
         _capture._dispatch_agent(self._db, data)
