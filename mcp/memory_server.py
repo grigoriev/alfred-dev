@@ -93,8 +93,8 @@ def _bounded_text(value: Any, maximum: int) -> tuple[Optional[str], bool, int]:
         return text, False, len(text)
 
     suffix = (
-        f"\n\n[contenido recortado por alfred-memory: "
-        f"{len(text)} caracteres originales, maximo {maximum}]"
+        f"\n\n[содержимое обрезано alfred-memory: "
+        f"исходно {len(text)} символов, максимум {maximum}]"
     )
     return text[:maximum].rstrip() + suffix, True, len(text)
 
@@ -106,7 +106,7 @@ def _bounded_event_payload(
     if value is None:
         return None, False, 0
     if not isinstance(value, dict):
-        raise ValueError("El campo 'payload' debe ser un objeto JSON.")
+        raise ValueError("Поле 'payload' должно быть JSON-объектом.")
 
     serialized = json.dumps(value, ensure_ascii=False, default=str)
     if len(serialized) <= _EVENT_PAYLOAD_MAX:
@@ -185,21 +185,21 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_search",
         "description": (
-            "Busca en la memoria del proyecto (decisiones y commits) por texto. "
-            "Usa FTS5 si esta disponible, o LIKE como fallback."
+            "Ищет по тексту в памяти проекта (решения и commits). "
+            "Использует FTS5, если он доступен, иначе LIKE как fallback."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Termino de busqueda textual.",
+                    "description": "Текст поискового запроса.",
                 },
                 "limit": {
                     "type": "integer",
                     "description": (
-                        "Numero maximo de resultados "
-                        f"(por defecto {_SEARCH_LIMIT_DEFAULT}, maximo {_SEARCH_LIMIT_MAX})."
+                        "Максимальное число результатов "
+                        f"(по умолчанию {_SEARCH_LIMIT_DEFAULT}, максимум {_SEARCH_LIMIT_MAX})."
                     ),
                     "default": _SEARCH_LIMIT_DEFAULT,
                     "minimum": 1,
@@ -207,25 +207,25 @@ _TOOLS: List[Dict[str, Any]] = [
                 },
                 "iteration_id": {
                     "type": "integer",
-                    "description": "Filtrar resultados por ID de iteracion.",
+                    "description": "Фильтр результатов по ID итерации.",
                 },
                 "since": {
                     "type": "string",
-                    "description": "Filtrar resultados posteriores a esta fecha (ISO 8601).",
+                    "description": "Только результаты после этой даты (ISO 8601).",
                 },
                 "until": {
                     "type": "string",
-                    "description": "Filtrar resultados anteriores a esta fecha (ISO 8601).",
+                    "description": "Только результаты до этой даты (ISO 8601).",
                 },
                 "tags": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Filtrar decisiones que tengan alguna de estas etiquetas.",
+                    "description": "Только решения с любой из этих меток.",
                 },
                 "status": {
                     "type": "string",
                     "enum": ["active", "superseded", "deprecated"],
-                    "description": "Filtrar decisiones por estado.",
+                    "description": "Фильтр решений по статусу.",
                 },
             },
             "required": ["query"],
@@ -234,46 +234,46 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_log_decision",
         "description": (
-            "Registra una decision de diseno formal en la memoria del proyecto. "
-            "Se vincula automaticamente a la iteracion activa si no se indica otra."
+            "Записывает формальное проектное решение в память проекта. "
+            "Если другая итерация не указана, решение автоматически привязывается к активной."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "title": {
                     "type": "string",
-                    "description": "Titulo corto de la decision.",
+                    "description": "Краткое название решения.",
                 },
                 "chosen": {
                     "type": "string",
-                    "description": "Opcion elegida.",
+                    "description": "Выбранный вариант.",
                 },
                 "context": {
                     "type": "string",
-                    "description": "Problema o situacion que se resolvia.",
+                    "description": "Проблема или ситуация, которую решали.",
                 },
                 "alternatives": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Opciones descartadas.",
+                    "description": "Отклонённые варианты.",
                 },
                 "rationale": {
                     "type": "string",
-                    "description": "Justificacion de la eleccion.",
+                    "description": "Обоснование выбора.",
                 },
                 "impact": {
                     "type": "string",
                     "enum": ["low", "medium", "high", "critical"],
-                    "description": "Nivel de impacto de la decision.",
+                    "description": "Уровень влияния решения.",
                 },
                 "phase": {
                     "type": "string",
-                    "description": "Fase del flujo en la que se tomo.",
+                    "description": "Фаза процесса, в которой принято решение.",
                 },
                 "tags": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Etiquetas para clasificar la decision.",
+                    "description": "Метки для классификации решения.",
                 },
             },
             "required": ["title", "chosen"],
@@ -282,45 +282,45 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_log_commit",
         "description": (
-            "Registra un commit en la memoria y opcionalmente lo vincula a "
-            "decisiones previas. Si el SHA ya existe se ignora (idempotente)."
+            "Записывает commit в память и при необходимости привязывает его к "
+            "ранее принятым решениям. Если SHA уже есть, запись пропускается (идемпотентно)."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "sha": {
                     "type": "string",
-                    "description": "Hash SHA del commit.",
+                    "description": "SHA-хеш commit.",
                 },
                 "message": {
                     "type": "string",
-                    "description": "Mensaje del commit.",
+                    "description": "Сообщение commit.",
                 },
                 "author": {
                     "type": "string",
-                    "description": "Autor del commit.",
+                    "description": "Автор commit.",
                 },
                 "committed_at": {
                     "type": "string",
-                    "description": "Fecha ISO 8601 del commit.",
+                    "description": "Дата commit в формате ISO 8601.",
                 },
                 "decision_ids": {
                     "type": "array",
                     "items": {"type": "integer"},
                     "description": (
-                        "IDs de decisiones a vincular con este commit."
+                        "ID решений, которые нужно привязать к этому commit."
                     ),
                 },
                 "iteration_id": {
                     "type": "integer",
                     "description": (
-                        "ID de iteracion. Si se omite, se usa la activa."
+                        "ID итерации. Если не указан, используется активная."
                     ),
                 },
                 "files": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Lista de ficheros afectados por el commit.",
+                    "description": "Список файлов, затронутых commit.",
                 },
             },
             "required": ["sha"],
@@ -329,8 +329,8 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_get_iteration",
         "description": (
-            "Obtiene los datos completos de una iteracion. Si no se indica "
-            "ID, devuelve la iteracion activa o la mas reciente."
+            "Возвращает полные данные итерации. Если ID не указан, "
+            "возвращает активную или самую последнюю итерацию."
         ),
         "inputSchema": {
             "type": "object",
@@ -338,8 +338,8 @@ _TOOLS: List[Dict[str, Any]] = [
                 "id": {
                     "type": "integer",
                     "description": (
-                        "ID de la iteracion. Si se omite, devuelve la activa "
-                        "o la ultima registrada."
+                        "ID итерации. Если не указан, возвращает активную "
+                        "или последнюю записанную."
                     ),
                 },
             },
@@ -349,15 +349,15 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_get_timeline",
         "description": (
-            "Obtiene la cronologia completa de eventos de una iteracion, "
-            "ordenados de mas antiguo a mas reciente."
+            "Возвращает полную хронологию событий итерации, "
+            "от самых старых к самым новым."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "iteration_id": {
                     "type": "integer",
-                    "description": "ID de la iteracion cuya cronologia consultar.",
+                    "description": "ID итерации, хронологию которой нужно получить.",
                 },
             },
             "required": ["iteration_id"],
@@ -366,9 +366,9 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_stats",
         "description": (
-            "Devuelve estadisticas generales de la memoria del proyecto: "
-            "contadores de iteraciones, decisiones, commits, eventos, modo "
-            "de busqueda y metadatos."
+            "Возвращает общую статистику памяти проекта: "
+            "число итераций, решений, commits и событий, режим "
+            "поиска и метаданные."
         ),
         "inputSchema": {
             "type": "object",
@@ -379,9 +379,9 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_manage_iteration",
         "description": (
-            "Gestiona el ciclo de vida de iteraciones: inicia una nueva "
-            "o completa una existente. Util para que los agentes controlen "
-            "el flujo sin depender del hook de captura automatica."
+            "Управляет жизненным циклом итераций: запускает новую "
+            "или завершает существующую. Позволяет агентам управлять "
+            "процессом без hook автоматического захвата."
         ),
         "inputSchema": {
             "type": "object",
@@ -390,26 +390,26 @@ _TOOLS: List[Dict[str, Any]] = [
                     "type": "string",
                     "enum": ["start", "complete"],
                     "description": (
-                        "Accion a realizar: 'start' para iniciar una nueva "
-                        "iteracion, 'complete' para cerrar una existente."
+                        "Действие: 'start' запускает новую "
+                        "итерацию, 'complete' закрывает существующую."
                     ),
                 },
                 "command": {
                     "type": "string",
                     "description": (
-                        "Comando que origino la iteracion (ej. 'feature', 'fix'). "
-                        "Solo requerido para action='start'."
+                        "Команда, которая запустила итерацию (например, 'feature', 'fix'). "
+                        "Нужна только для action='start'."
                     ),
                 },
                 "description": {
                     "type": "string",
-                    "description": "Descripcion libre de la iteracion.",
+                    "description": "Произвольное описание итерации.",
                 },
                 "iteration_id": {
                     "type": "integer",
                     "description": (
-                        "ID de la iteracion a completar. Solo para action='complete'. "
-                        "Si se omite, se completa la iteracion activa."
+                        "ID итерации для завершения. Только для action='complete'. "
+                        "Если не указан, завершается активная итерация."
                     ),
                 },
             },
@@ -419,9 +419,9 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_log_event",
         "description": (
-            "Registra un evento arbitrario en la cronologia de una iteracion. "
-            "Util para trazar gates aprobadas, agentes ejecutados o hitos "
-            "personalizados del flujo."
+            "Записывает произвольное событие в хронологию итерации. "
+            "Подходит для учёта одобренных gates, запущенных агентов и "
+            "собственных вех процесса."
         ),
         "inputSchema": {
             "type": "object",
@@ -430,39 +430,39 @@ _TOOLS: List[Dict[str, Any]] = [
                     "type": "string",
                     "maxLength": _EVENT_TYPE_MAX,
                     "description": (
-                        "Tipo de evento (ej. 'gate_approved', 'agent_executed', "
+                        "Тип события (например, 'gate_approved', 'agent_executed', "
                         "'phase_completed', 'custom')."
                     ),
                 },
                 "phase": {
                     "type": "string",
                     "maxLength": _EVENT_PHASE_MAX,
-                    "description": "Fase del flujo en la que ocurrio el evento.",
+                    "description": "Фаза процесса, в которой произошло событие.",
                 },
                 "payload": {
                     "type": "object",
                     "description": (
-                        "Datos JSON asociados al evento. Si serializados superan "
-                        f"{_EVENT_PAYLOAD_MAX} caracteres, se guarda un preview."
+                        "JSON-данные события. Если после сериализации они длиннее "
+                        f"{_EVENT_PAYLOAD_MAX} символов, сохраняется только preview."
                     ),
                 },
                 "summary": {
                     "type": "string",
                     "maxLength": _EVENT_SUMMARY_MAX,
-                    "description": "Resumen breve del evento para consultas rapidas.",
+                    "description": "Краткое резюме события для быстрых запросов.",
                 },
                 "content": {
                     "type": "string",
                     "maxLength": _EVENT_CONTENT_MAX,
                     "description": (
-                        "Contenido completo indexable. Si se omite, se usa el payload "
-                        "serializado como fallback. Las entradas enormes se recortan."
+                        "Полный индексируемый текст. Если не указан, как fallback используется "
+                        "сериализованный payload. Слишком большие записи обрезаются."
                     ),
                 },
                 "iteration_id": {
                     "type": "integer",
                     "description": (
-                        "ID de la iteracion. Si se omite, se usa la activa."
+                        "ID итерации. Если не указан, используется активная."
                     ),
                 },
             },
@@ -472,22 +472,22 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_get_decisions",
         "description": (
-            "Lista las decisiones de diseno registradas en la memoria. "
-            "Se pueden filtrar por iteracion. Util para el Bibliotecario "
-            "y para generar informes de decisiones."
+            "Возвращает список проектных решений из памяти. "
+            "Можно фильтровать по итерации. Подходит для Библиотекаря "
+            "и для отчётов по решениям."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "iteration_id": {
                     "type": "integer",
-                    "description": "Filtrar decisiones por ID de iteracion.",
+                    "description": "Фильтр решений по ID итерации.",
                 },
                 "limit": {
                     "type": "integer",
                     "description": (
-                        "Numero maximo de decisiones "
-                        f"(por defecto {_DECISIONS_LIMIT_DEFAULT}, maximo {_DECISIONS_LIMIT_MAX})."
+                        "Максимальное число решений "
+                        f"(по умолчанию {_DECISIONS_LIMIT_DEFAULT}, максимум {_DECISIONS_LIMIT_MAX})."
                     ),
                     "default": _DECISIONS_LIMIT_DEFAULT,
                     "minimum": 1,
@@ -496,12 +496,12 @@ _TOOLS: List[Dict[str, Any]] = [
                 "tags": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Filtrar decisiones por etiquetas.",
+                    "description": "Фильтр решений по меткам.",
                 },
                 "status": {
                     "type": "string",
                     "enum": ["active", "superseded", "deprecated"],
-                    "description": "Filtrar decisiones por estado.",
+                    "description": "Фильтр решений по статусу.",
                 },
             },
             "required": [],
@@ -510,9 +510,9 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_purge",
         "description": (
-            "Elimina eventos antiguos de la memoria. Las decisiones e "
-            "iteraciones se conservan siempre; solo se purgan eventos "
-            "anteriores a la ventana de retencion indicada."
+            "Удаляет старые события из памяти. Решения и итерации "
+            "сохраняются всегда: удаляются только события старше "
+            "указанного срока хранения."
         ),
         "inputSchema": {
             "type": "object",
@@ -520,7 +520,7 @@ _TOOLS: List[Dict[str, Any]] = [
                 "retention_days": {
                     "type": "integer",
                     "description": (
-                        "Dias de retencion. Los eventos mas antiguos se eliminan."
+                        "Срок хранения в днях. Более старые события удаляются."
                     ),
                 },
             },
@@ -530,26 +530,26 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_update_decision",
         "description": (
-            "Actualiza el estado o las etiquetas de una decision existente. "
-            "Permite marcar decisiones como superseded o deprecated, y "
-            "anadir etiquetas para clasificarlas."
+            "Обновляет статус или метки существующего решения. "
+            "Позволяет пометить решение как superseded или deprecated и "
+            "добавить метки для классификации."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "id": {
                     "type": "integer",
-                    "description": "ID de la decision a actualizar.",
+                    "description": "ID решения, которое нужно обновить.",
                 },
                 "status": {
                     "type": "string",
                     "enum": ["active", "superseded", "deprecated"],
-                    "description": "Nuevo estado de la decision.",
+                    "description": "Новый статус решения.",
                 },
                 "tags": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Etiquetas a anadir a la decision.",
+                    "description": "Метки, которые нужно добавить к решению.",
                 },
             },
             "required": ["id"],
@@ -558,25 +558,25 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_link_decisions",
         "description": (
-            "Crea una relacion entre dos decisiones. Permite documentar "
-            "que una decision sustituye, depende, contradice o se "
-            "relaciona con otra."
+            "Создаёт связь между двумя решениями. Позволяет зафиксировать, "
+            "что одно решение заменяет другое, зависит от него, противоречит ему "
+            "или связано с ним."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "source_id": {
                     "type": "integer",
-                    "description": "ID de la decision origen.",
+                    "description": "ID исходного решения.",
                 },
                 "target_id": {
                     "type": "integer",
-                    "description": "ID de la decision destino.",
+                    "description": "ID целевого решения.",
                 },
                 "link_type": {
                     "type": "string",
                     "enum": ["supersedes", "depends_on", "contradicts", "relates"],
-                    "description": "Tipo de relacion.",
+                    "description": "Тип связи.",
                 },
             },
             "required": ["source_id", "target_id", "link_type"],
@@ -585,9 +585,9 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_health",
         "description": (
-            "Valida la integridad de la base de datos de memoria. "
-            "Comprueba version del esquema, sincronizacion FTS5, "
-            "permisos del fichero y tamano de la BD."
+            "Проверяет целостность базы данных памяти: "
+            "версию схемы, синхронизацию FTS5, "
+            "права на файл и размер БД."
         ),
         "inputSchema": {
             "type": "object",
@@ -598,9 +598,9 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_export",
         "description": (
-            "Exporta las decisiones del proyecto a un fichero Markdown "
-            "con formato ADR-like. Incluye fecha, estado, etiquetas, "
-            "contexto, decision, alternativas y justificacion."
+            "Экспортирует решения проекта в Markdown-файл "
+            "в формате, похожем на ADR. Включает дату, статус, метки, "
+            "контекст, решение, альтернативы и обоснование."
         ),
         "inputSchema": {
             "type": "object",
@@ -608,15 +608,15 @@ _TOOLS: List[Dict[str, Any]] = [
                 "format": {
                     "type": "string",
                     "enum": ["markdown"],
-                    "description": "Formato de exportacion (por ahora solo markdown).",
+                    "description": "Формат экспорта (пока только markdown).",
                 },
                 "path": {
                     "type": "string",
-                    "description": "Ruta del fichero de salida. Por defecto DECISIONS.md.",
+                    "description": "Путь к выходному файлу. По умолчанию DECISIONS.md.",
                 },
                 "iteration_id": {
                     "type": "integer",
-                    "description": "Exportar solo decisiones de esta iteracion.",
+                    "description": "Экспортировать только решения этой итерации.",
                 },
             },
             "required": ["format"],
@@ -625,8 +625,8 @@ _TOOLS: List[Dict[str, Any]] = [
     {
         "name": "memory_import",
         "description": (
-            "Importa datos en la memoria desde fuentes externas: "
-            "historial de Git (commits) o ficheros ADR (decisiones)."
+            "Импортирует данные в память из внешних источников: "
+            "история Git (commits) или файлы ADR (решения)."
         ),
         "inputSchema": {
             "type": "object",
@@ -634,17 +634,17 @@ _TOOLS: List[Dict[str, Any]] = [
                 "source": {
                     "type": "string",
                     "enum": ["git", "adr"],
-                    "description": "Fuente de importacion.",
+                    "description": "Источник импорта.",
                 },
                 "path": {
                     "type": "string",
-                    "description": "Ruta del repositorio Git o directorio de ADRs.",
+                    "description": "Путь к Git-репозиторию или каталогу с ADR.",
                 },
                 "limit": {
                     "type": "integer",
                     "description": (
-                        "Numero maximo de registros a importar (para git; "
-                        f"por defecto {_GIT_IMPORT_LIMIT_DEFAULT}, maximo {_GIT_IMPORT_LIMIT_MAX})."
+                        "Максимальное число записей для импорта (для git; "
+                        f"по умолчанию {_GIT_IMPORT_LIMIT_DEFAULT}, максимум {_GIT_IMPORT_LIMIT_MAX})."
                     ),
                     "default": _GIT_IMPORT_LIMIT_DEFAULT,
                     "minimum": 1,
@@ -720,20 +720,20 @@ def _read_message() -> Optional[Dict[str, Any]]:
                 content_length = int(line_str.split(":", 1)[1].strip())
             except (ValueError, IndexError) as exc:
                 raise ValueError(
-                    f"Encabezado Content-Length malformado: {line_str!r}"
+                    f"Некорректный заголовок Content-Length: {line_str!r}"
                 ) from exc
 
         # Ignorar otros encabezados (ej. Content-Type)
 
     if content_length is None:
         preview = first_line.decode("utf-8", errors="replace").strip()
-        raise ValueError(f"Mensaje MCP malformado: {preview!r}")
+        raise ValueError(f"Некорректное MCP-сообщение: {preview!r}")
 
     # Leer el cuerpo exacto
     body = sys.stdin.buffer.read(content_length)
     if len(body) < content_length:
         _log.warning(
-            "Cuerpo truncado: esperados %d bytes, recibidos %d",
+            "Тело обрезано: ожидалось %d байт, получено %d",
             content_length,
             len(body),
         )
@@ -877,13 +877,13 @@ class MemoryMCPServer:
         if self._db is not None:
             return self._db
 
-        _log.info("Abriendo base de datos en: %s", self._db_path)
+        _log.info("Открываю базу данных: %s", self._db_path)
         try:
             self._db = MemoryDB(self._db_path)
         except Exception as exc:
-            _log.error("Error al abrir la base de datos: %s", exc)
+            _log.error("Ошибка при открытии базы данных: %s", exc)
             raise RuntimeError(
-                f"No se pudo abrir la base de datos: {exc}"
+                f"Не удалось открыть базу данных: {exc}"
             ) from exc
 
         # Purgar eventos antiguos si procede
@@ -892,12 +892,12 @@ class MemoryMCPServer:
                 purged = self._db.purge_old_events(self._retention_days)
                 if purged > 0:
                     _log.info(
-                        "Purgados %d eventos con mas de %d dias",
+                        "Удалено %d событий старше %d дней",
                         purged,
                         self._retention_days,
                     )
             except Exception as exc:
-                _log.warning("Error en purga de eventos: %s", exc)
+                _log.warning("Ошибка при очистке событий: %s", exc)
 
         return self._db
 
@@ -932,7 +932,7 @@ class MemoryMCPServer:
                     raise ValueError
             except ValueError as exc:
                 raise ValueError(
-                    "La ruta debe estar dentro del proyecto actual."
+                    "Путь должен быть внутри текущего проекта."
                 ) from exc
 
         return candidate_real
@@ -949,7 +949,7 @@ class MemoryMCPServer:
         caso, el servidor solo expone herramientas (``tools``).
         """
         self._initialized = True
-        _log.info("Inicializacion solicitada por el cliente")
+        _log.info("Клиент запросил инициализацию")
         protocol_version = str(params.get("protocolVersion") or "2025-06-18")
         return _make_response(request_id, {
             "protocolVersion": protocol_version,
@@ -971,7 +971,7 @@ class MemoryMCPServer:
         Cada herramienta incluye su nombre, descripcion y el JSON Schema
         de sus parametros de entrada.
         """
-        _log.debug("Listado de herramientas solicitado")
+        _log.debug("Запрошен список инструментов")
         return _make_response(request_id, {"tools": _TOOLS})
 
     def _handle_tools_call(
@@ -995,14 +995,14 @@ class MemoryMCPServer:
         tool_name: str = params.get("name", "")
         arguments: Dict[str, Any] = params.get("arguments", {})
 
-        _log.info("Invocacion de herramienta: %s", tool_name)
-        _log.debug("Argumentos: %s", arguments)
+        _log.info("Вызов инструмента: %s", tool_name)
+        _log.debug("Аргументы: %s", arguments)
 
         if tool_name not in _TOOL_NAMES:
             return _make_error(
                 request_id,
                 -32602,
-                f"Herramienta desconocida: {tool_name}",
+                f"Неизвестный инструмент: {tool_name}",
             )
 
         # Abrir la DB si aun no esta abierta
@@ -1023,7 +1023,7 @@ class MemoryMCPServer:
             return _make_error(
                 request_id,
                 -32603,
-                f"Handler no implementado para: {tool_name}",
+                f"Handler не реализован для: {tool_name}",
             )
 
         try:
@@ -1044,7 +1044,7 @@ class MemoryMCPServer:
             })
         except Exception as exc:
             _log.error(
-                "Error ejecutando %s: %s\n%s",
+                "Ошибка при выполнении %s: %s\n%s",
                 tool_name,
                 exc,
                 traceback.format_exc(),
@@ -1052,7 +1052,7 @@ class MemoryMCPServer:
             return _make_error(
                 request_id,
                 -32603,
-                f"Error en {tool_name}: {exc}",
+                f"Ошибка в {tool_name}: {exc}",
             )
 
     # --- Implementacion de cada herramienta --------------------------------
@@ -1086,7 +1086,7 @@ class MemoryMCPServer:
         status: Optional[str] = args.get("status")
 
         if not query.strip():
-            return {"results": [], "message": "La consulta esta vacia."}
+            return {"results": [], "message": "Запрос пустой."}
 
         results = db.search(
             query,
@@ -1131,7 +1131,7 @@ class MemoryMCPServer:
         chosen: str = args.get("chosen", "")
 
         if not title or not chosen:
-            return {"error": "Los campos 'title' y 'chosen' son obligatorios."}
+            return {"error": "Поля 'title' и 'chosen' обязательны."}
 
         decision_id = db.log_decision(
             title=title,
@@ -1148,15 +1148,15 @@ class MemoryMCPServer:
             return {
                 "decision_id": None,
                 "message": (
-                    "La captura automatica de decisiones esta desactivada "
-                    "en la configuracion del proyecto."
+                    "Автоматический захват решений отключён "
+                    "в конфигурации проекта."
                 ),
                 "skipped": True,
             }
 
         return {
             "decision_id": decision_id,
-            "message": f"Decision registrada con ID {decision_id}.",
+            "message": f"Решение записано с ID {decision_id}.",
         }
 
     def _call_memory_log_commit(
@@ -1181,14 +1181,14 @@ class MemoryMCPServer:
         sha: str = args.get("sha", "")
 
         if not sha:
-            return {"error": "El campo 'sha' es obligatorio."}
+            return {"error": "Поле 'sha' обязательно."}
 
         if not self._memory_config().get("capture_commits", True):
             return {
                 "commit_id": None,
                 "message": (
-                    "La captura automatica de commits esta desactivada "
-                    "en la configuracion del proyecto."
+                    "Автоматический захват commits отключён "
+                    "в конфигурации проекта."
                 ),
                 "skipped": True,
             }
@@ -1213,7 +1213,7 @@ class MemoryMCPServer:
                     linked.append(did)
                 except Exception as exc:
                     _log.warning(
-                        "No se pudo vincular commit %d con decision %d: %s",
+                        "Не удалось привязать commit %d к решению %d: %s",
                         commit_id,
                         did,
                         exc,
@@ -1222,13 +1222,13 @@ class MemoryMCPServer:
         if commit_id is None:
             return {
                 "commit_id": None,
-                "message": f"El commit {sha[:8]} ya existia. Ignorado.",
+                "message": f"Commit {sha[:8]} уже есть. Пропущен.",
                 "duplicate": True,
             }
 
         return {
             "commit_id": commit_id,
-            "message": f"Commit {sha[:8]} registrado con ID {commit_id}.",
+            "message": f"Commit {sha[:8]} записан с ID {commit_id}.",
             "linked_decisions": linked,
         }
 
@@ -1264,7 +1264,7 @@ class MemoryMCPServer:
                     iteration = self._get_latest_iteration(db)
 
         if iteration is None:
-            return {"iteration": None, "message": "No hay iteraciones registradas."}
+            return {"iteration": None, "message": "Записанных итераций нет."}
 
         # La tool promete la iteracion completa; evitar techos silenciosos.
         decisions = list(db.iter_decisions(iteration_id=iteration["id"]))
@@ -1312,7 +1312,7 @@ class MemoryMCPServer:
         iteration_id: Optional[int] = args.get("iteration_id")
 
         if iteration_id is None:
-            return {"error": "El campo 'iteration_id' es obligatorio."}
+            return {"error": "Поле 'iteration_id' обязательно."}
 
         # La tool publica anuncia la cronologia completa. get_timeline() en
         # MemoryDB tiene un limite defensivo por defecto para usos generales,
@@ -1369,16 +1369,16 @@ class MemoryMCPServer:
         if action == "start":
             command: str = args.get("command", "")
             if not command:
-                return {"error": "El campo 'command' es obligatorio para action='start'."}
+                return {"error": "Поле 'command' обязательно для action='start'."}
 
             # Verificar que no hay iteracion activa
             active = db.get_active_iteration()
             if active is not None:
                 return {
                     "error": (
-                        f"Ya hay una iteracion activa (ID {active['id']}, "
-                        f"comando '{active.get('command', '?')}'). "
-                        f"Completala antes de iniciar una nueva."
+                        f"Активная итерация уже есть (ID {active['id']}, "
+                        f"команда '{active.get('command', '?')}'). "
+                        f"Заверши её, прежде чем запускать новую."
                     ),
                     "active_iteration": active,
                 }
@@ -1389,7 +1389,7 @@ class MemoryMCPServer:
             )
             return {
                 "iteration_id": iteration_id,
-                "message": f"Iteracion {iteration_id} iniciada para '{command}'.",
+                "message": f"Итерация {iteration_id} запущена для '{command}'.",
             }
 
         elif action == "complete":
@@ -1398,17 +1398,17 @@ class MemoryMCPServer:
             if iteration_id_param is None:
                 active = db.get_active_iteration()
                 if active is None:
-                    return {"error": "No hay iteracion activa para completar."}
+                    return {"error": "Нет активной итерации для завершения."}
                 iteration_id_param = active["id"]
 
             db.complete_iteration(iteration_id_param)
             return {
                 "iteration_id": iteration_id_param,
-                "message": f"Iteracion {iteration_id_param} completada.",
+                "message": f"Итерация {iteration_id_param} завершена.",
             }
 
         else:
-            return {"error": f"Accion desconocida: '{action}'. Usa 'start' o 'complete'."}
+            return {"error": f"Неизвестное действие: '{action}'. Используй 'start' или 'complete'."}
 
     def _call_memory_log_event(
         self, db: MemoryDB, args: Dict[str, Any]
@@ -1431,25 +1431,25 @@ class MemoryMCPServer:
         """
         event_type_value = args.get("event_type")
         if not isinstance(event_type_value, str) or not event_type_value.strip():
-            return {"error": "El campo 'event_type' es obligatorio."}
+            return {"error": "Поле 'event_type' обязательно."}
         event_type = event_type_value.strip()
         if len(event_type) > _EVENT_TYPE_MAX:
             return {
                 "error": (
-                    f"El campo 'event_type' no puede superar "
-                    f"{_EVENT_TYPE_MAX} caracteres."
+                    f"Поле 'event_type' не может быть длиннее "
+                    f"{_EVENT_TYPE_MAX} символов."
                 ),
             }
 
         phase_value = args.get("phase")
         if phase_value is not None and not isinstance(phase_value, str):
-            return {"error": "El campo 'phase' debe ser texto si se proporciona."}
+            return {"error": "Поле 'phase', если указано, должно быть текстом."}
         phase = phase_value.strip() if isinstance(phase_value, str) else None
         if phase and len(phase) > _EVENT_PHASE_MAX:
             return {
                 "error": (
-                    f"El campo 'phase' no puede superar "
-                    f"{_EVENT_PHASE_MAX} caracteres."
+                    f"Поле 'phase' не может быть длиннее "
+                    f"{_EVENT_PHASE_MAX} символов."
                 ),
             }
 
@@ -1459,8 +1459,8 @@ class MemoryMCPServer:
             if active is None:
                 return {
                     "error": (
-                        "No hay iteracion activa. Proporciona 'iteration_id' "
-                        "o inicia una iteracion con memory_manage_iteration."
+                        "Нет активной итерации. Укажи 'iteration_id' "
+                        "или запусти итерацию через memory_manage_iteration."
                     ),
                 }
             iteration_id = active["id"]
@@ -1524,7 +1524,7 @@ class MemoryMCPServer:
             "payload_truncated": payload_truncated,
             "summary_truncated": summary_truncated,
             "content_truncated": content_truncated,
-            "message": f"Evento '{event_type}' registrado con ID {event_id}.",
+            "message": f"Событие '{event_type}' записано с ID {event_id}.",
         }
 
     def _call_memory_get_decisions(
@@ -1593,8 +1593,8 @@ class MemoryMCPServer:
         if retention_days is None or retention_days < 1:
             return {
                 "error": (
-                    "El campo 'retention_days' es obligatorio y debe ser "
-                    "un entero positivo."
+                    "Поле 'retention_days' обязательно и должно быть "
+                    "положительным целым числом."
                 ),
             }
 
@@ -1603,8 +1603,8 @@ class MemoryMCPServer:
             "purged_events": purged,
             "retention_days": retention_days,
             "message": (
-                f"Eliminados {purged} eventos con mas de "
-                f"{retention_days} dias de antigueedad."
+                f"Удалено событий старше {retention_days} дней: "
+                f"{purged}."
             ),
         }
 
@@ -1628,7 +1628,7 @@ class MemoryMCPServer:
         decision_id: Optional[int] = args.get("id")
 
         if decision_id is None:
-            return {"error": "El campo 'id' es obligatorio."}
+            return {"error": "Поле 'id' обязательно."}
 
         new_status: Optional[str] = args.get("status")
         new_tags: Optional[List[str]] = args.get("tags")
@@ -1643,7 +1643,7 @@ class MemoryMCPServer:
             db.add_decision_tags(decision_id, new_tags)
 
         return {
-            "message": "Decision actualizada.",
+            "message": "Решение обновлено.",
             "id": decision_id,
         }
 
@@ -1672,8 +1672,8 @@ class MemoryMCPServer:
         if source_id is None or target_id is None or link_type is None:
             return {
                 "error": (
-                    "Los campos 'source_id', 'target_id' y 'link_type' "
-                    "son obligatorios."
+                    "Поля 'source_id', 'target_id' и 'link_type' "
+                    "обязательны."
                 ),
             }
 
@@ -1681,8 +1681,8 @@ class MemoryMCPServer:
 
         return {
             "message": (
-                f"Relacion '{link_type}' creada entre decision "
-                f"{source_id} y {target_id}."
+                f"Связь '{link_type}' создана между решениями "
+                f"{source_id} и {target_id}."
             ),
             "source_id": source_id,
             "target_id": target_id,
@@ -1734,8 +1734,8 @@ class MemoryMCPServer:
         if fmt != "markdown":
             return {
                 "error": (
-                    f"Formato no soportado: '{fmt}'. "
-                    "Solo se admite 'markdown'."
+                    f"Формат не поддерживается: '{fmt}'. "
+                    "Поддерживается только 'markdown'."
                 ),
             }
 
@@ -1794,8 +1794,8 @@ class MemoryMCPServer:
         else:
             return {
                 "error": (
-                    f"Fuente no soportada: '{source}'. "
-                    "Usa 'git' o 'adr'."
+                    f"Источник не поддерживается: '{source}'. "
+                    "Используй 'git' или 'adr'."
                 ),
             }
 
@@ -1845,8 +1845,8 @@ class MemoryMCPServer:
             from mcp.server.fastmcp import FastMCP
         except ImportError:
             _log.warning(
-                "Paquete 'mcp' no disponible. "
-                "Instala el SDK oficial (pip install mcp) o se usara el transporte propio."
+                "Пакет 'mcp' недоступен. "
+                "Установи официальный SDK (pip install mcp), иначе будет использован собственный транспорт."
             )
             return False
 
@@ -1868,7 +1868,7 @@ class MemoryMCPServer:
 
             mcp.tool(name=tool_name)(_bind(tool_name, handler, description))
 
-        _log.info("Servidor MCP alfred-memory iniciado con FastMCP")
+        _log.info("MCP-сервер alfred-memory запущен через FastMCP")
         _log.info("DB path: %s", self._db_path)
         try:
             mcp.run()
@@ -1885,7 +1885,7 @@ class MemoryMCPServer:
 
     def _run_legacy_stdio(self) -> None:
         """Transporte stdio propio (compatibilidad si falta el paquete mcp)."""
-        _log.info("Servidor MCP alfred-memory iniciado")
+        _log.info("MCP-сервер alfred-memory запущен")
         _log.info("DB path: %s", self._db_path)
 
         try:
@@ -1893,13 +1893,13 @@ class MemoryMCPServer:
                 try:
                     message = _read_message()
                 except ValueError as exc:
-                    _log.error("Error leyendo mensaje: %s", exc)
+                    _log.error("Ошибка чтения сообщения: %s", exc)
                     # Intentar enviar error de parse si es posible
                     _write_message(_make_error(None, -32700, str(exc)))
                     continue
                 except Exception as exc:
                     _log.error(
-                        "Error inesperado leyendo stdin: %s\n%s",
+                        "Непредвиденная ошибка чтения stdin: %s\n%s",
                         exc,
                         traceback.format_exc(),
                     )
@@ -1907,10 +1907,10 @@ class MemoryMCPServer:
 
                 # stdin cerrado: el proceso padre termino
                 if message is None:
-                    _log.info("Stdin cerrado. Terminando servidor.")
+                    _log.info("Stdin закрыт. Сервер завершает работу.")
                     break
 
-                _log.debug("Mensaje recibido: %s", json.dumps(message)[:200])
+                _log.debug("Получено сообщение: %s", json.dumps(message)[:200])
 
                 # Extraer campos del mensaje JSON-RPC
                 method: str = message.get("method", "")
@@ -1929,7 +1929,7 @@ class MemoryMCPServer:
                 elif method == "notifications/initialized":
                     # Notificacion de confirmacion del cliente. No requiere
                     # respuesta segun el protocolo.
-                    _log.info("Cliente confirma inicializacion")
+                    _log.info("Клиент подтвердил инициализацию")
 
                 elif method == "tools/list":
                     response = self._handle_tools_list(request_id, params)
@@ -1948,28 +1948,28 @@ class MemoryMCPServer:
                         response = _make_error(
                             request_id,
                             -32601,
-                            f"Metodo no soportado: {method}",
+                            f"Метод не поддерживается: {method}",
                         )
                     else:
                         _log.debug(
-                            "Notificacion ignorada: %s", method
+                            "Уведомление пропущено: %s", method
                         )
 
                 # Enviar respuesta solo si es una peticion (tiene id)
                 if response is not None and not is_notification:
                     _write_message(response)
                     _log.debug(
-                        "Respuesta enviada para id=%s", request_id
+                        "Ответ отправлен для id=%s", request_id
                     )
 
         except KeyboardInterrupt:
-            _log.info("Interrupcion recibida. Cerrando servidor.")
+            _log.info("Получено прерывание. Сервер завершает работу.")
         finally:
             if self._db is not None:
-                _log.info("Cerrando conexion con la base de datos")
+                _log.info("Закрываю соединение с базой данных")
                 self._db.close()
 
-        _log.info("Servidor MCP alfred-memory finalizado")
+        _log.info("MCP-сервер alfred-memory остановлен")
 
 
 # ---------------------------------------------------------------------------

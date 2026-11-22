@@ -217,7 +217,7 @@ class TestMCPTools(unittest.TestCase):
             )
 
             self.assertIn("error", result)
-            self.assertIn("dentro del proyecto", result["error"])
+            self.assertIn("внутри текущего проекта", result["error"])
             self.assertFalse(os.path.exists(outside_path))
         finally:
             shutil.rmtree(outside_dir, ignore_errors=True)
@@ -232,7 +232,7 @@ class TestMCPTools(unittest.TestCase):
             )
 
             self.assertIn("error", result)
-            self.assertIn("dentro del proyecto", result["error"])
+            self.assertIn("внутри текущего проекта", result["error"])
         finally:
             shutil.rmtree(outside_dir, ignore_errors=True)
 
@@ -316,7 +316,7 @@ class TestMCPTools(unittest.TestCase):
         timeline = self.db.get_timeline(iteration_id)
         event = timeline[0]
         self.assertLess(len(event["content"]), memory_server_module._EVENT_CONTENT_MAX + 1000)
-        self.assertIn("contenido recortado", event["content"])
+        self.assertIn("содержимое обрезано", event["content"])
 
         payload = json.loads(event["payload"])
         self.assertTrue(payload["_truncated"])
