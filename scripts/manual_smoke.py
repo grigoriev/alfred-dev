@@ -459,7 +459,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "cto-invalid-scope",
         "/alfred-dev:cto --scope bananas",
-        "Rejects an invalid scope with a clear message and does not start Codex CLI.",
+        "Rejects an invalid scope with a clear message and does not start Greptile CLI.",
         commands=("cto",),
         suite="public-option",
         option_keys=("cto:invalid-scope",),

@@ -526,7 +526,7 @@ memoria:
   retention_days: 365
 
 agentes_opcionales:
-  cto: false
+  cto: true
 ---
 ```
 

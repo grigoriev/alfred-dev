@@ -74,10 +74,10 @@ Gate проверки требует `evidence_file`, `evidence_sha256` и
 нужен `approved=true` от человека.
 
 Что не покрывает локальный контракт (остаётся проверкой человеком или
-реальным окружением): GitHub Sync через `gh`, SonarQube/Docker, CTO против Codex
+реальным окружением): GitHub Sync через `gh`, SonarQube/Docker, CTO против Greptile
 CLI. Внешний preflight (`npm run release:audit:external:preflight`,
 `scripts/external_live_smoke.py`) не создаёт issues, не запускает контейнеры и
-не делает вызовов Codex.
+не запускает `greptile review`.
 
 ---
 
@@ -101,7 +101,7 @@ CLI. Внешний preflight (`npm run release:audit:external:preflight`,
 ## Runbook для человека (критерии и блокировки)
 
 Проверяющий не утверждает, что запускал тесты, развёртывания, SonarQube, GitHub Sync,
-Docker или Codex, если нет подтверждения. Он просит решения человека. Он не одобряет
+Docker или Greptile, если нет подтверждения. Он просит решения человека. Он не одобряет
 сам себе UAT, развёртывания, безопасность и аудиты. Он не фильтрует секреты вручную:
 gate использует `core/secrets.py`.
 

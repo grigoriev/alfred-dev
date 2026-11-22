@@ -77,8 +77,10 @@ python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command fix --p
 
 ### Опциональные специалисты в `fix`
 
-Единственный опциональный это **cto**. Если он активен, работает последовательно в
-`validacion`. Не вызывай data-engineer, copywriter, github-manager и librarian.
+Единственный опциональный это **cto**, но в `fix` он не участвует: он проверяет
+только полностью готовую фичу. Если пользователь хочет внешнее ревью, предложи ему
+`/alfred-dev:cto` после коммита. Не вызывай data-engineer, copywriter, github-manager
+и librarian.
 
 ## Итеративный цикл
 

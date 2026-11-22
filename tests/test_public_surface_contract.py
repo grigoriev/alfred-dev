@@ -668,7 +668,7 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
             "## Отказ от ответственности",
         )
         self.assertIn("entrega: autonomo", readme_config)
-        self.assertIn("cto: false", readme_config)
+        self.assertIn("cto: true", readme_config)
         self.assertNotIn("seguridad: autonomo", readme_config)
         self.assertNotIn("devops: semi-autonomo", readme_config)
 
