@@ -1,1 +1,1 @@
-"""Motor core del plugin Alfred Dev."""
+"""Core engine of the Alfred Dev plugin."""

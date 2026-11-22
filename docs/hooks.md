@@ -1,29 +1,29 @@
-# Sistema de hooks
+# Система хуков
 
-Los hooks son la pieza que conecta Alfred Dev con el ciclo de vida de Claude Code. Claude Code emite eventos en momentos clave de la sesión --al arrancar, antes de usar una herramienta, despues de usarla, al intentar parar-- y permite que los plugins registren scripts que se ejecutan en respuesta a esos eventos. Es, en esencia, un sistema de observadores tipificados: cada hook se suscribe a un tipo de evento concreto, con un filtro opcional (matcher) que restringe sobre que herramientas actua, y Claude Code se encarga de invocarlo en el momento preciso.
+Хуки связывают Alfred Dev с жизненным циклом Claude Code. Claude Code генерирует события в ключевые моменты сессии --при запуске, перед использованием инструмента, после него, при попытке остановиться-- и позволяет плагинам регистрировать скрипты, которые выполняются в ответ на эти события. По сути это система типизированных наблюдателей: каждый хук подписан на конкретный тип события с необязательным фильтром (matcher), который ограничивает, на какие инструменты он действует, а Claude Code вызывает его в нужный момент.
 
-Para Alfred Dev, los hooks inyectan contexto al arrancar, bloquean secretos y comandos peligrosos, vigilan tests y evidencia, capturan memoria útil y cierran Memory UI al salir. No hay stop-hook Ralph ni hooks de ortografía o dependencias.
+В Alfred Dev хуки внедряют контекст при запуске, блокируют секреты и опасные команды, следят за тестами и доказательствами, сохраняют полезную память и закрывают Memory UI при выходе. Stop-хука Ralph и хуков орфографии или зависимостей нет.
 
 ---
 
-## Como funcionan los hooks en Claude Code
+## Как работают хуки в Claude Code
 
-El mecanismo de hooks de Claude Code sigue un modelo sencillo de registro, invocación y respuesta. Entender este modelo es imprescindible para comprender por que cada hook de Alfred esta disenado como lo esta.
+Механизм хуков в Claude Code следует простой модели: регистрация, вызов и ответ. Эту модель нужно понимать, чтобы понять, почему каждый хук Alfred устроен именно так.
 
-### Registro
+### Регистрация
 
-Los hooks se declaran en el fichero `hooks/hooks.json` del repositorio. Cada entrada asocia un evento del ciclo de vida con uno o mas scripts a ejecutar. La estructura básica es:
+Хуки объявляются в файле `hooks/hooks.json` репозитория. Каждая запись связывает событие жизненного цикла с одним или несколькими скриптами. Базовая структура:
 
 ```json
 {
   "hooks": {
-    "NombreDelEvento": [
+    "EventName": [
       {
-        "matcher": "regex_que_filtra_herramientas",
+        "matcher": "tool_filter_regex",
         "hooks": [
           {
             "type": "command",
-            "command": "ruta/al/script.sh",
+            "command": "path/to/script.sh",
             "timeout": 10,
             "async": false
           }
@@ -34,220 +34,220 @@ Los hooks se declaran en el fichero `hooks/hooks.json` del repositorio. Cada ent
 }
 ```
 
-El campo `matcher` solo debe usarse en eventos donde Claude Code lo soporta. En Alfred se usa para filtrar nombre de herramienta (`PreToolUse` y `PostToolUse`) o tipo de sesión (`SessionStart`). Si no se específica matcher, el hook se ejecuta para todas las invocaciones de ese evento. Esta distinción es importante: un hook de `PostToolUse` sin matcher se ejecutaria despues de cada operación de cualquier herramienta, lo que generaria un coste de rendimiento innecesario. En eventos como `UserPromptSubmit`, `Stop`, `PostToolBatch`, `TaskCreated`, `TaskCompleted`, `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `MessageDisplay` y `TeammateIdle`, Claude Code ignora `matcher`; `release:audit` falla si Alfred declara un matcher ahí para no crear una falsa sensación de filtrado. Este plugin no registra `Stop`, `UserPromptExpansion` ni `PreCompact`. Si se registrara `PreCompact`, el matcher `manual\|auto` omitido para cubrir ambos tipos de compactación. El campo `if` solo se evalua en eventos de herramientas (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest` y `PermissionDenied`); en cualquier otro evento no debe usarse porque el handler no se ejecutaria.
+Поле `matcher` используй только в событиях, где Claude Code его поддерживает. В Alfred оно фильтрует имя инструмента (`PreToolUse` и `PostToolUse`) или тип сессии (`SessionStart`). Если matcher не указан, хук выполняется при каждом вызове этого события. Это важно: хук `PostToolUse` без matcher выполнялся бы после каждой операции любого инструмента, а это лишняя нагрузка на производительность. В событиях `UserPromptSubmit`, `Stop`, `PostToolBatch`, `TaskCreated`, `TaskCompleted`, `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `MessageDisplay` и `TeammateIdle` Claude Code игнорирует `matcher`; `release:audit` падает, если Alfred объявляет там matcher, чтобы не создавать ложного ощущения фильтрации. Этот плагин не регистрирует `Stop`, `UserPromptExpansion` и `PreCompact`. Если зарегистрировать `PreCompact`, matcher `manual\|auto` опускается, чтобы покрыть оба типа сжатия. Поле `if` вычисляется только в событиях инструментов (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest` и `PermissionDenied`); в любом другом событии его не используй, потому что handler не выполнится.
 
-### Invocación
+### Вызов
 
-Cuando Claude Code emite un evento que coincide con un hook registrado, ejecuta el script indicado como un proceso externo. La información del evento se pasa por **stdin** en formato JSON. El contenido exacto del JSON varia segun el tipo de evento, pero tipicamente incluye:
+Когда Claude Code генерирует событие, совпадающее с зарегистрированным хуком, он запускает указанный скрипт как внешний процесс. Данные события передаются через **stdin** в формате JSON. Точное содержимое JSON зависит от типа события, но обычно включает:
 
-- `tool_name`: nombre de la herramienta que disparo el evento (Write, Edit, Bash, etc.).
-- `tool_input`: parámetros que Claude envio a la herramienta (ruta del fichero, contenido, comando...).
-- `tool_output`: resultado de la herramienta (solo disponible en `PostToolUse`).
+- `tool_name`: имя инструмента, который вызвал событие (Write, Edit, Bash и т. д.).
+- `tool_input`: параметры, которые Claude передал инструменту (путь к файлу, содержимое, команда...).
+- `tool_output`: результат инструмента (есть только в `PostToolUse`).
 
-### Respuesta
+### Ответ
 
-El script responde a traves de tres canales:
+Скрипт отвечает по трём каналам:
 
-| Canal | Propósito |
+| Канал | Назначение |
 |-------|-----------|
-| **stdout** | Respuesta estructurada (JSON). Claude Code lo interpreta segun el tipo de evento. En `SessionStart` y `PreCompact`, el campo `hookSpecificOutput.additionalContext` se inyecta como contexto de la conversacion. El JSON debe incluir `hookSpecificOutput.hookEventName`. En `Stop`, un objeto con `"decision": "block"` impide que Claude se detenga. Cuando el aviso debe ser estructurado para el usuario, el JSON puede incluir `systemMessage`. |
-| **stderr** | Mensajes breves de diagnostico o aviso. Claude Code los muestra segun el evento; Alfred lo mantiene para avisos informativos de quality-gate y lecturas sensibles. |
-| **Exit code** | `0` indica operación permitida, `2` indica bloqueo (solo relevante en `PreToolUse`). Cualquier otro código no cero se trata como error del hook y se ignora. |
+| **stdout** | Структурированный ответ (JSON). Claude Code интерпретирует его в зависимости от типа события. В `SessionStart` и `PreCompact` поле `hookSpecificOutput.additionalContext` внедряется как контекст разговора. JSON должен включать `hookSpecificOutput.hookEventName`. В `Stop` объект с `"decision": "block"` не даёт Claude остановиться. Если предупреждение для пользователя должно быть структурированным, JSON может включать `systemMessage`. |
+| **stderr** | Короткие диагностические сообщения или предупреждения. Claude Code показывает их в зависимости от события; Alfred использует этот канал для информационных предупреждений quality-gate и чтения чувствительных файлов. |
+| **Exit code** | `0` означает, что операция разрешена, `2` означает блокировку (имеет смысл только в `PreToolUse`). Любой другой ненулевой код считается ошибкой хука и игнорируется. |
 
-### Modos de ejecución
+### Режимы выполнения
 
-Los hooks pueden ser **sincronos** o **asincronos**. En modo síncrono (por defecto), Claude Code espera a que el script termine antes de continuar. Esto es imprescindible para hooks que necesitan bloquear una operación, como `secret-guard.py`. En modo asíncrono (`"async": true`), Claude Code lanza el script y continua sin esperar el resultado, lo que es apropiado para hooks de inyección de contexto como `session-start.sh`.
+Хуки бывают **синхронными** и **асинхронными**. В синхронном режиме (по умолчанию) Claude Code ждёт завершения скрипта, прежде чем продолжить. Это обязательно для хуков, которые должны блокировать операцию, например `secret-guard.py`. В асинхронном режиме (`"async": true`) Claude Code запускает скрипт и продолжает работу, не дожидаясь результата. Это подходит для хуков внедрения контекста, таких как `session-start.sh`.
 
-Cada hook tiene un **timeout configurable** en segundos. Si el script no termina dentro del plazo, Claude Code lo mata y continua como si no existiera. Este mecanismo protege contra scripts colgados que podrian bloquear la sesión indefinidamente.
+У каждого хука есть **настраиваемый timeout** в секундах. Если скрипт не завершился за это время, Claude Code его убивает и продолжает так, будто хука нет. Этот механизм защищает от зависших скриптов, которые могли бы блокировать сессию бесконечно.
 
 ---
 
-## Los hooks de Alfred Dev 0.7.0
+## Хуки Alfred Dev 0.7.0
 
-Alfred Dev registra diez scripts visibles en `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse` y `PostToolUse`. No hay stop-hook Ralph ni hooks de compactación o ortografía. Cada hook tiene una responsabilidad única y falla de forma segura: exit 0 salvo los bloqueos de secretos y comandos peligrosos.
+Alfred Dev регистрирует десять видимых скриптов в `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse` и `PostToolUse`. Stop-хука Ralph и хуков сжатия или орфографии нет. У каждого хука одна ответственность, и он безопасно обрабатывает сбои: exit 0, кроме блокировки секретов и опасных команд.
 
 ### session-bootstrap.sh
 
-**Evento:** `SessionStart` -- **Matcher:** `startup|resume|clear|compact` -- **Timeout:** 10 s -- **Asíncrono:** no
+**Событие:** `SessionStart` -- **Matcher:** `startup|resume|clear|compact` -- **Timeout:** 10 с -- **Асинхронный:** нет
 
-Este hook ligero existe para eliminar una carrera del primer arranque en Claude Code CLI. Su misión es puramente operativa: preparar el proyecto antes de que Claude procese el primer prompt. Hace cinco cosas, todas idempotentes y locales al repo:
+Этот лёгкий хук устраняет гонку при первом запуске в Claude Code CLI. Его задача чисто операционная: подготовить проект до того, как Claude обработает первый промпт. Он делает пять вещей, все идемпотентные и локальные для репозитория:
 
-1. crea o corrige `.claude/alfred-dev.local.md` con autonomía CLI-first y memoria activada;
-2. crea `.claude/alfred-memory.db` si aún no existe;
-3. genera `.claude/settings.local.json` y `.claude/settings.json` con la allowlist mínima para los comandos helper-first;
-4. crea el wrapper local `.claude/alfred-continuity.py`;
-5. asegura una iteración `session` activa en la SQLite del proyecto.
+1. создаёт или исправляет `.claude/alfred-dev.local.md` с автономностью CLI-first и включённой памятью;
+2. создаёт `.claude/alfred-memory.db`, если его ещё нет;
+3. генерирует `.claude/settings.local.json` и `.claude/settings.json` с минимальным allowlist для команд helper-first;
+4. создаёт локальный wrapper `.claude/alfred-continuity.py`;
+5. обеспечивает активную итерацию `session` в SQLite проекта.
 
-El wrapper vive en el proyecto para que Claude Code pueda ejecutar helpers con
-una regla Bash local y acotada, pero no confia solo en una ruta absoluta de
-cache: primero usa `CLAUDE_PLUGIN_ROOT` si está disponible, luego el fallback
-embebido y, si esa instalación ya fue rotada, busca la cache activa de
-`alfred-dev`.
+Wrapper лежит в проекте, чтобы Claude Code мог запускать helpers через
+локальное и ограниченное правило Bash. При этом он не полагается только на
+абсолютный путь к кешу: сначала использует `CLAUDE_PLUGIN_ROOT`, если он
+доступен, затем встроенный fallback, а если эта установка уже заменена, ищет
+активный кеш `alfred-dev`.
 
-No inyecta contexto adicional en Claude ni hace llamadas de red. Precisamente por eso es síncrono: tiene que terminar antes de que el primer slash command dependa de esos artefactos.
+Хук не внедряет дополнительный контекст в Claude и не делает сетевых вызовов. Именно поэтому он синхронный: он должен завершиться до того, как первая slash-команда начнёт зависеть от этих артефактов.
 
 ### prompt-route.py
 
-**Evento:** `UserPromptSubmit` -- **Matcher:** ninguno -- **Timeout:** 5 s -- **Asíncrono:** no
+**Событие:** `UserPromptSubmit` -- **Matcher:** нет -- **Timeout:** 5 с -- **Асинхронный:** нет
 
-Si el usuario escribe en castellano sin slash, clasifica la petición
-(`fix`, `quick`, `retomar`, `ship`…) e inyecta `additionalContext` para
-que Claude actúe como ese comando. Si ya hay `/alfred-dev:` o no hay
-señal, no dice nada. Fail-open.
+Если пользователь пишет обычным текстом без slash, хук классифицирует запрос
+(`fix`, `quick`, `retomar`, `ship`…) и внедряет `additionalContext`, чтобы
+Claude действовал как эта команда. Если `/alfred-dev:` уже есть или сигнала
+нет, хук ничего не говорит. Fail-open.
 
 ### session-end.py
 
-**Evento:** `SessionEnd` -- **Asíncrono:** si
+**Событие:** `SessionEnd` -- **Асинхронный:** да
 
-Detiene Memory UI y, si hubo sesión o evidencia de tests, escribe
-`.claude/alfred-last-cierre.md` con el bloque pegable. No inventa trabajo.
+Останавливает Memory UI и, если была сессия или доказательства тестов, пишет
+`.claude/alfred-last-cierre.md` с блоком для вставки. Работу не выдумывает.
 
 ### session-start.sh
 
-**Evento:** `SessionStart` -- **Matcher:** `startup|resume|clear|compact` -- **Asíncrono:** si
+**Событие:** `SessionStart` -- **Matcher:** `startup|resume|clear|compact` -- **Асинхронный:** да
 
-Se ejecuta justo despues del bootstrap. Inyecta el protocolo de hablar sin
-slash y un briefing de tres lineas: sesion/handoff/UAT, ultima decision y
-ADRs aceptados. Si el helper falla, usa un fallback corto.
+Выполняется сразу после bootstrap. Внедряет протокол общения без slash и
+briefing из трёх строк: сессия/handoff/UAT, последнее решение и принятые ADR.
+Если helper падает, использует короткий fallback.
 
-El briefing se construye en `core/session_brief.py` (estado, handoff, UAT,
-memoria y ADRs). No llama a GitHub. Las quality gates verificables con evidencia
-siguen en los flujos, no en este hook.
+Briefing собирается в `core/session_brief.py` (состояние, handoff, UAT,
+память и ADR). GitHub не вызывается. Quality gates, проверяемые по подтверждению,
+остаются в процессах, а не в этом хуке.
 
-La salida es un JSON con la clave `hookSpecificOutput.additionalContext` que Claude Code inyecta como contexto del sistema.
+На выходе JSON с ключом `hookSpecificOutput.additionalContext`, который Claude Code внедряет как системный контекст.
 
 ### secret-guard.py
 
-**Evento:** `PreToolUse` -- **Matcher:** `Write|Edit|Bash|mcp__.*` -- **Timeout:** 5 s
+**Событие:** `PreToolUse` -- **Matcher:** `Write|Edit|Bash|mcp__.*` -- **Timeout:** 5 с
 
-Este es el hook que bloquea escrituras de secretos. Se ejecuta **antes** de Write, Edit, Bash o una tool MCP de escritura, analiza el contenido y, si detecta un patron de secreto, impide la operación con exit code 2.
+Этот хук блокирует запись секретов. Он выполняется **до** Write, Edit, Bash или пишущего MCP tool, анализирует содержимое и, если находит шаблон секрета, запрещает операцию с exit code 2.
 
-La politica de este hook es **fail-closed**: si el script no puede parsear la entrada de stdin o no puede cargar la fuente canónica de patrones (`core/secrets.py`), bloquea por precaucion. Esta decisión es deliberada: es preferible un falso positivo que obliga a reintentar a un falso negativo que deja un secreto expuesto en el repositorio.
+Политика этого хука **fail-closed**: если скрипт не может разобрать вход из stdin или загрузить канонический источник шаблонов (`core/secrets.py`), он блокирует операцию из осторожности. Это осознанное решение: ложное срабатывание, из-за которого нужно повторить попытку, лучше пропуска, который оставляет секрет открытым в репозитории.
 
-El script detecta 12 familias de patrones de secretos, mas un patron genérico de asignación de credenciales:
+Скрипт находит 12 семейств шаблонов секретов и общий шаблон присваивания учётных данных:
 
-| Patron | Descripción |
+| Шаблон | Описание |
 |--------|-------------|
 | `AKIA[0-9A-Z]{16}` | AWS Access Key |
-| `sk-[a-zA-Z0-9]{20,}` | Clave API con prefijo sk- (OpenAI, Stripe u otros) |
+| `sk-[a-zA-Z0-9]{20,}` | API-ключ с префиксом sk- (OpenAI, Stripe и другие) |
 | `sk-ant-[a-zA-Z0-9\-]{20,}` | Anthropic API Key |
 | `ghp_[a-zA-Z0-9]{36}` / `github_pat_...` | GitHub Personal Access Token |
 | `xox[bpsa]-...` | Slack Token |
 | `AIza[0-9A-Za-z\-_]{35}` | Google API Key |
 | `SG\.xxx.xxx` | SendGrid API Key |
-| `-----BEGIN ... PRIVATE KEY-----` | Clave privada PEM/SSH |
-| `eyJ...` (tres segmentos base64) | JWT token hardcodeado |
-| `mysql://...@`, `postgresql://...@`, etc. | Connection string con credenciales |
+| `-----BEGIN ... PRIVATE KEY-----` | Приватный ключ PEM/SSH |
+| `eyJ...` (три сегмента base64) | Захардкоженный JWT token |
+| `mysql://...@`, `postgresql://...@` и т. д. | Connection string с учётными данными |
 | `hooks.slack.com/services/...` | Slack Webhook URL |
 | `discord.com/api/webhooks/...` | Discord Webhook URL |
-| Asignación directa (`password = "..."`, etc.) | Credencial hardcodeada en código |
+| Прямое присваивание (`password = "..."` и т. д.) | Захардкоженные учётные данные в коде |
 
-Los ficheros de entorno reales se excluyen del análisis porque son el lugar legitimo para guardar secretos. La exclusion cubre `.env`, `.env.local`, `local.env` y variantes reales de `.env.*`, pero **no** plantillas como `.env.example`, `.env.sample`, `.env.template` o `.env.dist`, que se suelen versionar y por tanto no deben contener secretos reales.
+Реальные файлы окружения исключены из анализа, потому что это законное место для секретов. Исключение покрывает `.env`, `.env.local`, `local.env` и реальные варианты `.env.*`, но **не** шаблоны вроде `.env.example`, `.env.sample`, `.env.template` или `.env.dist`: их обычно версионируют, поэтому в них не должно быть реальных секретов.
 
-Cuando el hook bloquea, emite un mensaje en la voz de "El Paranoico" que explica que patron se detecto, por que no se debe hardcodear secretos y donde deberian ir (fichero `.env`, variables de entorno, gestor de secretos).
+Когда хук блокирует операцию, он выводит сообщение голосом «Параноика»: какой шаблон найден, почему секреты нельзя хардкодить и где их хранить (файл `.env`, переменные окружения, менеджер секретов).
 
 ### dangerous-command-guard.py
 
-**Evento:** `PreToolUse` -- **Matcher:** `Bash` -- **Timeout:** 5 s
+**Событие:** `PreToolUse` -- **Matcher:** `Bash` -- **Timeout:** 5 с
 
-Este hook actua como segunda linea de defensa contra comandos destructivos. Se ejecuta antes de cada invocación de Bash, analiza el comando y lo bloquea (exit 2) si coincide con un patron potencialmente catastrofico.
+Этот хук работает как вторая линия защиты от разрушительных команд. Он выполняется перед каждым вызовом Bash, анализирует команду и блокирует её (exit 2), если она совпадает с потенциально катастрофическим шаблоном.
 
-Ademas, desde `0.4.5` autoaprueba una allowlist muy estrecha de helpers
-deterministas locales de Alfred (`python3 .claude/alfred-continuity.py ...`)
-para que los comandos helper-first puedan arrancar en headless sin pedir
-permiso manual en su primer uso.
+Кроме того, с `0.4.5` он автоматически одобряет очень узкий allowlist локальных
+детерминированных helpers Alfred (`python3 .claude/alfred-continuity.py ...`),
+чтобы команды helper-first могли запускаться в headless без ручного запроса
+разрешения при первом использовании.
 
-A diferencia de los hooks informativos, la politica de este hook es **fail-closed**: si no puede parsear la entrada, bloquea por precaucion. La razon es la misma que en `secret-guard.py`: un guard de seguridad que falla en abierto deja la puerta abierta justo en el peor momento.
+В отличие от информационных хуков, политика этого хука **fail-closed**: если он не может разобрать вход, он блокирует операцию из осторожности. Причина та же, что и у `secret-guard.py`: guard безопасности, который при сбое пропускает всё, открывает дверь в самый неудачный момент.
 
-El hook vigila 10 familias de patrones peligrosos:
+Хук следит за 10 семействами опасных шаблонов:
 
-| Patron | Descripción |
+| Шаблон | Описание |
 |--------|-------------|
-| `rm -rf /` (o `~`, `$HOME`, `/usr`, etc.) | Borrado catastrofico del sistema, home o directorios de sistema. Cubre flags juntas (`-rf`), separadas (`-r -f`) y con `sudo`. |
-| `git push --force main/master` | Force push a rama protegida con riesgo de perdida de historial. |
-| `git push --force` (sin rama) | Force push sin rama explícita: avisa de que puede afectar a main/master. |
-| `DROP DATABASE/TABLE/SCHEMA` | Destruccion de datos en base de datos (case-insensitive). |
-| `docker system prune -af` | Eliminacion de todos los datos de contenedores, volumenes e imagenes. |
-| `chmod -R 777 /` | Permisos inseguros sobre directorio raiz. |
-| `:(){ :\|:& };:` | Fork bomb: denegación de servicio local. |
-| `mkfs.* /dev/*` | Formateo de disco sobre dispositivo de bloque. |
-| `dd of=/dev/sd*` | Escritura directa a dispositivo de bloque con dd. |
-| `git reset --hard origin/main` | Descarta todos los cambios locales contra la rama remota. |
+| `rm -rf /` (или `~`, `$HOME`, `/usr` и т. д.) | Катастрофическое удаление системы, домашнего каталога или системных каталогов. Покрывает слитные флаги (`-rf`), раздельные (`-r -f`) и с `sudo`. |
+| `git push --force main/master` | Force push в защищённую ветку с риском потери истории. |
+| `git push --force` (без ветки) | Force push без явной ветки: предупреждает, что это может затронуть main/master. |
+| `DROP DATABASE/TABLE/SCHEMA` | Уничтожение данных в базе данных (без учёта регистра). |
+| `docker system prune -af` | Удаление всех данных контейнеров, томов и образов. |
+| `chmod -R 777 /` | Небезопасные права на корневой каталог. |
+| `:(){ :\|:& };:` | Fork bomb: локальный отказ в обслуживании. |
+| `mkfs.* /dev/*` | Форматирование диска на блочном устройстве. |
+| `dd of=/dev/sd*` | Прямая запись на блочное устройство через dd. |
+| `git reset --hard origin/main` | Отбрасывает все локальные изменения относительно удалённой ветки. |
 
-El mensaje de bloqueo incluye el comando truncado (200 caracteres), la descripción del riesgo y la sugerencia de ejecutar el comando manualmente si es realmente necesario.
+Сообщение о блокировке включает обрезанную команду (200 символов), описание риска и совет выполнить команду вручную, если она действительно нужна.
 
 ### sensitive-read-guard.py
 
-**Evento:** `PreToolUse` -- **Matcher:** `Read` -- **Timeout:** 5 s
+**Событие:** `PreToolUse` -- **Matcher:** `Read` -- **Timeout:** 5 с
 
-Este hook emite un aviso informativo cuando Claude intenta leer un fichero que puede contener credenciales o claves privadas. A diferencia de los otros hooks de seguridad, no bloquea la operación: su propósito es alertar al agente para que tenga cuidado de no filtrar el contenido en respuestas, commits o artefactos generados.
+Этот хук выводит информационное предупреждение, когда Claude пытается прочитать файл, который может содержать учётные данные или приватные ключи. В отличие от других хуков безопасности, он не блокирует операцию: его задача предупредить агента, чтобы тот не раскрыл содержимое в ответах, коммитах или сгенерированных артефактах.
 
-El hook reconoce dos tipos de patrones:
+Хук распознаёт два типа шаблонов:
 
-**Por nombre base del fichero:** variables de entorno (`.env`, `.env.*`), claves privadas (`.pem`, `.key`, `.p12`, `.pfx`), claves SSH (`id_rsa`, `id_ed25519`, `id_ecdsa`), credenciales de servicios (`credentials.json`, `service-account.json`, `service-account.*.json`, `firebase-adminsdk*.json`, `.npmrc`, `.pypirc`, `terraform.tfstate`), ficheros de contrasenas (`.htpasswd`) y almacenes de claves Java (`.jks`, `.keystore`).
+**По базовому имени файла:** переменные окружения (`.env`, `.env.*`), приватные ключи (`.pem`, `.key`, `.p12`, `.pfx`), ключи SSH (`id_rsa`, `id_ed25519`, `id_ecdsa`), учётные данные сервисов (`credentials.json`, `service-account.json`, `service-account.*.json`, `firebase-adminsdk*.json`, `.npmrc`, `.pypirc`, `terraform.tfstate`), файлы паролей (`.htpasswd`) и хранилища ключей Java (`.jks`, `.keystore`).
 
-**Por ruta completa:** credenciales AWS (`.aws/credentials`, `.aws/config`), Docker (`.docker/config.json`), Kubernetes (`.kube/config`), estado local de Terraform (`.terraform/terraform.tfstate`), directorio SSH (`.ssh/`) y directorio GPG (`.gnupg/`).
+**По полному пути:** учётные данные AWS (`.aws/credentials`, `.aws/config`), Docker (`.docker/config.json`), Kubernetes (`.kube/config`), локальное состояние Terraform (`.terraform/terraform.tfstate`), каталог SSH (`.ssh/`) и каталог GPG (`.gnupg/`).
 
-La politica es estrictamente informativa: siempre sale con exit 0. Si no puede parsear la entrada, sale silenciosamente sin avisar.
+Политика строго информационная: хук всегда завершается с exit 0. Если он не может разобрать вход, он молча завершается без предупреждения.
 
 ### quality-gate.py
 
-**Evento:** `PostToolUse` -- **Matcher:** `Bash` -- **Timeout:** 10 s
+**Событие:** `PostToolUse` -- **Matcher:** `Bash` -- **Timeout:** 10 с
 
-Este hook vigila la salida de los comandos Bash para detectar ejecuciones de tests con resultados fallidos. A diferencia de `secret-guard.py`, no bloquea: informa por stderr con la voz de "El Rompe-cosas" para que Claude sepa que debe corregir los fallos antes de avanzar.
+Этот хук следит за выводом команд Bash, чтобы находить запуски тестов с падениями. В отличие от `secret-guard.py`, он не блокирует: он сообщает через stderr голосом «Ломателя», чтобы Claude знал, что нужно исправить падения, прежде чем двигаться дальше.
 
-El hook opera en dos fases. Primero determina si el comando ejecutado corresponde a un runner de tests, comparando la cadena del comando contra una lista de 17 patrones regex que cubren los ecosistemas mas comunes:
+Хук работает в два этапа. Сначала он определяет, является ли выполненная команда раннером тестов, сравнивая строку команды со списком из 17 regex-шаблонов, которые покрывают самые распространённые экосистемы:
 
-`pytest`, `vitest`, `jest`, `mocha`, `cargo test`, `go test`, `npm test`, `pnpm test`, `bun test`, `yarn test`, `python -m unittest`, `phpunit`, `rspec`, `mix test`, `dotnet test`, `maven test` / `mvn test` y `gradle test`.
+`pytest`, `vitest`, `jest`, `mocha`, `cargo test`, `go test`, `npm test`, `pnpm test`, `bun test`, `yarn test`, `python -m unittest`, `phpunit`, `rspec`, `mix test`, `dotnet test`, `maven test` / `mvn test` и `gradle test`.
 
-Los runners de una sola palabra (`pytest`, `jest`, `vitest`, `mocha`, etc.) usan un ancla de posición de comando (`(?:^|[;&|])\s*`) que exige que el runner aparezca al inicio de la cadena o tras un operador shell, lo que evita falsos positivos como `cat pytest.ini` o `grep jest config.js`. Los runners de varias palabras (`cargo test`, `npm test`, etc.) usan limites de palabra (`\b`) porque su prefijo los ancla de forma natural.
+Раннеры из одного слова (`pytest`, `jest`, `vitest`, `mocha` и т. д.) используют якорь позиции команды (`(?:^|[;&|])\s*`): раннер должен стоять в начале строки или после оператора shell. Это исключает ложные срабатывания вроде `cat pytest.ini` или `grep jest config.js`. Раннеры из нескольких слов (`cargo test`, `npm test` и т. д.) используют границы слова (`\b`), потому что префикс и так их привязывает.
 
-Si el comando es un runner de tests, la segunda fase analiza stdout y stderr buscando patrones de fallo. Si la salida no permite decidir pero el runner devolvio `exit_code != 0`, tambien se considera fallo. El hook tolera tanto el payload historico `tool_output` como el payload actual `tool_result`, para no depender de una sola variante del runtime.
+Если команда является раннером тестов, на втором этапе хук ищет шаблоны падений в stdout и stderr. Если по выводу решить нельзя, но раннер вернул `exit_code != 0`, это тоже считается падением. Хук принимает и исторический payload `tool_output`, и текущий payload `tool_result`, чтобы не зависеть от одного варианта runtime.
 
 ### evidence-guard.py
 
-**Evento:** `PostToolUse` -- **Matcher:** `Bash` -- **Timeout:** 10 s
+**Событие:** `PostToolUse` -- **Matcher:** `Bash` -- **Timeout:** 10 с
 
-Registra evidencia de runners de tests para que las quality gates no se cierren con una afirmación verbal. Fail-open: nunca bloquea el flujo.
+Записывает доказательства запусков тестов, чтобы quality gates не закрывались устным утверждением. Fail-open: никогда не блокирует процесс.
 
 ### activity-capture.py
 
-**Evento:** `PostToolUse` -- **Matcher:** `Write|Edit` y `Bash` -- más `UserPromptSubmit` -- **Timeout:** 10 s
+**Событие:** `PostToolUse` -- **Matcher:** `Write|Edit` и `Bash` -- плюс `UserPromptSubmit` -- **Timeout:** 10 с
 
-Este hook centraliza la captura de actividad en los eventos que el plugin registra. No está suscrito a `UserPromptExpansion`, `PreCompact` ni `Stop`. En `UserPromptSubmit` registra el prompt y, si aplica, deja rastro de continuidad. En `Write`/`Edit`/`Bash` captura ficheros, comandos y commits.
+Этот хук централизует сбор активности в событиях, которые регистрирует плагин. Он не подписан на `UserPromptExpansion`, `PreCompact` и `Stop`. В `UserPromptSubmit` он записывает промпт и, если нужно, оставляет след для непрерывности. В `Write`/`Edit`/`Bash` он сохраняет файлы, команды и коммиты.
 
-El hook registra cada evento en la base de datos SQLite de memoria persistente (`alfred-memory.db`) con tres niveles de detalle:
+Хук записывает каждое событие в базу SQLite постоянной памяти (`alfred-memory.db`) с тремя уровнями детализации:
 
-| Nivel | Propósito |
+| Уровень | Назначение |
 |-------|-----------|
-| `summary` | Texto legible en castellano (una linea), pensado para listados rapidos. |
-| `payload` | JSON estructurado con los campos clave del evento, pensado para filtrado programático. |
-| `content` | Texto completo cuando aporta valor directo; en herramientas de alto volumen (`Glob`, `Grep`, `WebFetch`, `WebSearch`) se guarda un preview recortado con metadatos de truncado para evitar ruido excesivo. |
+| `summary` | Читаемый текст (одна строка) для быстрых списков. |
+| `payload` | Структурированный JSON с ключевыми полями события для программной фильтрации. |
+| `content` | Полный текст, когда он полезен сам по себе; для инструментов с большим объёмом вывода (`Glob`, `Grep`, `WebFetch`, `WebSearch`) сохраняется обрезанный preview с метаданными обрезки, чтобы не создавать лишний шум. |
 
-La tabla de dispatchers mapea cada tipo de evento a su función de procesamiento:
+Таблица dispatchers связывает каждый тип события с функцией обработки:
 
-| Evento | Tipo | Que captura |
+| Событие | Тип | Что сохраняет |
 |--------|------|-------------|
-| `Write` | PostToolUse | Fichero escrito: ruta, extensión, lineas y contenido completo. Si el fichero es `alfred-dev-state.json`, dispara además la lógica de seguimiento de iteraciones y fases. |
-| `Edit` | PostToolUse | Fichero editado: diff old/new con conteo de lineas. |
-| `Bash` | PostToolUse | Comando ejecutado: comando, exit code, stdout y stderr completos. Si detecta un `git commit` exitoso, captura además los metadatos del commit (SHA, mensaje, autor, ficheros). |
-| `UserPromptSubmit` | Evento propio | Prompt del usuario: texto completo. |
+| `Write` | PostToolUse | Записанный файл: путь, расширение, строки и полное содержимое. Если файл `alfred-dev-state.json`, дополнительно запускает логику отслеживания итераций и фаз. |
+| `Edit` | PostToolUse | Отредактированный файл: diff old/new с подсчётом строк. |
+| `Bash` | PostToolUse | Выполненная команда: команда, exit code, полные stdout и stderr. Если обнаружен успешный `git commit`, дополнительно сохраняет метаданные коммита (SHA, сообщение, автор, файлы). |
+| `UserPromptSubmit` | Собственное событие | Промпт пользователя: полный текст. |
 
-La memoria solo esta activa si el usuario la ha habilitado explícitamente en `.claude/alfred-dev.local.md` con la sección `memoria: enabled: true`. El hook comprueba esta configuración antes de hacer nada, y si no esta habilitada, sale inmediatamente.
+Память активна, только если пользователь явно включил её в `.claude/alfred-dev.local.md` секцией `memoria: enabled: true`. Хук проверяет эту настройку, прежде чем что-то делать, и если память не включена, сразу завершается.
 
-El hook excluye automáticamente ficheros de rutas internas (`.claude/`, `.git/`, `node_modules/`, `__pycache__/`, `.venv/`) y comandos triviales de lectura o navegación (`ls`, `pwd`, `cat`, etc.) para evitar ruido en el historial.
+Хук автоматически исключает файлы из внутренних путей (`.claude/`, `.git/`, `node_modules/`, `__pycache__/`, `.venv/`) и тривиальные команды чтения или навигации (`ls`, `pwd`, `cat` и т. д.), чтобы не засорять историю.
 
-La lógica de seguimiento de iteraciones y fases (heredada de `memory-capture.py`) se activa cuando se escribe `alfred-dev-state.json`. Captura tres tipos de eventos de flujo: `iteration_started` (si no hay iteracion activa), `phase_completed` (fases nuevas que aun no estan registradas) e `iteration_completed` (cuando la fase actual pasa a `"completado"`).
+Логика отслеживания итераций и фаз (унаследована от `memory-capture.py`) включается при записи `alfred-dev-state.json`. Она сохраняет три типа событий процесса: `iteration_started` (если нет активной итерации), `phase_completed` (новые фазы, которые ещё не записаны) и `iteration_completed` (когда текущая фаза переходит в `"completado"`).
 
-La detección de commits (heredada de `commit-capture.py`) se basa en la regex `(?:^|&&|\|\||;)\s*git\s+commit\b` y se activa solo si el exit code es 0. Ejecuta `git log -1` para extraer SHA, mensaje, autor y ficheros, y los registra con `MemoryDB.log_commit()`, que es idempotente por SHA.
+Обнаружение коммитов (унаследовано от `commit-capture.py`) основано на regex `(?:^|&&|\|\||;)\s*git\s+commit\b` и включается, только если exit code равен 0. Хук выполняет `git log -1`, чтобы извлечь SHA, сообщение, автора и файлы, и записывает их через `MemoryDB.log_commit()`, который идемпотентен по SHA.
 
-La politica es **fail-open**: cualquier error se imprime en stderr con prefijo `[activity-capture]` y el hook sale con código 0 sin bloquear el flujo.
+Политика **fail-open**: любая ошибка выводится в stderr с префиксом `[activity-capture]`, и хук завершается с кодом 0, не блокируя процесс.
 
 ---
 
-## Diagrama de interacción
+## Диаграмма взаимодействия
 
-El siguiente diagrama muestra como interactuan los hooks con Claude Code durante una sesión típica. Los cuatro hooks representados cubren arranque, bloqueo de secretos, quality gates y captura; `prompt-route.py`, `session-end.py`, `dangerous-command-guard.py`, `sensitive-read-guard.py` y `evidence-guard.py` siguen patrones analogos.
+Диаграмма ниже показывает, как хуки взаимодействуют с Claude Code в типичной сессии. Четыре показанных хука покрывают запуск, блокировку секретов, quality gates и сбор данных; `prompt-route.py`, `session-end.py`, `dangerous-command-guard.py`, `sensitive-read-guard.py` и `evidence-guard.py` работают по аналогичным схемам.
 
 ```mermaid
 sequenceDiagram
@@ -257,81 +257,81 @@ sequenceDiagram
     participant QG as quality-gate.py
     participant AC as activity-capture.py
 
-    Note over CC: El usuario abre la sesión
+    Note over CC: Пользователь открывает сессию
 
-    CC->>+SS: SessionStart (stdin: evento de sesión)
-    Note right of SS: Lee estado, config,<br/>memoria y versión.<br/>Construye el contexto<br/>del sistema.
-    SS-->>-CC: stdout: JSON con additionalContext
-    Note over CC: Claude recibe el contexto<br/>y sabe quien es Alfred
+    CC->>+SS: SessionStart (stdin: событие сессии)
+    Note right of SS: Читает состояние, config,<br/>память и версию.<br/>Собирает системный<br/>контекст.
+    SS-->>-CC: stdout: JSON с additionalContext
+    Note over CC: Claude получает контекст<br/>и знает, кто такой Alfred
 
-    Note over CC: Claude quiere escribir un fichero
+    Note over CC: Claude хочет записать файл
 
     CC->>+SG: PreToolUse Write (stdin: file_path + content)
-    Note right of SG: Analiza el contenido contra<br/>12 patrones de secretos.<br/>Politica fail-closed.
+    Note right of SG: Проверяет содержимое по<br/>12 шаблонам секретов.<br/>Политика fail-closed.
 
-    alt Sin secreto detectado
-        SG-->>CC: exit 0 (operación permitida)
-        Note over CC: Claude escribe el fichero
-    else Secreto detectado
-        SG-->>CC: exit 2 + stderr: alerta de El Paranoico
-        Note over CC: Escritura bloqueada.<br/>Claude recibe el aviso.
+    alt Секрет не найден
+        SG-->>CC: exit 0 (операция разрешена)
+        Note over CC: Claude записывает файл
+    else Секрет найден
+        SG-->>CC: exit 2 + stderr: тревога от Параноика
+        Note over CC: Запись заблокирована.<br/>Claude получает предупреждение.
     end
     deactivate SG
 
-    Note over CC: Claude ejecuta tests con Bash
+    Note over CC: Claude запускает тесты через Bash
 
-    CC->>+QG: PostToolUse Bash (stdin: comando + salida)
-    Note right of QG: Comprueba si el comando<br/>es un runner de tests.<br/>Analiza la salida.
+    CC->>+QG: PostToolUse Bash (stdin: команда + вывод)
+    Note right of QG: Проверяет, является ли команда<br/>раннером тестов.<br/>Анализирует вывод.
 
-    alt Tests pasan
-        QG-->>CC: exit 0 (sin salida)
-    else Tests fallan
-        QG-->>CC: exit 0 + stderr: aviso de El Rompe-cosas
-        Note over CC: Claude recibe la advertencia.<br/>No bloquea, pero informa.
+    alt Тесты проходят
+        QG-->>CC: exit 0 (без вывода)
+    else Тесты падают
+        QG-->>CC: exit 0 + stderr: предупреждение от Ломателя
+        Note over CC: Claude получает предупреждение.<br/>Не блокирует, но сообщает.
     end
     deactivate QG
 
-    Note over CC: Claude escribe alfred-dev-state.json
+    Note over CC: Claude записывает alfred-dev-state.json
 
     CC->>+AC: PostToolUse Write (stdin: file_path + content)
-    Note right of AC: Detecta escritura en<br/>el fichero de estado.<br/>Registra el evento y<br/>actualiza iteraciones.
-    AC-->>-CC: exit 0 (sin salida, registro silencioso en SQLite)
-    Note over CC: Claude no percibe nada.<br/>La memoria se actualiza en segundo plano.
+    Note right of AC: Обнаруживает запись в<br/>файл состояния.<br/>Записывает событие и<br/>обновляет итерации.
+    AC-->>-CC: exit 0 (без вывода, тихая запись в SQLite)
+    Note over CC: Claude ничего не замечает.<br/>Память обновляется в фоне.
 ```
 
 ---
 
-## Tabla resumen
+## Сводная таблица
 
-| Evento | Matcher | Script | Timeout | Asíncrono | Bloquea | Que vigila |
+| Событие | Matcher | Скрипт | Timeout | Асинхронный | Блокирует | Что отслеживает |
 |--------|---------|--------|---------|-----------|---------|------------|
-| `SessionStart` | `startup\|resume\|clear\|compact\|fork` | `session-bootstrap.sh` | 10 s | No | No | Bootstrap síncrono del proyecto: config local, memoria, permisos y wrapper helper-first. |
-| `SessionStart` | `startup\|resume\|clear\|compact\|fork` | `session-start.sh` | 5 s | Si | No | Briefing de sesión y protocolo de hablar sin slash. |
-| `SessionEnd` | _(ninguno)_ | `session-end.py` | -- | Si | No | Detiene Memory UI y escribe el cierre. Fail-open. |
-| `UserPromptSubmit` | _(ninguno)_ | `activity-capture.py` | 10 s | No | No | Captura el prompt. Fail-open. |
-| `UserPromptSubmit` | _(ninguno)_ | `prompt-route.py` | 5 s | No | No | Sugiere fix/quick/retomar si el texto no trae slash. |
-| `PreToolUse` | `Write\|Edit\|Bash\|mcp__.*` | `secret-guard.py` | 5 s | No | Si | Secretos en ficheros, comandos y tools MCP de escritura. |
-| `PreToolUse` | `Bash` | `dangerous-command-guard.py` | 5 s | No | Si | Comandos destructivos: rm -rf /, force push, DROP DATABASE, docker prune, fork bombs. |
-| `PreToolUse` | `Read` | `sensitive-read-guard.py` | 5 s | No | No | Lectura de ficheros sensibles. Avisa sin bloquear. |
-| `PostToolUse` | `Bash` | `activity-capture.py` | 10 s | No | No | Captura comandos y commits. |
-| `PostToolUse` | `Bash` | `quality-gate.py` | 10 s | No | No | Resultado de ejecuciones de tests. Avisa sin bloquear. |
-| `PostToolUse` | `Bash` | `evidence-guard.py` | 10 s | No | No | Registra evidencia real de tests para gates automaticas. |
-| `PostToolUse` | `Write\|Edit` | `activity-capture.py` | 10 s | No | No | Captura escrituras y seguimiento de fases. |
+| `SessionStart` | `startup\|resume\|clear\|compact\|fork` | `session-bootstrap.sh` | 10 с | Нет | Нет | Синхронный bootstrap проекта: локальный config, память, права и wrapper helper-first. |
+| `SessionStart` | `startup\|resume\|clear\|compact\|fork` | `session-start.sh` | 5 с | Да | Нет | Briefing сессии и протокол общения без slash. |
+| `SessionEnd` | _(нет)_ | `session-end.py` | -- | Да | Нет | Останавливает Memory UI и пишет итог сессии. Fail-open. |
+| `UserPromptSubmit` | _(нет)_ | `activity-capture.py` | 10 с | Нет | Нет | Сохраняет промпт. Fail-open. |
+| `UserPromptSubmit` | _(нет)_ | `prompt-route.py` | 5 с | Нет | Нет | Предлагает fix/quick/retomar, если в тексте нет slash. |
+| `PreToolUse` | `Write\|Edit\|Bash\|mcp__.*` | `secret-guard.py` | 5 с | Нет | Да | Секреты в файлах, командах и пишущих MCP tools. |
+| `PreToolUse` | `Bash` | `dangerous-command-guard.py` | 5 с | Нет | Да | Разрушительные команды: rm -rf /, force push, DROP DATABASE, docker prune, fork bombs. |
+| `PreToolUse` | `Read` | `sensitive-read-guard.py` | 5 с | Нет | Нет | Чтение чувствительных файлов. Предупреждает без блокировки. |
+| `PostToolUse` | `Bash` | `activity-capture.py` | 10 с | Нет | Нет | Сохраняет команды и коммиты. |
+| `PostToolUse` | `Bash` | `quality-gate.py` | 10 с | Нет | Нет | Результат запусков тестов. Предупреждает без блокировки. |
+| `PostToolUse` | `Bash` | `evidence-guard.py` | 10 с | Нет | Нет | Записывает реальные доказательства тестов для автоматических gates. |
+| `PostToolUse` | `Write\|Edit` | `activity-capture.py` | 10 с | Нет | Нет | Сохраняет записи файлов и отслеживает фазы. |
 
 ---
 
-## Como crear un nuevo hook
+## Как создать новый хук
 
-Alfred Dev esta disenado para que añadir hooks nuevos sea un proceso predecible. Si necesitas que el plugin reaccione a un evento del ciclo de vida que actualmente no cubre, puedes crear un hook siguiendo la estructura que se describe a continuacion.
+Alfred Dev устроен так, чтобы добавление новых хуков было предсказуемым процессом. Если плагин должен реагировать на событие жизненного цикла, которое он сейчас не покрывает, создай хук по структуре, описанной ниже.
 
-### 1. Escribir el script
+### 1. Напиши скрипт
 
-Un hook es un script ejecutable (bash o python) que lee de stdin, procesa la información y responde a traves de stdout, stderr y el código de salida. La estructura mínima es:
+Хук это исполняемый скрипт (bash или python), который читает stdin, обрабатывает данные и отвечает через stdout, stderr и код выхода. Минимальная структура:
 
 ```python
 #!/usr/bin/env python3
 """
-Hook <tipo_evento> para <matcher>: descripción breve.
+Хук <event_type> для <matcher>: краткое описание.
 """
 
 import json
@@ -339,21 +339,21 @@ import sys
 
 
 def main():
-    """Punto de entrada del hook."""
+    """Точка входа хука."""
     try:
         data = json.load(sys.stdin)
     except ValueError:
-        # Si no se puede leer la entrada, salir sin bloquear
+        # Если вход не читается, выйти без блокировки
         sys.exit(0)
 
     tool_input = data.get("tool_input", {})
 
-    # ... lógica de análisis ...
+    # ... логика анализа ...
 
-    # Tres opciones de respuesta:
-    # 1. Silencioso: exit 0 sin salida
-    # 2. Informativo: exit 0 + mensaje en stderr
-    # 3. Bloqueo: exit 2 + mensaje en stderr (solo PreToolUse)
+    # Три варианта ответа:
+    # 1. Тихий: exit 0 без вывода
+    # 2. Информационный: exit 0 + сообщение в stderr
+    # 3. Блокировка: exit 2 + сообщение в stderr (только PreToolUse)
 
     sys.exit(0)
 
@@ -362,18 +362,18 @@ if __name__ == "__main__":
     main()
 ```
 
-El JSON de stdin contiene campos diferentes segun el evento:
+JSON из stdin содержит разные поля в зависимости от события:
 
-| Evento | Campos principales en stdin |
+| Событие | Основные поля в stdin |
 |--------|----------------------------|
-| `SessionStart` | Información de la sesión (tipo de inicio, metadatos). |
-| `Stop` | Mínimo o vacio. El hook consulta el estado del proyecto directamente. |
-| `PreToolUse` | `tool_name`, `tool_input` (parámetros que Claude quiere pasar a la herramienta). |
-| `PostToolUse` | `tool_name`, `tool_input`, `tool_output` (resultado de la herramienta). |
+| `SessionStart` | Данные сессии (тип запуска, метаданные). |
+| `Stop` | Минимум или пусто. Хук сам читает состояние проекта. |
+| `PreToolUse` | `tool_name`, `tool_input` (параметры, которые Claude хочет передать инструменту). |
+| `PostToolUse` | `tool_name`, `tool_input`, `tool_output` (результат инструмента). |
 
-### 2. Registrar en hooks.json
+### 2. Зарегистрируй в hooks.json
 
-Añade una entrada en `hooks/hooks.json` dentro del evento correspondiente:
+Добавь запись в `hooks/hooks.json` внутри нужного события:
 
 ```json
 {
@@ -383,7 +383,7 @@ Añade una entrada en `hooks/hooks.json` dentro del evento correspondiente:
       "type": "command",
       "command": "python3",
       "args": [
-        "${CLAUDE_PLUGIN_ROOT}/hooks/mi-nuevo-hook.py"
+        "${CLAUDE_PLUGIN_ROOT}/hooks/my-new-hook.py"
       ],
       "timeout": 10
     }
@@ -391,47 +391,47 @@ Añade una entrada en `hooks/hooks.json` dentro del evento correspondiente:
 }
 ```
 
-La variable `${CLAUDE_PLUGIN_ROOT}` se resuelve automáticamente al directorio raiz del plugin. Declárala en `args`, no dentro de un string de shell, para que rutas con espacios o caracteres especiales funcionen sin comillas manuales. Esa ruta pertenece a la instalación de una versión concreta y puede cambiar al actualizar el plugin; no guardes estado persistente dentro de ella. El matcher es una expresión regular que se evalua contra el nombre de la herramienta; si no se específica, el hook se ejecuta para todas las invocaciones del evento.
+Переменная `${CLAUDE_PLUGIN_ROOT}` автоматически раскрывается в корневой каталог плагина. Указывай её в `args`, а не внутри строки shell, чтобы пути с пробелами или спецсимволами работали без ручных кавычек. Этот путь относится к установке конкретной версии и может измениться при обновлении плагина; не храни в нём постоянное состояние. Matcher это регулярное выражение, которое сравнивается с именем инструмента; если он не указан, хук выполняется при каждом вызове события.
 
-### 3. Patrones de comunicación
+### 3. Схемы взаимодействия
 
-Alfred Dev utiliza tres patrones de comunicación en sus hooks, cada uno con un propósito y un contrato definidos:
+Alfred Dev использует в своих хуках три схемы взаимодействия, у каждой своё назначение и свой контракт:
 
-**Informativo (exit 0 + stderr).** El hook detecta algo que merece atencion pero no impide la operación. El mensaje se imprime en stderr para que Claude Code lo muestre al usuario como advertencia. Es el patron que usan `quality-gate.py` y `sensitive-read-guard.py`. Ejemplo:
+**Информационная (exit 0 + stderr).** Хук находит что-то, что заслуживает внимания, но не мешает операции. Сообщение выводится в stderr, чтобы Claude Code показал его пользователю как предупреждение. Эту схему используют `quality-gate.py` и `sensitive-read-guard.py`. Пример:
 
 ```python
-print("[Mi Hook] He detectado algo relevante.", file=sys.stderr)
+print("[Мой хук] Нашёл кое-что важное.", file=sys.stderr)
 sys.exit(0)
 ```
 
-**Bloqueo (exit 2 + stderr).** El hook impide que la operación se ejecute. Solo tiene sentido en `PreToolUse`, porque en `PostToolUse` la operación ya se ha realizado. El mensaje de stderr explica por que se bloquea. En este patrón stdout debe quedar vacío: Claude Code ignora cualquier JSON cuando el proceso sale con `2`. Es el patron que usan `secret-guard.py` y `dangerous-command-guard.py`. Ejemplo:
+**Блокировка (exit 2 + stderr).** Хук не даёт операции выполниться. Это имеет смысл только в `PreToolUse`, потому что в `PostToolUse` операция уже выполнена. Сообщение в stderr объясняет причину блокировки. В этой схеме stdout должен оставаться пустым: Claude Code игнорирует любой JSON, когда процесс завершается с `2`. Эту схему используют `secret-guard.py` и `dangerous-command-guard.py`. Пример:
 
 ```python
-print("[Mi Hook] Operación bloqueada: motivo detallado.", file=sys.stderr)
+print("[Мой хук] Операция заблокирована: подробная причина.", file=sys.stderr)
 sys.exit(2)
 ```
 
-No envuelvas hooks bloqueantes con `|| true`: eso convierte el `exit 2` en
-éxito y neutraliza el bloqueo.
+Не оборачивай блокирующие хуки в `|| true`: это превращает `exit 2` в
+успех и отключает блокировку.
 
-Cuando el bloqueo necesita comunicar una decisión a Claude Code, emite tambien
-JSON por stdout con `{"decision": "block", "reason": "..."}` y sal con código
-`0`; no mezcles JSON de control con `exit 2`. Los hooks que inyectan contexto
-usan `hookSpecificOutput.additionalContext`; los avisos estructurados para el
-usuario deben preferir `systemMessage`.
+Если блокировка должна передать решение в Claude Code, выведи также
+JSON в stdout с `{"decision": "block", "reason": "..."}` и заверши с кодом
+`0`; не смешивай управляющий JSON с `exit 2`. Хуки, которые внедряют контекст,
+используют `hookSpecificOutput.additionalContext`; для структурированных
+предупреждений пользователю лучше подходит `systemMessage`.
 
-**Silencioso (exit 0 sin salida).** El hook hace su trabajo internamente sin emitir nada. Claude Code y el usuario no perciben su ejecución. Es el patron que usa `activity-capture.py` para registrar eventos en SQLite sin interrumpir el flujo.
+**Тихая (exit 0 без вывода).** Хук делает свою работу внутри и ничего не выводит. Claude Code и пользователь не замечают его выполнения. Эту схему использует `activity-capture.py`, чтобы записывать события в SQLite, не прерывая процесс.
 
-### 4. Restricciones a tener en cuenta
+### 4. Ограничения, которые нужно учитывать
 
-Hay varias restricciones de diseño que conviene respetar para mantener la coherencia del sistema:
+Чтобы система оставалась согласованной, соблюдай несколько ограничений дизайна:
 
-- **Timeout conservador.** Los hooks sincronos no deben superar los 10 segundos de timeout. Un hook que tarda mas de 10 segundos degrada la experiencia del usuario porque Claude Code espera bloqueado. Si la operación requiere mas tiempo, considera usar `"async": true` (pero entonces no podras bloquear).
+- **Консервативный timeout.** Timeout синхронных хуков не должен превышать 10 секунд. Хук, который работает дольше 10 секунд, ухудшает работу пользователя, потому что Claude Code ждёт его заблокированным. Если операции нужно больше времени, рассмотри `"async": true` (но тогда блокировать не получится).
 
-- **No modificar el contenido del evento.** Los hooks pueden leer y analizar la información del evento, pero no deben intentar modificarla. Un hook de `PreToolUse` puede bloquear una escritura, pero no puede alterar el contenido que Claude quiere escribir.
+- **Не изменяй содержимое события.** Хуки могут читать и анализировать данные события, но не должны пытаться их изменить. Хук `PreToolUse` может заблокировать запись, но не может изменить содержимое, которое Claude хочет записать.
 
-- **Fallo seguro.** Si el hook no puede leer su entrada, no puede acceder a un fichero necesario o sufre cualquier error interno, la decisión por defecto debe ser no bloquear (exit 0). Las excepciones son los hooks de seguridad que protegen escrituras o comandos destructivos, como `secret-guard.py` y `dangerous-command-guard.py`, donde la politica fail-closed (bloquear ante la duda) tiene mas sentido que fail-open.
+- **Безопасный сбой.** Если хук не может прочитать вход, получить доступ к нужному файлу или сталкивается с любой внутренней ошибкой, решение по умолчанию: не блокировать (exit 0). Исключения: хуки безопасности, которые защищают от записи секретов или разрушительных команд, такие как `secret-guard.py` и `dangerous-command-guard.py`. Для них политика fail-closed (блокировать при сомнении) разумнее, чем fail-open.
 
-- **Una responsabilidad por hook.** Cada hook debe hacer una cosa y hacerla bien. Si necesitas vigilar dos aspectos diferentes, crea dos hooks. Esto facilita la depuración, el testing y la posibilidad de desactivar un hook concreto sin afectar a los demas.
+- **Одна ответственность на хук.** Каждый хук должен делать одну вещь и делать её хорошо. Если нужно следить за двумя разными аспектами, создай два хука. Так проще отлаживать и тестировать хук и отключать его, не затрагивая остальные.
 
-- **Voz del agente.** Los mensajes de los hooks de Alfred usan la voz de un agente concreto del equipo: El Paranoico para seguridad, El Rompe-cosas para calidad. Si anades un hook nuevo, asignale un agente coherente con su función o crea uno nuevo si ninguno encaja.
+- **Голос агента.** Сообщения хуков Alfred звучат голосом конкретного агента команды: Параноик для безопасности, Ломатель для качества. Если добавляешь новый хук, назначь ему агента, подходящего по функции, или создай нового, если никто не подходит.

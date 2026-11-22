@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Lectura ligera de la configuracion de memoria de Alfred por proyecto.
+Lightweight reader for the per-project Alfred memory configuration.
 
-El fichero ``.claude/alfred-dev.local.md`` usa frontmatter YAML simple.
-Este modulo evita depender de PyYAML y expone una API pequeña para leer
-la subseccion ``memoria`` con defaults consistentes.
+The ``.claude/alfred-dev.local.md`` file uses simple YAML frontmatter.
+This module does not depend on PyYAML. It exposes a small API that reads
+the ``memoria`` subsection with consistent defaults.
 """
 
 from __future__ import annotations
@@ -86,9 +86,9 @@ def _normalize_memory_value(key: str, value: Any) -> Any:
 
 def load_memory_config(project_dir: str) -> Dict[str, Any]:
     """
-    Devuelve la configuracion efectiva de ``memoria`` para un proyecto.
+    Return the effective ``memoria`` configuration for a project.
 
-    Si el fichero no existe o la seccion no aparece, devuelve defaults.
+    If the file does not exist or the section is missing, return defaults.
     """
     config = dict(DEFAULT_MEMORY_CONFIG)
     config_path = os.path.join(project_dir, ".claude", "alfred-dev.local.md")
@@ -133,5 +133,5 @@ def load_memory_config(project_dir: str) -> Dict[str, Any]:
 
 
 def is_memory_enabled(project_dir: str) -> bool:
-    """Atajo para comprobar si la memoria persistente esta activa."""
+    """Shortcut that checks if persistent memory is enabled."""
     return bool(load_memory_config(project_dir).get("enabled", False))

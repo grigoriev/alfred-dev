@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para el hook de verificacion de evidencia."""
+"""Tests for the evidence verification hook."""
 
 import json
 import os
@@ -21,7 +21,7 @@ from hooks.evidence_guard_lib import (
 
 
 class TestIsTestCommand(unittest.TestCase):
-    """Verifica la deteccion de comandos de tests."""
+    """Verify detection of test commands."""
 
     def test_pytest(self):
         self.assertTrue(is_test_command("pytest tests/ -v"))
@@ -58,7 +58,7 @@ class TestIsTestCommand(unittest.TestCase):
 
 
 class TestDetectTestResult(unittest.TestCase):
-    """Verifica la deteccion de resultados de tests."""
+    """Verify detection of test results."""
 
     def test_pass_pytest(self):
         output = "====== 10 passed in 0.5s ======"
@@ -84,43 +84,43 @@ class TestDetectTestResult(unittest.TestCase):
         self.assertEqual(detect_test_result(""), "unknown")
 
     def test_nonzero_exit_code_without_output_is_failure(self):
-        """Un runner de tests con exit code != 0 debe contar como fallo."""
+        """A test runner with exit code != 0 must count as a failure."""
         self.assertEqual(detect_test_result("", exit_code=1), "fail")
 
     def test_zero_exit_code_without_output_stays_unknown(self):
-        """Sin patrones y con exit 0 seguimos siendo conservadores."""
+        """With no patterns and exit 0, stay conservative."""
         self.assertEqual(detect_test_result("", exit_code=0), "unknown")
 
     def test_fail_safe_not_detected_as_failure(self):
-        """La palabra 'fail-safe' no debe detectarse como fallo."""
+        """The word 'fail-safe' must not be detected as a failure."""
         output = "System entered fail-safe mode. All checks passed."
-        # Contiene "passed" como exito, "fail-safe" no debe contar como fallo
+        # Contains "passed" as success; "fail-safe" must not count as a failure
         self.assertEqual(detect_test_result(output), "pass")
 
     def test_failover_not_detected_as_failure(self):
-        """La palabra 'failover' no debe detectarse como fallo."""
+        """The word 'failover' must not be detected as a failure."""
         output = "Failover completed successfully. 5 passed"
         self.assertEqual(detect_test_result(output), "pass")
 
     def test_zero_failures_not_detected_as_fail(self):
-        """La salida '0 failures' no debe detectarse como fallo."""
+        """The output '0 failures' must not be detected as a failure."""
         output = "Tests run: 10, 0 failures, 0 errors"
         self.assertEqual(detect_test_result(output), "pass")
 
     def test_zero_failed_not_detected_as_fail(self):
-        """La salida '0 failed' no debe detectarse como fallo."""
+        """The output '0 failed' must not be detected as a failure."""
         output = "10 passed, 0 failed in 1.5s"
         self.assertEqual(detect_test_result(output), "pass")
 
     def test_go_test_detected_as_pass(self):
-        """La salida de go test se detecta como pass."""
-        # Salida multilinea realista de go test
+        """go test output is detected as pass."""
+        # Realistic multiline go test output
         output = "=== RUN   TestFoo\n--- PASS: TestFoo (0.00s)\nPASS\nok  \tgithub.com/foo/bar\t0.003s"
         self.assertEqual(detect_test_result(output), "pass")
 
 
 class TestEvidenceStorage(unittest.TestCase):
-    """Verifica el almacenamiento y consulta de evidencia."""
+    """Verify evidence storage and lookup."""
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
@@ -164,8 +164,8 @@ class TestEvidenceStorage(unittest.TestCase):
         self.assertFalse(evidence["has_evidence"])
 
     def test_old_evidence_excluded(self):
-        """Evidencia antigua no se considera reciente."""
-        # Escribir un registro con timestamp antiguo directamente
+        """Old evidence does not count as recent."""
+        # Write a record with an old timestamp directly
         path = os.path.join(self.claude_dir, "alfred-evidence.json")
         old_ts = (datetime.now(timezone.utc) - timedelta(seconds=EVIDENCE_MAX_AGE_SECONDS + 60)).isoformat()
         records = [{"timestamp": old_ts, "command": "pytest", "result": "pass"}]
@@ -176,7 +176,7 @@ class TestEvidenceStorage(unittest.TestCase):
         self.assertFalse(evidence["has_evidence"])
 
     def test_truncation_at_50(self):
-        """El fichero se trunca a 50 registros."""
+        """The file is truncated to 50 records."""
         for i in range(60):
             record_evidence(f"pytest test_{i}.py", "pass", project_dir=self.tmpdir)
 
@@ -186,8 +186,8 @@ class TestEvidenceStorage(unittest.TestCase):
         self.assertLessEqual(len(data), 50)
 
     def test_get_evidence_no_age_filter(self):
-        """max_age_seconds=None devuelve todos los registros sin filtrar."""
-        # Escribir un registro con timestamp antiguo
+        """max_age_seconds=None returns all records without a filter."""
+        # Write a record with an old timestamp
         path = os.path.join(self.claude_dir, "alfred-evidence.json")
         old_ts = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
         records = [
@@ -196,17 +196,17 @@ class TestEvidenceStorage(unittest.TestCase):
         with open(path, "w") as f:
             json.dump(records, f)
 
-        # Con ventana normal: no aparece
+        # With the normal window: not present
         evidence = get_evidence(project_dir=self.tmpdir)
         self.assertFalse(evidence["has_evidence"])
 
-        # Sin ventana: aparece
+        # Without a window: present
         evidence = get_evidence(max_age_seconds=None, project_dir=self.tmpdir)
         self.assertTrue(evidence["has_evidence"])
         self.assertEqual(evidence["count"], 1)
 
     def test_unknown_result_affects_all_passing(self):
-        """Un resultado unknown hace que all_passing sea False."""
+        """An unknown result makes all_passing False."""
         record_evidence("pytest -v", "pass", project_dir=self.tmpdir)
         record_evidence("pytest -v", "unknown", project_dir=self.tmpdir)
         evidence = get_evidence(project_dir=self.tmpdir)

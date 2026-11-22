@@ -1,23 +1,23 @@
-# Configuración
+# Настройка
 
-Alfred Dev esta disenado para adaptarse a cada proyecto sin que el desarrollador tenga que rellenar formularios ni editar ficheros de configuración a mano. Al iniciarse, el plugin analiza el directorio del proyecto, detecta el stack tecnologico y aplica valores por defecto sensatos para cada apartado: autonomía, personalidad, agentes opcionales y memoria. `load_config()` puede funcionar sin fichero local, pero `session-bootstrap.sh` y `session-start.sh` materializan `.claude/alfred-dev.local.md` en la primera sesión para dejar un estado operativo explicito y estable.
+Alfred Dev подстраивается под каждый проект: разработчику не нужно заполнять формы или вручную править файлы настроек. При запуске плагин анализирует каталог проекта, определяет технологический стек и применяет разумные значения по умолчанию для каждого раздела: автономность, личность, опциональные агенты и память. `load_config()` может работать без локального файла, но `session-bootstrap.sh` и `session-start.sh` создают `.claude/alfred-dev.local.md` в первой сессии, чтобы зафиксировать явное и стабильное рабочее состояние.
 
-Cuando el desarrollador quiere personalizar el comportamiento --ajustar el nivel de autonomía, activar Lucius o cambiar el tono de las respuestas--, puede hacerlo editando `.claude/alfred-dev.local.md` o ejecutando `/alfred-dev:ajustes` desde la interfaz del plugin. El formato combina YAML frontmatter para los valores estructurados con Markdown libre para notas de contexto, lo que permite que el mismo fichero sea legible tanto por humanos como por el parser del plugin. Desde la ronda actual, `/alfred-dev:ajustes` ya no depende solo del prompt: `config_loader.py` expone `build_config_section_summaries()`, `build_config_section_menu()`, `apply_config_section_update()`, `build_config_section_change_preview()`, `update_config_section()` y `update_project_config_section()` para resumir el estado real, construir el menú principal navegable, aplicar cambios por sección, confirmar el diff efectivo y persistir el resultado sin reimplementar el round-trip del fichero.
+Если разработчик хочет изменить поведение (уровень автономности, включение CTO или тон ответов), он может отредактировать `.claude/alfred-dev.local.md` или выполнить `/alfred-dev:ajustes` из интерфейса плагина. Формат сочетает YAML frontmatter для структурированных значений и свободный Markdown для заметок с контекстом, поэтому один и тот же файл читают и люди, и парсер плагина. Начиная с текущей итерации `/alfred-dev:ajustes` зависит не только от промпта: `config_loader.py` предоставляет `build_config_section_summaries()`, `build_config_section_menu()`, `apply_config_section_update()`, `build_config_section_change_preview()`, `update_config_section()` и `update_project_config_section()`. Они сводят реальное состояние, строят навигируемое главное меню, применяют изменения по разделам, подтверждают итоговый diff и сохраняют результат без повторной реализации round-trip файла.
 
 
-## Detección automática de stack
+## Автоматическое определение стека
 
-Antes de que el desarrollador configure nada, `config_loader.py` ejecuta un análisis del directorio del proyecto buscando ficheros indicadores. La razon de esta detección automática es doble: por un lado, evita que el usuario tenga que declarar manualmente información que ya esta implícita en su proyecto; por otro, permite que los agentes ajusten sus recomendaciones al stack real (un agente de QA no sugiere Vitest en un proyecto Python, ni pytest en uno Node).
+Прежде чем разработчик что-либо настроит, `config_loader.py` анализирует каталог проекта и ищет файлы-индикаторы. У автоматического определения две причины: пользователю не нужно вручную объявлять то, что уже следует из проекта, а агенты подстраивают рекомендации под реальный стек (QA-агент не предложит Vitest в Python-проекте или pytest в Node-проекте).
 
-El análisis funciona por prioridad. Primero se comprueba el runtime y lenguaje a traves de ficheros raiz, y despues se profundiza leyendo manifiestos de dependencias (`package.json`, `pyproject.toml`, `requirements.txt`, `pom.xml`, `build.gradle`, `composer.json`, `.csproj` y `Package.swift`) para identificar framework, ORM, test runner y bundler cuando el ecosistema lo permite.
+Анализ идёт по приоритету. Сначала runtime и язык определяются по корневым файлам, затем плагин читает манифесты зависимостей (`package.json`, `pyproject.toml`, `requirements.txt`, `pom.xml`, `build.gradle`, `composer.json`, `.csproj` и `Package.swift`), чтобы определить framework, ORM, test runner и bundler, если экосистема это позволяет.
 
-### Ficheros indicadores de runtime y lenguaje
+### Файлы-индикаторы runtime и языка
 
-El orden de evaluación determina la prioridad. Si un proyecto tiene simultaneamente `package.json` y `pyproject.toml`, se clasifica como Node/JavaScript (o TypeScript si existe `tsconfig.json`), porque la comprobacion de Node va primero en la cadena.
+Порядок проверки задаёт приоритет. Если в проекте одновременно есть `package.json` и `pyproject.toml`, он классифицируется как Node/JavaScript (или TypeScript, если есть `tsconfig.json`), потому что проверка Node идёт первой в цепочке.
 
-| Fichero indicador    | Runtime detectado | Lenguaje detectado         |
+| Файл-индикатор       | Определённый runtime | Определённый язык          |
 |----------------------|-------------------|----------------------------|
-| `package.json`       | node              | javascript (o typescript si existe `tsconfig.json`) |
+| `package.json`       | node              | javascript (или typescript, если есть `tsconfig.json`) |
 | `pyproject.toml`     | python            | python                     |
 | `setup.py`           | python            | python                     |
 | `requirements.txt`   | python            | python                     |
@@ -32,13 +32,13 @@ El orden de evaluación determina la prioridad. Si un proyecto tiene simultaneam
 | `*.csproj` / `*.sln` | dotnet            | csharp                    |
 | `Package.swift`      | swift             | swift                      |
 
-### Frameworks detectados
+### Определяемые фреймворки
 
-Para proyectos Node, el parser lee `dependencies` y `devDependencies` de `package.json`. Para proyectos Python, busca coincidencias en el texto de `pyproject.toml` y `requirements.txt`. El orden de la lista establece la prioridad: si un proyecto tiene tanto Next como React, se clasifica como Next (que es mas específico).
+Для Node-проектов парсер читает `dependencies` и `devDependencies` из `package.json`. Для Python-проектов он ищет совпадения в тексте `pyproject.toml` и `requirements.txt`. Порядок в списке задаёт приоритет: если в проекте есть и Next, и React, он классифицируется как Next (он более специфичен).
 
 **Node / JavaScript / TypeScript:**
 
-| Framework detectado | Paquete buscado en dependencias |
+| Определённый framework | Пакет в зависимостях |
 |---------------------|---------------------------------|
 | next                | `next`                          |
 | nuxt                | `nuxt`                          |
@@ -52,14 +52,14 @@ Para proyectos Node, el parser lee `dependencies` y `devDependencies` de `packag
 | express             | `express`                       |
 | fastify             | `fastify`                       |
 | koa                 | `koa`                           |
-| nestjs              | `nest` o `@nestjs/core`         |
+| nestjs              | `nest` или `@nestjs/core`       |
 | vue                 | `vue`                           |
 | react               | `react`                         |
-| angular             | `angular` o `@angular/core`     |
+| angular             | `angular` или `@angular/core`   |
 
 **Python:**
 
-| Framework detectado | Paquete buscado |
+| Определённый framework | Искомый пакет |
 |---------------------|-----------------|
 | fastapi             | `fastapi`       |
 | django              | `django`        |
@@ -72,15 +72,15 @@ Para proyectos Node, el parser lee `dependencies` y `devDependencies` de `packag
 
 **Java / Kotlin:**
 
-| Framework detectado | Marcador buscado |
+| Определённый framework | Искомый маркер |
 |---------------------|------------------|
-| spring-boot         | `spring-boot` o `org.springframework.boot` |
-| quarkus             | `quarkus` o `io.quarkus` |
-| micronaut           | `micronaut` o `io.micronaut` |
+| spring-boot         | `spring-boot` или `org.springframework.boot` |
+| quarkus             | `quarkus` или `io.quarkus` |
+| micronaut           | `micronaut` или `io.micronaut` |
 
 **PHP:**
 
-| Framework detectado | Paquete buscado |
+| Определённый framework | Искомый пакет |
 |---------------------|-----------------|
 | laravel             | `laravel/framework` |
 | symfony             | `symfony/framework-bundle` |
@@ -88,34 +88,34 @@ Para proyectos Node, el parser lee `dependencies` y `devDependencies` de `packag
 
 **C# / .NET:**
 
-| Framework detectado | Marcador buscado |
+| Определённый framework | Искомый маркер |
 |---------------------|------------------|
 | aspnet              | `Microsoft.NET.Sdk.Web` |
-| blazor              | `Microsoft.AspNetCore.Components.WebAssembly` o `blazor` |
+| blazor              | `Microsoft.AspNetCore.Components.WebAssembly` или `blazor` |
 
 **Swift:**
 
-| Framework detectado | Marcador buscado |
+| Определённый framework | Искомый маркер |
 |---------------------|------------------|
-| vapor               | `vapor` en `Package.swift` |
+| vapor               | `vapor` в `Package.swift` |
 
-### ORMs detectados
+### Определяемые ORM
 
 **Node:**
 
-| ORM detectado | Paquete buscado                     |
+| Определённый ORM | Искомый пакет                    |
 |---------------|-------------------------------------|
 | drizzle       | `drizzle-orm`                       |
-| prisma        | `prisma` o `@prisma/client`         |
+| prisma        | `prisma` или `@prisma/client`       |
 | typeorm       | `typeorm`                           |
 | sequelize     | `sequelize`                         |
 | knex          | `knex`                              |
 | mongoose      | `mongoose`                          |
-| mikro-orm     | `mikro-orm` o `@mikro-orm/core`     |
+| mikro-orm     | `mikro-orm` или `@mikro-orm/core`   |
 
 **Python:**
 
-| ORM detectado | Paquete buscado |
+| Определённый ORM | Искомый пакет |
 |---------------|-----------------|
 | sqlalchemy    | `sqlalchemy`    |
 | sqlmodel      | `sqlmodel`      |
@@ -126,16 +126,16 @@ Para proyectos Node, el parser lee `dependencies` y `devDependencies` de `packag
 
 **PHP / .NET:**
 
-| ORM detectado | Paquete o marcador buscado |
+| Определённый ORM | Искомый пакет или маркер |
 |---------------|----------------------------|
 | doctrine      | `doctrine/orm`             |
 | entity-framework | `Microsoft.EntityFrameworkCore` |
 
-### Test runners detectados
+### Определяемые test runners
 
 **Node:**
 
-| Test runner | Paquete buscado |
+| Test runner | Искомый пакет |
 |-------------|-----------------|
 | vitest      | `vitest`        |
 | jest        | `jest`          |
@@ -147,28 +147,28 @@ Para proyectos Node, el parser lee `dependencies` y `devDependencies` de `packag
 
 **Python:**
 
-| Test runner | Paquete buscado |
+| Test runner | Искомый пакет |
 |-------------|-----------------|
 | pytest      | `pytest`        |
 | unittest    | `unittest`      |
 | nose        | `nose`          |
 
-**Otros ecosistemas:**
+**Другие экосистемы:**
 
-| Test runner | Marcador buscado |
+| Test runner | Искомый маркер |
 |-------------|------------------|
-| junit       | `junit` en Maven/Gradle |
-| kotest      | `kotest` en Maven/Gradle |
-| phpunit     | `phpunit/phpunit` en Composer |
-| pest        | `pestphp/pest` en Composer |
-| xunit       | `xunit` en `.csproj` |
-| nunit       | `nunit` en `.csproj` |
-| mstest      | `mstest` en `.csproj` |
-| swift-test  | `.testTarget` o `swift-testing` en `Package.swift` |
+| junit       | `junit` в Maven/Gradle |
+| kotest      | `kotest` в Maven/Gradle |
+| phpunit     | `phpunit/phpunit` в Composer |
+| pest        | `pestphp/pest` в Composer |
+| xunit       | `xunit` в `.csproj` |
+| nunit       | `nunit` в `.csproj` |
+| mstest      | `mstest` в `.csproj` |
+| swift-test  | `.testTarget` или `swift-testing` в `Package.swift` |
 
-### Bundlers detectados (solo Node)
+### Определяемые bundlers (только Node)
 
-| Bundler   | Paquete buscado |
+| Bundler   | Искомый пакет |
 |-----------|-----------------|
 | vite      | `vite`          |
 | webpack   | `webpack`       |
@@ -180,40 +180,40 @@ Para proyectos Node, el parser lee `dependencies` y `devDependencies` de `packag
 | unbuild   | `unbuild`       |
 
 
-## Fichero de configuración
+## Файл настроек
 
-La configuración de Alfred Dev vive en `.claude/alfred-dev.local.md`, dentro del directorio del proyecto. Se utiliza el formato YAML frontmatter (delimitado por `---`) para los valores estructurados, seguido de contenido Markdown libre para notas y contexto adicional.
+Настройки Alfred Dev хранятся в `.claude/alfred-dev.local.md` внутри каталога проекта. Структурированные значения записаны в формате YAML frontmatter (между `---`), за ним идёт свободный Markdown для заметок и дополнительного контекста.
 
-La razon de este formato hibrido es practica: YAML cubre la configuración tipada (booleanos, números, listas), mientras que el cuerpo Markdown permite al desarrollador añadir instrucciones en lenguaje natural que Alfred inyecta en su contexto. El fichero es editable a mano, pero la forma recomendada de gestionarlo es a traves del comando `/alfred-dev:ajustes`, que guia al usuario por cada sección de forma interactiva. El menú principal de secciones y sus descripciones ya salen de `build_config_section_menu()` / `build_config_section_summaries()`, la confirmación de cambios puede apoyarse en `build_config_section_change_preview()`, y la persistencia final en `update_config_section()` / `update_project_config_section()`, así que la UX de `ajustes` no depende de reescribir a mano el estado actual, el diff esperado ni el guardado final en cada prompt.
+У гибридного формата практическая причина: YAML покрывает типизированные настройки (булевы значения, числа, списки), а тело Markdown позволяет разработчику добавить инструкции на естественном языке, которые Alfred добавляет в свой контекст. Файл можно править вручную, но рекомендуемый способ управления им: команда `/alfred-dev:ajustes`, которая интерактивно проводит пользователя по каждому разделу. Главное меню разделов и их описания берутся из `build_config_section_menu()` / `build_config_section_summaries()`, подтверждение изменений может опираться на `build_config_section_change_preview()`, а итоговое сохранение на `update_config_section()` / `update_project_config_section()`. Поэтому UX `ajustes` не требует в каждом промпте вручную переписывать текущее состояние, ожидаемый diff и итоговое сохранение.
 
-La fusion con los valores por defecto es recursiva: el desarrollador solo necesita definir las claves que quiere cambiar. El resto se hereda automáticamente del `DEFAULT_CONFIG` del plugin. El runtime acepta alias legacy como `autonomía`, pero la escritura canónica del plugin es `autonomia`.
+Слияние со значениями по умолчанию рекурсивное: разработчику достаточно задать только те ключи, которые он хочет изменить. Остальное автоматически наследуется из `DEFAULT_CONFIG` плагина. Runtime принимает legacy-алиасы вроде `autonomía`, но каноническая запись плагина: `autonomia`.
 
-El menú principal de `/alfred-dev:ajustes` expone estas 7 secciones canónicas:
-Autonomía por fase, Proyecto, Agentes opcionales, Memoria persistente,
-Compliance, Integraciones y Personalidad.
+Главное меню `/alfred-dev:ajustes` показывает 7 канонических разделов:
+Автономность по фазам, Проект, Опциональные агенты, Постоянная память,
+Compliance, Интеграции и Личность.
 
-### Sección `autonomia`
+### Раздел `autonomia`
 
-La autonomía controla cuanto puede decidir el plugin por su cuenta en cada fase canónica del flujo de trabajo. Cada clave representa una fase real del orquestador y acepta uno de los tres niveles de autonomía descritos mas adelante en este documento.
+Автономность определяет, сколько плагин может решать сам в каждой канонической фазе процесса. Каждый ключ соответствует реальной фазе оркестратора и принимает один из трёх уровней автономности, описанных ниже в этом документе.
 
-| Clave            | Descripción                                                     | Valor por defecto |
+| Ключ             | Описание                                                        | Значение по умолчанию |
 |------------------|-----------------------------------------------------------------|-------------------|
-| `producto`       | Descubrimiento y definición funcional                            | `autonomo`        |
-| `arquitectura`   | Diseño técnico y validación arquitectónica                       | `autonomo`        |
-| `desarrollo`     | Implementación, TDD y cambios de código                          | `autonomo`        |
-| `calidad`        | QA, seguridad operativa y revisión de calidad                    | `autonomo`        |
-| `documentacion`  | Documentación y artefactos de soporte                            | `autonomo`        |
-| `entrega`        | Validación final, ship y cierre                                  | `autonomo`        |
+| `producto`       | Исследование и функциональное определение                        | `autonomo`        |
+| `arquitectura`   | Техническое проектирование и архитектурная проверка              | `autonomo`        |
+| `desarrollo`     | Реализация, TDD и изменения кода                                 | `autonomo`        |
+| `calidad`        | QA, операционная безопасность и проверка качества                | `autonomo`        |
+| `documentacion`  | Документация и вспомогательные артефакты                         | `autonomo`        |
+| `entrega`        | Финальная проверка, ship и закрытие                              | `autonomo`        |
 
-Alias legacy aceptados al leer configuración existente:
+Legacy-алиасы, которые принимаются при чтении существующих настроек:
 
 - `refactor` -> `desarrollo`
 - `tests` -> `calidad`
 - `docs` / `documentación` -> `documentacion`
 - `devops` -> `entrega`
-- `seguridad` -> se proyecta sobre `arquitectura`, `calidad` y `entrega`
+- `seguridad` -> проецируется на `arquitectura`, `calidad` и `entrega`
 
-Ejemplo:
+Пример:
 
 ```yaml
 autonomia:
@@ -225,20 +225,20 @@ autonomia:
   entrega: semi-autonomo
 ```
 
-### Sección `proyecto`
+### Раздел `proyecto`
 
-Metadatos del proyecto. Normalmente se rellenan automáticamente con `detect_stack()`, pero el desarrollador puede sobreescribirlos si la detección no es precisa o si quiere forzar un valor concreto.
+Метаданные проекта. Обычно их автоматически заполняет `detect_stack()`, но разработчик может переопределить их, если определение неточное или нужно задать конкретное значение.
 
-| Clave         | Descripción                        | Valor por defecto |
+| Ключ          | Описание                           | Значение по умолчанию |
 |---------------|------------------------------------|-------------------|
-| `runtime`     | Entorno de ejecución               | `desconocido`     |
-| `lenguaje`    | Lenguaje principal                  | `desconocido`     |
-| `framework`   | Framework web o de aplicación       | `desconocido`     |
-| `orm`         | ORM o query builder                 | `ninguno`         |
-| `test_runner` | Framework de tests                  | `desconocido`     |
-| `bundler`     | Bundler o empaquetador              | `desconocido`     |
+| `runtime`     | Среда выполнения                   | `desconocido`     |
+| `lenguaje`    | Основной язык                       | `desconocido`     |
+| `framework`   | Веб-фреймворк или фреймворк приложения | `desconocido`  |
+| `orm`         | ORM или query builder               | `ninguno`         |
+| `test_runner` | Фреймворк тестов                    | `desconocido`     |
+| `bundler`     | Bundler или сборщик                 | `desconocido`     |
 
-Ejemplo:
+Пример:
 
 ```yaml
 proyecto:
@@ -250,19 +250,19 @@ proyecto:
   bundler: vite
 ```
 
-### Sección `personalidad`
+### Раздел `personalidad`
 
-Define el tono y el estilo de comunicación de los agentes. Los detalles de cada nivel de sarcasmo se explican en la sección dedicada mas adelante.
+Задаёт тон и стиль общения агентов. Подробности каждого уровня сарказма описаны в отдельном разделе ниже.
 
-| Clave             | Descripción                                          | Valor por defecto |
+| Ключ              | Описание                                             | Значение по умолчанию |
 |-------------------|------------------------------------------------------|-------------------|
-| `nivel_sarcasmo`  | Nivel de sarcasmo de 1 (formal) a 5 (acido)          | `3`               |
-| `verbosidad`      | Nivel de detalle en las respuestas: `normal`, etc.    | `normal`          |
-| `idioma`          | Idioma de las respuestas                              | `es`              |
-| `celebrar_victorias` | Celebrar cuando se completan fases o flujos        | `true`            |
-| `insultar_malas_practicas` | Comentar con sarcasmo las malas practicas     | `true`            |
+| `nivel_sarcasmo`  | Уровень сарказма от 1 (формальный) до 5 (едкий)      | `3`               |
+| `verbosidad`      | Подробность ответов: `normal` и др.                   | `normal`          |
+| `idioma`          | Язык ответов                                          | `es`              |
+| `celebrar_victorias` | Отмечать завершение фаз или процессов            | `true`            |
+| `insultar_malas_practicas` | Саркастично комментировать плохие практики     | `true`            |
 
-Ejemplo:
+Пример:
 
 ```yaml
 personalidad:
@@ -271,37 +271,37 @@ personalidad:
   insultar_malas_practicas: true
 ```
 
-### Sección `agentes_opcionales`
+### Раздел `agentes_opcionales`
 
-Activa o desactiva el único agente opcional del runtime. Lucius viene desactivado por defecto.
+Включает или выключает единственного опционального агента runtime. CTO по умолчанию выключен.
 
-| Clave                    | Rol del agente                              | Valor por defecto |
+| Ключ                     | Роль агента                                 | Значение по умолчанию |
 |--------------------------|---------------------------------------------|-------------------|
-| `lucius`                 | Director técnico externo (segunda opinión)  | `false`           |
+| `cto`                 | Внешний технический директор (второе мнение) | `false`          |
 
-Ejemplo:
+Пример:
 
 ```yaml
 agentes_opcionales:
-  lucius: false
+  cto: false
 ```
 
-La memoria persistente no depende de un agente bibliotecario. Activar `memoria.enabled` hace que Alfred registre y exponga historial; las consultas van por MCP o `/alfred-dev:memory-ui`.
+Постоянная память не зависит от агента-библиотекаря. Если включить `memoria.enabled`, Alfred записывает и показывает историю; запросы идут через MCP или `/alfred-dev:memory-ui`.
 
-### Sección `memoria`
+### Раздел `memoria`
 
-Controla la memoria persistente del proyecto. Cuando esta activa, Alfred registra decisiones de diseño, commits e iteraciones en una base de datos SQLite local (`.claude/alfred-memory.db`). Los detalles completos se explican en la sección dedicada mas adelante.
+Управляет постоянной памятью проекта. Когда она включена, Alfred записывает проектные решения, коммиты и итерации в локальную базу SQLite (`.claude/alfred-memory.db`). Подробности описаны в отдельном разделе ниже.
 
-| Clave               | Descripción                                      | Valor por defecto |
+| Ключ                 | Описание                                         | Значение по умолчанию |
 |----------------------|--------------------------------------------------|-------------------|
-| `enabled`            | Activa o desactiva la memoria persistente        | `false` en `load_config()` |
-| `sync_to_native`     | Proyectar SQLite a memorias `.md` nativas de Claude Code | `true` |
-| `sync_commits_limit` | Numero de commits recientes a proyectar en la memoria nativa | `10` |
-| `capture_decisions`  | Registrar decisiones de diseño automáticamente   | `true`            |
-| `capture_commits`    | Registrar commits automáticamente                | `true`            |
-| `retention_days`     | Dias de retención de eventos (las decisiones se conservan siempre) | `365` |
+| `enabled`            | Включает или выключает постоянную память         | `false` в `load_config()` |
+| `sync_to_native`     | Проецировать SQLite в нативные `.md`-памяти Claude Code | `true` |
+| `sync_commits_limit` | Число последних коммитов для проекции в нативную память | `10` |
+| `capture_decisions`  | Автоматически записывать проектные решения       | `true`            |
+| `capture_commits`    | Автоматически записывать коммиты                 | `true`            |
+| `retention_days`     | Сколько дней хранить события (решения хранятся всегда) | `365` |
 
-Ejemplo:
+Пример:
 
 ```yaml
 memoria:
@@ -313,178 +313,178 @@ memoria:
   retention_days: 365
 ```
 
-Aunque `DEFAULT_MEMORY_CONFIG` parte de `enabled: false`, la primera sesión del proyecto siembra `.claude/alfred-dev.local.md` con `memoria.enabled: true` si el fichero local no existía. A partir de ese momento, cualquier `enabled: false` explícito del usuario se respeta y no se vuelve a sobrescribir.
+Хотя `DEFAULT_MEMORY_CONFIG` начинается с `enabled: false`, первая сессия проекта создаёт `.claude/alfred-dev.local.md` с `memoria.enabled: true`, если локального файла ещё не было. После этого любое явное `enabled: false` от пользователя соблюдается и больше не перезаписывается.
 
-### Sección `compliance`
+### Раздел `compliance`
 
-Reglas de cumplimiento y estilo de código.
+Правила соответствия и стиля кода.
 
-| Clave            | Descripción                                | Valor por defecto |
+| Ключ             | Описание                                  | Значение по умолчанию |
 |------------------|-------------------------------------------|-------------------|
-| `estilo`         | Guia de estilo: `auto` detecta la del proyecto | `auto`        |
-| `lint`           | Ejecutar linter automáticamente            | `true`            |
-| `format_on_save` | Formatear al guardar                       | `true`            |
+| `estilo`         | Руководство по стилю: `auto` определяет стиль проекта | `auto`  |
+| `lint`           | Автоматически запускать linter             | `true`            |
+| `format_on_save` | Форматировать при сохранении               | `true`            |
 
-### Sección `integraciones`
+### Раздел `integraciones`
 
-Servicios externos habilitados.
+Включённые внешние сервисы.
 
-| Clave    | Descripción                           | Valor por defecto |
+| Ключ     | Описание                              | Значение по умолчанию |
 |----------|---------------------------------------|-------------------|
-| `git`    | Integración con Git                   | `true`            |
-| `ci`     | Integración con CI/CD                 | `false`           |
-| `deploy` | Integración con despliegue            | `false`           |
+| `git`    | Интеграция с Git                      | `true`            |
+| `ci`     | Интеграция с CI/CD                    | `false`           |
+| `deploy` | Интеграция с развёртыванием           | `false`           |
 
-### Contexto adicional (notas)
+### Дополнительный контекст (заметки)
 
-El cuerpo Markdown del fichero, despues del cierre del frontmatter (`---`), se utiliza como notas de texto libre. Si existe una sección con cabecera que contenga la palabra "Notas", Alfred extrae su contenido y lo inyecta en el contexto del sistema. Esto permite al desarrollador dar instrucciones en lenguaje natural que complementan la configuración estructurada.
+Тело Markdown после закрывающего `---` frontmatter используется как свободные заметки. Если есть раздел с заголовком, содержащим слово `Notas`, Alfred извлекает его содержимое и добавляет в системный контекст. Так разработчик может дать инструкции на естественном языке в дополнение к структурированным настройкам.
 
-Ejemplo de uso típico: indicar convenciones del equipo, restricciones de negocio o preferencias que no encajan en ninguna sección YAML.
+Типичный пример: соглашения команды, бизнес-ограничения или предпочтения, которые не подходят ни к одному разделу YAML.
 
 
-## Niveles de autonomía
+## Уровни автономности
 
-La autonomía es uno de los conceptos mas importantes de Alfred Dev porque determina hasta que punto el plugin puede tomar decisiones sin pedir permiso. La razon de ofrecer varios niveles es que cada equipo y cada fase del desarrollo tienen necesidades distintas: la fase de producto requiere validación humana constante (los requisitos son decisiones de negocio), mientras que la ejecución de tests es mecánica y no necesita supervision.
+Автономность одно из важнейших понятий Alfred Dev: она определяет, насколько плагин может принимать решения без запроса разрешения. Уровней несколько, потому что у каждой команды и каждой фазы разработки разные потребности: фаза продукта требует постоянной проверки человеком (требования это бизнес-решения), а запуск тестов механический и не требует надзора.
 
-Alfred Dev define tres niveles de autonomía que se aplican a cada fase de forma independiente. Esto significa que un mismo proyecto puede tener `producto` en modo interactivo y `documentacion` en modo autonomo.
+Alfred Dev определяет три уровня автономности, которые применяются к каждой фазе независимо. Значит, в одном проекте `producto` может быть в интерактивном режиме, а `documentacion` в автономном.
 
-### Interactivo
+### Интерактивный
 
-En este nivel, Alfred pide confirmacion en cada gate antes de avanzar. Es el modo mas conservador y el recomendado para fases donde las decisiones tienen impacto directo en el negocio o la arquitectura.
+На этом уровне Alfred запрашивает подтверждение на каждом gate перед продвижением. Это самый консервативный режим. Он рекомендуется для фаз, где решения напрямую влияют на бизнес или архитектуру.
 
-En la practica, durante un flujo `/alfred-dev:feature`:
+На практике в процессе `/alfred-dev:feature`:
 
-- **Producto**: Alfred presenta los requisitos y la historia de usuario, y espera a que el desarrollador los apruebe antes de pasar a arquitectura.
-- **Arquitectura**: El diseño técnico y el threat model se presentan para revision. No se empieza a codificar hasta que el desarrollador da el visto bueno.
-- **Desarrollo**: Si `desarrollo` esta en interactivo, los cambios estructurales relevantes se proponen antes de aplicarse.
-- **Entrega**: El changelog y la validación final requieren aprobacion explícita.
+- **Продукт**: Alfred показывает требования и пользовательскую историю и ждёт, пока разработчик их одобрит, прежде чем перейти к архитектуре.
+- **Архитектура**: техническое проектирование и threat model выносятся на проверку. Кодирование не начинается, пока разработчик не даст добро.
+- **Разработка**: если `desarrollo` в интерактивном режиме, значимые структурные изменения предлагаются до применения.
+- **Поставка**: changelog и финальная проверка требуют явного одобрения.
 
-### Semi-autonomo
+### Полуавтономный
 
-En este nivel, las gates automáticas (las que dependen de metricas objetivas como tests verdes o pipeline OK) se pasan sin preguntar, pero las gates de usuario (las que requieren juicio humano) siguen pidiendo confirmacion.
+На этом уровне автоматические gates (те, что зависят от объективных метрик, например зелёных тестов или успешного pipeline) проходят без вопросов, а пользовательские gates (те, что требуют человеческого суждения) по-прежнему запрашивают подтверждение.
 
-Es el nivel recomendado cuando el desarrollador confia en la infraestructura de calidad del proyecto (buena cobertura de tests, linters configurados) pero quiere mantener el control sobre las decisiones de producto y arquitectura.
+Этот уровень рекомендуется, когда разработчик доверяет инфраструктуре качества проекта (хорошее покрытие тестами, настроенные linters), но хочет сохранить контроль над решениями о продукте и архитектуре.
 
-En la practica:
+На практике:
 
-- **Desarrollo**: Si los tests pasan, la gate se supera automáticamente sin intervencion. Si fallan, se detiene y se informa.
-- **Calidad**: La auditoría de calidad y seguridad se ejecutan y, si ambas pasan, el flujo avanza solo.
-- **Producto y arquitectura**: Siguen pidiendo confirmacion porque son gates de tipo `usuario`.
+- **Разработка**: если тесты проходят, gate пройден автоматически без вмешательства. Если падают, процесс останавливается и сообщает об этом.
+- **Качество**: аудит качества и безопасности выполняется, и если оба проходят, процесс идёт дальше сам.
+- **Продукт и архитектура**: по-прежнему запрашивают подтверждение, потому что это gates типа `usuario`.
 
-### Autonomo
+### Автономный
 
-Todo se ejecuta sin interrupciones. El flujo solo se detiene ante errores críticos (tests que fallan, auditoría de seguridad que no pasa). Es el nivel para desarrolladores experimentados que quieren velocidad máxima y confian plenamente en los agentes.
+Всё выполняется без перерывов. Процесс останавливается только на критических ошибках (падающие тесты, непройденный аудит безопасности). Это уровень для опытных разработчиков, которым нужна максимальная скорость и которые полностью доверяют агентам.
 
-En la practica:
+На практике:
 
-- Todas las fases avanzan automáticamente mientras las condiciones de la gate se cumplan.
-- Las unicas paradas son por fallos reales: tests rojos, vulnerabilidades detectadas o errores de build.
-- El desarrollador puede revisar el resultado completo al final del flujo en lugar de fase por fase.
+- Все фазы продвигаются автоматически, пока условия gate выполняются.
+- Остановки бывают только из-за реальных сбоев: красные тесты, найденные уязвимости или ошибки сборки.
+- Разработчик может проверить весь результат в конце процесса, а не по фазам.
 
-### Tipos de gate en el orquestador
+### Типы gate в оркестраторе
 
-Para entender como la autonomía interactua con cada fase, conviene conocer los tipos de gate que define el orquestador. Cada fase de un flujo tiene un tipo de gate que determina las condiciones necesarias para avanzar:
+Чтобы понять, как автономность взаимодействует с каждой фазой, полезно знать типы gate, которые определяет оркестратор. У каждой фазы процесса есть тип gate, задающий условия для продвижения:
 
-| Tipo de gate             | Condiciones para pasar                                                    |
+| Тип gate                 | Условия прохождения                                                       |
 |--------------------------|---------------------------------------------------------------------------|
-| `libre`                  | Requiere resultado favorable y evidencia/checklist; no pide aprobacion humana. |
-| `usuario`                | Requiere aprobacion explícita del desarrollador.                           |
-| `automático`             | Requiere que los tests pasen y el resultado sea favorable.                 |
-| `usuario+seguridad`      | Requiere aprobacion del desarrollador y auditoría de seguridad positiva.   |
-| `automático+seguridad`   | Requiere tests verdes, seguridad OK y resultado favorable.                 |
+| `libre`                  | Нужен положительный результат и подтверждение/чек-лист; одобрение человека не требуется. |
+| `usuario`                | Нужно явное одобрение разработчика.                                        |
+| `automático`             | Тесты должны пройти, а результат должен быть положительным.                |
+| `usuario+seguridad`      | Нужно одобрение разработчика и положительный аудит безопасности.           |
+| `automático+seguridad`   | Нужны зелёные тесты, успешная проверка безопасности и положительный результат. |
 
-El nivel de autonomía modifica el comportamiento de las gates de tipo `usuario`: en modo interactivo, siempre se pide confirmacion; en semi-autonomo, solo las de usuario; en autonomo, ninguna (salvo fallo en las condiciones automáticas). La excepción explícita es `ship:despliegue`: aunque el flujo esté en autopilot, esa fase mantiene confirmación humana obligatoria antes de publicar.
-
-
-## Descubrimiento de agentes opcionales
-
-Alfred Dev incluye 8 agentes de nucleo más Selina si hay frontend. El único opcional es Lucius. El kanban lo escribe el runtime, no un agente aparte.
-
-La función `suggest_optional_agents()` en `config_loader.py` no propone el catálogo 0.6. Lucius no se decide por I/O del proyecto: su valor depende de si el usuario quiere una segunda opinión externa en un cierre.
-
-### Flujo de activacion
-
-El descubrimiento contextual se ejecuta la primera vez que el desarrollador abre `/alfred-dev:ajustes` en un proyecto nuevo (o cuando Lucius no está configurado). El flujo es:
-
-1. Se detecta el stack con `detect_stack()`.
-2. Se ejecuta `suggest_optional_agents()` con el directorio del proyecto y la configuración actual.
-3. Se presentan las sugerencias al desarrollador con la razon de cada una.
-4. El desarrollador elige cuales activar.
-5. La seleccion se guarda en el fichero `.claude/alfred-dev.local.md` bajo la clave `agentes_opcionales`.
-
-Los agentes que no se sugieren también se pueden activar manualmente. El descubrimiento es una ayuda, no una restricción.
+Уровень автономности меняет поведение gates типа `usuario`: в интерактивном режиме подтверждение запрашивается всегда; в полуавтономном только для пользовательских; в автономном никогда (кроме сбоя автоматических условий). Явное исключение: `ship:despliegue`. Даже если процесс в autopilot, эта фаза сохраняет обязательное подтверждение человеком перед публикацией.
 
 
-## Composicion dinámica de equipo
+## Обнаружение опциональных агентов
 
-El descubrimiento de agentes opcionales descrito en la sección anterior resuelve la pregunta «que agentes podrian ser utiles en este proyecto», pero no la pregunta «que agentes necesita esta tarea concreta». Un proyecto Next.js con Prisma siempre tendra las mismas sugerencias, independientemente de si la tarea actual es «añadir pagos con Stripe» o «corregir un typo en el README». La composicion dinámica de equipo cierra esa brecha: analiza la descripción de la tarea del usuario, la combina con las señales del proyecto y la configuración activa, y propone un equipo adaptado a cada ejecución.
+Alfred Dev включает 8 базовых агентов плюс Designer, если есть фронтенд. Единственный опциональный агент: CTO. Kanban пишет runtime, а не отдельный агент.
 
-La seleccion es efímera: solo aplica a la sesión en curso y no modifica la configuración persistente del fichero `.claude/alfred-dev.local.md`. Esto evita que una tarea puntual contamine la configuración del proyecto para todas las sesiones futuras.
+Функция `suggest_optional_agents()` в `config_loader.py` не предлагает каталог 0.6. CTO не выбирается по I/O проекта: его ценность зависит от того, нужно ли пользователю внешнее второе мнение при закрытии.
 
-### Las tres capas de la composicion
+### Процесс включения
 
-La composicion dinámica se ejecuta al invocar cualquier flujo y opera en tres capas. El protocolo esta centralizado en `commands/_composicion.md` y todos los comandos lo referencian, eliminando la duplicacion anterior.
+Контекстное обнаружение запускается, когда разработчик впервые открывает `/alfred-dev:ajustes` в новом проекте (или когда CTO не настроен). Процесс:
+
+1. Стек определяется через `detect_stack()`.
+2. Запускается `suggest_optional_agents()` с каталогом проекта и текущими настройками.
+3. Разработчику показываются предложения с причиной для каждого.
+4. Разработчик выбирает, какие включить.
+5. Выбор сохраняется в файле `.claude/alfred-dev.local.md` под ключом `agentes_opcionales`.
+
+Агентов, которых система не предложила, тоже можно включить вручную. Обнаружение это помощь, а не ограничение.
+
+
+## Динамический состав команды
+
+Обнаружение опциональных агентов из предыдущего раздела отвечает на вопрос «какие агенты могут быть полезны в этом проекте», но не на вопрос «какие агенты нужны для этой конкретной задачи». Проект на Next.js с Prisma всегда получит одни и те же предложения, будь текущая задача «добавить оплату через Stripe» или «исправить опечатку в README». Динамический состав команды закрывает этот пробел: он анализирует описание задачи пользователя, сочетает его с сигналами проекта и активными настройками и предлагает команду под каждый запуск.
+
+Выбор эфемерный: он действует только в текущей сессии и не меняет постоянные настройки в файле `.claude/alfred-dev.local.md`. Так разовая задача не засоряет настройки проекта для всех будущих сессий.
+
+### Три слоя состава команды
+
+Динамический состав запускается при вызове любого процесса и работает в три слоя. Протокол централизован в `commands/_composicion.md`, и все команды ссылаются на него, что устранило прежнее дублирование.
 
 ```
-1. CONTEXTO DEL PROYECTO  (config_loader.py)
-   suggest_optional_agents() -- señales basadas en I/O
-   --> ORM detectado, frontend, HTML público, remote GitHub, etc.
+1. КОНТЕКСТ ПРОЕКТА  (config_loader.py)
+   suggest_optional_agents() -- сигналы на основе I/O
+   --> найденный ORM, фронтенд, публичный HTML, remote GitHub и т. д.
 
-2. RAZONAMIENTO SEMÁNTICO  (Alfred)
-   Alfred analiza la tarea + señales del proyecto y decide
-   que agentes son relevantes usando comprension semántica.
-   --> preseleccion razonada, no por keywords
+2. СЕМАНТИЧЕСКИЙ АНАЛИЗ  (Alfred)
+   Alfred анализирует задачу + сигналы проекта и решает,
+   какие агенты релевантны, на основе семантического понимания.
+   --> обоснованный предвыбор, а не по keywords
 
-3. PRESENTACION + EJECUCIÓN
-   Lucius se presenta con AskUserQuestion en un menú del grupo Auditoria.
-   Si el usuario no quiere activarlo, elige «Seguir sin activar más».
-   --> equipo_sesion efimero
+3. ПРЕДСТАВЛЕНИЕ + ВЫПОЛНЕНИЕ
+   CTO показывается через AskUserQuestion в меню группы Аудит.
+   Если пользователь не хочет его включать, он выбирает «Продолжить без включения».
+   --> эфемерный equipo_sesion
 ```
 
-La primera capa proporciona señales objetivas del proyecto (I/O de ficheros). La segunda aprovecha la capacidad de comprension semántica de Alfred para decidir que agentes son relevantes para la tarea concreta, sin depender de un diccionario de keywords. La tercera da al usuario la decisión final sobre Lucius.
+Первый слой даёт объективные сигналы проекта (I/O файлов). Второй использует семантическое понимание Alfred, чтобы решить, какие агенты релевантны конкретной задаче, без словаря keywords. Третий оставляет финальное решение о CTO пользователю.
 
-### Capa de proyecto: suggest_optional_agents
+### Слой проекта: suggest_optional_agents
 
-La función `suggest_optional_agents()` en `config_loader.py` analiza el proyecto de forma estática para generar señales contextuales. No analiza la descripción de la tarea; eso lo hace Alfred semanticamente.
+Функция `suggest_optional_agents()` в `config_loader.py` статически анализирует проект и создаёт контекстные сигналы. Описание задачи она не анализирует: это семантически делает Alfred.
 
-`suggest_optional_agents()` ya no propone el catálogo 0.6. El único opcional es Lucius, y queda fuera de las señales estáticas: se activa por contexto de tarea o desde `/alfred-dev:ajustes`, no porque el repo tenga ORM, frontend o remoto GitHub.
+`suggest_optional_agents()` больше не предлагает каталог 0.6. Единственный опциональный агент: CTO, и он не входит в статические сигналы. Он включается по контексту задачи или из `/alfred-dev:ajustes`, а не потому, что в репозитории есть ORM, фронтенд или remote GitHub.
 
-### Capa semántica: Alfred como razonador
+### Семантический слой: Alfred как аналитик
 
-Alfred analiza la descripción de la tarea con comprension semántica completa. No busca keywords; entiende la intencion. El catalogo de agentes en `commands/_composicion.md` le proporciona el contexto necesario para decidir.
+Alfred анализирует описание задачи с полным семантическим пониманием. Он не ищет keywords, а понимает намерение. Каталог агентов в `commands/_composicion.md` даёт ему контекст для решения.
 
-Ejemplos de razonamiento semántico:
+Примеры семантического анализа:
 
-| Tarea | Decisión de Alfred | Por que |
+| Задача | Решение Alfred | Почему |
 |-------|--------------------|---------|
-| "Implementar pagos con Stripe" | senior-dev | Entiende que "pagos" es lógica de negocio del nucleo |
-| "Dark mode en el dashboard" | selina si hay frontend, luego senior-dev | Entiende que afecta a la interfaz |
-| "¿Por que se eligio SQLite?" | memory-ui / MCP | Consulta histórica, no un agente bibliotecario |
-| "Segunda opinión antes de cerrar" | lucius | Único opcional, activado por tarea o ajustes |
+| "Реализовать оплату через Stripe" | senior-dev | Понимает, что «оплата» это бизнес-логика ядра |
+| "Dark mode в dashboard" | designer, если есть фронтенд, затем senior-dev | Понимает, что это затрагивает интерфейс |
+| "Почему выбрали SQLite?" | memory-ui / MCP | Исторический запрос, а не агент-библиотекарь |
+| "Второе мнение перед закрытием" | cto | Единственный опциональный, включается по задаче или через ajustes |
 
-### Capa de presentacion: todos los agentes visibles
+### Слой представления: все агенты видны
 
-Los comandos presentan Lucius mediante `AskUserQuestion` con un menú del grupo `Auditoria`. El menú se construye como payload actual de Claude Code (`questions[]` con `multiSelect: false`) y conserva `question`/`header`/`options` en raíz solo como compatibilidad interna de lectura. Si el usuario no quiere activarlo, elige `Seguir sin activar más`.
+Команды показывают CTO через `AskUserQuestion` в меню группы `Аудит`. Меню строится как актуальный payload Claude Code (`questions[]` с `multiSelect: false`) и сохраняет `question`/`header`/`options` в корне только для внутренней совместимости чтения. Если пользователь не хочет его включать, он выбирает `Продолжить без включения`.
 
-Desde v0.6, esa UX ya no depende solo del prompt: `core/optional_agents.py`
-actúa como fuente canónica del menú con `build_optional_agent_group_menu()` y
-`build_optional_agent_group_menus()`, que fijan grupos, orden, labels visibles,
-descripciones base y opción de salida.
+Начиная с v0.6 эта UX зависит не только от промпта: `core/optional_agents.py`
+служит каноническим источником меню через `build_optional_agent_group_menu()` и
+`build_optional_agent_group_menus()`, которые фиксируют группы, порядок, видимые labels,
+базовые описания и вариант выхода.
 
 ```
-Menú Auditoría:
-  Seguir sin activar más
-  Lucius            -- "Segunda opinión técnica externa para esta tarea"
+Меню Auditoría:
+  Продолжить без включения
+  CTO            -- "Внешнее техническое второе мнение для этой задачи"
 ```
 
-### Ejecución: equipo efimero en el orquestador
+### Выполнение: эфемерная команда в оркестраторе
 
-La seleccion del usuario se traduce en un diccionario `equipo_sesion` que se pasa como parámetro opcional a `run_flow()` en `core/orchestrator.py`. La estructura del diccionario es:
+Выбор пользователя превращается в словарь `equipo_sesion`, который передаётся необязательным параметром в `run_flow()` в `core/orchestrator.py`. Структура словаря:
 
 ```python
 equipo_sesion = {
     "opcionales_activos": {
-        "lucius": False,
+        "cto": False,
     },
     "infra": {
         "memoria": True,
@@ -493,117 +493,117 @@ equipo_sesion = {
 }
 ```
 
-Antes de inyectar el equipo en la sesión, `run_flow()` lo valida con `_validate_equipo_sesion()`. Las reglas de validación son:
+Прежде чем внедрить команду в сессию, `run_flow()` проверяет её через `_validate_equipo_sesion()`. Правила проверки:
 
-- El primer nivel exige exactamente tres claves: `opcionales_activos`, `infra` y `fuente`.
-- `opcionales_activos` exige como mínimo la clave `lucius`. Acepta claves extra con aviso a stderr, lo que permite extensiones futuras sin romper la validación.
-- `infra` exige exactamente `memoria`, de tipo booleano.
-- `fuente` debe ser una fuente runtime reconocida: `"composicion_dinamica"` para composicion efimera o `"config_persistida"` cuando el equipo se deriva de `.claude/alfred-dev.local.md`.
+- На первом уровне должно быть ровно три ключа: `opcionales_activos`, `infra` и `fuente`.
+- `opcionales_activos` требует как минимум ключ `cto`. Лишние ключи принимаются с предупреждением в stderr, что допускает будущие расширения без поломки проверки.
+- `infra` требует ровно `memoria` булева типа.
+- `fuente` должен быть известным источником runtime: `"composicion_dinamica"` для эфемерного состава или `"config_persistida"`, когда команда берётся из `.claude/alfred-dev.local.md`.
 
-Si la validación falla, el equipo se descarta con un aviso a stderr y el motivo se registra en `session["equipo_sesion_error"]` para que los consumidores downstream puedan informar al usuario. Si existía configuración persistida válida en el proyecto, `run_flow()` hace fallback a esa configuración antes de quedarse sin equipo.
+Если проверка не проходит, команда отбрасывается с предупреждением в stderr, а причина записывается в `session["equipo_sesion_error"]`, чтобы downstream-потребители могли сообщить пользователю. Если в проекте есть корректные сохранённые настройки, `run_flow()` откатывается на них, прежде чем остаться без команды.
 
-### Retrocompatibilidad
+### Обратная совместимость
 
-La composicion dinámica es un camino nuevo, no un reemplazo del existente. Si `equipo_sesion` no se pasa a `run_flow()`, el orquestador intenta derivar el equipo desde la configuración persistente del proyecto actual (o del `project_dir` explícito si se pasa). Un proyecto que ya tiene agentes configurados en `.claude/alfred-dev.local.md` sigue funcionando sin cambios y deja ese equipo reflejado también en `alfred-dev-state.json`.
+Динамический состав это новый путь, а не замена существующего. Если `equipo_sesion` не передан в `run_flow()`, оркестратор пытается получить команду из постоянных настроек текущего проекта (или явного `project_dir`, если он передан). Проект, в котором агенты уже настроены в `.claude/alfred-dev.local.md`, работает без изменений, и эта команда также отражается в `alfred-dev-state.json`.
 
-Los mecanismos de seleccion de agentes opcionales coexisten:
+Механизмы выбора опциональных агентов сосуществуют:
 
-| Mecanismo | Persistencia | Contexto |
+| Механизм | Сохранение | Контекст |
 |-----------|--------------|----------|
-| `/alfred-dev:ajustes` | Persistente (fichero `.local.md`) | Proyecto |
-| Descubrimiento (`suggest_optional_agents`) | Persistente (se guarda al confirmar) | Proyecto |
-| Composicion dinámica (Alfred semántico) | Efímera (solo la sesión) | Tarea |
+| `/alfred-dev:ajustes` | Постоянное (файл `.local.md`) | Проект |
+| Обнаружение (`suggest_optional_agents`) | Постоянное (сохраняется при подтверждении) | Проект |
+| Динамический состав (семантический Alfred) | Эфемерное (только сессия) | Задача |
 
-### Ficheros involucrados
+### Задействованные файлы
 
-| Fichero | Componente | Rol en la composicion dinámica |
+| Файл | Компонент | Роль в динамическом составе |
 |---------|------------|--------------------------------|
-| `commands/_composicion.md` | Protocolo compartido | Catalogo de agentes, criterios de decisión, formato de presentacion |
-| `core/config_loader.py` | `suggest_optional_agents()` | Señales de proyecto basadas en I/O |
-| `core/orchestrator.py` | `_validate_equipo_sesion()` | Validación de la estructura del equipo efimero |
-| `core/orchestrator.py` | `run_flow()` | Punto de entrada con inyección de equipo de sesión |
-| `commands/*.md` | Skills de cada flujo | Referencian `_composicion.md` y arrancan flujo con equipo |
+| `commands/_composicion.md` | Общий протокол | Каталог агентов, критерии решения, формат представления |
+| `core/config_loader.py` | `suggest_optional_agents()` | Сигналы проекта на основе I/O |
+| `core/orchestrator.py` | `_validate_equipo_sesion()` | Проверка структуры эфемерной команды |
+| `core/orchestrator.py` | `run_flow()` | Точка входа с внедрением команды сессии |
+| `commands/*.md` | Skills каждого процесса | Ссылаются на `_composicion.md` и запускают процесс с командой |
 
 
-## Configuración de memoria
+## Настройка памяти
 
-La memoria persistente es una capa lateral que permite a Alfred Dev conservar el historial del proyecto entre sesiones: decisiones de diseño, commits, iteraciones y eventos del flujo de trabajo. Sin memoria, cada sesión de Alfred empieza de cero; con memoria, el plugin puede responder preguntas como "por que decidimos usar SQLite en vez de PostgreSQL" o "que se implemento en la iteracion 3" con evidencia verificable.
+Постоянная память это боковой слой, который позволяет Alfred Dev сохранять историю проекта между сессиями: проектные решения, коммиты, итерации и события процесса. Без памяти каждая сессия Alfred начинается с нуля; с памятью плагин может ответить на вопросы вроде «почему мы выбрали SQLite, а не PostgreSQL» или «что реализовали в итерации 3» с проверяемыми доказательствами.
 
-La razón de que siga siendo configurable es que no todos los proyectos necesitan la misma persistencia. Un script de 50 lineas no necesita la misma trazabilidad que un producto con varias iteraciones y decisiones arquitectonicas. Por eso el primer arranque la activa para ofrecer continuidad desde el minuto uno, pero el usuario puede desactivarla en cuanto quiera con `memoria.enabled: false`.
+Память остаётся настраиваемой, потому что не всем проектам нужна одинаковая степень сохранения. Скрипту на 50 строк не нужна та же трассируемость, что продукту с несколькими итерациями и архитектурными решениями. Поэтому первый запуск включает её, чтобы дать непрерывность с первой минуты, но пользователь может выключить её в любой момент через `memoria.enabled: false`.
 
-### Activacion
+### Включение
 
-Para activar la memoria, se añade la sección `memoria` al frontmatter del fichero de configuración con `enabled: true`. También se puede activar de forma interactiva con `/alfred-dev:ajustes` eligiendo la sección de memoria. Si el proyecto nunca tuvo fichero local, los hooks de arranque ya lo habrán sembrado con `enabled: true`; desactivarla consiste en escribir `enabled: false`, no en borrar la base de datos.
+Чтобы включить память, добавь раздел `memoria` во frontmatter файла настроек с `enabled: true`. Также её можно включить интерактивно через `/alfred-dev:ajustes`, выбрав раздел памяти. Если у проекта никогда не было локального файла, стартовые hooks уже создали его с `enabled: true`; чтобы выключить память, напиши `enabled: false`, а не удаляй базу данных.
 
-Al activarse, Alfred crea automáticamente la base de datos SQLite en `.claude/alfred-memory.db` con permisos `0600` (solo el propietario puede leer y escribir). El esquema incluye tablas para iteraciones, decisiones, commits, eventos y vinculos entre commits y decisiones.
+При включении Alfred автоматически создаёт базу SQLite в `.claude/alfred-memory.db` с правами `0600` (читать и писать может только владелец). Схема включает таблицы для итераций, решений, коммитов, событий и связей между коммитами и решениями.
 
-### Que captura
+### Что записывается
 
-La memoria captura dos tipos de información controlados por su propia clave de configuración:
+Память записывает несколько типов информации, каждым управляет свой ключ настроек:
 
-- **`sync_to_native`**: cuando esta activo, Alfred proyecta decisiones, iteracion activa, resumen y commits recientes a `~/.claude/projects/<hash>/memory/` con formato nativo de Claude Code. Si se desactiva, SQLite sigue siendo la fuente de verdad pero no se generan los `.md`.
+- **`sync_to_native`**: когда включён, Alfred проецирует решения, активную итерацию, сводку и последние коммиты в `~/.claude/projects/<hash>/memory/` в нативном формате Claude Code. Если выключить, SQLite остаётся источником истины, но `.md` не создаются.
 
-- **`sync_commits_limit`**: controla cuantos commits recientes se proyectan al fichero nativo `alfred-commits-recent.md`. No limita la memoria SQLite; solo la vista resumida para Claude Code.
+- **`sync_commits_limit`**: задаёт, сколько последних коммитов проецируется в нативный файл `alfred-commits-recent.md`. Память SQLite он не ограничивает, только сводное представление для Claude Code.
 
-- **`capture_decisions`**: cuando esta activo, las llamadas a `memory_log_decision` persisten decisiones en SQLite y quedan disponibles para MCP, Memory UI, la sync nativa y las consultas historicas. Si se desactiva, Alfred responde con `skipped` y no escribe la decision.
+- **`capture_decisions`**: когда включён, вызовы `memory_log_decision` сохраняют решения в SQLite, и они доступны для MCP, Memory UI, нативной синхронизации и исторических запросов. Если выключить, Alfred отвечает `skipped` и не записывает решение.
 
-- **`capture_commits`**: cuando esta activo, el hook de actividad registra `git commit` y la herramienta MCP `memory_log_commit` persiste commits con SHA, mensaje, autor y ficheros afectados. Si se desactiva, la captura se omite sin tocar la DB.
+- **`capture_commits`**: когда включён, hook активности записывает `git commit`, а инструмент MCP `memory_log_commit` сохраняет коммиты с SHA, сообщением, автором и затронутыми файлами. Если выключить, запись пропускается без изменения DB.
 
-Además, la memoria registra automáticamente eventos del flujo de trabajo (fases completadas, gates superadas, aprobaciones) que permiten reconstruir la cronología detallada de cada iteracion.
+Кроме того, память автоматически записывает события процесса (завершённые фазы, пройденные gates, одобрения), по которым можно восстановить подробную хронологию каждой итерации.
 
-### Retención
+### Хранение
 
-La clave `retention_days` controla cuantos dias se conservan los eventos del flujo. Pasado ese periodo, los eventos antiguos se purgan automáticamente. Sin embargo, las decisiones e iteraciones no se borran nunca, porque su valor para la trazabilidad es permanente: saber por que se tomo una decisión hace seis meses es tan util como saber por que se tomo ayer.
+Ключ `retention_days` задаёт, сколько дней хранятся события процесса. По истечении этого срока старые события автоматически удаляются. Но решения и итерации не удаляются никогда, потому что их ценность для трассируемости постоянна: знать, почему решение приняли полгода назад, так же полезно, как знать, почему его приняли вчера.
 
-El valor por defecto es 365 dias. Para proyectos de larga duracion, se puede aumentar sin limite. Para proyectos efimeros, se puede reducir a 30 o 60 dias.
+Значение по умолчанию: 365 дней. Для долгих проектов его можно увеличить без ограничений. Для эфемерных проектов можно уменьшить до 30 или 60 дней.
 
-### Busqueda
+### Поиск
 
-La memoria soporta dos modos de busqueda, determinados automáticamente por las capacidades del entorno SQLite:
+Память поддерживает два режима поиска. Режим определяется автоматически по возможностям среды SQLite:
 
-- **FTS5 (busqueda de texto completo)**: si el entorno SQLite soporta la extensión FTS5, la memoria crea automáticamente una tabla virtual con índice de texto completo que indexa decisiones, commits y eventos con contenido. Las busquedas son rapidas y soportan frases literales.
+- **FTS5 (полнотекстовый поиск)**: если среда SQLite поддерживает расширение FTS5, память автоматически создаёт виртуальную таблицу с полнотекстовым индексом по решениям, коммитам и событиям с содержимым. Поиск быстрый и поддерживает точные фразы.
 
-- **LIKE (fallback básico)**: si FTS5 no esta disponible, las busquedas se realizan con `LIKE %termino%`, que es mas lento pero funcional en cualquier entorno SQLite.
+- **LIKE (базовый fallback)**: если FTS5 недоступен, поиск выполняется через `LIKE %termino%`. Это медленнее, но работает в любой среде SQLite.
 
-La detección del modo es automática al inicializar la base de datos. El plugin registra el resultado en la tabla `meta` para que MCP y Memory UI sepan que modo esta activo sin tener que volver a comprobarlo.
+Режим определяется автоматически при инициализации базы данных. Плагин записывает результат в таблицу `meta`, чтобы MCP и Memory UI знали активный режим без повторной проверки.
 
-### Consulta de memoria
+### Запросы к памяти
 
-No hay agente `librarian`. Las consultas van por el servidor MCP (`alfred-memory`) o por `/alfred-dev:memory-ui`. Las citas verificables usan `[D#12]`, `[C#a1b2c3d]` e `[I#5]` cuando el runtime o el visor muestran un registro concreto.
+Агента `librarian` нет. Запросы идут через сервер MCP (`alfred-memory`) или через `/alfred-dev:memory-ui`. Проверяемые ссылки используют `[D#12]`, `[C#a1b2c3d]` и `[I#5]`, когда runtime или просмотрщик показывают конкретную запись.
 
 
-## Personalidad
+## Личность
 
-La personalidad de los agentes es uno de los aspectos que distingue a Alfred Dev de un asistente genérico. Cada agente tiene un perfil único con nombre, rol, frases caracteristicas y un tono que se adapta al nivel de sarcasmo configurado por el desarrollador. La razon de ofrecer esta personalizacion es que el tono afecta directamente a la experiencia de uso: un desarrollador que lleva ocho horas depurando un bug necesita un tono diferente al de alguien que esta explorando ideas en un spike.
+Личность агентов отличает Alfred Dev от универсального ассистента. У каждого агента уникальный профиль: имя, роль, характерные фразы и тон, который подстраивается под уровень сарказма, заданный разработчиком. Такая персонализация нужна, потому что тон напрямую влияет на опыт работы: разработчику, который восемь часов отлаживает баг, нужен другой тон, чем тому, кто исследует идеи в spike.
 
-### Niveles de sarcasmo
+### Уровни сарказма
 
-El nivel de sarcasmo es un entero de 1 a 5 que modifica el tono de todos los agentes de forma coherente. No cambia lo que dicen los agentes (sus recomendaciones técnicas son las mismas), sino como lo dicen.
+Уровень сарказма это целое число от 1 до 5, которое согласованно меняет тон всех агентов. Он меняет не то, что говорят агенты (их технические рекомендации те же), а то, как они это говорят.
 
-| Nivel | Etiqueta         | Descripción                                                                                              |
+| Уровень | Метка          | Описание                                                                                                 |
 |-------|------------------|----------------------------------------------------------------------------------------------------------|
-| 1     | Formal           | Tono profesional y neutro. Las respuestas son directas, sin humor ni coletillas. Ideal para entornos corporativos o documentación oficial. |
-| 2     | Cordial          | Ligeramente mas cercano que el formal. Algun comentario amable, pero sin chistes. Adecuado para equipos que prefieren un tono serio pero no frio. |
-| 3     | Colega (defecto) | El punto medio. Los agentes se expresan con naturalidad, alguna broma puntual y un tono de compañero de equipo. Es el valor por defecto. |
-| 4     | Mordaz           | Los agentes empiezan a soltar comentarios acidos. Las malas practicas se senalan con ironia y las frases de sarcasmo alto se añaden al repertorio. |
-| 5     | Erudito ironico  | Sarcasmo máximo. Los agentes no se cortan: comentarios acidos, ironia elaborada y críticas con estilo. Solo para desarrolladores que aprecian el humor negro técnico. |
+| 1     | Формальный       | Профессиональный и нейтральный тон. Ответы прямые, без юмора и присказок. Подходит для корпоративной среды или официальной документации. |
+| 2     | Сердечный        | Немного теплее формального. Иногда дружелюбный комментарий, но без шуток. Подходит командам, которые предпочитают серьёзный, но не холодный тон. |
+| 3     | Коллега (по умолчанию) | Золотая середина. Агенты говорят естественно, иногда шутят и звучат как товарищ по команде. Это значение по умолчанию. |
+| 4     | Язвительный      | Агенты начинают отпускать едкие комментарии. Плохие практики отмечаются с иронией, а фразы высокого сарказма добавляются в репертуар. |
+| 5     | Ироничный эрудит | Максимальный сарказм. Агенты не сдерживаются: едкие комментарии, изощрённая ирония и стильная критика. Только для разработчиков, которые ценят чёрный технический юмор. |
 
-Tecnicamente, el umbral esta en el nivel 4. A partir de ese nivel, la función `get_agent_voice()` del modulo `personality.py` añade las frases de `frases_sarcasmo_alto` al repertorio del agente, y `get_agent_intro()` incluye una coletilla acida en la presentacion. Por debajo de 4, solo se usan las frases base.
+Технически порог находится на уровне 4. Начиная с него функция `get_agent_voice()` модуля `personality.py` добавляет фразы из `frases_sarcasmo_alto` в репертуар агента, а `get_agent_intro()` добавляет едкую присказку в представление. Ниже уровня 4 используются только базовые фразы.
 
-### Celebrar victorias
+### Отмечать победы
 
-Cuando `celebrar_victorias` esta activo (`true`), los agentes reaccionan de forma positiva al completar fases y flujos: reconocen el progreso, destacan los hitos y animan al equipo. Cuando esta desactivado, el avance se comunica de forma factual sin celebraciones.
+Когда `celebrar_victorias` включён (`true`), агенты позитивно реагируют на завершение фаз и процессов: признают прогресс, отмечают вехи и подбадривают команду. Когда он выключен, о продвижении сообщается по фактам, без празднования.
 
-La razon de este ajuste es que no todos los desarrolladores responden igual al refuerzo positivo. Algunos lo valoran; otros lo perciben como ruido. Dejarlo configurable respeta ambas preferencias.
+Эта настройка нужна, потому что не все разработчики одинаково реагируют на позитивное подкрепление. Одни его ценят, другие воспринимают как шум. Настраиваемость учитывает оба предпочтения.
 
-### Insultar malas practicas
+### Высмеивать плохие практики
 
-Cuando `insultar_malas_practicas` esta activo y el nivel de sarcasmo es suficientemente alto (>= 4), los agentes comentan con ironia las practicas cuestionables que detectan: un `SELECT *` sin `WHERE`, un push directo a main, un README vacio o un token en el repositorio. Es una forma de senalar problemas con humor, no con hostilidad. Si se desactiva, los agentes informan de los problemas sin el componente sarcastico.
+Когда `insultar_malas_practicas` включён, а уровень сарказма достаточно высок (>= 4), агенты с иронией комментируют сомнительные практики, которые находят: `SELECT *` без `WHERE`, прямой push в main, пустой README или токен в репозитории. Это способ указывать на проблемы с юмором, а не с враждебностью. Если выключить, агенты сообщают о проблемах без сарказма.
 
 
-## Ejemplo completo de fichero `.claude/alfred-dev.local.md`
+## Полный пример файла `.claude/alfred-dev.local.md`
 
-El siguiente ejemplo muestra un fichero de configuración con todas las secciones definidas. En la practica, el desarrollador solo necesita incluir las secciones que quiere personalizar; todo lo demas hereda los valores por defecto.
+Пример ниже показывает файл настроек со всеми разделами. На практике разработчику достаточно включить только те разделы, которые он хочет изменить; всё остальное наследует значения по умолчанию.
 
 ```yaml
 ---
@@ -624,7 +624,7 @@ proyecto:
   bundler: vite
 
 agentes_opcionales:
-  lucius: false
+  cto: false
 
 memoria:
   enabled: true
@@ -654,14 +654,14 @@ integraciones:
 
 ## Notas
 
-Este proyecto usa el App Router de Next.js 15 con Server Components por defecto.
-Las rutas de API estan en `app/api/` y usan Hono como framework HTTP.
-La base de datos es PostgreSQL gestionada con Prisma; las migraciones se aplican
-con `prisma migrate deploy` en el pipeline de CI.
+Этот проект использует App Router из Next.js 15 с Server Components по умолчанию.
+Маршруты API находятся в `app/api/` и используют Hono как HTTP-фреймворк.
+База данных PostgreSQL управляется через Prisma; миграции применяются
+командой `prisma migrate deploy` в pipeline CI.
 
-Convenciones del equipo:
-- Los componentes de UI van en `components/ui/` con barrel exports.
-- Los hooks personalizados en `hooks/` con prefijo `use`.
-- Las utilidades compartidas en `lib/` con tests unitarios obligatorios.
-- Los mensajes de commit siguen la convencion de tipos semanticos (feat, fix, refactor, etc.).
+Соглашения команды:
+- UI-компоненты лежат в `components/ui/` с barrel exports.
+- Пользовательские hooks лежат в `hooks/` с префиксом `use`.
+- Общие утилиты лежат в `lib/` с обязательными unit-тестами.
+- Сообщения коммитов следуют соглашению семантических типов (feat, fix, refactor и т. д.).
 ```

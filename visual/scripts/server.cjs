@@ -1,17 +1,17 @@
 /**
- * server.cjs — Servidor HTTP + WebSocket para la visualizacion de Designer.
+ * server.cjs: HTTP + WebSocket server for the Designer visual companion.
  *
- * Usa exclusivamente modulos nativos de Node.js (http, crypto, fs, path).
- * Sirve contenido HTML desde un directorio de sesion, inyecta helper.js,
- * envuelve fragmentos en frame-template.html y notifica al navegador
- * via WebSocket cuando el contenido cambia.
+ * Uses only native Node.js modules (http, crypto, fs, path).
+ * Serves HTML content from a session directory, injects helper.js,
+ * wraps fragments in frame-template.html and notifies the browser
+ * over WebSocket when the content changes.
  *
- * Configuracion mediante variables de entorno:
- *   ALFRED_VISUAL_PORT     — Puerto (por defecto 0 = libre elegido por el SO)
- *   ALFRED_VISUAL_HOST     — Direccion de escucha (por defecto 127.0.0.1)
- *   ALFRED_VISUAL_URL_HOST — Host para URLs (por defecto localhost)
- *   ALFRED_VISUAL_DIR      — Directorio de sesion (por defecto /tmp/alfred-visual)
- *   ALFRED_VISUAL_OWNER_PID — PID del proceso padre (opcional)
+ * Configuration through environment variables:
+ *   ALFRED_VISUAL_PORT     - Port (default 0 = free port chosen by the OS)
+ *   ALFRED_VISUAL_HOST     - Listen address (default 127.0.0.1)
+ *   ALFRED_VISUAL_URL_HOST - Host for URLs (default localhost)
+ *   ALFRED_VISUAL_DIR      - Session directory (default /tmp/alfred-visual)
+ *   ALFRED_VISUAL_OWNER_PID - PID of the parent process (optional)
  */
 
 'use strict';
@@ -22,7 +22,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 // ---------------------------------------------------------------------------
-// Constantes y configuracion
+// Constants and configuration
 // ---------------------------------------------------------------------------
 
 const HOST = process.env.ALFRED_VISUAL_HOST || '127.0.0.1';
@@ -32,19 +32,19 @@ const OWNER_PID = process.env.ALFRED_VISUAL_OWNER_PID
   ? Number.parseInt(process.env.ALFRED_VISUAL_OWNER_PID, 10)
   : null;
 
-/** Tiempo maximo de inactividad antes de apagar el servidor (30 min). */
+/** Maximum idle time before the server shuts down (30 min). */
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 
-/** Intervalo para comprobar si el proceso padre sigue vivo (60 s). */
+/** Interval to check that the parent process is still alive (60 s). */
 const OWNER_CHECK_INTERVAL_MS = 60 * 1000;
 
-/** Debounce para el vigilante de ficheros (100 ms). */
+/** Debounce for the file watcher (100 ms). */
 const WATCH_DEBOUNCE_MS = 100;
 
-/** Tamaño máximo aceptado para eventos del navegador (64 KiB). */
+/** Maximum accepted size for browser events (64 KiB). */
 const MAX_EVENT_BODY_BYTES = 64 * 1024;
 
-/** Tamaño máximo de campos de evento persistidos. */
+/** Maximum size of persisted event fields. */
 const MAX_EVENT_FIELD_CHARS = 512;
 
 const CONTENT_DIR = path.join(SESSION_DIR, 'content');
@@ -58,10 +58,10 @@ function debugWs(message, details) {
 }
 
 // ---------------------------------------------------------------------------
-// WebSocket RFC 6455 — implementacion minima
+// WebSocket RFC 6455: minimal implementation
 // ---------------------------------------------------------------------------
 
-/** Codigos de operacion definidos en RFC 6455, seccion 5.2. */
+/** Opcodes defined in RFC 6455, section 5.2. */
 const OPCODES = {
   TEXT: 0x01,
   CLOSE: 0x08,
@@ -70,9 +70,9 @@ const OPCODES = {
 };
 
 /**
- * Calcula la clave de aceptacion del handshake WebSocket.
- * @param {string} key — Valor de la cabecera Sec-WebSocket-Key.
- * @returns {string} Hash SHA-1 en base64 segun RFC 6455, seccion 4.2.2.
+ * Computes the accept key for the WebSocket handshake.
+ * @param {string} key - Value of the Sec-WebSocket-Key header.
+ * @returns {string} Base64 SHA-1 hash per RFC 6455, section 4.2.2.
  */
 function computeAcceptKey(key) {
   const MAGIC = '258EAFA5-E914-47DA-95CA-5AB5DC76B51E';
@@ -83,10 +83,10 @@ function computeAcceptKey(key) {
 }
 
 /**
- * Normaliza cabeceras que deberian contener un unico valor.
- * Algunos clientes/proxies pueden entregarlas como array o
- * concatenadas por comas; para el handshake WebSocket usamos
- * solo el primer token significativo.
+ * Normalizes headers that should hold a single value.
+ * Some clients or proxies send them as an array or as a
+ * comma-separated list. For the WebSocket handshake we use
+ * only the first meaningful token.
  * @param {string|string[]|undefined} value
  * @returns {string}
  */
@@ -98,7 +98,7 @@ function normalizeSingleHeader(value) {
 }
 
 /**
- * Comprueba si una cabecera HTTP contiene un token concreto separado por comas.
+ * Checks if an HTTP header contains a given comma-separated token.
  * @param {string|string[]|undefined} value
  * @param {string} token
  * @returns {boolean}
@@ -112,7 +112,7 @@ function headerHasToken(value, token) {
 }
 
 /**
- * Valida que Sec-WebSocket-Key sea base64 de 16 bytes, como exige RFC 6455.
+ * Checks that Sec-WebSocket-Key is 16 bytes of base64, as RFC 6455 requires.
  * @param {string} key
  * @returns {boolean}
  */
@@ -127,10 +127,10 @@ function isValidWebSocketKey(key) {
 }
 
 /**
- * Codifica un frame WebSocket para enviar al cliente.
- * @param {number} opcode — Codigo de operacion (TEXT, CLOSE, PING, PONG).
- * @param {Buffer|string} payload — Datos a enviar.
- * @returns {Buffer} Frame WebSocket listo para escribir en el socket.
+ * Encodes a WebSocket frame to send to the client.
+ * @param {number} opcode - Opcode (TEXT, CLOSE, PING, PONG).
+ * @param {Buffer|string} payload - Data to send.
+ * @returns {Buffer} WebSocket frame ready to write to the socket.
  */
 function encodeFrame(opcode, payload) {
   const data = Buffer.isBuffer(payload) ? payload : Buffer.from(payload, 'utf8');
@@ -150,7 +150,7 @@ function encodeFrame(opcode, payload) {
     header = Buffer.alloc(10);
     header[0] = 0x80 | opcode;
     header[1] = 127;
-    // Usamos writeBigUInt64BE para longitudes grandes
+    // Use writeBigUInt64BE for large lengths
     header.writeBigUInt64BE(BigInt(len), 2);
   }
 
@@ -158,11 +158,11 @@ function encodeFrame(opcode, payload) {
 }
 
 /**
- * Decodifica un frame WebSocket recibido del cliente.
- * Los clientes siempre envian datos enmascarados (seccion 5.3 del RFC).
- * @param {Buffer} buf — Datos crudos del socket.
+ * Decodes a WebSocket frame received from the client.
+ * Clients always send masked data (RFC section 5.3).
+ * @param {Buffer} buf - Raw socket data.
  * @returns {{ opcode: number, payload: Buffer, totalLength: number } | null}
- *   null si el buffer esta incompleto.
+ *   null if the buffer is incomplete.
  */
 function decodeFrame(buf) {
   if (buf.length < 2) return null;
@@ -201,12 +201,12 @@ function decodeFrame(buf) {
 }
 
 // ---------------------------------------------------------------------------
-// Utilidades de ficheros
+// File utilities
 // ---------------------------------------------------------------------------
 
 /**
- * Obtiene el fichero .html mas reciente del directorio de contenido.
- * @returns {string|null} Ruta absoluta o null si no hay ficheros HTML.
+ * Gets the newest .html file in the content directory.
+ * @returns {string|null} Absolute path, or null if there are no HTML files.
  */
 function getNewestHtml() {
   let files;
@@ -233,29 +233,29 @@ function getNewestHtml() {
 }
 
 /**
- * Determina si un contenido HTML es un documento completo o un fragmento.
- * Un documento completo empieza con <!DOCTYPE (ignorando espacios).
- * @param {string} html — Contenido HTML.
+ * Tells if HTML content is a full document or a fragment.
+ * A full document starts with <!DOCTYPE (whitespace ignored).
+ * @param {string} html - HTML content.
  * @returns {boolean}
  */
 function isFullDocument(html) {
   return /^\s*<!DOCTYPE/i.test(html);
 }
 
-/** Carga helper.js desde el mismo directorio que este fichero. */
+/** Loads helper.js from the directory of this file. */
 function loadHelperJs() {
   return fs.readFileSync(path.join(__dirname, 'helper.js'), 'utf8');
 }
 
-/** Carga frame-template.html desde el mismo directorio que este fichero. */
+/** Loads frame-template.html from the directory of this file. */
 function loadFrameTemplate() {
   return fs.readFileSync(path.join(__dirname, 'frame-template.html'), 'utf8');
 }
 
 /**
- * Inyecta helper.js como script inline justo antes de </body>.
- * Si no hay </body>, lo anade al final.
- * @param {string} html — Documento HTML completo.
+ * Injects helper.js as an inline script just before </body>.
+ * If there is no </body>, appends it at the end.
+ * @param {string} html - Full HTML document.
  * @returns {string}
  */
 function injectHelper(html) {
@@ -267,8 +267,8 @@ function injectHelper(html) {
 }
 
 /**
- * Extrae bloques de estilos que conviene mover al <head> del frame.
- * Ahora mismo se usa para imports tipográficos generados por Designer.
+ * Extracts style blocks that should move to the frame <head>.
+ * Currently used for font imports generated by Designer.
  * @param {string} fragment
  * @returns {{ fragment: string, headHtml: string }}
  */
@@ -285,8 +285,8 @@ function extractHeadMarkup(fragment) {
 }
 
 /**
- * Envuelve un fragmento HTML en el frame-template e inyecta helper.js.
- * @param {string} fragment — Fragmento HTML sin DOCTYPE.
+ * Wraps an HTML fragment in frame-template and injects helper.js.
+ * @param {string} fragment - HTML fragment without DOCTYPE.
  * @returns {string}
  */
 function wrapInFrame(fragment) {
@@ -299,16 +299,16 @@ function wrapInFrame(fragment) {
   return injectHelper(wrapped);
 }
 
-/** Pagina de espera cuando aun no hay contenido HTML. */
+/** Waiting page shown while there is no HTML content yet. */
 function waitingPage() {
   const template = loadFrameTemplate();
-  const msg = '<p class="waiting-message">Esperando a que Designer prepare las opciones de estilo...</p>';
+  const msg = '<p class="waiting-message">Ждём, пока Designer подготовит варианты стиля...</p>';
   const wrapped = template.replace('<!-- CONTENT -->', msg);
   return injectHelper(wrapped);
 }
 
 // ---------------------------------------------------------------------------
-// Tipos MIME basicos para servir ficheros estaticos
+// Basic MIME types for static files
 // ---------------------------------------------------------------------------
 
 const MIME_TYPES = {
@@ -324,7 +324,7 @@ const MIME_TYPES = {
   '.ico': 'image/x-icon',
 };
 
-/** Cabeceras de seguridad aplicadas a todas las respuestas HTTP. */
+/** Security headers applied to all HTTP responses. */
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
@@ -332,50 +332,50 @@ const SECURITY_HEADERS = {
 };
 
 // ---------------------------------------------------------------------------
-// Estado global del servidor
+// Global server state
 // ---------------------------------------------------------------------------
 
-/** Conexiones WebSocket activas. */
+/** Active WebSocket connections. */
 const wsClients = new Set();
 
-/** Marca temporal de la ultima actividad (para idle timeout). */
+/** Timestamp of the last activity (for the idle timeout). */
 let lastActivity = Date.now();
 
-/** Ficheros conocidos en el directorio de contenido. */
+/** Known files in the content directory. */
 let knownFiles = new Set();
 
-/** Referencia global al servidor HTTP (necesaria para verificacion de origen WS). */
+/** Global reference to the HTTP server (needed for the WS origin check). */
 let _httpServer = null;
 
 // ---------------------------------------------------------------------------
-// Emision de mensajes JSON por stdout
+// JSON messages on stdout
 // ---------------------------------------------------------------------------
 
 /**
- * Emite un mensaje JSON por stdout.
- * Cada mensaje ocupa exactamente una linea.
- * @param {object} msg — Objeto a serializar.
+ * Writes a JSON message to stdout.
+ * Each message takes exactly one line.
+ * @param {object} msg - Object to serialize.
  */
 function emit(msg) {
   process.stdout.write(JSON.stringify(msg) + '\n');
 }
 
 /**
- * Limpia el registro de eventos de la pantalla visual actual.
- * Se usa cuando cambia la pantalla para evitar reutilizar clics
- * pertenecientes a una version anterior del HTML.
+ * Clears the event log of the current visual screen.
+ * Used when the screen changes, so that clicks from an older
+ * version of the HTML are not reused.
  */
 function clearEventLog() {
   try {
     fs.writeFileSync(path.join(STATE_DIR, 'events'), '');
   } catch {
-    // No pasa nada si falla
+    // A failure here is harmless
   }
 }
 
 /**
- * Normaliza un clic del usuario al formato canónico del contrato visual.
- * Mantiene campos legacy por compatibilidad con integraciones existentes.
+ * Normalizes a user click to the canonical format of the visual contract.
+ * Keeps legacy fields for compatibility with existing integrations.
  * @param {object} event
  * @returns {object}
  */
@@ -393,7 +393,7 @@ function buildChoiceEvent(event) {
 }
 
 /**
- * Normaliza la entrada recibida desde navegador antes de persistirla.
+ * Normalizes input from the browser before it is persisted.
  * @param {unknown} event
  * @returns {{choice: string, label: string, element: string}|null}
  */
@@ -418,7 +418,7 @@ function normalizeChoiceEventInput(event) {
 }
 
 /**
- * Registra una eleccion canónica en el log de eventos y la emite por stdout.
+ * Records a canonical choice in the event log and writes it to stdout.
  * @param {object} event
  * @returns {object}
  */
@@ -433,8 +433,8 @@ function recordChoiceEvent(event) {
 }
 
 /**
- * Devuelve el conjunto de origins permitidos para conexiones WebSocket locales.
- * Acepta aliases de loopback para evitar que localhost y 127.0.0.1 diverjan.
+ * Returns the set of allowed origins for local WebSocket connections.
+ * Accepts loopback aliases so that localhost and 127.0.0.1 stay equivalent.
  * @returns {Set<string>}
  */
 function getAllowedOrigins() {
@@ -461,12 +461,12 @@ function getAllowedOrigins() {
 }
 
 // ---------------------------------------------------------------------------
-// Manejador HTTP
+// HTTP handler
 // ---------------------------------------------------------------------------
 
 /**
- * Sirve un fichero estatico del directorio de contenido.
- * Protege contra path traversal resolviendo la ruta real con realpathSync.
+ * Serves a static file from the content directory.
+ * Protects against path traversal by resolving the real path with realpathSync.
  * @param {http.IncomingMessage} req
  * @param {http.ServerResponse} res
  */
@@ -476,25 +476,25 @@ function serveStaticFile(req, res) {
     relPath = decodeURIComponent(req.url.slice('/files/'.length));
   } catch {
     res.writeHead(400, SECURITY_HEADERS);
-    res.end('Ruta invalida');
+    res.end('Invalid path');
     return;
   }
   const filePath = path.join(CONTENT_DIR, relPath);
 
-  // Proteccion contra path traversal: resolver ruta real para detectar symlinks
+  // Path traversal protection: resolve the real path to detect symlinks
   const resolvedBase = fs.realpathSync(CONTENT_DIR);
   let resolvedPath;
   try {
     resolvedPath = fs.realpathSync(filePath);
   } catch {
     res.writeHead(404, SECURITY_HEADERS);
-    res.end('No encontrado');
+    res.end('Not found');
     return;
   }
 
   if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
     res.writeHead(403, SECURITY_HEADERS);
-    res.end('Prohibido');
+    res.end('Forbidden');
     return;
   }
 
@@ -506,14 +506,14 @@ function serveStaticFile(req, res) {
     res.end(data);
   } catch {
     res.writeHead(404, SECURITY_HEADERS);
-    res.end('No encontrado');
+    res.end('Not found');
   }
 }
 
 /**
- * Gestiona las peticiones HTTP entrantes.
- * - GET / sirve el HTML mas reciente (o pagina de espera).
- * - GET /files/* sirve ficheros estaticos del directorio de contenido.
+ * Handles incoming HTTP requests.
+ * - GET / serves the newest HTML (or the waiting page).
+ * - GET /files/* serves static files from the content directory.
  */
 function handleRequest(req, res) {
   lastActivity = Date.now();
@@ -522,7 +522,7 @@ function handleRequest(req, res) {
     const contentLength = Number.parseInt(normalizeSingleHeader(req.headers['content-length']) || '0', 10);
     if (Number.isFinite(contentLength) && contentLength > MAX_EVENT_BODY_BYTES) {
       res.writeHead(413, SECURITY_HEADERS);
-      res.end('Evento demasiado grande');
+      res.end('Event too large');
       return;
     }
 
@@ -541,7 +541,7 @@ function handleRequest(req, res) {
     req.on('end', () => {
       if (tooLarge) {
         res.writeHead(413, SECURITY_HEADERS);
-        res.end('Evento demasiado grande');
+        res.end('Event too large');
         return;
       }
 
@@ -550,7 +550,7 @@ function handleRequest(req, res) {
         const event = JSON.parse(body || '{}');
         if (!normalizeChoiceEventInput(event)) {
           res.writeHead(400, SECURITY_HEADERS);
-          res.end('Evento invalido');
+          res.end('Invalid event');
           return;
         }
         recordChoiceEvent(event);
@@ -558,7 +558,7 @@ function handleRequest(req, res) {
         res.end('accepted');
       } catch {
         res.writeHead(400, SECURITY_HEADERS);
-        res.end('JSON invalido');
+        res.end('Invalid JSON');
       }
     });
     return;
@@ -573,7 +573,7 @@ function handleRequest(req, res) {
     } else {
       try {
         const raw = fs.readFileSync(newest, 'utf8');
-        // textContent se usa en helper.js (no innerHTML) para evitar XSS
+        // helper.js uses textContent (not innerHTML) to prevent XSS
         body = isFullDocument(raw) ? injectHelper(raw) : wrapInFrame(raw);
       } catch {
         body = waitingPage();
@@ -591,16 +591,16 @@ function handleRequest(req, res) {
   }
 
   res.writeHead(404, SECURITY_HEADERS);
-  res.end('No encontrado');
+  res.end('Not found');
 }
 
 // ---------------------------------------------------------------------------
-// Gestion de WebSocket
+// WebSocket handling
 // ---------------------------------------------------------------------------
 
 /**
- * Difunde un mensaje a todas las conexiones WebSocket activas.
- * @param {string} message — Mensaje JSON serializado.
+ * Broadcasts a message to all active WebSocket connections.
+ * @param {string} message - Serialized JSON message.
  */
 function broadcast(message) {
   const frame = encodeFrame(OPCODES.TEXT, message);
@@ -614,7 +614,7 @@ function broadcast(message) {
 }
 
 /**
- * Gestiona el upgrade HTTP a WebSocket segun RFC 6455.
+ * Handles the HTTP upgrade to WebSocket per RFC 6455.
  * @param {http.IncomingMessage} req
  * @param {net.Socket} socket
  */
@@ -624,7 +624,7 @@ function handleUpgrade(req, socket, head) {
     try {
       socket.write('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n');
     } catch {
-      // La conexión puede estar ya cerrada.
+      // The connection can already be closed.
     }
     socket.destroy();
   };
@@ -642,7 +642,7 @@ function handleUpgrade(req, socket, head) {
     return;
   }
 
-  // Verificar origen del WebSocket para prevenir conexiones desde dominios ajenos
+  // Check the WebSocket origin to block connections from foreign domains
   const origin = normalizeSingleHeader(req.headers['origin']);
   debugWs('upgrade-request', {
     origin,
@@ -688,7 +688,7 @@ function handleUpgrade(req, socket, head) {
     if (!chunk || chunk.length === 0) return;
     buffer = Buffer.concat([buffer, chunk]);
 
-    // Procesar todos los frames completos del buffer
+    // Process all complete frames in the buffer
     let frame;
     while ((frame = decodeFrame(buffer)) !== null) {
       buffer = buffer.slice(frame.totalLength);
@@ -698,12 +698,12 @@ function handleUpgrade(req, socket, head) {
           const text = frame.payload.toString('utf8');
           try {
             const event = JSON.parse(text);
-            // Si el evento contiene una eleccion, registrarla
+            // If the event contains a choice, record it
             if (normalizeChoiceEventInput(event)) {
               recordChoiceEvent(event);
             }
           } catch {
-            // Mensaje no JSON, ignorar
+            // Not a JSON message, ignore it
           }
           break;
         }
@@ -733,21 +733,21 @@ function handleUpgrade(req, socket, head) {
 }
 
 // ---------------------------------------------------------------------------
-// Vigilancia de ficheros (fs.watch con debounce)
+// File watching (fs.watch with debounce)
 // ---------------------------------------------------------------------------
 
 /**
- * Inicia la vigilancia del directorio de contenido.
- * Cuando se detecta un fichero nuevo, limpia los eventos y difunde recarga.
- * Cuando se actualiza un fichero existente, solo difunde recarga.
+ * Starts watching the content directory.
+ * On a new file, clears the events and broadcasts a reload.
+ * On an update to an existing file, clears the events and broadcasts a reload.
  */
 function startWatcher() {
-  // Cargar ficheros conocidos iniciales
+  // Load the initial known files
   try {
     const files = fs.readdirSync(CONTENT_DIR);
     knownFiles = new Set(files.filter((f) => f.endsWith('.html')));
   } catch {
-    // El directorio puede no existir aun
+    // The directory may not exist yet
   }
 
   let debounceTimer = null;
@@ -761,7 +761,7 @@ function startWatcher() {
         const isNew = !knownFiles.has(filename);
 
         if (isNew) {
-          // Fichero nuevo: limpiar eventos y notificar
+          // New file: clear the events and notify
           knownFiles.add(filename);
           clearEventLog();
           emit({ type: 'screen-added', file: filename });
@@ -774,46 +774,46 @@ function startWatcher() {
       }, WATCH_DEBOUNCE_MS);
     });
   } catch {
-    // Si el directorio no existe, el watcher no arranca — no es critico
+    // If the directory does not exist, the watcher does not start. This is not critical
   }
 }
 
 // ---------------------------------------------------------------------------
-// Gestion del ciclo de vida
+// Lifecycle management
 // ---------------------------------------------------------------------------
 
 /**
- * Escribe la informacion del servidor en el directorio de estado.
- * @param {object} info — Datos del servidor (puerto, host, URL, etc.).
+ * Writes the server info to the state directory.
+ * @param {object} info - Server data (port, host, URL, and so on).
  */
 function writeServerInfo(info) {
   try {
     fs.writeFileSync(path.join(STATE_DIR, 'server-info'), JSON.stringify(info, null, 2));
   } catch {
-    // No es critico si falla
+    // A failure here is not critical
   }
 }
 
 /**
- * Detiene el servidor de forma limpia, notifica por stdout y escribe
- * el fichero server-stopped.
- * @param {string} reason — Motivo del cierre.
+ * Stops the server cleanly, notifies on stdout and writes
+ * the server-stopped file.
+ * @param {string} reason - Reason for the shutdown.
  */
 function shutdown(reason) {
   emit({ type: 'server-stopped', reason });
   try {
     fs.writeFileSync(path.join(STATE_DIR, 'server-stopped'), JSON.stringify({ reason, timestamp: new Date().toISOString() }));
   } catch {
-    // Ignorar errores en el cierre
+    // Ignore errors during shutdown
   }
 
-  // Cerrar todas las conexiones WebSocket
+  // Close all WebSocket connections
   for (const socket of wsClients) {
     try {
       socket.write(encodeFrame(OPCODES.CLOSE, Buffer.alloc(0)));
       socket.end();
     } catch {
-      // Ignorar
+      // Ignore
     }
   }
 
@@ -821,8 +821,8 @@ function shutdown(reason) {
 }
 
 /**
- * Comprueba si el proceso padre sigue vivo.
- * Si se definio OWNER_PID y el proceso ya no existe, apaga el servidor.
+ * Checks if the parent process is still alive.
+ * If OWNER_PID is set and the process no longer exists, shuts down the server.
  */
 function checkOwnerAlive() {
   if (OWNER_PID === null) return;
@@ -834,26 +834,26 @@ function checkOwnerAlive() {
 }
 
 // ---------------------------------------------------------------------------
-// Arranque del servidor
+// Server startup
 // ---------------------------------------------------------------------------
 
 /**
- * Punto de entrada principal.
- * Crea los directorios necesarios, arranca el servidor HTTP y configura
- * los temporizadores de inactividad y vigilancia del proceso padre.
+ * Main entry point.
+ * Creates the required directories, starts the HTTP server and sets up
+ * the idle timer and the parent process watch.
  */
 function main() {
-  // Asegurar que los directorios de sesion existen
+  // Make sure the session directories exist
   fs.mkdirSync(CONTENT_DIR, { recursive: true });
   fs.mkdirSync(STATE_DIR, { recursive: true });
 
-  // Elegir puerto: variable de entorno valida o un puerto libre asignado por el SO.
+  // Pick the port: a valid environment variable or a free port assigned by the OS.
   const rawPort = process.env.ALFRED_VISUAL_PORT;
   const requestedPort = rawPort === undefined || rawPort === ''
     ? 0
     : Number.parseInt(rawPort, 10);
   if (!Number.isInteger(requestedPort) || requestedPort < 0 || requestedPort > 65535) {
-    process.stderr.write(`Puerto invalido para ALFRED_VISUAL_PORT: ${rawPort}\n`);
+    process.stderr.write(`Invalid port for ALFRED_VISUAL_PORT: ${rawPort}\n`);
     process.exit(1);
   }
 
@@ -861,7 +861,7 @@ function main() {
   _httpServer = server;
   server.on('upgrade', handleUpgrade);
   server.on('error', (error) => {
-    process.stderr.write(`Error al arrancar el servidor visual: ${error.message}\n`);
+    process.stderr.write(`Failed to start the visual server: ${error.message}\n`);
     process.exit(1);
   });
 
@@ -884,34 +884,34 @@ function main() {
     writeServerInfo(info);
     emit(info);
 
-    // Iniciar vigilancia de ficheros
+    // Start file watching
     startWatcher();
 
-    // Temporizador de inactividad (30 min)
+    // Idle timer (30 min)
     setInterval(() => {
       if (Date.now() - lastActivity > IDLE_TIMEOUT_MS) {
         shutdown('idle-timeout');
       }
     }, 60 * 1000);
 
-    // Comprobacion periodica del proceso padre
+    // Periodic check of the parent process
     if (OWNER_PID !== null) {
       setInterval(checkOwnerAlive, OWNER_CHECK_INTERVAL_MS);
     }
   });
 
-  // Cierre limpio ante senales del sistema
+  // Clean shutdown on system signals
   process.on('SIGTERM', () => shutdown('sigterm'));
   process.on('SIGINT', () => shutdown('sigint'));
 }
 
-// Solo ejecutar si es el modulo principal (no cuando se importa para tests)
+// Run only as the main module (not when imported by tests)
 if (require.main === module) {
   main();
 }
 
 // ---------------------------------------------------------------------------
-// Exportaciones para tests
+// Exports for tests
 // ---------------------------------------------------------------------------
 
 module.exports = { computeAcceptKey, encodeFrame, decodeFrame, OPCODES };

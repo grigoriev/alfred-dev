@@ -1,25 +1,23 @@
 #!/usr/bin/env python3
 """
-Hook centralizado de captura de actividad para Alfred Dev.
+Central activity capture hook for Alfred Dev.
 
-Sustituye a ``memory-capture.py`` y ``commit-capture.py`` proporcionando un
-unico punto de entrada que registra TODA la actividad relevante en la base
-de datos de memoria persistente. Cada evento se almacena con tres niveles
-de detalle:
+Replaces ``memory-capture.py`` and ``commit-capture.py``. It is a single
+entry point that records ALL relevant activity in the persistent memory
+database. Each event is stored with three levels of detail:
 
-- **summary**: texto legible en castellano para el dashboard.
-- **payload**: JSON estructurado para filtrado programatico.
-- **content**: texto completo sin truncar para consulta bajo demanda.
+- **summary**: human-readable text (in Russian) for the dashboard.
+- **payload**: structured JSON for programmatic filtering.
+- **content**: full, untruncated text for on-demand lookup.
 
-Politica de escritura: solo se persiste lo que un humano querría releer.
-    En runtime se registran prompts de slash Alfred, commits `git commit` de
-    la sesión y escrituras de estado/handoff/UAT/`docs/project/`. No se
-    copian Read/Glob/Grep, ni el historial antiguo de Git, ni cada edit de
-    código.
+Write policy: persist only what a human would want to read again.
+    At runtime the hook records Alfred slash prompts, `git commit` commits
+    of the session and writes to state/handoff/UAT/`docs/project/`. It does
+    not copy Read/Glob/Grep, old Git history or every code edit.
 
-Politica fail-open: el hook NUNCA bloquea el flujo de trabajo. Cualquier
-error se imprime en stderr con prefijo ``[activity-capture]`` y se sale
-con codigo 0.
+Fail-open policy: the hook NEVER blocks the workflow. Any error goes to
+stderr with the ``[activity-capture]`` prefix and the hook exits with
+code 0.
 """
 
 import json
@@ -32,12 +30,12 @@ from typing import Optional
 
 
 # ---------------------------------------------------------------------------
-# Constantes
+# Constants
 # ---------------------------------------------------------------------------
 
-# Directorios y patrones excluidos de la captura generica.
-# Son ficheros internos cuya actividad genera ruido sin aportar contexto
-# util al historial del proyecto.
+# Directories and patterns excluded from generic capture.
+# These are internal files. Their activity adds noise and no useful
+# context to the project history.
 _EXCLUDED_PREFIXES = (
     ".claude/",
     ".git/",
@@ -49,14 +47,14 @@ _EXCLUDED_PREFIXES = (
     ".pytest_cache/",
 )
 
-# Patron que detecta 'git commit' como comando real, no como argumento
-# de otro comando (grep, echo, etc.). Solo detecta git commit al inicio
-# de la linea o despues de operadores de shell (&&, ||, ;).
+# Pattern that detects 'git commit' as a real command, not as an argument
+# of another command (grep, echo, etc.). It matches git commit only at the
+# start of the line or after shell operators (&&, ||, ;).
 _GIT_COMMIT_RE = re.compile(r"(?:^|&&|\|\||;)\s*git\s+commit\b")
 
-# Comandos triviales que no aportan contexto util al historial.
-# Son comandos de lectura, navegacion o diagnostico que no modifican
-# el estado del proyecto.
+# Trivial commands that add no useful context to the history.
+# These are read, navigation or diagnostic commands that do not change
+# the project state.
 _TRIVIAL_COMMANDS = frozenset({
     "ls", "pwd", "cd", "echo", "cat", "head", "tail", "less", "more",
     "wc", "whoami", "date", "which", "where", "type", "file", "true",
@@ -64,8 +62,8 @@ _TRIVIAL_COMMANDS = frozenset({
     "alias", "unalias", "source", ".", "test", "[",
 })
 
-# Comandos de Alfred que pueden prepararse de forma determinista antes de que
-# el modelo intente resolver el prompt por si mismo.
+# Alfred commands that can be prepared deterministically before the
+# model tries to resolve the prompt by itself.
 _ALFRED_PREFETCH_COMMANDS = frozenset({
     "alfred",
     "audit",
@@ -80,7 +78,7 @@ _ALFRED_PREFETCH_COMMANDS = frozenset({
     "memory-ui",
 })
 
-# Prefijo para los mensajes de aviso en stderr.
+# Prefix for warning messages on stderr.
 _LOG_PREFIX = "[activity-capture]"
 
 _HIGH_VOLUME_CONTENT_MAX_LINES = 80
@@ -88,15 +86,15 @@ _HIGH_VOLUME_CONTENT_MAX_CHARS = 4000
 
 
 def _ensure_plugin_root_on_path() -> str:
-    """Asegura que la raiz del plugin este disponible para imports.
+    """Make sure the plugin root is available for imports.
 
-    Los hooks se ejecutan como scripts sueltos desde Claude Code y no siempre
-    reciben ``PYTHONPATH`` con la raiz del plugin. Sin este ajuste, imports
-    como ``core.memory`` o ``core.memory_config`` pueden fallar incluso cuando
-    el plugin esta bien instalado.
+    Claude Code runs hooks as standalone scripts, and they do not always get
+    ``PYTHONPATH`` with the plugin root. Without this fix, imports such as
+    ``core.memory`` or ``core.memory_config`` can fail even when the plugin
+    is installed correctly.
 
     Returns:
-        Ruta absoluta a la raiz del plugin.
+        Absolute path to the plugin root.
     """
     plugin_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if plugin_root not in sys.path:
@@ -105,17 +103,17 @@ def _ensure_plugin_root_on_path() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Tabla de dispatchers
+# Dispatcher table
 # ---------------------------------------------------------------------------
 
 def _build_dispatcher_table():
-    """Construye el mapa evento -> funcion de despacho.
+    """Build the event -> dispatch function map.
 
-    Se define como funcion para evitar referencias anticipadas a funciones
-    que aun no se han declarado en el momento de la definicion del modulo.
+    This is a function to avoid forward references to functions that are
+    not yet declared when the module is defined.
 
     Returns:
-        Diccionario con claves de evento y valores de funcion dispatcher.
+        Dictionary with event keys and dispatcher function values.
     """
     return {
         "Write": _dispatch_write,
@@ -136,18 +134,18 @@ def _build_dispatcher_table():
 
 
 # ---------------------------------------------------------------------------
-# Funciones auxiliares
+# Helper functions
 # ---------------------------------------------------------------------------
 
 def _is_memory_enabled() -> bool:
-    """Comprueba si la memoria persistente esta habilitada en la configuracion.
+    """Check if persistent memory is enabled in the configuration.
 
-    Busca el fichero ``alfred-dev.local.md`` en el directorio ``.claude``
-    del proyecto actual y verifica que contenga la seccion ``memoria:`` con
+    Looks for ``alfred-dev.local.md`` in the ``.claude`` directory of the
+    current project and checks that it has the ``memoria:`` section with
     ``enabled: true``.
 
     Returns:
-        True si la memoria esta habilitada, False en caso contrario.
+        True if memory is enabled, otherwise False.
     """
     _ensure_plugin_root_on_path()
     try:
@@ -159,7 +157,7 @@ def _is_memory_enabled() -> bool:
 
 
 def _memory_settings():
-    """Carga la configuracion efectiva de memoria del proyecto."""
+    """Load the effective memory configuration of the project."""
     _ensure_plugin_root_on_path()
     try:
         from core.memory_config import load_memory_config
@@ -176,17 +174,16 @@ def _memory_settings():
 
 
 def _is_excluded_path(file_path: str) -> bool:
-    """Determina si un fichero debe excluirse de la captura generica.
+    """Determine if a file must be excluded from generic capture.
 
-    Se excluyen ficheros internos del plugin, del sistema de control de
-    versiones y de caches de herramientas. La comparacion se hace sobre
-    la ruta relativa al directorio del proyecto.
+    Excludes internal files of the plugin, of version control and of tool
+    caches. The comparison uses the path relative to the project directory.
 
     Args:
-        file_path: ruta absoluta o relativa del fichero.
+        file_path: absolute or relative file path.
 
     Returns:
-        True si el fichero debe excluirse.
+        True if the file must be excluded.
     """
     project_dir = _normalize_local_path(os.getcwd())
     normalized_path = _normalize_local_path(file_path)
@@ -204,12 +201,12 @@ def _is_excluded_path(file_path: str) -> bool:
 
 
 def _normalize_local_path(file_path: str) -> str:
-    """Normaliza una ruta local para comparaciones estables."""
+    """Normalize a local path for stable comparisons."""
     return os.path.normcase(os.path.realpath(os.path.abspath(file_path)))
 
 
 def _shell_segments(command: str) -> list[list[str]]:
-    """Divide un comando shell en segmentos separados por &&, || o ;."""
+    """Split a shell command into segments separated by &&, || or ;."""
     cleaned = command.strip()
     if not cleaned:
         return []
@@ -237,7 +234,7 @@ def _shell_segments(command: str) -> list[list[str]]:
 
 
 def _segment_command_name(tokens: list[str]) -> str:
-    """Extrae el ejecutable principal de un segmento shell."""
+    """Extract the main executable of a shell segment."""
     for token in tokens:
         if re.match(r"^\w+=\S*$", token):
             continue
@@ -263,7 +260,7 @@ _MEMORY_WRITE_FILES = frozenset({
 
 
 def _should_record_event(dispatch_key: str, data: dict) -> bool:
-    """Filtra ruido: la memoria no es un log de cada herramienta."""
+    """Filter noise: memory is not a log of every tool call."""
     if dispatch_key in {"UserPromptSubmit", "UserPromptExpansion", "PreCompact", "Stop"}:
         return True
     if dispatch_key in _NOISE_TOOLS:
@@ -287,16 +284,16 @@ def _should_record_event(dispatch_key: str, data: dict) -> bool:
 
 
 def _is_trivial_command(command: str) -> bool:
-    """Determina si un comando es trivial y no merece ser registrado.
+    """Determine if a command is trivial and not worth recording.
 
-    Extrae el primer token del comando (ignorando variables de entorno
-    y redirecciones) y lo compara con la lista de comandos triviales.
+    Extracts the first token of each command segment (ignoring environment
+    variables) and compares it with the list of trivial commands.
 
     Args:
-        command: comando de shell completo.
+        command: full shell command.
 
     Returns:
-        True si el comando es trivial.
+        True if the command is trivial.
     """
     segments = _shell_segments(command)
     if not segments:
@@ -310,27 +307,27 @@ def _is_trivial_command(command: str) -> bool:
 
 
 def is_git_commit_command(command: str) -> bool:
-    """Determina si un comando contiene un git commit real.
+    """Determine if a command contains a real git commit.
 
-    Se expone como funcion publica para facilitar su uso en tests.
+    Public so that tests can use it easily.
 
     Args:
-        command: comando de shell a analizar.
+        command: shell command to analyze.
 
     Returns:
-        True si contiene un git commit real.
+        True if it contains a real git commit.
     """
     return bool(_GIT_COMMIT_RE.search(command))
 
 
 def _open_db():
-    """Abre la base de datos de memoria del proyecto actual.
+    """Open the memory database of the current project.
 
-    Busca la DB en ``.claude/alfred-memory.db`` relativa al directorio
-    de trabajo. Si no existe o no se puede abrir, devuelve None.
+    Looks for the DB in ``.claude/alfred-memory.db`` relative to the working
+    directory. Returns None if it does not exist or cannot be opened.
 
     Returns:
-        Instancia de MemoryDB o None si no se pudo abrir.
+        MemoryDB instance, or None if it could not be opened.
     """
     _ensure_plugin_root_on_path()
 
@@ -358,14 +355,14 @@ def _open_db():
 
 
 def _relative_path(file_path: str, project_dir: str) -> str:
-    """Convierte una ruta absoluta a ruta relativa respecto al proyecto.
+    """Convert an absolute path to a path relative to the project.
 
     Args:
-        file_path: ruta absoluta del fichero.
-        project_dir: directorio raiz del proyecto.
+        file_path: absolute file path.
+        project_dir: project root directory.
 
     Returns:
-        Ruta relativa. Si la conversion falla, devuelve la ruta original.
+        Relative path. If the conversion fails, the normalized original path.
     """
     normalized_file = _normalize_local_path(file_path)
     normalized_project = _normalize_local_path(project_dir)
@@ -379,13 +376,13 @@ def _relative_path(file_path: str, project_dir: str) -> str:
 
 
 def _read_file_safe(file_path: str) -> Optional[str]:
-    """Lee el contenido de un fichero de forma segura.
+    """Read the content of a file safely.
 
     Args:
-        file_path: ruta absoluta del fichero.
+        file_path: absolute file path.
 
     Returns:
-        Contenido del fichero como texto, o None si falla la lectura.
+        File content as text, or None if the read fails.
     """
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -395,14 +392,14 @@ def _read_file_safe(file_path: str) -> Optional[str]:
 
 
 def _first_meaningful_line(text: str) -> str:
-    """Extrae la primera linea no vacia de un texto.
+    """Extract the first non-empty line of a text.
 
     Args:
-        text: texto de entrada.
+        text: input text.
 
     Returns:
-        Primera linea no vacia, truncada a 120 caracteres. Cadena vacia
-        si no se encuentra ninguna linea con contenido.
+        First non-empty line, truncated to 120 characters. Empty string
+        if no line has content.
     """
     if not text:
         return ""
@@ -414,12 +411,12 @@ def _first_meaningful_line(text: str) -> str:
 
 
 def _prepare_high_volume_content(text: str) -> tuple[Optional[str], dict]:
-    """Recorta salidas masivas y devuelve metadatos de captura.
+    """Trim large outputs and return capture metadata.
 
-    Algunos eventos de exploracion (`Glob`, `Grep`, `WebFetch`, `WebSearch`)
-    pueden generar miles de lineas o blobs HTML muy grandes. Guardarlos
-    completos aporta poca señal y mucho ruido. En esos casos almacenamos una
-    vista previa con metadatos para que la memoria sepa que se recorto.
+    Some exploration events (`Glob`, `Grep`, `WebFetch`, `WebSearch`) can
+    produce thousands of lines or very large HTML blobs. Storing them in full
+    adds little signal and a lot of noise. In these cases we store a preview
+    with metadata so that memory knows the content was trimmed.
     """
     if not text:
         return None, {}
@@ -454,8 +451,8 @@ def _prepare_high_volume_content(text: str) -> tuple[Optional[str], dict]:
     omitted_chars = max(total_chars - len(preview), 0)
     marker = (
         "\n"
-        f"--- contenido recortado: {omitted_lines} lineas y "
-        f"{omitted_chars} caracteres omitidos ---"
+        f"--- содержимое обрезано: пропущено строк: {omitted_lines}, "
+        f"символов: {omitted_chars} ---"
     )
     preview = f"{preview.rstrip()}{marker}"
 
@@ -466,16 +463,16 @@ def _prepare_high_volume_content(text: str) -> tuple[Optional[str], dict]:
 
 
 def _try_sync(db, action: str, **kwargs) -> None:
-    """Ejecuta una sincronizacion incremental a ficheros .md nativos.
+    """Run an incremental sync to native .md files.
 
-    Proyecta los cambios recientes a los ficheros de memoria nativa de
-    Claude Code. Si falla por cualquier razon, continua silenciosamente
-    (politica fail-open).
+    Projects recent changes to the Claude Code native memory files. If it
+    fails for any reason, it continues and only prints a warning
+    (fail-open policy).
 
     Args:
-        db: instancia de MemoryDB.
-        action: tipo de sincronizacion (decision, iteration, commits).
-        **kwargs: argumentos adicionales para el metodo de sync.
+        db: MemoryDB instance.
+        action: sync type (decision, iteration, commits).
+        **kwargs: additional arguments for the sync method.
     """
     try:
         settings = _memory_settings()
@@ -503,7 +500,7 @@ def _try_sync(db, action: str, **kwargs) -> None:
         elif action == "commits":
             sync.sync_commits()
         else:
-            return  # Accion no reconocida: no sincronizar
+            return  # Unknown action: do not sync
 
         sync.sync_summary()
         sync.update_index()
@@ -515,16 +512,16 @@ def _try_sync(db, action: str, **kwargs) -> None:
 
 
 def _load_state_file(file_path: str) -> Optional[dict]:
-    """Lee y parsea el fichero de estado de sesion.
+    """Read and parse the session state file.
 
-    Valida que el JSON tenga la estructura minima requerida: debe ser
-    un diccionario con las claves ``comando`` y ``fase_actual``.
+    Validates that the JSON has the minimum required structure: it must be
+    a dictionary with the ``comando`` and ``fase_actual`` keys.
 
     Args:
-        file_path: ruta absoluta al fichero alfred-dev-state.json.
+        file_path: absolute path to the alfred-dev-state.json file.
 
     Returns:
-        Diccionario con el estado, o None si no se puede leer o parsear.
+        Dictionary with the state, or None if it cannot be read or parsed.
     """
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -541,7 +538,7 @@ def _load_state_file(file_path: str) -> Optional[dict]:
 
 
 def _parse_alfred_prefetch_prompt(prompt_text: str) -> Optional[dict]:
-    """Extrae el slash command de Alfred si admite preparación helper-first."""
+    """Extract the Alfred slash command if it supports helper-first preparation."""
     normalized = (prompt_text or "").strip()
     first_line = normalized.splitlines()[0].strip()
     alias_match = re.match(
@@ -579,7 +576,7 @@ def _parse_alfred_prefetch_prompt(prompt_text: str) -> Optional[dict]:
 
 
 def _prefetch_alfred_continuity(prompt_text: str) -> Optional[dict]:
-    """Prepara artefactos de continuidad antes del primer razonamiento."""
+    """Prepare continuity artifacts before the first reasoning step."""
     parsed = _parse_alfred_prefetch_prompt(prompt_text)
     if parsed is None:
         return None
@@ -670,7 +667,7 @@ def _prefetch_alfred_continuity(prompt_text: str) -> Optional[dict]:
 
 
 def _log_prefetch_event(db, project_dir: str, payload: dict) -> None:
-    """Registra en memoria que Alfred dejó listo un helper-first command."""
+    """Record in memory that Alfred prepared a helper-first command."""
     command = payload.get("prefetched_command", "desconocido")
     source_command = payload.get("source_command", command)
     artifacts = []
@@ -685,9 +682,9 @@ def _log_prefetch_event(db, project_dir: str, payload: dict) -> None:
     source_label = "/alfred" if source_command == "alfred" else f"/alfred-dev:{source_command}"
     summary = f"Prefetch Alfred: {source_label}"
     if source_command != command:
-        summary += f" preparó /alfred-dev:{command}"
+        summary += f" подготовил /alfred-dev:{command}"
     else:
-        summary += " preparado antes del flujo principal"
+        summary += " подготовлен до основного процесса"
 
     event_payload = {
         "source_command": source_command,
@@ -706,25 +703,25 @@ def _log_prefetch_event(db, project_dir: str, payload: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Logica de estado (iteraciones y fases)
+# State logic (iterations and phases)
 # ---------------------------------------------------------------------------
 
 def _process_state(db, file_path: str) -> None:
-    """Procesa el fichero de estado y registra eventos de iteracion/fases.
+    """Process the state file and record iteration/phase events.
 
-    La logica de comparacion sigue tres ejes:
+    The comparison logic has three parts:
 
-    1. Si no hay iteracion activa en la DB, se inicia una nueva.
-    2. Si hay fases completadas en el estado nuevo que no estan registradas
-       como eventos en la DB, se registra un ``phase_completed`` por cada una.
-    3. Si la fase actual es "completado", se cierra la iteracion activa.
+    1. If the DB has no active iteration, start a new one.
+    2. For each completed phase in the new state that is not yet recorded
+       as an event in the DB, record one ``phase_completed`` event.
+    3. If the current phase is "completado", close the active iteration.
 
-    Ademas, las fases completadas se marcan automaticamente (auto-pin) para
-    que sobrevivan entre sesiones.
+    Also, completed phases are marked automatically (auto-pin) so that
+    they survive between sessions.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
-        file_path: ruta al fichero alfred-dev-state.json.
+        db: open MemoryDB instance.
+        file_path: path to the alfred-dev-state.json file.
     """
     new_state = _load_state_file(file_path)
     if new_state is None:
@@ -735,7 +732,7 @@ def _process_state(db, file_path: str) -> None:
     fase_actual = new_state.get("fase_actual", "")
     fases_completadas = new_state.get("fases_completadas", [])
 
-    # --- Comprobar si hay una iteracion activa ---
+    # --- Check for an active iteration ---
     active = db.get_active_iteration()
 
     if active is None:
@@ -772,7 +769,7 @@ def _process_state(db, file_path: str) -> None:
 
     iteration_id = active["id"]
 
-    # --- Detectar fases nuevas completadas ---
+    # --- Detect newly completed phases ---
     phase_event_count = db.count_events(
         iteration_id=iteration_id,
         event_type="phase_completed",
@@ -818,7 +815,7 @@ def _process_state(db, file_path: str) -> None:
             iteration_id=iteration_id,
         )
 
-    # --- Detectar iteracion completada ---
+    # --- Detect a completed iteration ---
     if fase_actual == "completado":
         db.complete_iteration(iteration_id)
         db.log_event(
@@ -834,17 +831,17 @@ def _process_state(db, file_path: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Captura de git commit
+# Git commit capture
 # ---------------------------------------------------------------------------
 
 def _capture_git_commit(db) -> None:
-    """Extrae metadatos del ultimo commit y los registra con log_commit().
+    """Extract metadata of the last commit and record it with log_commit().
 
-    Complementa el evento generico con informacion estructurada del commit
-    (SHA, mensaje, autor, ficheros) para la vista de commits del dashboard.
+    Adds structured commit data (SHA, message, author, files) to the
+    generic event for the commits view of the dashboard.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
+        db: open MemoryDB instance.
     """
     if not _memory_settings().get("capture_commits", True):
         return
@@ -885,15 +882,15 @@ def _capture_git_commit(db) -> None:
 # ---------------------------------------------------------------------------
 
 def _dispatch_write(db, data: dict) -> None:
-    """Captura la escritura completa de un fichero.
+    """Capture a full file write.
 
-    Registra el contenido integro del fichero, su extension, numero de
-    lineas y ruta relativa. Si el fichero es ``alfred-dev-state.json``,
-    dispara ademas la logica de seguimiento de iteraciones/fases.
+    Records the full file content, its extension, line count and relative
+    path. If the file is ``alfred-dev-state.json``, it also runs the
+    iteration/phase tracking logic.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
-        data: datos del hook PostToolUse.
+        db: open MemoryDB instance.
+        data: PostToolUse hook data.
     """
     tool_input = data.get("tool_input", {})
     file_path = tool_input.get("file_path", "") or tool_input.get("path", "")
@@ -921,7 +918,7 @@ def _dispatch_write(db, data: dict) -> None:
         is_secret_storage_path = lambda _path: False  # noqa: E731
     stored_content = None if is_secret_storage_path(file_path) else file_content
 
-    summary = f"Escrito {rel_path} ({line_count} lineas, {ext_clean or 'sin extension'})"
+    summary = f"Записан {rel_path} (строк: {line_count}, {ext_clean or 'без расширения'})"
 
     db.log_event(
         event_type="file_written",
@@ -932,14 +929,14 @@ def _dispatch_write(db, data: dict) -> None:
 
 
 def _dispatch_edit(db, data: dict) -> None:
-    """Captura la edicion parcial de un fichero.
+    """Capture a partial file edit.
 
-    Registra el diff (old_string -> new_string) junto con el conteo de
-    lineas reemplazadas y nuevas.
+    Records the diff (old_string -> new_string) with the count of replaced
+    and new lines.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
-        data: datos del hook PostToolUse.
+        db: open MemoryDB instance.
+        data: PostToolUse hook data.
     """
     tool_input = data.get("tool_input", {})
     file_path = tool_input.get("file_path", "") or tool_input.get("path", "")
@@ -956,7 +953,7 @@ def _dispatch_edit(db, data: dict) -> None:
     old_lines = old_string.count("\n") + 1 if old_string else 0
     new_lines = new_string.count("\n") + 1 if new_string else 0
 
-    summary = f"Editado {rel_path}: {old_lines} lineas reemplazadas por {new_lines}"
+    summary = f"Изменён {rel_path}: строк заменено: {old_lines}, новых: {new_lines}"
     content = f"--- old ---\n{old_string}\n--- new ---\n{new_string}"
 
     db.log_event(
@@ -968,15 +965,15 @@ def _dispatch_edit(db, data: dict) -> None:
 
 
 def _dispatch_bash(db, data: dict) -> None:
-    """Captura la ejecucion de un comando Bash.
+    """Capture a Bash command run.
 
-    Registra el comando completo, codigo de salida, stdout y stderr sin
-    truncar. Si el comando es un ``git commit`` exitoso, dispara ademas
-    la captura enriquecida de metadatos del commit.
+    Records the full command, exit code, stdout and stderr without
+    truncation. If the command is a successful ``git commit``, it also
+    runs the extended commit metadata capture.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
-        data: datos del hook PostToolUse.
+        db: open MemoryDB instance.
+        data: PostToolUse hook data.
     """
     tool_input = data.get("tool_input", {})
     tool_result = data.get("tool_response") or data.get("tool_result") or {}
@@ -992,9 +989,9 @@ def _dispatch_bash(db, data: dict) -> None:
     stderr = tool_result.get("stderr", "")
 
     cmd_short = command[:80] + "..." if len(command) > 80 else command
-    exit_str = f"exit {exit_code}" if exit_code is not None else "sin exit code"
+    exit_str = f"exit {exit_code}" if exit_code is not None else "нет exit code"
     first_line = _first_meaningful_line(stdout)
-    summary_parts = [f"Ejecutado: {cmd_short} -- {exit_str}"]
+    summary_parts = [f"Выполнено: {cmd_short} -- {exit_str}"]
     if first_line:
         summary_parts.append(first_line)
     summary = ", ".join(summary_parts)
@@ -1013,21 +1010,21 @@ def _dispatch_bash(db, data: dict) -> None:
         content=content,
     )
 
-    # Captura enriquecida de git commit
+    # Extended git commit capture
     if _GIT_COMMIT_RE.search(command) and exit_code == 0:
         _capture_git_commit(db)
 
 
 def _dispatch_read(db, data: dict) -> None:
-    """Captura la lectura de un fichero.
+    """Capture a file read.
 
-    Registra la ruta del fichero leido y el rango de lineas solicitado.
-    No almacena el contenido (ya existe en el fichero) para evitar
-    duplicacion innecesaria.
+    Records the path of the read file and the requested line range.
+    It does not store the content (it already exists in the file) to
+    avoid needless duplication.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
-        data: datos del hook PostToolUse.
+        db: open MemoryDB instance.
+        data: PostToolUse hook data.
     """
     tool_input = data.get("tool_input", {})
     file_path = tool_input.get("file_path", "")
@@ -1041,13 +1038,13 @@ def _dispatch_read(db, data: dict) -> None:
 
     range_str = ""
     if offset is not None and limit is not None:
-        range_str = f" (lineas {offset}-{offset + limit})"
+        range_str = f" (строки {offset}-{offset + limit})"
     elif offset is not None:
-        range_str = f" (desde linea {offset})"
+        range_str = f" (со строки {offset})"
     elif limit is not None:
-        range_str = f" (primeras {limit} lineas)"
+        range_str = f" (первые строки: {limit})"
 
-    summary = f"Leido {rel_path}{range_str}"
+    summary = f"Прочитан {rel_path}{range_str}"
 
     payload = {"file": rel_path}
     if offset is not None:
@@ -1063,13 +1060,13 @@ def _dispatch_read(db, data: dict) -> None:
 
 
 def _dispatch_glob(db, data: dict) -> None:
-    """Captura una busqueda de ficheros por patron glob.
+    """Capture a file search by glob pattern.
 
-    Registra el patron usado y el numero de resultados encontrados.
+    Records the pattern and the number of results.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
-        data: datos del hook PostToolUse.
+        db: open MemoryDB instance.
+        data: PostToolUse hook data.
     """
     tool_input = data.get("tool_input", {})
     tool_result = data.get("tool_result", {})
@@ -1080,7 +1077,7 @@ def _dispatch_glob(db, data: dict) -> None:
 
     search_path = tool_input.get("path", ".")
 
-    # Contar resultados: tool_result puede ser string con rutas o un dict
+    # Count results: tool_result can be a string with paths or a dict
     result_text = ""
     if isinstance(tool_result, str):
         result_text = tool_result
@@ -1089,7 +1086,7 @@ def _dispatch_glob(db, data: dict) -> None:
 
     match_count = len([l for l in result_text.strip().split("\n") if l.strip()]) if result_text.strip() else 0
 
-    summary = f"Glob: {pattern} en {search_path} ({match_count} resultados)"
+    summary = f"Glob: {pattern} в {search_path} (результатов: {match_count})"
 
     content, content_meta = _prepare_high_volume_content(result_text)
     payload = {"pattern": pattern, "path": search_path, "results": match_count}
@@ -1104,13 +1101,13 @@ def _dispatch_glob(db, data: dict) -> None:
 
 
 def _dispatch_grep(db, data: dict) -> None:
-    """Captura una busqueda de contenido en ficheros.
+    """Capture a content search in files.
 
-    Registra el patron regex, el directorio y el numero de coincidencias.
+    Records the regex pattern, the directory and the number of matches.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
-        data: datos del hook PostToolUse.
+        db: open MemoryDB instance.
+        data: PostToolUse hook data.
     """
     tool_input = data.get("tool_input", {})
     tool_result = data.get("tool_result", {})
@@ -1134,11 +1131,11 @@ def _dispatch_grep(db, data: dict) -> None:
 
     filter_str = ""
     if file_type:
-        filter_str = f" tipo={file_type}"
+        filter_str = f" тип={file_type}"
     elif glob_filter:
-        filter_str = f" filtro={glob_filter}"
+        filter_str = f" фильтр={glob_filter}"
 
-    summary = f"Grep: '{pattern}' en {search_path}{filter_str} ({match_count} coincidencias)"
+    summary = f"Grep: '{pattern}' в {search_path}{filter_str} (совпадений: {match_count})"
 
     content, content_meta = _prepare_high_volume_content(result_text)
     payload = {"pattern": pattern, "path": search_path, "mode": output_mode, "results": match_count}
@@ -1157,14 +1154,14 @@ def _dispatch_grep(db, data: dict) -> None:
 
 
 def _dispatch_agent(db, data: dict) -> None:
-    """Captura el lanzamiento de un subagente.
+    """Capture a subagent launch.
 
-    Registra el tipo de subagente, la descripcion de la tarea y el
-    prompt enviado. El resultado completo se almacena en content.
+    Records the subagent type, the task description and the prompt.
+    The full result is stored in content.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
-        data: datos del hook PostToolUse.
+        db: open MemoryDB instance.
+        data: PostToolUse hook data.
     """
     tool_input = data.get("tool_input", {})
     tool_result = data.get("tool_result", {})
@@ -1173,7 +1170,7 @@ def _dispatch_agent(db, data: dict) -> None:
     subagent_type = tool_input.get("subagent_type", "general-purpose")
     prompt = tool_input.get("prompt", "")
 
-    summary = f"Subagente ({subagent_type}): {description}" if description else f"Subagente ({subagent_type}) lanzado"
+    summary = f"Субагент ({subagent_type}): {description}" if description else f"Субагент ({subagent_type}) запущен"
 
     result_text = ""
     if isinstance(tool_result, str):
@@ -1185,7 +1182,7 @@ def _dispatch_agent(db, data: dict) -> None:
     if prompt:
         content_parts.append(f"--- prompt ---\n{prompt}")
     if result_text:
-        content_parts.append(f"--- resultado ---\n{result_text}")
+        content_parts.append(f"--- результат ---\n{result_text}")
 
     db.log_event(
         event_type="agent_launched",
@@ -1196,11 +1193,11 @@ def _dispatch_agent(db, data: dict) -> None:
 
 
 def _dispatch_web_fetch(db, data: dict) -> None:
-    """Captura una peticion HTTP a una URL externa.
+    """Capture an HTTP request to an external URL.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
-        data: datos del hook PostToolUse.
+        db: open MemoryDB instance.
+        data: PostToolUse hook data.
     """
     tool_input = data.get("tool_input", {})
     tool_result = data.get("tool_result", {})
@@ -1230,11 +1227,11 @@ def _dispatch_web_fetch(db, data: dict) -> None:
 
 
 def _dispatch_web_search(db, data: dict) -> None:
-    """Captura una busqueda web.
+    """Capture a web search.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
-        data: datos del hook PostToolUse.
+        db: open MemoryDB instance.
+        data: PostToolUse hook data.
     """
     tool_input = data.get("tool_input", {})
     tool_result = data.get("tool_result", {})
@@ -1264,11 +1261,11 @@ def _dispatch_web_search(db, data: dict) -> None:
 
 
 def _dispatch_notebook(db, data: dict) -> None:
-    """Captura la edicion de un notebook Jupyter.
+    """Capture a Jupyter notebook edit.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
-        data: datos del hook PostToolUse.
+        db: open MemoryDB instance.
+        data: PostToolUse hook data.
     """
     tool_input = data.get("tool_input", {})
 
@@ -1289,14 +1286,14 @@ def _dispatch_notebook(db, data: dict) -> None:
 
 
 def _dispatch_prompt(db, data: dict) -> None:
-    """Captura el prompt enviado por el usuario.
+    """Capture the prompt sent by the user.
 
-    Registra el texto completo del prompt y genera un resumen con la
-    primera linea truncada a 100 caracteres.
+    Records the full prompt text and builds a summary from the first line,
+    truncated to 100 characters.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
-        data: datos del hook UserPromptSubmit o UserPromptExpansion.
+        db: open MemoryDB instance.
+        data: UserPromptSubmit or UserPromptExpansion hook data.
     """
     prompt_text = data.get("prompt", "") or data.get("content", "")
     if not prompt_text:
@@ -1340,16 +1337,15 @@ def _dispatch_prompt(db, data: dict) -> None:
 
 
 def _dispatch_compact(db, data: dict) -> None:
-    """Marca un evento de compactacion de contexto.
+    """Mark a context compaction event.
 
-    Indica que los mensajes anteriores se han resumido por el motor de
-    Claude Code.
+    Shows that the Claude Code engine summarized the previous messages.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
-        data: datos del hook PreCompact.
+        db: open MemoryDB instance.
+        data: PreCompact hook data.
     """
-    summary = "Contexto compactado -- los mensajes anteriores se han resumido"
+    summary = "Контекст сжат: предыдущие сообщения свёрнуты в резюме"
     db.log_event(
         event_type="context_compacted",
         summary=summary,
@@ -1358,16 +1354,15 @@ def _dispatch_compact(db, data: dict) -> None:
 
 
 def _dispatch_stop(db, data: dict) -> None:
-    """Marca el cierre de sesion.
+    """Mark the end of the session.
 
-    Registra un evento de finalizacion y cierra la iteracion activa si
-    existe alguna.
+    Records an end event and closes the active iteration, if any.
 
     Args:
-        db: instancia de MemoryDB ya abierta.
-        data: datos del hook Stop.
+        db: open MemoryDB instance.
+        data: Stop hook data.
     """
-    summary = "Sesion finalizada"
+    summary = "Сессия завершена"
     db.log_event(
         event_type="session_ended",
         summary=summary,
@@ -1389,15 +1384,15 @@ def _dispatch_stop(db, data: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Punto de entrada
+# Entry point
 # ---------------------------------------------------------------------------
 
 def main():
-    """Punto de entrada del hook.
+    """Hook entry point.
 
-    Lee el JSON de stdin proporcionado por Claude Code, determina el tipo
-    de evento y lo despacha al handler correspondiente. Nunca bloquea el
-    flujo de trabajo: cualquier error sale con exit 0.
+    Reads the JSON that Claude Code sends on stdin, finds the event type and
+    dispatches it to the matching handler. It never blocks the workflow:
+    any error exits with code 0.
     """
     try:
         data = json.load(sys.stdin)
@@ -1409,7 +1404,7 @@ def main():
         )
         sys.exit(0)
 
-    # Determinar la clave de despacho: primero tool_name, luego hook_event_name
+    # Find the dispatch key: tool_name first, then hook_event_name
     dispatch_key = data.get("tool_name") or data.get("hook_event_name", "")
     if not dispatch_key:
         sys.exit(0)
@@ -1421,11 +1416,11 @@ def main():
     if not _should_record_event(dispatch_key, data):
         sys.exit(0)
 
-    # Comprobar si la memoria esta habilitada
+    # Check if memory is enabled
     if not _is_memory_enabled():
         sys.exit(0)
 
-    # Abrir la base de datos
+    # Open the database
     db = _open_db()
     if db is None:
         sys.exit(0)

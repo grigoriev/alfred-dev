@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generacion canónica de style-options.html para Designer."""
+"""Canonical generation of style-options.html for Designer."""
 
 from __future__ import annotations
 
@@ -98,20 +98,20 @@ def _candidate_option_flavors(proposal: Dict[str, Any]) -> List[str]:
         "technical",
         _matches_any(
             text,
-            ["grafana", "datadog", "monitor", "tiempo real", "24/7", "semantico", "alerta", "observabilidad"],
+            ["grafana", "datadog", "monitor", "tiempo real", "24/7", "semantico", "alerta", "observabilidad", "мониторинг", "реальном времени", "семантич", "алерт"],
         )
     )
-    add("editorial", _matches_any(text, ["editorial", "premium", "serif", "revista", "magazine", "lujo", "curado"]))
+    add("editorial", _matches_any(text, ["editorial", "premium", "serif", "revista", "magazine", "lujo", "curado", "редакцион", "журнал", "премиал", "роскош"]))
     add(
         "minimal",
-        _matches_any(text, ["minimal", "limpio", "clean", "airead", "claridad", "linear", "notion", "attio", "whitespace"])
+        _matches_any(text, ["minimal", "limpio", "clean", "airead", "claridad", "linear", "notion", "attio", "whitespace", "минимал", "чист", "воздушн", "ясност"])
         or (
             luminance > 0.92
-            and _matches_any(text, ["saas", "moderno", "blanco", "ligero"])
+            and _matches_any(text, ["saas", "moderno", "blanco", "ligero", "современ", "бел", "лёгк", "легк"])
         ),
     )
-    add("operational", _matches_any(text, ["dashboard", "operativ", "metric", "analit", "control", "panel", "enterprise", "tableau", "power bi"]))
-    add("expressive", _matches_any(text, ["vibrante", "espacial", "futur", "expresiv", "bold", "impacto", "memorable"]))
+    add("operational", _matches_any(text, ["dashboard", "operativ", "metric", "analit", "control", "panel", "enterprise", "tableau", "power bi", "дашборд", "операцион", "метрик", "аналитик", "контрол", "панел"]))
+    add("expressive", _matches_any(text, ["vibrante", "espacial", "futur", "expresiv", "bold", "impacto", "memorable", "ярк", "пространств", "футур", "выразительн", "смел", "запомина"]))
     add("balanced", True)
 
     for flavor in ("operational", "minimal", "editorial", "technical", "expressive", "balanced"):
@@ -347,7 +347,7 @@ def _reference_links_markup(reference_urls: List[Dict[str, str]]) -> str:
 
     links = []
     for item in reference_urls[:3]:
-        label = _escape(item.get("label", "Referencia"))
+        label = _escape(item.get("label", "Референс"))
         url = _escape(item.get("url", ""))
         if not url:
             continue
@@ -384,13 +384,13 @@ def _typography_summary(proposal: Dict[str, Any]) -> str:
     if typography.get("pairing_label"):
         parts.append(f"Pairing: {typography['pairing_label']}")
     if typography.get("headings"):
-        parts.append(f"Titulares: {typography['headings']}")
+        parts.append(f"Заголовки: {typography['headings']}")
     if typography.get("body"):
-        parts.append(f"Cuerpo: {typography['body']}")
+        parts.append(f"Основной текст: {typography['body']}")
     if typography.get("scale"):
-        parts.append(f"Escala: {typography['scale']}")
+        parts.append(f"Шкала: {typography['scale']}")
     if typography.get("notes"):
-        parts.append(f"Notas: {typography['notes']}")
+        parts.append(f"Заметки: {typography['notes']}")
     return " · ".join(parts)
 
 
@@ -405,7 +405,7 @@ def _preview_title_text(proposal: Dict[str, Any]) -> str:
         text = _clean_text(candidate)
         if text:
             return _truncate_text(text, 42)
-    return "Direccion visual"
+    return "Визуальное направление"
 
 
 def _preview_body_text(proposal: Dict[str, Any], fallback: str) -> str:
@@ -468,15 +468,15 @@ def _variant_badge_text(proposal: Dict[str, Any], fallback: str) -> str:
 
 def _preview_editorial(proposal: Dict[str, Any]) -> str:
     title = _escape(_preview_title_text(proposal))
-    body = _escape(_preview_body_text(proposal, "Calma, criterio y jerarquia"))
+    body = _escape(_preview_body_text(proposal, "Спокойствие, вкус и иерархия"))
     return (
         '<div class="preview-editorial">'
         '<div class="mock-nav"><span></span><span></span><span></span></div>'
-        '<p class="preview-kicker">Edicion visual</p>'
+        '<p class="preview-kicker">Визуальная редакция</p>'
         '<div class="mock-hero preview-hero preview-hero--editorial">'
         f"<h4>{title}</h4>"
         f"<p>{body}</p>"
-        '<span class="mock-button">Leer propuesta</span>'
+        '<span class="mock-button">Читать предложение</span>'
         "</div>"
         '<div class="preview-lines"><span></span><span></span><span></span></div>'
         "</div>"
@@ -489,8 +489,8 @@ def _preview_operational(proposal: Dict[str, Any]) -> str:
     return (
         '<div class="preview-dashboard">'
         '<div class="preview-metrics">'
-        '<div class="preview-stat"><strong>72%</strong><span>Adopcion</span></div>'
-        '<div class="preview-stat"><strong>4.2</strong><span>Foco</span></div>'
+        '<div class="preview-stat"><strong>72%</strong><span>Внедрение</span></div>'
+        '<div class="preview-stat"><strong>4.2</strong><span>Фокус</span></div>'
         "</div>"
         '<div class="mock-card preview-card preview-card--wide">'
         f"<h5>{title}</h5>"
@@ -521,7 +521,7 @@ def _preview_technical(proposal: Dict[str, Any]) -> str:
 
 def _preview_minimal(proposal: Dict[str, Any]) -> str:
     title = _escape(_preview_title_text(proposal))
-    tone = _escape(_preview_body_text(proposal, "Sobrio y enfocado"))
+    tone = _escape(_preview_body_text(proposal, "Сдержанно и сфокусированно"))
     return (
         '<div class="preview-minimal">'
         '<div class="preview-product-topline"><span></span><span></span><span></span></div>'
@@ -531,8 +531,8 @@ def _preview_minimal(proposal: Dict[str, Any]) -> str:
         f"<h4>{title}</h4>"
         f"<p>{tone}</p>"
         '<div class="preview-product-actions">'
-        '<span class="mock-button">Continuar</span>'
-        '<span class="preview-product-ghost">Ver demo</span>'
+        '<span class="mock-button">Продолжить</span>'
+        '<span class="preview-product-ghost">Смотреть демо</span>'
         "</div>"
         "</div>"
         '<div class="preview-product-panel">'
@@ -551,14 +551,14 @@ def _preview_minimal(proposal: Dict[str, Any]) -> str:
 
 def _preview_expressive(proposal: Dict[str, Any]) -> str:
     title = _escape(_preview_title_text(proposal))
-    body = _escape(_preview_body_text(proposal, "Expresivo y memorable"))
+    body = _escape(_preview_body_text(proposal, "Выразительно и запоминающе"))
     return (
         '<div class="preview-expressive">'
-        '<div class="preview-badge">Impacto</div>'
+        '<div class="preview-badge">Эффект</div>'
         '<div class="mock-hero preview-hero preview-hero--expressive">'
         f"<h4>{title}</h4>"
         f"<p>{body}</p>"
-        '<span class="mock-button">Ver identidad</span>'
+        '<span class="mock-button">Смотреть айдентику</span>'
         "</div>"
         '<div class="preview-stack">'
         '<div class="preview-panel"></div><div class="preview-panel preview-panel--alt"></div>'
@@ -569,14 +569,14 @@ def _preview_expressive(proposal: Dict[str, Any]) -> str:
 
 def _preview_balanced(proposal: Dict[str, Any]) -> str:
     title = _escape(_preview_title_text(proposal))
-    body = _escape(_preview_body_text(proposal, "Equilibrio y claridad"))
+    body = _escape(_preview_body_text(proposal, "Баланс и ясность"))
     return (
         '<div class="preview-balanced">'
         '<div class="mock-nav"><span></span><span></span><span></span></div>'
         '<div class="mock-hero preview-hero">'
         f"<h4>{title}</h4>"
         f"<p>{body}</p>"
-        '<span class="mock-button">CTA principal</span>'
+        '<span class="mock-button">Главный CTA</span>'
         "</div>"
         '<div class="mock-card preview-card">'
         f"<h5>{title}</h5>"
@@ -590,13 +590,13 @@ def _preview_brutal_family(proposal: Dict[str, Any], flavor: str) -> str:
     title = _escape(_preview_title_text(proposal))
     body = _escape(_preview_body_text(proposal, _context_summary(proposal)))
     badge = _escape(_variant_badge_text(proposal, "Brutal"))
-    palette = _escape(_variant_badge_text({"variant_label": proposal.get("palette_mode_label")}, "Solidos"))
+    palette = _escape(_variant_badge_text({"variant_label": proposal.get("palette_mode_label")}, "Плотная"))
     if flavor == "operational":
         return (
             '<div class="preview-brutal preview-brutal--operational">'
             '<div class="preview-brutal-metrics">'
-            '<div class="preview-brutal-metric"><strong>72%</strong><span>adopcion</span></div>'
-            '<div class="preview-brutal-metric"><strong>4.2</strong><span>foco</span></div>'
+            '<div class="preview-brutal-metric"><strong>72%</strong><span>внедрение</span></div>'
+            '<div class="preview-brutal-metric"><strong>4.2</strong><span>фокус</span></div>'
             "</div>"
             '<div class="preview-brutal-card preview-brutal-card--board">'
             f'<p class="preview-brutal-kicker">{badge}</p>'
@@ -616,7 +616,7 @@ def _preview_brutal_family(proposal: Dict[str, Any], flavor: str) -> str:
             '<div class="preview-brutal-card preview-brutal-card--copy">'
             f"<h4>{title}</h4>"
             f"<p>{body}</p>"
-            '<span class="mock-button">Continuar</span>'
+            '<span class="mock-button">Продолжить</span>'
             "</div>"
             '<div class="preview-brutal-card preview-brutal-card--stat">'
             '<strong>99.9%</strong>'
@@ -637,7 +637,7 @@ def _preview_brutal_family(proposal: Dict[str, Any], flavor: str) -> str:
         '<div class="preview-brutal-card preview-brutal-card--hero">'
         f"<h4>{title}</h4>"
         f"<p>{body}</p>"
-        '<span class="mock-button">Ver identidad</span>'
+        '<span class="mock-button">Смотреть айдентику</span>'
         "</div>"
         "</div>"
         '<div class="preview-brutal-row"><span></span><span></span><span></span></div>'
@@ -647,8 +647,8 @@ def _preview_brutal_family(proposal: Dict[str, Any], flavor: str) -> str:
 
 def _preview_organic_family(proposal: Dict[str, Any], flavor: str) -> str:
     title = _escape(_preview_title_text(proposal))
-    body = _escape(_preview_body_text(proposal, "Calido, organico y curado"))
-    badge = _escape(_variant_badge_text(proposal, "Tierra"))
+    body = _escape(_preview_body_text(proposal, "Тепло, органично и продуманно"))
+    badge = _escape(_variant_badge_text(proposal, "Земляная"))
     if flavor == "minimal":
         return (
             '<div class="preview-organic preview-organic--minimal">'
@@ -676,7 +676,7 @@ def _preview_organic_family(proposal: Dict[str, Any], flavor: str) -> str:
             f"<h4>{title}</h4>"
             f"<p>{body}</p>"
             "</div>"
-            '<div class="preview-organic-card preview-organic-card--stat"><strong>03</strong><span>ritmos</span></div>'
+            '<div class="preview-organic-card preview-organic-card--stat"><strong>03</strong><span>ритма</span></div>'
             "</div>"
             "</div>"
         )
@@ -688,7 +688,7 @@ def _preview_organic_family(proposal: Dict[str, Any], flavor: str) -> str:
         f'<p class="preview-kicker">{badge}</p>'
         f"<h4>{title}</h4>"
         f"<p>{body}</p>"
-        '<span class="preview-product-ghost">Leer calma</span>'
+        '<span class="preview-product-ghost">Читать спокойно</span>'
         "</div>"
         "</div>"
         '<div class="preview-organic-pills"><span></span><span></span><span></span></div>'
@@ -698,7 +698,7 @@ def _preview_organic_family(proposal: Dict[str, Any], flavor: str) -> str:
 
 def _preview_glass_family(proposal: Dict[str, Any], flavor: str) -> str:
     title = _escape(_preview_title_text(proposal))
-    body = _escape(_preview_body_text(proposal, "Capas suaves y profundidad contenida"))
+    body = _escape(_preview_body_text(proposal, "Мягкие слои и сдержанная глубина"))
     badge = _escape(_variant_badge_text(proposal, "Glass"))
     if flavor == "technical":
         return (
@@ -706,7 +706,7 @@ def _preview_glass_family(proposal: Dict[str, Any], flavor: str) -> str:
             '<div class="preview-glass-topline"><span></span><span></span><span></span></div>'
             '<div class="preview-glass-stack">'
             '<div class="preview-glass-panel preview-glass-panel--data">'
-            '<div class="preview-glass-chiprow"><span>OK</span><span>Latencia</span></div>'
+            '<div class="preview-glass-chiprow"><span>OK</span><span>Задержка</span></div>'
             '<div class="preview-glass-orb preview-glass-orb--small"></div>'
             "</div>"
             '<div class="preview-glass-panel preview-glass-panel--copy">'
@@ -724,7 +724,7 @@ def _preview_glass_family(proposal: Dict[str, Any], flavor: str) -> str:
             f'<p class="preview-product-kicker">{badge}</p>'
             f"<h4>{title}</h4>"
             f"<p>{body}</p>"
-            '<div class="preview-glass-actions"><span class="mock-button">Abrir</span><span class="preview-product-ghost">Demo</span></div>'
+            '<div class="preview-glass-actions"><span class="mock-button">Открыть</span><span class="preview-product-ghost">Демо</span></div>'
             "</div>"
             '<div class="preview-glass-orb"></div>'
             "</div>"
@@ -749,7 +749,7 @@ def _preview_glass_family(proposal: Dict[str, Any], flavor: str) -> str:
 
 def _preview_hyperminimal_family(proposal: Dict[str, Any], flavor: str) -> str:
     title = _escape(_preview_title_text(proposal))
-    body = _escape(_preview_body_text(proposal, "Aire, precision y tecnologia limpia"))
+    body = _escape(_preview_body_text(proposal, "Воздух, точность и чистая технология"))
     badge = _escape(_variant_badge_text(proposal, "Lucid"))
     if flavor == "editorial":
         return (
@@ -786,7 +786,7 @@ def _preview_hyperminimal_family(proposal: Dict[str, Any], flavor: str) -> str:
 
 def _preview_depth_family(proposal: Dict[str, Any], flavor: str) -> str:
     title = _escape(_preview_title_text(proposal))
-    body = _escape(_preview_body_text(proposal, "Objeto, escena y panel de apoyo"))
+    body = _escape(_preview_body_text(proposal, "Объект, сцена и вспомогательная панель"))
     badge = _escape(_variant_badge_text(proposal, "WebGL"))
     if flavor == "technical":
         return (
@@ -810,7 +810,7 @@ def _preview_depth_family(proposal: Dict[str, Any], flavor: str) -> str:
             '<div class="preview-depth-stage"><div class="preview-depth-object"></div></div>'
             '<div class="preview-depth-panel preview-depth-panel--copy">'
             f"<h4>{title}</h4><p>{body}</p>"
-            '<span class="mock-button">Explorar</span>'
+            '<span class="mock-button">Исследовать</span>'
             "</div>"
             "</div>"
             "</div>"
@@ -828,7 +828,7 @@ def _preview_depth_family(proposal: Dict[str, Any], flavor: str) -> str:
 
 def _preview_kinetic_family(proposal: Dict[str, Any], flavor: str) -> str:
     title = _escape(_preview_title_text(proposal))
-    body = _escape(_preview_body_text(proposal, "Titular como sistema"))
+    body = _escape(_preview_body_text(proposal, "Заголовок как система"))
     badge = _escape(_variant_badge_text(proposal, "Kinetic"))
     if flavor == "minimal":
         return (
@@ -849,7 +849,7 @@ def _preview_kinetic_family(proposal: Dict[str, Any], flavor: str) -> str:
             "</div>"
             f"<p>{body}</p>"
             '<div class="preview-kinetic-band"></div>'
-            '<span class="mock-button">Actuar</span>'
+            '<span class="mock-button">Действовать</span>'
             "</div>"
         )
     return (
@@ -865,14 +865,14 @@ def _preview_kinetic_family(proposal: Dict[str, Any], flavor: str) -> str:
 
 def _preview_journey_family(proposal: Dict[str, Any], flavor: str) -> str:
     title = _escape(_preview_title_text(proposal))
-    body = _escape(_preview_body_text(proposal, "Historia guiada por pasos"))
+    body = _escape(_preview_body_text(proposal, "История, ведомая по шагам"))
     badge = _escape(_variant_badge_text(proposal, "Journey"))
     if flavor == "expressive":
         return (
             '<div class="preview-journey preview-journey--expressive">'
             '<div class="preview-journey-rail"><span></span><span></span><span></span></div>'
             '<div class="preview-journey-card">'
-            '<div class="preview-journey-topline"><strong>Fase 02</strong><span>Progreso +18%</span></div>'
+            '<div class="preview-journey-topline"><strong>Фаза 02</strong><span>Прогресс +18%</span></div>'
             f'<p class="preview-kicker">{badge}</p><h4>{title}</h4><p>{body}</p>'
             "</div>"
             '<div class="preview-journey-steps"><span></span><span></span><span></span></div>'
@@ -884,13 +884,13 @@ def _preview_journey_family(proposal: Dict[str, Any], flavor: str) -> str:
             '<div class="preview-journey-rail preview-journey-rail--soft"><span></span><span></span><span></span></div>'
             '<div class="preview-journey-shell">'
             '<div class="preview-journey-step"><strong>2/4</strong><span>checkpoint</span></div>'
-            '<div class="preview-journey-card"><div class="preview-journey-topline"><strong>Ruta base</strong><span>Checkpoint</span></div><h4>' + title + '</h4><p>' + body + '</p></div>'
+            '<div class="preview-journey-card"><div class="preview-journey-topline"><strong>Базовый маршрут</strong><span>Checkpoint</span></div><h4>' + title + '</h4><p>' + body + '</p></div>'
             "</div></div>"
         )
     return (
         '<div class="preview-journey preview-journey--editorial">'
         f'<p class="preview-kicker">{badge}</p>'
-        '<div class="preview-journey-card"><div class="preview-journey-topline"><strong>Intro</strong><span>Cap. 1</span></div><h4>' + title + '</h4><p>' + body + '</p></div>'
+        '<div class="preview-journey-card"><div class="preview-journey-topline"><strong>Intro</strong><span>Гл. 1</span></div><h4>' + title + '</h4><p>' + body + '</p></div>'
         '<div class="preview-journey-steps"><span></span><span></span><span></span></div>'
         "</div>"
     )
@@ -898,12 +898,12 @@ def _preview_journey_family(proposal: Dict[str, Any], flavor: str) -> str:
 
 def _preview_retro_family(proposal: Dict[str, Any], flavor: str) -> str:
     title = _escape(_preview_title_text(proposal))
-    body = _escape(_preview_body_text(proposal, "Capas, energia y color visible"))
+    body = _escape(_preview_body_text(proposal, "Слои, энергия и заметный цвет"))
     badge = _escape(_variant_badge_text(proposal, "Retro"))
     if flavor == "balanced":
         return (
             '<div class="preview-retro preview-retro--balanced">'
-            '<div class="preview-retro-stickers"><span>' + badge + '</span><span>Editorial</span></div>'
+            '<div class="preview-retro-stickers"><span>' + badge + '</span><span>Журнал</span></div>'
             '<div class="preview-retro-collage"><div class="preview-retro-poster"></div><div class="preview-retro-ticket"></div></div>'
             '<div class="preview-retro-copy"><h4>' + title + '</h4><p>' + body + '</p></div>'
             '<div class="preview-retro-bar"></div>'
@@ -912,29 +912,29 @@ def _preview_retro_family(proposal: Dict[str, Any], flavor: str) -> str:
     if flavor == "minimal":
         return (
             '<div class="preview-retro preview-retro--editorial">'
-            '<div class="preview-retro-stickers"><span>' + badge + '</span><span>Curado</span></div>'
+            '<div class="preview-retro-stickers"><span>' + badge + '</span><span>Продуманно</span></div>'
             '<div class="preview-retro-collage"><div class="preview-retro-poster preview-retro-poster--wide"></div><div class="preview-retro-ticket preview-retro-ticket--tilt"></div></div>'
             '<div class="preview-retro-copy"><h4>' + title + '</h4><p>' + body + '</p></div>'
             "</div>"
         )
     return (
         '<div class="preview-retro preview-retro--expressive">'
-        '<div class="preview-retro-stickers"><span>' + badge + '</span><span>Impacto</span></div>'
+        '<div class="preview-retro-stickers"><span>' + badge + '</span><span>Эффект</span></div>'
         '<div class="preview-retro-collage"><div class="preview-retro-poster preview-retro-poster--wide"></div><div class="preview-retro-ticket preview-retro-ticket--tilt"></div></div>'
         '<div class="preview-retro-bar preview-retro-bar--thick"></div>'
-        '<span class="mock-button">Entrar</span>'
+        '<span class="mock-button">Войти</span>'
         "</div>"
     )
 
 
 def _preview_dopamine_family(proposal: Dict[str, Any], flavor: str) -> str:
     title = _escape(_preview_title_text(proposal))
-    body = _escape(_preview_body_text(proposal, "Color rapido, energia y respuesta inmediata"))
+    body = _escape(_preview_body_text(proposal, "Быстрый цвет, энергия и мгновенный отклик"))
     badge = _escape(_variant_badge_text(proposal, "Dopa"))
     if flavor == "balanced":
         return (
             '<div class="preview-dopamine preview-dopamine--balanced">'
-            '<div class="preview-dopamine-badges"><span>' + badge + '</span><span>Color</span></div>'
+            '<div class="preview-dopamine-badges"><span>' + badge + '</span><span>Цвет</span></div>'
             '<div class="preview-dopamine-shell"><div class="preview-dopamine-bubble"></div><div class="preview-dopamine-bubble preview-dopamine-bubble--small"></div></div>'
             '<div class="preview-dopamine-copy"><h4>' + title + '</h4><p>' + body + '</p></div>'
             '<div class="preview-dopamine-dots"><span></span><span></span><span></span></div>'
@@ -951,9 +951,9 @@ def _preview_dopamine_family(proposal: Dict[str, Any], flavor: str) -> str:
         )
     return (
         '<div class="preview-dopamine preview-dopamine--expressive">'
-        '<div class="preview-dopamine-badges"><span>' + badge + '</span><span>Impacto</span></div>'
+        '<div class="preview-dopamine-badges"><span>' + badge + '</span><span>Эффект</span></div>'
         '<div class="preview-dopamine-shell"><div class="preview-dopamine-bubble preview-dopamine-bubble--large"></div><div class="preview-dopamine-pill"></div></div>'
-        '<span class="mock-button">Entrar</span>'
+        '<span class="mock-button">Войти</span>'
         "</div>"
     )
 
@@ -1042,20 +1042,20 @@ def _render_generic_option_card(
             badges.append(f'<span class="style-badge style-badge--soft">{palette_mode}</span>')
         meta_lines.append('<div class="style-badges">' + "".join(badges) + "</div>")
     if variant_label:
-        meta_lines.append(f'<p class="style-description"><strong>Variante:</strong> {variant_label}</p>')
+        meta_lines.append(f'<p class="style-description"><strong>Вариант:</strong> {variant_label}</p>')
     if concept:
         meta_lines.append(f'<p class="style-description">{concept}</p>')
     palette_markup = _palette_markup(proposal.get("palette") or [])
     if palette_markup:
         meta_lines.append(palette_markup)
     if typography:
-        meta_lines.append(f'<p class="style-typo"><strong>Tipografia:</strong> {typography}</p>')
+        meta_lines.append(f'<p class="style-typo"><strong>Типографика:</strong> {typography}</p>')
     if tone:
-        meta_lines.append(f'<p class="style-tone"><strong>Tono:</strong> {tone}</p>')
+        meta_lines.append(f'<p class="style-tone"><strong>Тон:</strong> {tone}</p>')
     if density:
-        meta_lines.append(f'<p class="style-tone"><strong>Densidad:</strong> {density}</p>')
+        meta_lines.append(f'<p class="style-tone"><strong>Плотность:</strong> {density}</p>')
     if sample_component:
-        meta_lines.append(f'<p class="style-sample"><strong>Componente:</strong> {sample_component}</p>')
+        meta_lines.append(f'<p class="style-sample"><strong>Компонент:</strong> {sample_component}</p>')
     reference_links = _reference_links_markup(proposal.get("reference_urls") or [])
     if reference_links:
         meta_lines.append(reference_links)
@@ -1093,33 +1093,33 @@ def _render_kinetic_option_card(
     density = _escape(_sentence(proposal.get("spacing_density") or ""))
     sample_component = _escape(_sentence(proposal.get("sample_component") or ""))
     palette_markup = _palette_markup(proposal.get("palette") or [])
-    family_badge = _escape(style_family or "Tipografia cinetica")
-    mode_badge = _escape(palette_mode or "Base")
+    family_badge = _escape(style_family or "Кинетическая типографика")
+    mode_badge = _escape(palette_mode or "Базовая")
     kinetic_copy = concept or body
     kinetic_specs = []
     if typography:
         kinetic_specs.append(
-            '<div class="style-kinetic-spec"><span class="style-kinetic-spec-label">Tipografia</span>'
+            '<div class="style-kinetic-spec"><span class="style-kinetic-spec-label">Типографика</span>'
             f"<p>{typography}</p></div>"
         )
     if tone:
         kinetic_specs.append(
-            '<div class="style-kinetic-spec"><span class="style-kinetic-spec-label">Tono</span>'
+            '<div class="style-kinetic-spec"><span class="style-kinetic-spec-label">Тон</span>'
             f"<p>{tone}</p></div>"
         )
     if density:
         kinetic_specs.append(
-            '<div class="style-kinetic-spec"><span class="style-kinetic-spec-label">Densidad</span>'
+            '<div class="style-kinetic-spec"><span class="style-kinetic-spec-label">Плотность</span>'
             f"<p>{density}</p></div>"
         )
     if sample_component:
         kinetic_specs.append(
-            '<div class="style-kinetic-spec style-kinetic-spec--wide"><span class="style-kinetic-spec-label">Componente</span>'
+            '<div class="style-kinetic-spec style-kinetic-spec--wide"><span class="style-kinetic-spec-label">Компонент</span>'
             f"<p>{sample_component}</p></div>"
         )
     if not kinetic_specs:
         kinetic_specs.append(
-            '<div class="style-kinetic-spec style-kinetic-spec--wide"><span class="style-kinetic-spec-label">Direccion</span>'
+            '<div class="style-kinetic-spec style-kinetic-spec--wide"><span class="style-kinetic-spec-label">Направление</span>'
             f"<p>{body}</p></div>"
         )
 
@@ -1131,7 +1131,7 @@ def _render_kinetic_option_card(
             f'<div class="style-kinetic-echo">{title}</div>'
             f'<p class="style-kinetic-copy">{kinetic_copy}</p>'
             '<div class="style-kinetic-band"></div>'
-            '<span class="style-kinetic-cta">Actuar</span>'
+            '<span class="style-kinetic-cta">Действовать</span>'
             "</div>"
         ),
         "minimal": (
@@ -1192,29 +1192,29 @@ def _render_hyperminimal_option_card(
     tone = _escape(_sentence(proposal.get("tone") or ""))
     density = _escape(_sentence(proposal.get("spacing_density") or ""))
     typography = _escape(_typography_summary(proposal))
-    badge = _escape(proposal.get("variant_label") or "Producto limpio")
-    palette_mode = _escape(proposal.get("palette_mode_label") or proposal.get("palette_mode") or "Base")
+    badge = _escape(proposal.get("variant_label") or "Чистый продукт")
+    palette_mode = _escape(proposal.get("palette_mode_label") or proposal.get("palette_mode") or "Базовая")
     palette_markup = _palette_markup(proposal.get("palette") or [])
 
     spec_lines = []
     if typography:
         spec_lines.append(
-            '<div class="style-lucid-spec"><span>Tipografia</span>'
+            '<div class="style-lucid-spec"><span>Типографика</span>'
             f"<p>{typography}</p></div>"
         )
     if tone:
         spec_lines.append(
-            '<div class="style-lucid-spec"><span>Tono</span>'
+            '<div class="style-lucid-spec"><span>Тон</span>'
             f"<p>{tone}</p></div>"
         )
     if density:
         spec_lines.append(
-            '<div class="style-lucid-spec"><span>Densidad</span>'
+            '<div class="style-lucid-spec"><span>Плотность</span>'
             f"<p>{density}</p></div>"
         )
     if not spec_lines and concept:
         spec_lines.append(
-            '<div class="style-lucid-spec style-lucid-spec--wide"><span>Direccion</span>'
+            '<div class="style-lucid-spec style-lucid-spec--wide"><span>Направление</span>'
             f"<p>{concept}</p></div>"
         )
 
@@ -1224,9 +1224,9 @@ def _render_hyperminimal_option_card(
         "minimal": "style-lucid-hero--minimal",
     }[flavor]
     metric_markup = {
-        "editorial": '<div class="style-lucid-caption">Lectura guiada</div>',
-        "balanced": '<div class="style-lucid-caption">Precision sostenible</div>',
-        "minimal": '<div class="style-lucid-caption">Menos ruido, mas foco</div>',
+        "editorial": '<div class="style-lucid-caption">Ведомое чтение</div>',
+        "balanced": '<div class="style-lucid-caption">Устойчивая точность</div>',
+        "minimal": '<div class="style-lucid-caption">Меньше шума, больше фокуса</div>',
     }[flavor]
 
     return (
@@ -1242,7 +1242,7 @@ def _render_hyperminimal_option_card(
         + f'<span class="style-letter">{choice}</span>'
         + f'<div class="style-lucid-card style-lucid-card--{flavor}">'
         + '<div class="style-lucid-topline">'
-        + f"<span>{_escape(proposal.get('style_family_label') or 'AI Hyperminimalismo')}</span>"
+        + f"<span>{_escape(proposal.get('style_family_label') or 'AI-гиперминимализм')}</span>"
         + f"<span>{palette_mode}</span><span>{badge}</span>"
         + "</div>"
         + f'<div class="style-lucid-hero {hero_variant}">'
@@ -1274,22 +1274,22 @@ def _render_glass_option_card(
     typography = _escape(_typography_summary(proposal))
     tone = _escape(_sentence(proposal.get("tone") or ""))
     density = _escape(_sentence(proposal.get("spacing_density") or ""))
-    badge = _escape(proposal.get("variant_label") or "Equilibrio base")
-    palette_mode = _escape(proposal.get("palette_mode_label") or proposal.get("palette_mode") or "Base")
+    badge = _escape(proposal.get("variant_label") or "Базовый баланс")
+    palette_mode = _escape(proposal.get("palette_mode_label") or proposal.get("palette_mode") or "Базовая")
     palette_markup = _palette_markup(proposal.get("palette") or [])
 
     specs = []
     if typography:
-        specs.append(f'<p><strong>Tipografia:</strong> {typography}</p>')
+        specs.append(f'<p><strong>Типографика:</strong> {typography}</p>')
     if tone:
-        specs.append(f'<p><strong>Tono:</strong> {tone}</p>')
+        specs.append(f'<p><strong>Тон:</strong> {tone}</p>')
     if density:
-        specs.append(f'<p><strong>Densidad:</strong> {density}</p>')
+        specs.append(f'<p><strong>Плотность:</strong> {density}</p>')
 
     hero_copy = {
-        "technical": '<div class="style-glass-chiprow"><span>OK</span><span>Latencia</span></div>',
-        "minimal": '<div class="style-glass-actions"><span class="style-glass-pill style-glass-pill--accent">Abrir</span><span class="style-glass-pill">Demo</span></div>',
-        "balanced": '<div class="style-glass-actions"><span class="style-glass-pill style-glass-pill--accent">Abrir</span><span class="style-glass-pill">Explorar</span></div>',
+        "technical": '<div class="style-glass-chiprow"><span>OK</span><span>Задержка</span></div>',
+        "minimal": '<div class="style-glass-actions"><span class="style-glass-pill style-glass-pill--accent">Открыть</span><span class="style-glass-pill">Демо</span></div>',
+        "balanced": '<div class="style-glass-actions"><span class="style-glass-pill style-glass-pill--accent">Открыть</span><span class="style-glass-pill">Исследовать</span></div>',
     }[flavor]
 
     return (
@@ -1338,13 +1338,13 @@ def _render_depth_option_card(
     typography = _escape(_typography_summary(proposal))
     tone = _escape(_sentence(proposal.get("tone") or ""))
     density = _escape(_sentence(proposal.get("spacing_density") or ""))
-    badge = _escape(proposal.get("variant_label") or "Equilibrio base")
-    palette_mode = _escape(proposal.get("palette_mode_label") or proposal.get("palette_mode") or "Base")
+    badge = _escape(proposal.get("variant_label") or "Базовый баланс")
+    palette_mode = _escape(proposal.get("palette_mode_label") or proposal.get("palette_mode") or "Базовая")
     palette_markup = _palette_markup(proposal.get("palette") or [])
     side_markup = {
-        "expressive": '<span class="style-depth-cta">Explorar</span>',
-        "technical": '<div class="style-depth-stats"><span>Estado</span><span>Grafica</span></div>',
-        "balanced": '<span class="style-depth-cta">Entrar</span>',
+        "expressive": '<span class="style-depth-cta">Исследовать</span>',
+        "technical": '<div class="style-depth-stats"><span>Состояние</span><span>График</span></div>',
+        "balanced": '<span class="style-depth-cta">Войти</span>',
     }[flavor]
 
     return (
@@ -1360,7 +1360,7 @@ def _render_depth_option_card(
         + f'<span class="style-letter">{choice}</span>'
         + f'<div class="style-depth-card style-depth-card--{flavor}">'
         + '<div class="style-depth-topline">'
-        + f"<span>{_escape(proposal.get('style_family_label') or '3D interactivo & WebGL')}</span>"
+        + f"<span>{_escape(proposal.get('style_family_label') or 'Интерактивное 3D и WebGL')}</span>"
         + f"<span>{palette_mode}</span><span>{badge}</span>"
         + "</div>"
         + '<div class="style-depth-stage">'
@@ -1374,9 +1374,9 @@ def _render_depth_option_card(
         + '<div class="style-depth-meta">'
         + f'<h3 class="style-depth-name">{name}</h3>'
         + (f'<div class="style-depth-palette">{palette_markup}</div>' if palette_markup else "")
-        + (f'<p><strong>Tipografia:</strong> {typography}</p>' if typography else "")
-        + (f'<p><strong>Tono:</strong> {tone}</p>' if tone else "")
-        + (f'<p><strong>Densidad:</strong> {density}</p>' if density else "")
+        + (f'<p><strong>Типографика:</strong> {typography}</p>' if typography else "")
+        + (f'<p><strong>Тон:</strong> {tone}</p>' if tone else "")
+        + (f'<p><strong>Плотность:</strong> {density}</p>' if density else "")
         + "</div></div></div>"
     )
 
@@ -1406,10 +1406,10 @@ def _render_option_card(proposal: Dict[str, Any], flavor: Optional[str] = None) 
 def render_style_options_html(
     proposals: List[Dict[str, Any]],
     *,
-    title: str = "Selecciona una direccion visual",
-    subtitle: str = "Elige la propuesta que mejor encaja con el producto. Tu clic queda registrado automaticamente.",
+    title: str = "Выбери визуальное направление",
+    subtitle: str = "Выбери предложение, которое лучше подходит продукту. Твой клик записывается автоматически.",
 ) -> str:
-    """Renderiza el fragmento HTML canónico de las opciones de Designer."""
+    """Render the canonical HTML fragment of the Designer options."""
     assigned_flavors = _assign_option_flavors(proposals)
     cards = [
         _render_option_card(proposal, assigned_flavors.get(str(proposal.get("choice", "")).strip()))
@@ -1419,7 +1419,7 @@ def render_style_options_html(
         _font_imports_markup(proposals)
         + '<section class="style-screen">'
         '<div class="style-screen-header">'
-        f"<p class=\"style-screen-kicker\">Designer propone</p>"
+        f"<p class=\"style-screen-kicker\">Designer предлагает</p>"
         f"<h1>{_escape(title)}</h1>"
         f"<p class=\"style-screen-subtitle\">{_escape(subtitle)}</p>"
         "</div>"
@@ -1436,20 +1436,20 @@ def build_style_options_payload(
     title: Optional[str] = None,
     subtitle: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Carga propuestas normalizadas y genera el HTML listo para escribir."""
+    """Load normalized proposals and build the HTML ready to write."""
     proposals_path = proposals_file or discover_proposals_file(visual_path)
     if not proposals_path:
-        raise ValueError("No se ha encontrado ningun fichero de propuestas de Designer.")
+        raise ValueError("Файл с предложениями Designer не найден.")
 
     proposals = list(load_style_proposals(proposals_path).values())
     if not proposals:
-        raise ValueError("El sidecar de propuestas existe pero no contiene opciones validas.")
+        raise ValueError("Sidecar с предложениями существует, но в нём нет корректных вариантов.")
 
     html_fragment = render_style_options_html(
         proposals,
-        title=title or "Selecciona una direccion visual",
+        title=title or "Выбери визуальное направление",
         subtitle=subtitle
-        or "Elige la propuesta que mejor encaja con el producto. Tu clic queda registrado automaticamente.",
+        or "Выбери предложение, которое лучше подходит продукту. Твой клик записывается автоматически.",
     )
 
     return {
@@ -1467,7 +1467,7 @@ def write_style_options_html(
     title: Optional[str] = None,
     subtitle: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Escribe style-options.html en la sesion visual de Designer."""
+    """Write style-options.html into the Designer visual session."""
     payload = build_style_options_payload(
         visual_path,
         proposals_file=proposals_file,

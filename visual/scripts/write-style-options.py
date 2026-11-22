@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera style-options.html a partir del sidecar de propuestas de Designer."""
+"""Generates style-options.html from the Designer proposals sidecar."""
 
 from __future__ import annotations
 
@@ -15,14 +15,14 @@ from core.designer_style_options import write_style_options_html
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Generar style-options.html desde el sidecar de Designer")
-    parser.add_argument("--visual-path", required=True, help="Ruta a session_dir o state_dir del servidor visual")
+    parser = argparse.ArgumentParser(description="Generate style-options.html from the Designer sidecar")
+    parser.add_argument("--visual-path", required=True, help="Path to session_dir or state_dir of the visual server")
     parser.add_argument(
         "--proposals-file",
-        help="Ruta opcional al sidecar JSON de propuestas. Si se omite, se autodetecta.",
+        help="Optional path to the proposals JSON sidecar. Detected automatically if omitted.",
     )
-    parser.add_argument("--title", help="Titulo opcional para la pantalla de seleccion.")
-    parser.add_argument("--subtitle", help="Subtitulo opcional para la pantalla de seleccion.")
+    parser.add_argument("--title", help="Optional title for the selection screen.")
+    parser.add_argument("--subtitle", help="Optional subtitle for the selection screen.")
     return parser
 
 

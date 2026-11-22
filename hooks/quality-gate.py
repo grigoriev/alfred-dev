@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 """
-Hook PostToolUse para Bash: quality gate de tests.
+PostToolUse hook for Bash: test quality gate.
 
-Intercepta la salida de comandos Bash para detectar si se han ejecutado
-tests y, en caso afirmativo, analizar si han fallado. Cuando detecta
-fallos, informa por stderr con la voz de "El Rompe-cosas" (QA).
+Intercepts Bash command output to detect test runs and, if tests ran,
+checks if they failed. On failure, it reports to stderr in the voice of
+the QA persona (El Rompe-cosas).
 
-Delega la deteccion de comandos y resultados a ``evidence_guard_lib``
-para mantener una unica fuente de verdad en los patrones.
+Delegates command and result detection to ``evidence_guard_lib`` to keep
+one source of truth for the patterns.
 
-Solo actua sobre comandos que coincidan con runners de tests conocidos.
-El resto de comandos Bash pasan sin inspeccion.
+Acts only on commands that match known test runners. Other Bash commands
+pass without inspection.
 """
 
 import json
 import os
 import sys
 
-# Anadir el directorio de hooks al path para importar la libreria
+# Add the hooks directory to the path to import the library
 _HOOKS_DIR = os.path.dirname(os.path.abspath(__file__))
 if _HOOKS_DIR not in sys.path:
     sys.path.insert(0, _HOOKS_DIR)
@@ -26,7 +26,7 @@ from evidence_guard_lib import is_test_command, detect_test_result
 
 
 def _get_tool_result(data: dict) -> dict:
-    """Normaliza payloads actuales e historicos del runtime de hooks."""
+    """Normalize current and legacy payloads of the hook runtime."""
     for key in ("tool_response", "tool_result", "tool_output"):
         value = data.get(key)
         if isinstance(value, dict):
@@ -37,11 +37,11 @@ def _get_tool_result(data: dict) -> dict:
 
 
 def main():
-    """Punto de entrada del hook.
+    """Hook entry point.
 
-    Lee el JSON de stdin, extrae el comando ejecutado y su salida,
-    y determina si hay tests fallidos. Si los hay, emite un aviso
-    por stderr con la voz de El Rompe-cosas.
+    Reads the JSON from stdin, extracts the command and its output, and
+    checks for failed tests. If tests failed, writes a warning to stderr
+    in the voice of El Rompe-cosas.
     """
     try:
         data = json.load(sys.stdin)

@@ -1,111 +1,111 @@
-# MCP y Memory UI
+# MCP и Memory UI
 
-La memoria de Alfred Dev no se queda encerrada en SQLite. El plugin expone esa capa mediante un servidor MCP local y una interfaz web ligera que permiten consultar decisiones, commits, eventos y contexto operativo sin hablar directamente con la base de datos.
+Память Alfred Dev не заперта в SQLite. Плагин открывает этот слой через локальный MCP-сервер и лёгкий веб-интерфейс. Через них можно смотреть решения, коммиты, события и операционный контекст, не обращаясь к базе данных напрямую.
 
-Las tres piezas forman un subsistema:
+Три части образуют подсистему:
 
-- `core/memory.py`: fuente de verdad de datos y reglas de persistencia;
-- `mcp/memory_server.py`: adaptador MCP sobre stdio;
-- `core/memory_ui_server.py`: servidor HTTP local para exploración visual.
-
----
-
-## Servidor MCP
-
-### Ubicación
-
-- Código: `mcp/memory_server.py`
-- Registro del servidor: `.claude-plugin/mcp.json`
-
-### Función
-
-El servidor MCP expone operaciones de memoria como herramientas accesibles desde Claude Code a través de stdio. No redefine la lógica de negocio: se apoya en `MemoryDB` y traduce entre el protocolo MCP y las funciones internas del plugin.
-
-La separación es deliberada:
-
-- `core/memory.py` decide cómo se persiste, se sanea y se consulta;
-- `mcp/memory_server.py` decide cómo se publica esa capacidad al exterior.
-
-### Qué aporta
-
-- acceso estructurado a decisiones, commits y eventos;
-- consultas sin abrir directamente SQLite;
-- una frontera clara entre runtime interno y herramientas consumidoras.
+- `core/memory.py`: источник истины для данных и правил хранения;
+- `mcp/memory_server.py`: MCP-адаптер поверх stdio;
+- `core/memory_ui_server.py`: локальный HTTP-сервер для визуального просмотра.
 
 ---
 
-## Memory UI local
+## MCP-сервер
 
-### Entrada de usuario
+### Расположение
 
-El comando `/alfred-dev:memory-ui` prepara el contexto y delega en `python3 .claude/alfred-continuity.py memory-ui "$PWD"` para levantar la UI local.
+- Код: `mcp/memory_server.py`
+- Регистрация сервера: `.claude-plugin/mcp.json`
 
-### Implementación
+### Назначение
 
-La interfaz está servida por `core/memory_ui_server.py`. No es una SPA compleja ni depende de un framework frontend; es una UI ligera, orientada a consulta, que renderiza HTML/CSS/JS directamente desde el servidor.
+MCP-сервер открывает операции с памятью как инструменты, доступные из Claude Code через stdio. Он не переопределяет бизнес-логику: он опирается на `MemoryDB` и переводит между протоколом MCP и внутренними функциями плагина.
 
-### Qué muestra
+Разделение сделано намеренно:
 
-La UI mezcla memoria persistente y contexto operativo:
+- `core/memory.py` решает, как данные сохраняются, очищаются и запрашиваются;
+- `mcp/memory_server.py` решает, как эта возможность публикуется наружу.
 
-- timeline de eventos;
-- decisiones;
-- commits;
-- salud de memoria;
-- resultados de búsqueda;
-- contexto de `docs/project/`;
-- señales del kanban operativo.
+### Что это даёт
 
-Esto es importante: no es solo un visor de base de datos. Es una proyección de memoria + estado operativo del proyecto.
+- структурированный доступ к решениям, коммитам и событиям;
+- запросы без прямого открытия SQLite;
+- чёткую границу между внутренним runtime и инструментами-потребителями.
 
 ---
 
-## Búsqueda unificada
+## Локальный Memory UI
 
-Una parte especialmente útil de la UI es la búsqueda. `core/memory_ui_server.py` delega en `core.continuity.search_project_context`, que cruza:
+### Пользовательский вход
 
-- resultados de SQLite;
-- señales y documentos de `docs/project/`.
+Команда `/alfred-dev:memory-ui` готовит контекст и делегирует `python3 .claude/alfred-continuity.py memory-ui "$PWD"`, чтобы поднять локальный UI.
 
-El resultado es una búsqueda contextual única, no dos búsquedas separadas pegadas sin criterio.
+### Реализация
+
+Интерфейс отдаёт `core/memory_ui_server.py`. Это не сложное SPA и не зависит от фронтенд-фреймворка: это лёгкий UI для просмотра, который рендерит HTML/CSS/JS прямо с сервера.
+
+### Что показывает
+
+UI объединяет постоянную память и операционный контекст:
+
+- timeline событий;
+- решения;
+- коммиты;
+- здоровье памяти;
+- результаты поиска;
+- контекст из `docs/project/`;
+- сигналы операционного kanban.
+
+Это важно: это не просто просмотрщик базы данных. Это проекция памяти + операционного состояния проекта.
 
 ---
 
-## Relación con la instalación
+## Единый поиск
 
-El instalador puede parchear `.claude-plugin/mcp.json` cuando `python3` no apunta a una versión compatible. Ese detalle es importante porque el subsistema MCP comparte la misma exigencia que hooks y core: Python 3.10+ real, no asumido.
+Особенно полезная часть UI: поиск. `core/memory_ui_server.py` делегирует `core.continuity.search_project_context`, который объединяет:
 
-Cuando el entorno no expone un `python3` válido por defecto, `install.sh` e `install.ps1` actualizan el runtime instalado para que el MCP use el intérprete correcto.
+- результаты из SQLite;
+- сигналы и документы из `docs/project/`.
+
+В результате получается один контекстный поиск, а не два отдельных поиска, склеенных без логики.
 
 ---
 
-## Cobertura de tests
+## Связь с установкой
 
-Aunque esta capa depende de protocolos de integración, no está “sin testear”. El repo ya incluye cobertura real en esta zona:
+Установщик может пропатчить `.claude-plugin/mcp.json`, если `python3` не указывает на совместимую версию. Эта деталь важна: у подсистемы MCP то же требование, что у хуков и ядра: реальный Python 3.10+, а не предполагаемый.
+
+Если окружение по умолчанию не даёт рабочий `python3`, `install.sh` и `install.ps1` обновляют установленный runtime, чтобы MCP использовал правильный интерпретатор.
+
+---
+
+## Покрытие тестами
+
+Хотя этот слой зависит от интеграционных протоколов, он не «без тестов». В репозитории уже есть реальное покрытие этой зоны:
 
 - `tests/test_memory_server.py`
 - `tests/test_memory_ui.py`
 - `tests/test_memory_ui_contract.py`
 - `tests/test_visual_server.py`
 
-Además, la mayor parte de la lógica de datos subyacente se verifica en `tests/test_memory.py` y `tests/test_memory_sync.py`.
+Кроме того, большая часть нижележащей логики данных проверяется в `tests/test_memory.py` и `tests/test_memory_sync.py`.
 
 ---
 
-## Cuándo tocar cada pieza
+## Когда трогать каждую часть
 
-| Si quieres cambiar... | Empieza por... |
+| Если хочешь изменить... | Начни с... |
 |---|---|
-| Esquema o persistencia | `core/memory.py` |
-| Sync de memoria a Markdown | `core/memory_sync.py` |
-| Herramientas MCP expuestas | `mcp/memory_server.py` y `.claude-plugin/mcp.json` |
-| UI local y endpoints HTTP | `core/memory_ui_server.py` |
-| Comportamiento del comando | `commands/memory-ui.md` y `core/continuity.py` |
+| Схему или хранение | `core/memory.py` |
+| Синхронизацию памяти в Markdown | `core/memory_sync.py` |
+| Открытые MCP-инструменты | `mcp/memory_server.py` и `.claude-plugin/mcp.json` |
+| Локальный UI и HTTP-эндпоинты | `core/memory_ui_server.py` |
+| Поведение команды | `commands/memory-ui.md` и `core/continuity.py` |
 
 ---
 
-## Relación con otros documentos
+## Связь с другими документами
 
-- [memory.md](memory.md) cubre el modelo de memoria y SQLite.
-- [operations.md](operations.md) explica cómo `docs/project/` y la capa operativa alimentan la UI.
-- [installation.md](installation.md) documenta el parcheo de `mcp.json`.
+- [memory.md](memory.md) описывает модель памяти и SQLite.
+- [operations.md](operations.md) объясняет, как `docs/project/` и операционный слой питают UI.
+- [installation.md](installation.md) документирует патч `mcp.json`.

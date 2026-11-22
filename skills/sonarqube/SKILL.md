@@ -105,7 +105,7 @@ until curl -s http://localhost:9000/api/system/status | grep -q '"status":"UP"';
 - Создать или проверить файл `sonar-project.properties` в корне проекта:
 
 ```properties
-sonar.projectKey=nombre-del-proyecto
+sonar.projectKey=my-project
 sonar.sources=src
 sonar.tests=tests
 sonar.language=ts

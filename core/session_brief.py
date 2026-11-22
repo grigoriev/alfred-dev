@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Briefing de sesión: qué hay abierto, qué se decidió y cómo hablarle a Alfred."""
+"""Session briefing: what is open, what was decided and how to talk to Alfred."""
 
 from __future__ import annotations
 
@@ -80,7 +80,7 @@ def list_accepted_adrs(project_dir: str) -> List[str]:
 
 
 def build_session_brief(project_dir: str) -> Dict[str, Any]:
-    """Datos reales para el primer mensaje de la sesión."""
+    """Real data for the first message of the session."""
     root = os.path.abspath(project_dir)
     state_path = os.path.join(root, STATE_RELATIVE_PATH)
     state = load_state(state_path) if os.path.isfile(state_path) else None
@@ -161,6 +161,6 @@ def render_brief_lines(brief: Dict[str, Any]) -> str:
 
 
 def render_session_start_context(project_dir: str = ".") -> str:
-    """Texto que SessionStart inyecta en Claude. Fail-open en el hook."""
+    """Text that SessionStart injects into Claude. The hook fails open."""
     brief = build_session_brief(project_dir)
     return CONVERSATION_PROTOCOL + "\n" + render_brief_lines(brief) + "\n"

@@ -1,175 +1,175 @@
-# El equipo
+# Команда
 
-Alfred Dev no es un agente monolítico que intenta saberlo todo y hacerlo todo. Es un equipo de **10 especialistas** (8 de nucleo, Designer si hay frontend y CTO bajo demanda), cada uno con un rol delimitado, herramientas restringidas, personalidad propia y quality gates verificables con evidencia. Esta decisión de diseño responde a un principio fundamental: un modelo de IA generalista rinde mejor cuando se le asigna un rol concreto con instrucciones focalizadas que cuando se le pide que sea todo a la vez.
+Alfred Dev не монолитный агент, который пытается всё знать и всё делать. Это команда из **10 специалистов** (8 базовых, Designer при наличии фронтенда и CTO по запросу). У каждого чётко очерченная роль, ограниченные инструменты, собственная личность и quality gates, проверяемые по подтверждению. Это решение по дизайну следует фундаментальному принципу: универсальная модель ИИ работает лучше, когда ей дают конкретную роль со сфокусированными инструкциями, чем когда от неё требуют быть всем сразу.
 
-Cada agente se invoca como un subproceso de Claude Code mediante la herramienta **Agent**. Esto garantiza aislamiento de contexto: el agente arranca con su propio system prompt, sin heredar sesgos ni ruido de conversaciones anteriores. El resultado no se promete determinista, pero sí más controlable: el mismo rol, con las mismas instrucciones y artefactos, reduce variabilidad y facilita revisar si el agente cumplió su contrato.
+Каждый агент запускается как подпроцесс Claude Code через инструмент **Agent**. Это обеспечивает изоляцию контекста: агент стартует со своим system prompt, не наследуя предвзятость и шум прошлых разговоров. Результат не обещается детерминированным, но он лучше управляем: та же роль с теми же инструкциями и артефактами снижают вариативность и упрощают проверку, выполнил ли агент свой контракт.
 
-La filosofía detrás de esta arquitectura se puede resumir en tres principios:
+Философию этой архитектуры можно свести к трём принципам:
 
-- **Responsabilidad única.** Cada agente tiene un ámbito de actuacion claro. El Artesano escribe código; El Paranoico audita seguridad. Ninguno invade el territorio del otro.
-- **Herramientas restringidas.** No todos los agentes necesitan acceso al sistema de ficheros o a la terminal. Limitar las herramientas por agente reduce la superficie de error y fuerza la especialización.
-- **Quality gates entre fases.** Ningun artefacto pasa de una fase a la siguiente sin superar un punto de control. Estos gates pueden ser automáticos (tests verdes), manuales (aprobacion del usuario) o combinados (automático + seguridad).
+- **Единая ответственность.** У каждого агента ясная зона действия. Ремесленник пишет код; Параноик аудирует безопасность. Никто не вторгается на чужую территорию.
+- **Ограниченные инструменты.** Не всем агентам нужен доступ к файловой системе или терминалу. Ограничение инструментов для каждого агента уменьшает поверхность ошибок и заставляет специализироваться.
+- **Quality gates между фазами.** Ни один артефакт не переходит из одной фазы в следующую, не пройдя контрольную точку. Gates бывают автоматическими (зелёные тесты), ручными (одобрение пользователя) или комбинированными (автоматика + безопасность).
 
-Hay una frontera especialmente importante en el núcleo:
+В ядре есть особенно важная граница:
 
-- **`product-owner`** decide **qué** problema se resuelve y **por qué**.
-- **`architect`** decide **cómo** se implementa técnicamente.
-- **`alfred`** decide **cuándo** interviene cada uno, en qué orden y con qué gate.
+- **`product-owner`** решает, **какую** проблему решаем и **зачем**.
+- **`architect`** решает, **как** это реализуется технически.
+- **`alfred`** решает, **когда** вмешивается каждый, в каком порядке и с какой gate.
 
-Si esas tres responsabilidades se mezclan, el flujo deja de ser previsible. Por eso Alfred coordina, pero no redefine alcance ni diseño por su cuenta.
+Если смешать эти три ответственности, процесс перестаёт быть предсказуемым. Поэтому Alfred координирует, но не переопределяет объём и дизайн по своей инициативе.
 
 ---
 
-## Flujo feature: cronología de fases
+## Процесс feature: хронология фаз
 
-El flujo `feature` es el mas completo del sistema y el que mejor ilustra como colaboran los agentes. Cada feature nueva atraviesa **hasta siete fases** secuenciales: la fase visual `estilo_visual` solo aparece cuando el proyecto tiene frontend. El security-officer aparece en tres fases distintas porque la seguridad no es un paso final sino una preocupacion transversal que acompana al desarrollo desde el diseño hasta la entrega.
+Процесс `feature` самый полный в системе и лучше всех показывает, как агенты работают вместе. Каждая новая feature проходит **до семи** последовательных фаз: визуальная фаза `estilo_visual` появляется, только если у проекта есть фронтенд. Security-officer участвует в трёх разных фазах, потому что безопасность не финальный шаг, а сквозная забота, которая сопровождает разработку от дизайна до поставки.
 
 ```mermaid
 timeline
-    title Flujo feature - fases y agentes
-    producto
+    title Процесс feature - фазы и агенты
+    продукт
         : product-owner
-        : Análisis de requisitos
-        : Gate - aprobacion del usuario
-    estilo visual
+        : Анализ требований
+        : Gate - одобрение пользователя
+    визуальный стиль
         : designer
-        : Dirección de estilo visual (solo con frontend)
-        : Gate - eleccion del usuario
-    arquitectura
+        : Направление визуального стиля (только с фронтендом)
+        : Gate - выбор пользователя
+    архитектура
         : architect + security-officer
-        : Diseño técnico y threat model
-        : Gate - usuario + seguridad
-    desarrollo
+        : Техническое проектирование и threat model
+        : Gate - пользователь + безопасность
+    разработка
         : senior-dev
-        : Implementacion TDD
-        : Gate - tests verdes (automático)
-    calidad
+        : Реализация по TDD
+        : Gate - зелёные тесты (автоматически)
+    качество
         : qa-engineer + security-officer
-        : Tests y auditoria de seguridad
-        : Gate - automático + seguridad
-    documentación
+        : Тесты и аудит безопасности
+        : Gate - автоматика + безопасность
+    документация
         : tech-writer
-        : Documentación técnica y de usuario
-        : Gate - libre (sin bloqueo)
-    entrega
+        : Техническая и пользовательская документация
+        : Gate - свободная (без блокировки)
+    поставка
         : devops-engineer + security-officer
-        : Changelog y validación final
-        : Gate - usuario + seguridad
+        : Changelog и финальная проверка
+        : Gate - пользователь + безопасность
 ```
 
-El diagrama muestra algo importante: la seguridad no se comprueba al final, sino que interviene en la arquitectura (para validar el threat model), en la calidad (para auditar el código) y en la entrega (para dar el visto bueno final). Esta presencia transversal del security-officer es una decisión deliberada para que los problemas de seguridad se detecten lo antes posible, cuando corregirlos es barato.
+Диаграмма показывает важную вещь: безопасность проверяется не в конце, а участвует в архитектуре (чтобы проверить threat model), в качестве (чтобы проаудировать код) и в поставке (чтобы дать финальное добро). Такое сквозное участие security-officer сделано намеренно: проблемы безопасности нужно находить как можно раньше, пока исправлять их дёшево.
 
 ---
 
-## Tabla resumen de agentes
+## Сводная таблица агентов
 
-Los 10 agentes se dividen en nucleo (8), Designer (frontend) y CTO (opcional). La tabla siguiente ofrece una vision rápida de cada uno con sus caracteristicas principales.
+10 агентов делятся на базовые (8), Designer (фронтенд) и CTO (опциональный). Таблица ниже даёт быстрый обзор каждого с основными характеристиками.
 
-### Agentes de nucleo
+### Базовые агенты
 
-Estos agentes de nucleo más Designer están disponibles por defecto y la configuración del proyecto no los desactiva. Alfred no los invoca todos a la vez: cada flujo activa el rol que corresponde a la fase, y Designer solo entra cuando hay interfaz de usuario.
+Эти базовые агенты и Designer доступны по умолчанию, и конфигурация проекта их не отключает. Alfred не вызывает их всех сразу: каждый процесс активирует роль, которая соответствует фазе, а Designer подключается, только если есть пользовательский интерфейс.
 
-| Agente | Alias | Modelo | Tipo | Color | Fase principal |
-|--------|-------|--------|------|-------|----------------|
-| `alfred` | Alfred | opus | nucleo | azul | orquestación |
-| `product-owner` | El Buscador de Problemas | opus | nucleo | verde | producto |
-| `architect` | El Dibujante de Cajas | opus | nucleo | cyan | arquitectura |
-| `senior-dev` | El Artesano | opus | nucleo | amarillo | desarrollo |
-| `security-officer` | El Paranoico | opus | nucleo | rojo | seguridad (transversal) |
-| `qa-engineer` | El Rompe-cosas | sonnet | nucleo | magenta | calidad |
-| `devops-engineer` | El Fontanero | sonnet | nucleo | naranja | entrega |
-| `tech-writer` | El Traductor | sonnet | nucleo | blanco | documentación |
-| `designer` | Designer — La Estilista | opus | nucleo | morado | estilo visual (fase 1b) |
+| Агент | Прозвище | Модель | Тип | Цвет | Основная фаза |
+|-------|----------|--------|-----|------|---------------|
+| `alfred` | Alfred | opus | базовый | синий | оркестрация |
+| `product-owner` | Искатель проблем | opus | базовый | зелёный | продукт |
+| `architect` | Рисовальщик квадратиков | opus | базовый | cyan | архитектура |
+| `senior-dev` | Ремесленник | opus | базовый | жёлтый | разработка |
+| `security-officer` | Параноик | opus | базовый | красный | безопасность (сквозная) |
+| `qa-engineer` | Ломатель | sonnet | базовый | пурпурный | качество |
+| `devops-engineer` | Сантехник | sonnet | базовый | оранжевый | поставка |
+| `tech-writer` | Переводчик | sonnet | базовый | белый | документация |
+| `designer` | Designer: Стилист | opus | базовый | фиолетовый | визуальный стиль (фаза 1b) |
 
-### Agente opcional
+### Опциональный агент
 
-CTO es el único especialista bajo demanda.
+CTO единственный специалист по запросу.
 
-| Agente | Alias | Modelo | Tipo | Color | Fase principal |
-|--------|-------|--------|------|-------|----------------|
-| `cto` | CTO — El Director Técnico Externo | opus | opcional | ambar | auditoría técnica externa |
-
----
-
-## Nucleo vs opcionales
-
-La distinción entre agentes de nucleo y opcionales no es arbitraria. Responde a una pregunta practica: que necesita *cualquier* proyecto de software, y que solo necesitan *algunos* proyectos.
-
-Los **ocho agentes de nucleo más Designer** existen siempre en el equipo base porque cubren las fases universales del desarrollo: definir que se construye (product-owner), fijar una dirección visual cuando hay frontend (designer), decidir como se construye (architect), construirlo (senior-dev), verificar que funciona (qa-engineer), documentarlo (tech-writer), desplegarlo (devops-engineer), protegerlo (security-officer) y orquestarlo todo (alfred). El kanban lo escribe el runtime. Eso no significa que todos participen en cada respuesta: Alfred los invoca desde los commands del plugin (`feature.md`, `fix.md`, `spike.md`, etc.) segun fase, señales del proyecto y gates. Claude Code los descubre directamente desde `agents/`; el manifiesto `plugin.json` no declara una seccion `agents` manual.
-
-El **único agente opcional** es cto: segunda opinión técnica externa vía Codex CLI. Claude Code descubre los agentes de plugin directamente desde `agents/`; el manifiesto no mantiene una sección `agents` manual. La configuración local del proyecto (`.local.md`) decide si CTO entra en la orquestación automática.
-
-En resumen: los de nucleo siempre estan disponibles porque son imprescindibles; los opcionales se activan bajo demanda porque atienden necesidades específicas.
+| Агент | Прозвище | Модель | Тип | Цвет | Основная фаза |
+|-------|----------|--------|-----|------|---------------|
+| `cto` | CTO: Внешний технический директор | opus | опциональный | янтарный | внешний технический аудит |
 
 ---
 
-## Modelo de colaboración
+## Базовые и опциональные
 
-Los agentes de Alfred Dev no se comunican entre si directamente. No existe un canal de mensajeria entre ellos ni llamadas de agente a agente. Todo el flujo de información pasa por dos mecanismos:
+Разделение на базовых и опциональных агентов не произвольно. Оно отвечает на практический вопрос: что нужно *любому* программному проекту, а что нужно только *некоторым*.
 
-**El estado de sesión** (`alfred-dev-state.json`) es un fichero JSON que registra en que fase se encuentra el flujo, que fases se han completado, que artefactos se han generado y cual es el resultado de cada gate. Cuando un agente termina su trabajo, el orquestador actualiza el estado y decide, basandose en el resultado de la gate, si se puede avanzar a la siguiente fase.
+**Восемь базовых агентов и Designer** всегда есть в базовой команде, потому что покрывают универсальные фазы разработки: определить, что строим (product-owner), задать визуальное направление, если есть фронтенд (designer), решить, как строим (architect), построить (senior-dev), проверить, что работает (qa-engineer), задокументировать (tech-writer), развернуть (devops-engineer), защитить (security-officer) и оркестровать всё это (alfred). Kanban пишет runtime. Это не значит, что все участвуют в каждом ответе: Alfred вызывает их из команд плагина (`feature.md`, `fix.md`, `spike.md` и т. д.) в зависимости от фазы, сигналов проекта и gates. Claude Code находит их напрямую в `agents/`; манифест `plugin.json` не объявляет ручную секцию `agents`.
 
-**Los artefactos** son los entregables que cada agente produce: documentos de requisitos, diagramas de arquitectura, código fuente, informes de tests, changelogs o documentación. Cada artefacto se registra en el estado de sesión con su nombre y el momento en que se genero. El agente de la fase siguiente recibe como contexto los artefactos relevantes de las fases anteriores, pero no el historial de conversacion de esas fases.
+**Единственный опциональный агент**: cto, внешнее техническое второе мнение через Codex CLI. Claude Code находит агентов плагина напрямую в `agents/`; манифест не поддерживает ручную секцию `agents`. Локальная конфигурация проекта (`.local.md`) решает, входит ли CTO в автоматическую оркестрацию.
 
-**Alfred** (el orquestador) es el único agente con vision global. Conoce el flujo completo, sabe en que fase esta la sesión, evalua las gates y decide que agente invocar a continuacion y con que contexto. Los demas agentes son especialistas ciegos al panorama general: reciben una tarea concreta, la ejecutan y devuelven un resultado. Esta separación es deliberada porque evita que un agente tome decisiones que no le corresponden.
-
-El flujo, simplificado, funciona así:
-
-1. El usuario lanza un comando (por ejemplo, `/alfred-dev:feature`).
-2. Alfred crea una sesión y arranca la primera fase.
-3. Alfred invoca al agente correspondiente mediante Agent, pasandole su system prompt y los artefactos relevantes.
-4. El agente ejecuta su trabajo y devuelve un resultado.
-5. Alfred evalua la gate de la fase con el resultado.
-6. Si la gate se supera, Alfred avanza a la siguiente fase y repite desde el paso 3.
-7. Si la gate no se supera, Alfred informa al usuario y espera correccion o aprobacion.
+Итого: базовые доступны всегда, потому что без них не обойтись; опциональные включаются по запросу, потому что закрывают конкретные потребности.
 
 ---
 
-## Distribución de modelos
+## Модель совместной работы
 
-Los 10 agentes usan `model: inherit` para respetar el modelo de la sesión.
+Агенты Alfred Dev не общаются друг с другом напрямую. Между ними нет канала сообщений и нет вызовов от агента к агенту. Весь поток информации идёт через два механизма:
 
-Los siete agentes que usan **opus** son los que toman decisiones críticas:
+**Состояние сессии** (`alfred-dev-state.json`) это JSON-файл, который фиксирует, в какой фазе находится процесс, какие фазы завершены, какие артефакты созданы и каков результат каждой gate. Когда агент заканчивает работу, оркестратор обновляет состояние и по результату gate решает, можно ли перейти к следующей фазе.
 
-| Agente | Razon para opus |
-|--------|-----------------|
-| `alfred` | Orquesta todo el sistema; necesita comprension profunda de contexto y capacidad de decisión. |
-| `product-owner` | Define requisitos y alcance funcional; un error aquí se propaga a todo el flujo. |
-| `architect` | Disena la arquitectura; las decisiones de diseño son dificiles de revertir. |
-| `senior-dev` | Escribe código de produccion; la calidad del código es directamente proporcional a la capacidad del modelo. |
-| `security-officer` | Evalua amenazas y vulnerabilidades; un falso negativo aquí tiene consecuencias graves. |
-| `designer` | Define dirección visual y sistema de diseño en proyectos con UI; sus decisiones afectan la experiencia final del usuario. |
-| `cto` | Coordina la auditoría técnica externa invocando Codex CLI; necesita razonamiento profundo para sintetizar el informe y decidir qué prescripciones son accionables. |
+**Артефакты** это результаты, которые производит каждый агент: документы требований, архитектурные диаграммы, исходный код, отчёты о тестах, changelogs или документация. Каждый артефакт регистрируется в состоянии сессии с именем и моментом создания. Агент следующей фазы получает в контекст релевантные артефакты прошлых фаз, но не историю разговора этих фаз.
 
-Los trece agentes restantes usan **sonnet**, que es mas rápido y eficiente en coste. Sus tareas, aunque importantes, son de naturaleza mas estructurada: ejecutar tests y reportar resultados (qa-engineer), generar documentación a partir de artefactos existentes (tech-writer), gestionar pipelines (devops-engineer) o realizar revisiones acotadas a un ámbito concreto (ux-reviewer, seo-specialist, etc.). Sonnet resuelve estas tareas con solvencia y permite que los flujos avancen mas rápido sin sacrificar calidad donde no es critica.
+**Alfred** (оркестратор) единственный агент с глобальным видением. Он знает весь процесс, знает, в какой фазе сессия, оценивает gates и решает, какого агента вызвать дальше и с каким контекстом. Остальные агенты специалисты, которые не видят общей картины: они получают конкретную задачу, выполняют её и возвращают результат. Это разделение намеренное: оно не даёт агенту принимать решения, которые ему не принадлежат.
 
----
+Упрощённо процесс работает так:
 
-## Por que Agent y no invocación directa
-
-Los agentes se descubren desde el directorio `agents/` y se usan principalmente como subagentes lanzados por los commands del plugin mediante la herramienta **Agent** de Claude Code. Esta decisión tiene tres ventajas fundamentales:
-
-**Aislamiento de contexto.** Cada agente arranca con un contexto limpio: su system prompt y los artefactos que Alfred le pasa. No hereda la conversacion acumulada de la sesión ni el contexto de otros agentes. Esto evita un problema habitual de los sistemas multiagente: la contaminación cruzada, donde las instrucciones o sesgos de un agente afectan al siguiente.
-
-**Control de herramientas.** Cada llamada a Agent puede restringir las herramientas disponibles para el subagente. Un tech-writer no necesita acceso a la terminal; un qa-engineer no necesita escribir ficheros de produccion. Limitar las herramientas reduce la superficie de errores accidentales y fuerza a cada agente a trabajar dentro de su ámbito.
-
-**Paralelismo.** La herramienta Agent permite lanzar dos o mas subagentes en paralelo. En el runtime actual, el paralelismo se usa sobre todo en arquitectura y calidad del flujo `feature`, en la validación de `fix`, en la exploración de `spike` y en las auditorías de `ship` y `audit`. La fase `entrega` de `feature` mantiene dos agentes, pero no se modela como paralela en `core/orchestrator.py`.
+1. Пользователь запускает команду (например, `/alfred-dev:feature`).
+2. Alfred создаёт сессию и запускает первую фазу.
+3. Alfred вызывает нужного агента через Agent и передаёт ему system prompt и релевантные артефакты.
+4. Агент выполняет работу и возвращает результат.
+5. Alfred оценивает gate фазы по результату.
+6. Если gate пройдена, Alfred переходит к следующей фазе и повторяет с шага 3.
+7. Если gate не пройдена, Alfred сообщает пользователю и ждёт исправления или одобрения.
 
 ---
 
-## Navegación
+## Распределение моделей
 
-Cada agente tiene una ficha individual con su system prompt completo, herramientas disponibles, quality gates que evalua y ejemplos de interacción. La tabla siguiente enlaza a todas las fichas.
+Все 10 агентов используют `model: inherit`, чтобы соблюдать модель сессии.
 
-| Agente | Ficha | Descripción |
-|--------|-------|-------------|
-| `alfred` | [alfred.md](alfred.md) | Orquestador general del sistema; gestiona sesiones, flujos y delegacion. |
-| `product-owner` | [product-owner.md](product-owner.md) | Define requisitos funcionales, historias de usuario y criterios de aceptacion. |
-| `architect` | [architect.md](architect.md) | Disena la arquitectura técnica, elige patrones y valida la viabilidad del diseño. |
-| `senior-dev` | [senior-dev.md](senior-dev.md) | Implementa el código de produccion con TDD estricto y clean code. |
-| `security-officer` | [security-officer.md](security-officer.md) | Audita seguridad de forma transversal: threat model, code review y validación final. |
-| `qa-engineer` | [qa-engineer.md](qa-engineer.md) | Ejecuta y disena tests; busca edge cases y regresiones. |
-| `devops-engineer` | [devops-engineer.md](devops-engineer.md) | Gestiona CI/CD, pipelines, despliegues y empaquetado de releases. |
-| `tech-writer` | [tech-writer.md](tech-writer.md) | Genera documentación técnica y de usuario comprensible para la comunidad. |
-| `designer` | [designer.md](designer.md) | Define la dirección visual del producto y cierra la fase 1b cuando hay frontend. |
-| `cto` | [cto.md](cto.md) | Auditoría técnica externa vía Codex CLI; diagnóstico y prescripción por ítem. |
+Семь агентов на **opus** принимают критические решения:
+
+| Агент | Почему opus |
+|-------|-------------|
+| `alfred` | Оркестрирует всю систему; нужно глубокое понимание контекста и способность принимать решения. |
+| `product-owner` | Определяет требования и функциональный объём; ошибка здесь распространяется на весь процесс. |
+| `architect` | Проектирует архитектуру; решения по дизайну трудно откатить. |
+| `senior-dev` | Пишет production-код; качество кода прямо пропорционально возможностям модели. |
+| `security-officer` | Оценивает угрозы и уязвимости; ложноотрицательный результат здесь имеет серьёзные последствия. |
+| `designer` | Определяет визуальное направление и дизайн-систему в проектах с UI; его решения влияют на итоговый опыт пользователя. |
+| `cto` | Координирует внешний технический аудит через Codex CLI; нужно глубокое рассуждение, чтобы свести отчёт и решить, какие предписания выполнимы. |
+
+Остальные тринадцать агентов используют **sonnet**: он быстрее и дешевле. Их задачи, хотя и важные, более структурированы: запускать тесты и сообщать результаты (qa-engineer), генерировать документацию по существующим артефактам (tech-writer), управлять пайплайнами (devops-engineer) или выполнять проверки в узкой области (ux-reviewer, seo-specialist и т. д.). Sonnet надёжно решает эти задачи и ускоряет процессы, не жертвуя качеством там, где оно не критично.
+
+---
+
+## Почему Agent, а не прямой вызов
+
+Агенты находятся в каталоге `agents/` и используются в основном как субагенты, которых команды плагина запускают через инструмент **Agent** Claude Code. У этого решения три фундаментальных преимущества:
+
+**Изоляция контекста.** Каждый агент стартует с чистым контекстом: его system prompt и артефакты, которые передаёт Alfred. Он не наследует накопленный разговор сессии и контекст других агентов. Это предотвращает типичную проблему мультиагентных систем: перекрёстное загрязнение, когда инструкции или предвзятость одного агента влияют на следующего.
+
+**Контроль инструментов.** Каждый вызов Agent может ограничить инструменты, доступные субагенту. Tech-writer не нужен терминал; qa-engineer не нужно писать production-файлы. Ограничение инструментов уменьшает поверхность случайных ошибок и заставляет каждого агента работать в своей зоне.
+
+**Параллелизм.** Инструмент Agent позволяет запускать два и более субагентов параллельно. В текущем runtime параллелизм используется в основном в архитектуре и качестве процесса `feature`, в валидации `fix`, в исследовании `spike` и в аудитах `ship` и `audit`. Фаза `entrega` процесса `feature` держит двух агентов, но в `core/orchestrator.py` она не моделируется как параллельная.
+
+---
+
+## Навигация
+
+У каждого агента есть отдельная карточка с полным system prompt, доступными инструментами, quality gates, которые он оценивает, и примерами взаимодействия. Таблица ниже ссылается на все карточки.
+
+| Агент | Карточка | Описание |
+|-------|----------|----------|
+| `alfred` | [alfred.md](alfred.md) | Общий оркестратор системы; управляет сессиями, процессами и делегированием. |
+| `product-owner` | [product-owner.md](product-owner.md) | Определяет функциональные требования, пользовательские истории и критерии приёмки. |
+| `architect` | [architect.md](architect.md) | Проектирует техническую архитектуру, выбирает паттерны и проверяет реализуемость дизайна. |
+| `senior-dev` | [senior-dev.md](senior-dev.md) | Реализует production-код по строгому TDD и принципам clean code. |
+| `security-officer` | [security-officer.md](security-officer.md) | Сквозной аудит безопасности: threat model, code review и финальная проверка. |
+| `qa-engineer` | [qa-engineer.md](qa-engineer.md) | Запускает и проектирует тесты; ищет edge cases и регрессии. |
+| `devops-engineer` | [devops-engineer.md](devops-engineer.md) | Управляет CI/CD, пайплайнами, развёртываниями и упаковкой релизов. |
+| `tech-writer` | [tech-writer.md](tech-writer.md) | Создаёт понятную сообществу техническую и пользовательскую документацию. |
+| `designer` | [designer.md](designer.md) | Определяет визуальное направление продукта и закрывает фазу 1b, если есть фронтенд. |
+| `cto` | [cto.md](cto.md) | Внешний технический аудит через Codex CLI; диагноз и предписание по каждому пункту. |

@@ -1,18 +1,18 @@
-# Catalogo de skills
+# Каталог skills
 
-Los skills son las capacidades concretas que los agentes de Alfred pueden ejecutar. Cada skill es un fichero Markdown (`SKILL.md`) que contiene instrucciones paso a paso para una tarea específica: desde disenar un esquema de base de datos hasta auditar la accesibilidad de una interfaz. Los agentes no parten de una página en blanco: siguen las instrucciones del skill asignado para hacer el resultado más consistente, revisable y fácil de contrastar con evidencia.
+Skills это конкретные возможности, которые могут выполнять агенты Alfred. Каждый skill это файл Markdown (`SKILL.md`) с пошаговыми инструкциями для конкретной задачи: от проектирования схемы базы данных до аудита доступности интерфейса. Агенты не начинают с чистого листа: они следуют инструкциям назначенного skill, чтобы результат был более последовательным, проверяемым и его было легко сверить с подтверждениями.
 
-La razon de separar los skills de los agentes es la misma por la que una empresa separa los procedimientos de los roles: un procedimiento (skill) puede ser ejecutado por diferentes personas (agentes) segun el contexto, y un mismo rol puede dominar multiples procedimientos. Esta separación permite que el sistema crezca sin acoplar capacidades a identidades.
+Skills отделены от агентов по той же причине, по которой компания отделяет процедуры от ролей: процедуру (skill) могут выполнять разные люди (агенты) в зависимости от контекста, а одна роль может владеть несколькими процедурами. Такое разделение позволяет системе расти, не привязывая возможности к идентичностям.
 
-El repositorio mantiene un **catalogo de 11 skills** planas en `skills/<nombre>/SKILL.md`. Cubren proceso propio de Alfred: memory, estilo visual, SonarQube, incidente, compliance, threat-model, SBOM, flujo de PRs, ADR, evaluación de dependencias y sync de docs vivas.
+Репозиторий поддерживает **каталог из 11 skills**, плоских, в `skills/<имя>/SKILL.md`. Они покрывают собственный процесс Alfred: memory, визуальный стиль, SonarQube, инциденты, compliance, threat-model, SBOM, процесс PR, ADR, оценку зависимостей и синхронизацию живой документации.
 
-Los skills con side effects (SonarQube, companion visual, incident-response, pr-workflow) van con `disable-model-invocation: true`.
+Skills с побочными эффектами (SonarQube, визуальный companion, incident-response, pr-workflow) имеют `disable-model-invocation: true`.
 
-## Mapa
+## Карта
 
 ```mermaid
 mindmap
-  root((11 skills planas))
+  root((11 плоских skills))
     memory
     style-direction
     sonarqube
@@ -26,93 +26,92 @@ mindmap
     sync-project-docs
 ```
 
-| Skill | Uso |
-|-------|-----|
-| `memory` | Consulta y política de escritura de la memoria SQLite |
-| `style-direction` | Dirección visual de Selina |
-| `sonarqube` | Preflight y análisis SonarQube |
-| `incident-response` | Respuesta a incidentes |
-| `compliance-check` | Comprobaciones de compliance |
-| `threat-model` | Modelo de amenazas |
-| `sbom-generate` | Generación de SBOM |
-| `pr-workflow` | Flujo de pull request |
-| `write-adr` | Architecture Decision Records en `docs/adr/` |
-| `evaluate-dependency` | Veredicto de paquetes nuevos |
-| `sync-project-docs` | Índice y sync de `docs/project/` |
+| Skill | Назначение |
+|-------|------------|
+| `memory` | Запросы к памяти SQLite и политика записи в неё |
+| `style-direction` | Визуальное направление Designer |
+| `sonarqube` | Preflight и анализ SonarQube |
+| `incident-response` | Реагирование на инциденты |
+| `compliance-check` | Проверки compliance |
+| `threat-model` | Threat model |
+| `sbom-generate` | Генерация SBOM |
+| `pr-workflow` | Процесс pull request |
+| `write-adr` | Architecture Decision Records в `docs/adr/` |
+| `evaluate-dependency` | Вердикт по новым пакетам |
+| `sync-project-docs` | Индекс и синхронизация `docs/project/` |
 
-## Como se ejecutan los skills
+## Как выполняются skills
 
-Los skills no sustituyen a los slash commands. Claude Code los descubre en `skills/<nombre>/SKILL.md`. El usuario interactua con los flujos (`/alfred-dev:feature`, `/alfred-dev:fix`, `/alfred-dev:audit`, etc.) y Alfred usa el skill si aporta procedimiento.
+Skills не заменяют slash-команды. Claude Code находит их в `skills/<имя>/SKILL.md`. Пользователь работает с процессами (`/alfred-dev:feature`, `/alfred-dev:fix`, `/alfred-dev:audit` и т. д.), а Alfred использует skill, если тот добавляет процедуру.
 
-El único opcional del runtime es Lucius. Selina entra si hay frontend. No hay data-engineer, github-manager, copywriter ni el resto del catálogo 0.6.
+Единственный опциональный агент runtime: CTO. Designer подключается, если есть фронтенд. Нет data-engineer, github-manager, copywriter и остального каталога 0.6.
 
 ---
 
-## Como crear un nuevo skill
+## Как создать новый skill
 
-Crear un skill nuevo es el mecanismo para expandir las capacidades de Alfred sin modificar la lógica de los agentes ni de los flujos. Un skill bien escrito permite que cualquier agente lo ejecute de forma autonoma y que el resultado sea consistente independientemente del contexto.
+Новый skill это механизм расширения возможностей Alfred без изменения логики агентов и процессов. Хорошо написанный skill позволяет любому агенту выполнить его автономно и получить последовательный результат независимо от контекста.
 
-### Estructura del fichero
+### Структура файла
 
-Cada skill es un fichero `SKILL.md` dentro de un subdirectorio con nombre descriptivo en kebab-case, ubicado en el dominio correspondiente:
+Каждый skill это файл `SKILL.md` в подкаталоге с описательным именем в kebab-case:
 
 ```
-skills/<nombre-del-skill>/SKILL.md
+skills/<имя-skill>/SKILL.md
 ```
 
-Por ejemplo: `skills/threat-model/SKILL.md`.
+Например: `skills/threat-model/SKILL.md`.
 
-### Secciones obligatorias
+### Обязательные разделы
 
-El fichero sigue esta estructura:
+Файл следует такой структуре:
 
 ```markdown
 ---
-name: nombre-del-skill
-description: "Frase que describe cuando usar este skill"
+name: skill-name
+description: "Фраза, которая описывает, когда использовать этот skill"
 ---
 
-# Titulo descriptivo del skill
+# Описательный заголовок skill
 
-## Resumen
+## Кратко
 
-Parrafo que explica que hace el skill, por que es necesario y que
-resultado produce. El resumen debe permitir a cualquier persona
-decidir si este skill es el adecuado para su tarea sin necesidad
-de leer el proceso completo.
+Абзац, который объясняет, что делает skill, зачем он нужен и какой
+результат даёт. По краткому описанию любой человек должен решить,
+подходит ли этот skill для его задачи, не читая весь процесс.
 
-## Proceso
+## Процесс
 
-Pasos numerados que el agente debe seguir. Cada paso incluye:
+Пронумерованные шаги, которым следует агент. Каждый шаг включает:
 
-1. **Nombre del paso en negrita.** Explicacion de que hacer, por que
-   y como verificar que se ha hecho correctamente.
+1. **Название шага жирным.** Объяснение, что делать, зачем
+   и как проверить, что шаг выполнен правильно.
 
-2. **Segundo paso.** Los pasos deben ser lo bastante concretos para
-   que no haya ambiguedad, pero lo bastante genéricos para que
-   funcionen en diferentes proyectos y stacks.
+2. **Второй шаг.** Шаги должны быть достаточно конкретными, чтобы
+   не было двусмысленности, но достаточно общими, чтобы
+   работать в разных проектах и стеках.
 
-## Criterios de exito
+## Критерии успеха
 
-Lista de condiciones que deben cumplirse para considerar que el
-skill se ha ejecutado correctamente. Estos criterios son la
-definición de "hecho" del skill.
+Список условий, которые должны выполняться, чтобы считать, что
+skill выполнен правильно. Эти критерии и есть определение
+«готово» для skill.
 ```
 
-### Pautas de redaccion
+### Правила написания
 
-Al escribir un skill nuevo, conviene tener en cuenta los siguientes principios:
+При написании нового skill стоит учитывать следующие принципы:
 
-- **Explica el "por que", no solo el "que".** Un paso que dice "crear índice en la columna X" es menos util que uno que dice "crear índice en la columna X porque el EXPLAIN muestra un full table scan". El razonamiento detrás de cada accion es lo que permite al agente adaptarse a situaciones imprevistas.
+- **Объясняй «зачем», а не только «что».** Шаг «создать индекс по колонке X» менее полезен, чем «создать индекс по колонке X, потому что EXPLAIN показывает full table scan». Обоснование каждого действия позволяет агенту адаптироваться к непредвиденным ситуациям.
 
-- **Se concreto pero no rigido.** Los pasos deben dar instrucciones claras sin asumir un stack específico, salvo que el skill sea inherentemente específico de un ecosistema (como `sonarqube`). Usar ejemplos de multiples stacks cuando sea relevante.
+- **Будь конкретным, но не жёстким.** Шаги дают чёткие инструкции, не предполагая конкретный стек, если только skill не привязан к экосистеме по своей природе (как `sonarqube`). Используй примеры из нескольких стеков, когда это уместно.
 
-- **Incluye "que NO hacer".** Los errores comunes y los antipatrones son tan valiosos como las instrucciones positivas. Una sección que previene errores ahorra mas tiempo que una que los corrige.
+- **Включай «чего НЕ делать».** Типичные ошибки и антипаттерны так же ценны, как позитивные инструкции. Раздел, который предотвращает ошибки, экономит больше времени, чем раздел, который их исправляет.
 
-- **Los criterios de exito son verificables.** Cada criterio debe poder responderse con un "si" o un "no" objetivo. "El código es de buena calidad" no es verificable; "los tests pasan y no hay vulnerabilidades críticas sin resolver" si lo es.
+- **Критерии успеха проверяемы.** На каждый критерий можно объективно ответить «да» или «нет». «Код хорошего качества» не проверяем; «тесты проходят и нет нерешённых критических уязвимостей» проверяем.
 
-- **Un skill, una responsabilidad.** Si un skill intenta cubrir demasiado, dividirlo. Es preferible tener dos skills específicos que uno genérico que intente hacer todo.
+- **Один skill, одна ответственность.** Если skill пытается охватить слишком много, раздели его. Лучше два конкретных skills, чем один общий, который пытается делать всё.
 
-### Asignación a un agente
+### Назначение агенту
 
-Una vez creado el skill, hay que asignarlo a un agente editando el fichero del agente correspondiente en `agents/`. La asignación se refleja en la descripción del agente y en la configuración de los flujos que deben invocarlo. El skill no tiene efecto hasta que un agente lo referencia como parte de su repertorio de capacidades.
+Созданный skill нужно назначить агенту: отредактируй файл соответствующего агента в `agents/`. Назначение отражается в описании агента и в конфигурации процессов, которые должны его вызывать. Skill не действует, пока агент не включит его в свой набор возможностей.

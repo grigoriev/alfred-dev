@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para las pantallas guiadas del selector de Designer."""
+"""Tests for the guided Designer selector screens."""
 
 import os
 import shutil
@@ -58,8 +58,8 @@ class TestDesignerStyleSelector(unittest.TestCase):
         with open(result["html_path"], "r", encoding="utf-8") as fh:
             html = fh.read()
 
-        self.assertIn("Elige el sistema de diseño base", html)
-        self.assertIn("Anti-diseno / Neo-brutalismo", html)
+        self.assertIn("Выбери базовую дизайн-систему", html)
+        self.assertIn("Антидизайн / Необрутализм", html)
         self.assertIn("style::neo-brutalism", html)
         self.assertIn("Brutal Core", html)
 
@@ -72,10 +72,10 @@ class TestDesignerStyleSelector(unittest.TestCase):
         with open(result["html_path"], "r", encoding="utf-8") as fh:
             html = fh.read()
 
-        self.assertIn("Elige tipografía y paleta para Anti-diseno / Neo-brutalismo", html)
+        self.assertIn("Выбери типографику и палитру для Антидизайн / Необрутализм", html)
         self.assertIn("brief::neo-brutalism::brutal-core::recommended", html)
-        self.assertIn("Brutal legible", html)
-        self.assertIn("Solidos", html)
+        self.assertIn("Читаемый брутализм", html)
+        self.assertIn("Плотная", html)
 
 
 if __name__ == "__main__":

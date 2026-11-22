@@ -1,5 +1,5 @@
 {
-  "description": "Alfred Dev - hooks del ciclo de vida del plugin",
+  "description": "Alfred Dev - plugin lifecycle hooks",
   "hooks": {
     "SessionStart": [
       {

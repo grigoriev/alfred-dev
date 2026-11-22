@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Utilidades para consumir la elección visual de Designer."""
+"""Helpers to read the Designer visual choice."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ EVENTS_FILENAME = "events"
 
 
 def resolve_state_dir(path: str) -> str:
-    """Acepta session_dir o state_dir y devuelve el state_dir real."""
+    """Accept session_dir or state_dir and return the real state_dir."""
     candidate = os.path.abspath(path)
     if os.path.basename(candidate) == STATE_DIRNAME:
         return candidate
@@ -22,12 +22,12 @@ def resolve_state_dir(path: str) -> str:
 
 
 def events_file_for(path: str) -> str:
-    """Devuelve la ruta al fichero de eventos para una sesión visual."""
+    """Return the events file path for a visual session."""
     return os.path.join(resolve_state_dir(path), EVENTS_FILENAME)
 
 
 def _normalize_choice_event(raw_event: Dict[str, Any]) -> Optional[Dict[str, Optional[str]]]:
-    """Normaliza un evento de clic compatible con formatos legacy y canónico."""
+    """Normalize a click event in the legacy or canonical format."""
     if not isinstance(raw_event, dict):
         return None
 
@@ -60,7 +60,7 @@ def _normalize_choice_event(raw_event: Dict[str, Any]) -> Optional[Dict[str, Opt
 
 
 def read_latest_style_choice(path: str) -> Optional[Dict[str, Optional[str]]]:
-    """Lee el último clic válido de una sesión visual de Designer."""
+    """Read the last valid click of a Designer visual session."""
     events_path = events_file_for(path)
     if not os.path.isfile(events_path):
         return None

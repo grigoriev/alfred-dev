@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contratos del comando de refinado previo a feature."""
+"""Contracts for the refinement command that runs before feature."""
 
 import os
 import unittest

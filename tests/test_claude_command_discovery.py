@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests del smoke interactivo de descubrimiento de /alfred."""
+"""Tests for the interactive /alfred discovery smoke test."""
 
 import importlib.util
 from pathlib import Path
@@ -26,8 +26,8 @@ class TestClaudeCommandDiscovery(unittest.TestCase):
         raw_output = (
             "\x1b[?25l/alfred\r\n"
             "/alfred        (Alfred Dev) Alias global /alfred para abrir el asistente contextual\r\n"
-            "/alfred-dev:fix        (Alfred Dev) Correccion de bugs\r\n"
-            "/alfred-dev:help       (Alfred Dev) Muestra los comandos disponibles\r\n"
+            "/alfred-dev:fix        (Alfred Dev) Bug fixes\r\n"
+            "/alfred-dev:help       (Alfred Dev) Shows the available commands\r\n"
         )
 
         analysis = discovery.analyze_discovery_output(raw_output)
@@ -38,20 +38,33 @@ class TestClaudeCommandDiscovery(unittest.TestCase):
         self.assertTrue(analysis.namespaced_visible)
         self.assertFalse(analysis.no_match_visible)
 
+    def test_analysis_accepts_russian_alfred_description(self):
+        discovery = _load_module()
+        raw_output = (
+            "/alfred\r\n"
+            "/alfred        (Alfred Dev) Контекстный ассистент Alfred Dev\r\n"
+            "/alfred-dev:fix        (Alfred Dev) Исправление багов\r\n"
+        )
+
+        analysis = discovery.analyze_discovery_output(raw_output)
+
+        self.assertTrue(analysis.ok)
+        self.assertEqual(analysis.alias_entry_count, 1)
+
     def test_analysis_rejects_duplicate_alfred_alias_entries(self):
         discovery = _load_module()
         raw_output = (
             "/alfred\r\n"
             "/alfred        (Alfred Dev) Alias global /alfred para abrir el asistente contextual\r\n"
             "/alfred        Alias global /alfred para abrir el asistente contextual\r\n"
-            "/alfred-dev:help       (Alfred Dev) Muestra los comandos disponibles\r\n"
+            "/alfred-dev:help       (Alfred Dev) Shows the available commands\r\n"
         )
 
         analysis = discovery.analyze_discovery_output(raw_output)
 
         self.assertFalse(analysis.ok)
         self.assertEqual(analysis.alias_entry_count, 2)
-        self.assertIn("mas de una entrada /alfred", " ".join(analysis.problems))
+        self.assertIn("more than one /alfred entry", " ".join(analysis.problems))
 
     def test_analysis_rejects_no_commands_match(self):
         discovery = _load_module()
@@ -60,7 +73,7 @@ class TestClaudeCommandDiscovery(unittest.TestCase):
 
         self.assertFalse(analysis.ok)
         self.assertTrue(analysis.no_match_visible)
-        self.assertIn('Claude muestra "No commands match"', analysis.problems[0])
+        self.assertIn('Claude shows "No commands match"', analysis.problems[0])
 
     def test_strip_terminal_control_removes_ansi_without_losing_text(self):
         discovery = _load_module()

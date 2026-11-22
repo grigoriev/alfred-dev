@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Higiene pre-dolor y cierre enseñable."""
+"""Pre-pain hygiene and a shareable wrap-up (cierre)."""
 
 import json
 import os
@@ -47,7 +47,7 @@ class TestHygiene(unittest.TestCase):
             ensure_project_docs(tmpdir)
             architecture = os.path.join(tmpdir, "docs/project/architecture.md")
             with open(architecture, "w", encoding="utf-8") as handle:
-                handle.write(f"# Arquitectura\n\n{FILLED_MARKER}\n\nCajas reales.\n")
+                handle.write(f"# Architecture\n\n{FILLED_MARKER}\n\nReal boxes.\n")
             result = run_hygiene(tmpdir, "ship")
             self.assertFalse(result["passed"])
             self.assertTrue(any("threat-model" in item for item in result["blockers"]))
@@ -60,7 +60,7 @@ class TestHygiene(unittest.TestCase):
                 json.dump(
                     {
                         "comando": "quick",
-                        "descripcion": "cambia el CTA",
+                        "descripcion": "change the CTA",
                         "fase_actual": "validacion_rapida",
                         "fase_numero": 1,
                     },
@@ -76,9 +76,9 @@ class TestHygiene(unittest.TestCase):
                 )
             cierre = build_cierre(tmpdir)
             text = render_cierre_markdown(cierre)
-            self.assertIn("cambia el CTA", text)
+            self.assertIn("change the CTA", text)
             self.assertIn("pytest tests/test_cta.py", text)
-            self.assertIn("Cierre Alfred", text)
+            self.assertIn("Итог Alfred", text)
 
 
 if __name__ == "__main__":

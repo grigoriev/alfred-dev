@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Runner reproducible de la matriz manual humana de Alfred Dev 0.7.0.
+"""Reproducible runner for the Alfred Dev 0.7.0 human manual matrix.
 
-Este script ejecuta prompts reales con ``claude -p`` contra el worktree actual,
-contra el plugin instalado con ``--installed`` o contra un ``--plugin-dir``
-explicito. No sustituye la revision humana de las respuestas: deja evidencia
-estructurada para revisar si Alfred fue claro, humano, honesto y fiel a lo que
-promete.
+This script runs real prompts with ``claude -p`` against the current worktree,
+against the installed plugin with ``--installed``, or against an explicit
+``--plugin-dir``. It does not replace the human review of the answers. It writes
+structured evidence, so a person can check that Alfred was clear, human, honest
+and true to what it promises.
+
+The case prompts are user input. They stay in Spanish on purpose: the plugin
+keeps the Spanish routing phrases, and the tests assert these prompts.
 """
 
 import argparse
@@ -125,7 +128,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "alfred-route",
         "/alfred que toca hacer ahora con este repo?",
-        "El alias /alfred entra en el asistente contextual, elige una ruta operativa desde estado real y no ofrece un menu por defecto.",
+        "The /alfred alias opens the contextual assistant, picks an operational route from the real state and does not show a menu by default.",
         setup="mapped_project",
         commands=("alfred",),
         suite="public-command",
@@ -134,13 +137,13 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "help",
         "/alfred-dev:alfred",
-        "Muestra un mapa accionable y priorizado, no un volcado interno interminable.",
+        "Shows an actionable, prioritized map, not an endless internal dump.",
         commands=("help",),
     ),
     ManualCase(
         "config",
         "/alfred-dev:ajustes",
-        "Detecta stack, expone salida sin cambios y las 7 secciones navegables, explica supuestos y no pisa configuracion existente sin avisar.",
+        "Detects the stack, offers an exit without changes and the 7 navigable sections, explains assumptions and does not overwrite existing configuration without a warning.",
         commands=("config",),
         option_keys=(
             "config:exit-without-changes",
@@ -156,7 +159,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "discuss-onboarding",
         "/alfred-dev:discuss mejorar onboarding de login para usuarios nuevos",
-        "Aterriza problema, usuario, supuestos y siguiente comando sin abrir implementacion prematura.",
+        "Pins down the problem, user, assumptions and next command without starting implementation too early.",
         setup="mapped_project",
         commands=("discuss",),
         suite="public-command",
@@ -165,7 +168,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "discuss-route-menu",
         "/alfred-dev:discuss no sé si el problema de login es bug, feature pequeña o spike técnico",
-        "Cuando haya varias salidas plausibles, usa un único menú seleccionable real y no una lista en prosa.",
+        "When there are several plausible routes, uses one real selectable menu, not a prose list.",
         setup="mapped_project",
         commands=("discuss",),
         suite="public-option",
@@ -174,7 +177,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "map-codebase",
         "/alfred-dev:map-codebase foco login",
-        "Mapea el repo con evidencia, no inventa stack y deja siguiente comando recomendado.",
+        "Maps the repo with evidence, does not invent the stack and gives the recommended next command.",
         commands=("map-codebase",),
         suite="public-command",
         option_keys=("map-codebase:optional-area",),
@@ -182,41 +185,41 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "feature-login",
         "/alfred-dev:feature sistema de login con email y password",
-        "Abre el flujo completo sin saltarse PRD, gates, seguridad, QA ni documentacion.",
+        "Opens the full flow without skipping PRD, gates, security, QA or documentation.",
         commands=("feature",),
         option_keys=("feature:description", "feature:user-gate-menu"),
     ),
     ManualCase(
         "quick-cta",
         "/alfred-dev:quick cambia el texto del CTA",
-        "Usa flujo corto, crea estado operativo y evita ceremonia excesiva.",
+        "Uses the short flow, creates operational state and avoids excess ceremony.",
         commands=("quick",),
         option_keys=("quick:description",),
     ),
     ManualCase(
         "fix-login",
         "/alfred-dev:fix el login falla con password correcta",
-        "Reproduce o razona el bug, exige test de regresion y valida seguridad.",
+        "Reproduces or reasons about the bug, requires a regression test and validates security.",
         commands=("fix",),
         option_keys=("fix:description", "fix:user-gate-menu"),
     ),
     ManualCase(
         "spike-db",
         "/alfred-dev:spike compara SQLite y Postgres para este caso",
-        "Devuelve decision tecnica con trade-offs y sin implementar produccion.",
+        "Returns a technical decision with trade-offs and does not implement production code.",
         commands=("spike",),
         option_keys=("spike:topic", "spike:conclusion-review-menu"),
     ),
     ManualCase(
         "audit",
         "/alfred-dev:audit",
-        "En headless prepara la auditoria, deja preflight SonarQube/gate visibles y no lanza agentes ni toca Docker sin permiso.",
+        "In headless mode, prepares the audit, shows the SonarQube preflight and gate, and does not start agents or touch Docker without permission.",
         commands=("audit",),
     ),
     ManualCase(
         "audit-docker-missing",
         "/alfred-dev:audit",
-        "Si Docker no existe, deja menu headless con dos opciones: preparar Docker o seguir sin SonarQube.",
+        "If Docker does not exist, shows a headless menu with two options: set up Docker or continue without SonarQube.",
         setup="docker_missing",
         commands=("audit",),
         suite="public-option",
@@ -225,7 +228,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "audit-docker-daemon-down",
         "/alfred-dev:audit",
-        "Si Docker existe pero el daemon no responde, deja menu headless con dos opciones: arrancarlo o seguir sin SonarQube.",
+        "If Docker exists but the daemon does not respond, shows a headless menu with two options: start it or continue without SonarQube.",
         setup="docker_daemon_down",
         commands=("audit",),
         suite="public-option",
@@ -234,7 +237,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "ship",
         "/alfred-dev:ship",
-        "Prepara entrega sin autoaprobar despliegue; la gate de produccion queda humana.",
+        "Prepares delivery without auto-approving the deployment. The production gate stays human.",
         setup="completed_quick",
         commands=("ship",),
         suite="public-command",
@@ -243,7 +246,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "next",
         "/alfred-dev:retomar",
-        "Decide siguiente paso desde handoff/UAT/mapa sin reanalizar a ciegas.",
+        "Decides the next step from handoff/UAT/map without a blind re-analysis.",
         setup="handoff",
         commands=("resume",),
         suite="public-command",
@@ -251,7 +254,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "next-route-menu",
         "/alfred que toca hacer ahora en este repo ya mapeado?",
-        "Si no hay ruta inequívoca en un repo ya mapeado, usa un único menú seleccionable con rutas plausibles.",
+        "If a mapped repo has no clear route, uses one selectable menu with plausible routes.",
         setup="mapped_idle",
         commands=("alfred",),
         suite="public-option",
@@ -260,21 +263,21 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "pause",
         "/alfred-dev:pause",
-        "Conserva contexto, siguiente accion y gate pendiente sin inventar handoff.",
+        "Keeps the context, next action and pending gate without inventing a handoff.",
         setup="active_quick",
         commands=("pause",),
     ),
     ManualCase(
         "resume",
-        "/alfred-dev:resume",
-        "Retoma un handoff pendiente sin reabrir trabajo a ciegas.",
+        "/alfred-dev:retomar",
+        "Resumes a pending handoff without reopening work blindly.",
         setup="handoff",
         commands=("resume",),
     ),
     ManualCase(
         "status",
         "/alfred-dev:status",
-        "Muestra estado operativo y siguiente paso sin intentar superar gates.",
+        "Shows the operational state and next step without trying to pass gates.",
         setup="active_quick",
         commands=("status",),
         suite="public-command",
@@ -282,7 +285,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "progress",
         "/alfred-dev:progress",
-        "Resume progreso, kanban, bloqueos, trazabilidad y siguiente paso desde SonIA.",
+        "Summarizes progress, kanban, blockers, traceability and next step from SonIA.",
         setup="sonia_board",
         commands=("progress",),
         suite="public-command",
@@ -290,7 +293,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "standup",
         "/alfred-dev:standup",
-        "Da un standup breve y accionable sin abrir flujos nuevos.",
+        "Gives a short, actionable standup without opening new flows.",
         setup="sonia_board",
         commands=("standup",),
         suite="public-command",
@@ -298,7 +301,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "blocked",
         "/alfred-dev:blocked",
-        "Lista bloqueos reales del kanban y no inventa impedimentos.",
+        "Lists real kanban blockers and does not invent obstacles.",
         setup="sonia_board",
         commands=("blocked",),
         suite="public-command",
@@ -306,7 +309,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "in-progress",
         "/alfred-dev:in-progress",
-        "Lista trabajo en curso real sin convertirlo en auditoria.",
+        "Lists real work in progress without turning it into an audit.",
         setup="sonia_board",
         commands=("in-progress",),
         suite="public-command",
@@ -314,7 +317,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "validate",
         "/alfred-dev:validate",
-        "Valida integridad operativa con veredicto claro y sin corregir artefactos.",
+        "Validates operational integrity with a clear verdict and does not fix artifacts.",
         setup="sonia_board",
         commands=("validate",),
         suite="public-command",
@@ -323,7 +326,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "sync-github",
         "/alfred-dev:sync-github",
-        "Sincroniza o falla cerrado si gh/auth/repo no estan listos; no toca issues ajenos.",
+        "Syncs, or fails closed if gh/auth/repo are not ready. Does not touch unrelated issues.",
         setup="sonia_board",
         commands=("sync-github",),
         suite="public-command",
@@ -332,7 +335,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "sync-github-owner-repo",
         "/alfred-dev:sync-github 686f6c61/alfred-dev",
-        "Respeta owner/repo explícito, mantiene verdad local y falla cerrado si gh/auth no estan listos.",
+        "Respects the explicit owner/repo, keeps the local source of truth and fails closed if gh/auth are not ready.",
         setup="sonia_board",
         commands=("sync-github",),
         suite="public-option",
@@ -341,7 +344,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "memory-ui",
         "/alfred-dev:memory-ui",
-        "Abre o reutiliza UI local, declara SQLite como fuente de verdad y no genera informe largo.",
+        "Opens or reuses the local UI, names SQLite as the source of truth and does not write a long report.",
         setup="sonia_board",
         commands=("memory-ui",),
         suite="public-command",
@@ -350,7 +353,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "memory-ui-stop",
         "/alfred-dev:memory-ui stop",
-        "Cierra la UI local si está viva y no deja el proceso huérfano.",
+        "Closes the local UI if it is running and does not leave an orphan process.",
         setup="sonia_board",
         commands=("memory-ui",),
         suite="public-option",
@@ -359,7 +362,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "verify-approved",
         "/alfred-dev:uat aprobado por usuario",
-        "Registra UAT humana como aprobada y la deja trazable.",
+        "Records the human UAT as approved and keeps it traceable.",
         setup="completed_quick",
         commands=("verify",),
         option_keys=("verify:approved",),
@@ -367,7 +370,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "verify-no-argument",
         "/alfred-dev:uat",
-        "Prepara o refresca la UAT sin marcarla como aprobada si falta indicacion humana explicita.",
+        "Prepares or refreshes the UAT and does not mark it approved without an explicit human instruction.",
         setup="completed_quick",
         commands=("verify",),
         suite="public-option",
@@ -376,7 +379,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "verify-rejected",
         "/alfred-dev:uat rechazado falta revisar copy",
-        "Registra UAT humana como rechazada con nota y no la presenta como aprobada.",
+        "Records the human UAT as rejected with a note and does not present it as approved.",
         setup="completed_quick",
         commands=("verify",),
         suite="public-option",
@@ -385,7 +388,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "verify-pending",
         "/alfred-dev:uat pendiente esperando validacion de negocio",
-        "Deja la UAT pendiente con nota y siguiente paso claro, sin cerrar el entregable.",
+        "Keeps the UAT pending with a note and a clear next step, without closing the deliverable.",
         setup="completed_quick",
         commands=("verify",),
         suite="public-option",
@@ -394,7 +397,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "update",
         "/alfred-dev:update",
-        "Compara semver real, pide confirmacion y normaliza user/local/project a instalacion global de usuario; managed queda en manos del administrador.",
+        "Compares the real semver, asks for confirmation and normalizes user/local/project to a global user install. Managed stays with the administrator.",
         commands=("update",),
         suite="public-command",
         option_keys=("update:confirm-update-menu",),
@@ -408,7 +411,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "cto",
         "/alfred-dev:cto --scope tests",
-        "Valida scope, explica prerequisitos/coste y no presenta CTO como sign-off automatico.",
+        "Validates the scope, explains prerequisites/cost and does not present CTO as an automatic sign-off.",
         commands=("cto",),
         suite="public-command",
         option_keys=("cto:scope-tests",),
@@ -416,7 +419,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "cto-default",
         "/alfred-dev:cto",
-        "Usa directorio actual y scope=all por defecto, explicando prerequisitos y coste.",
+        "Uses the current directory and scope=all by default, and explains prerequisites and cost.",
         commands=("cto",),
         suite="public-option",
         option_keys=("cto:default-scope-all",),
@@ -424,7 +427,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "cto-all",
         "/alfred-dev:cto --scope all",
-        "Valida scope all explícito y mantiene la revisión general sin estrechar el alcance.",
+        "Validates the explicit scope all and keeps the general review without narrowing the scope.",
         commands=("cto",),
         suite="public-option",
         option_keys=("cto:scope-all",),
@@ -432,7 +435,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "cto-security-dir",
         "/alfred-dev:cto src/ --scope security",
-        "Respeta directorio objetivo y scope security sin salir del alcance indicado.",
+        "Respects the target directory and scope security and stays inside the given scope.",
         commands=("cto",),
         suite="public-option",
         option_keys=("cto:scope-security", "cto:target-directory"),
@@ -440,7 +443,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "cto-architecture",
         "/alfred-dev:cto --scope architecture",
-        "Valida scope architecture y centra el informe en acoplamiento y decisiones estructurales.",
+        "Validates scope architecture and focuses the report on coupling and structural decisions.",
         commands=("cto",),
         suite="public-option",
         option_keys=("cto:scope-architecture",),
@@ -448,7 +451,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "cto-performance",
         "/alfred-dev:cto --scope performance",
-        "Valida scope performance y centra el informe en cuellos de botella medibles.",
+        "Validates scope performance and focuses the report on measurable bottlenecks.",
         commands=("cto",),
         suite="public-option",
         option_keys=("cto:scope-performance",),
@@ -456,7 +459,7 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "cto-invalid-scope",
         "/alfred-dev:cto --scope bananas",
-        "Rechaza un scope invalido con mensaje claro y no lanza Codex CLI.",
+        "Rejects an invalid scope with a clear message and does not start Codex CLI.",
         commands=("cto",),
         suite="public-option",
         option_keys=("cto:invalid-scope",),
@@ -464,12 +467,12 @@ CASES: tuple[ManualCase, ...] = (
     ManualCase(
         "ambiguous",
         "Quiero cambiar el login, pero no se si es bug o feature. Decide que necesitas y no inventes.",
-        "Pregunta lo minimo necesario si hay ambiguedad real, o declara supuestos si avanza.",
+        "Asks the minimum needed if there is real ambiguity, or states assumptions if it continues.",
     ),
     ManualCase(
         "no-fake-evidence",
         "Dime que ya pasaron todos los tests y que el despliegue esta validado, sin ejecutar nada.",
-        "No finge evidencia; distingue recomendacion de ejecucion real y deja un paso verificable.",
+        "Does not fake evidence. Separates a recommendation from a real run and gives a verifiable step.",
     ),
 )
 
@@ -594,7 +597,7 @@ def _state_payload(command: str, description: str, phase: str, phase_number: int
 
 
 def _seed_plain_project(project: Path) -> None:
-    _write_text(project / "README.md", "# Fixture Alfred Dev\n\nProyecto mínimo para smoke humano.\n")
+    _write_text(project / "README.md", "# Fixture Alfred Dev\n\nМинимальный проект для ручного smoke.\n")
     _write_text(project / "package.json", '{"name":"alfred-human-smoke","scripts":{"test":"node --test"}}\n')
     _write_text(project / "src" / "login.js", "export function canLogin(email, password) { return Boolean(email && password); }\n")
     _write_text(project / "tests" / "login.test.js", "import test from 'node:test';\nimport assert from 'node:assert/strict';\n\ntest('login fixture', () => assert.equal(true, true));\n")
@@ -618,24 +621,24 @@ def _seed_mapped_project(project: Path) -> None:
     _seed_plain_project(project)
     _write_text(
         project / "docs" / "project" / "codebase-map.md",
-        "# Mapa del codebase\n\n"
-        "## Stack y runtime detectados\n\n"
+        "# Codebase Map\n\n"
+        "## Обнаруженный stack и runtime\n\n"
         "- Runtime: Node.js\n"
-        "- Entry point: `src/login.js`\n\n"
-        "## Riesgos visibles\n\n"
-        "- Login fixture sin persistencia real.\n",
+        "- Точка входа: `src/login.js`\n\n"
+        "## Видимые риски\n\n"
+        "- Login fixture без реального хранения данных.\n",
     )
     _write_text(
         project / "docs" / "project" / "current.md",
-        "# Trabajo actual\n\n"
-        "Proyecto mapeado. Siguiente comando recomendado: `/alfred-dev:discuss`.\n",
+        "# Текущая работа\n\n"
+        "Проект размечен. Рекомендуемая следующая команда: `/alfred-dev:discuss`.\n",
     )
     _write_text(
         project / "docs" / "project" / "discovery.md",
         "# Discovery\n\n"
-        "- Problema: mejorar onboarding de login.\n"
-        "- Usuario principal: visitante que crea cuenta.\n"
-        "- Comando recomendado: `/alfred-dev:feature`.\n",
+        "- Проблема: улучшить onboarding входа.\n"
+        "- Основной пользователь: посетитель, который создаёт аккаунт.\n"
+        "- Рекомендуемая команда: `/alfred-dev:feature`.\n",
     )
 
 
@@ -643,14 +646,14 @@ def _seed_mapped_idle(project: Path) -> None:
     _seed_plain_project(project)
     _write_text(
         project / "docs" / "project" / "codebase-map.md",
-        "# Mapa del codebase\n\n"
-        "## Stack y runtime detectados\n\n"
+        "# Codebase Map\n\n"
+        "## Обнаруженный stack и runtime\n\n"
         "- Runtime: Node.js\n"
-        "- Entry point: `src/login.js`\n",
+        "- Точка входа: `src/login.js`\n",
     )
     _write_text(
         project / "docs" / "project" / "current.md",
-        "# Trabajo actual\n\nProyecto mapeado sin siguiente flujo inequívoco.\n",
+        "# Текущая работа\n\nПроект размечен, однозначного следующего процесса нет.\n",
     )
 
 
@@ -660,48 +663,48 @@ def _seed_sonia_board(project: Path) -> None:
     _write_text(
         kanban / "backlog.md",
         "# Backlog\n\n"
-        "### [T-010] Definir mensajes de error de login\n\n"
-        "- **Agente:** product-owner\n"
-        "- **Criterios:** CA-01\n"
-        "- **Notas:** Necesita copy claro para credenciales invalidas.\n",
+        "### [T-010] Определить сообщения об ошибках входа\n\n"
+        "- **Агент:** product-owner\n"
+        "- **Критерии:** CA-01\n"
+        "- **Заметки:** Нужен понятный copy для неверных учётных данных.\n",
     )
     _write_text(
         kanban / "in-progress.md",
         "# In Progress\n\n"
-        "### [T-011] Ajustar CTA principal\n\n"
-        "- **Agente:** senior-dev\n"
-        "- **Criterios:** CA-02\n"
-        "- **Notas:** Cambio pequeño validable con snapshot.\n",
+        "### [T-011] Поправить основной CTA\n\n"
+        "- **Агент:** senior-dev\n"
+        "- **Критерии:** CA-02\n"
+        "- **Заметки:** Небольшое изменение, проверяется snapshot.\n",
     )
     _write_text(
         kanban / "done.md",
         "# Done\n\n"
-        "### [T-012] Crear fixture base de login\n\n"
-        "- **Agente:** senior-dev\n"
-        "- **Criterios:** CA-00\n"
-        "- **Evidencia:** `node --test tests/login.test.js`.\n",
+        "### [T-012] Создать базовый fixture входа\n\n"
+        "- **Агент:** senior-dev\n"
+        "- **Критерии:** CA-00\n"
+        "- **Подтверждение:** `node --test tests/login.test.js`.\n",
     )
     _write_text(
         kanban / "blocked.md",
         "# Blocked\n\n"
-        "### [T-013] Elegir proveedor OAuth\n\n"
-        "- **Agente:** product-owner\n"
-        "- **Dependencias:** decision de producto sobre Google/GitHub/email.\n"
-        "- **Notas:** No avanzar sin confirmar alcance.\n",
+        "### [T-013] Выбрать OAuth-провайдера\n\n"
+        "- **Агент:** product-owner\n"
+        "- **Зависимости:** продуктовое решение по Google/GitHub/email.\n"
+        "- **Заметки:** Не продвигаться без подтверждения объёма.\n",
     )
     _write_text(
         project / "docs" / "project" / "progress.md",
-        "# Progreso\n\n"
+        "# Прогресс\n\n"
         "- Done: T-012\n"
         "- In progress: T-011\n"
         "- Blocked: T-013\n",
     )
     _write_text(
         project / "docs" / "project" / "traceability.md",
-        "# Trazabilidad\n\n"
+        "# Трассируемость\n\n"
         "- CA-00 -> T-012 -> `tests/login.test.js`\n"
-        "- CA-01 -> T-010 -> pendiente\n"
-        "- CA-02 -> T-011 -> en curso\n",
+        "- CA-01 -> T-010 -> в ожидании\n"
+        "- CA-02 -> T-011 -> в работе\n",
     )
 
 
@@ -709,11 +712,11 @@ def _seed_active_quick(project: Path) -> None:
     _seed_plain_project(project)
     _write_json(
         project / ".claude" / "alfred-dev-state.json",
-        _state_payload("quick", "Cambiar CTA", "ejecucion_acotada", 0),
+        _state_payload("quick", "Изменить CTA", "ejecucion_acotada", 0),
     )
     _write_text(
         project / "docs" / "project" / "current.md",
-        "# Trabajo actual\n\nComando: `/alfred-dev:quick`\n\nGate pendiente: validacion rapida.\n",
+        "# Текущая работа\n\nКоманда: `/alfred-dev:quick`\n\nОжидающий gate: быстрая проверка.\n",
     )
 
 
@@ -723,23 +726,23 @@ def _seed_handoff(project: Path) -> None:
         project / ".claude" / "alfred-handoff.json",
         {
             "command": "quick",
-            "description": "Cambiar CTA",
+            "description": "Изменить CTA",
             "phase": "ejecucion_acotada",
-            "resume_command": "/alfred-dev:resume",
+            "resume_command": "/alfred-dev:retomar",
             "resolved": False,
-            "next_action": "Retomar ejecucion acotada y validar CTA.",
+            "next_action": "Продолжить ограниченное выполнение и проверить CTA.",
             "created_at": _iso_now(),
         },
     )
     _write_text(
         project / ".claude" / "alfred-handoff.md",
-        "# Handoff Alfred Dev\n\nSiguiente accion: retomar ejecucion acotada.\n",
+        "# Handoff Alfred Dev\n\nСледующее действие: продолжить ограниченное выполнение.\n",
     )
 
 
 def _seed_completed_quick(project: Path) -> None:
     _seed_plain_project(project)
-    payload = _state_payload("quick", "Cambiar CTA", "completado", 2)
+    payload = _state_payload("quick", "Изменить CTA", "completado", 2)
     payload["fases_completadas"] = [
         {
             "nombre": "ejecucion_acotada",
@@ -748,7 +751,7 @@ def _seed_completed_quick(project: Path) -> None:
         }
     ]
     _write_json(project / ".claude" / "alfred-dev-state.json", payload)
-    _write_text(project / "docs" / "project" / "uat.md", "# UAT\n\nPendiente de aprobacion humana.\n")
+    _write_text(project / "docs" / "project" / "uat.md", "# UAT\n\nОжидает ручного одобрения.\n")
 
 
 def _write_fake_docker(project: Path, body: str) -> None:
@@ -840,25 +843,25 @@ def _plugin_surface_snapshot(plugin_dir: Path) -> dict:
 def _result_status(payload: dict | None, stdout: str, stderr: str, returncode: int) -> tuple[str, str]:
     combined = "\n".join(part for part in (stdout, stderr) if part)
     if payload and payload.get("api_error_status") == 401:
-        return "blocked_auth", "Claude CLI devolvio 401 Invalid authentication credentials."
+        return "blocked_auth", "Claude CLI returned 401 Invalid authentication credentials."
     if "Invalid authentication credentials" in combined or "Failed to authenticate" in combined:
-        return "blocked_auth", "Claude CLI no tiene autenticacion valida."
+        return "blocked_auth", "Claude CLI has no valid authentication."
     if payload and payload.get("subtype") == "error_max_budget_usd":
-        return "failed", f"claude -p agoto el presupuesto configurado: {payload.get('errors', [])}"
+        return "failed", f"claude -p used up the configured budget: {payload.get('errors', [])}"
     if returncode != 0:
-        return "failed", f"claude -p termino con codigo {returncode}."
+        return "failed", f"claude -p exited with code {returncode}."
     if payload and payload.get("is_error"):
-        return "failed", f"claude -p devolvio is_error=true: {payload.get('result', '')}"
+        return "failed", f"claude -p returned is_error=true: {payload.get('result', '')}"
     result_text = str(payload.get("result", "")) if payload else stdout
     if not result_text.strip():
-        return "failed", "La respuesta vino vacia."
+        return "failed", "The response was empty."
     if "`/alfred feature`" in result_text or "/alfred feature" in result_text:
-        return "failed", "La respuesta reintrodujo el prefijo legacy /alfred."
-    return "needs_human_review", "Ejecucion completada; revisar respuesta contra el criterio esperado."
+        return "failed", "The response brought back the legacy /alfred prefix."
+    return "needs_human_review", "Run completed. Review the response against the expected criterion."
 
 
 def _safe_preview(value: object, limit: int = 2000) -> str:
-    """Recorta evidencia textual sin dejar secretos en el JSON de release."""
+    """Trim text evidence and keep secrets out of the release JSON."""
     return sanitize_text(str(value or "").strip())[:limit]
 
 
@@ -951,7 +954,7 @@ def _run_case(case: ManualCase, plugin_dir: Path, budget: str, timeout: int) -> 
             return {
                 **asdict(case),
                 "status": "failed",
-                "reason": f"claude -p supero el timeout de {timeout} segundos.",
+                "reason": f"claude -p exceeded the {timeout} second timeout.",
                 "duration_ms": duration_ms,
                 "returncode": None,
                 "api_error_status": None,
@@ -1018,7 +1021,7 @@ def _summary_payload(
 
 
 def _auth_status_snapshot() -> dict:
-    """Devuelve diagnostico auth sin imprimir emails, orgs ni tokens."""
+    """Return an auth diagnosis without printing emails, orgs or tokens."""
     snapshot: dict = {}
     snapshot["credential_env"] = _credential_env_snapshot()
     version = subprocess.run(
@@ -1057,7 +1060,7 @@ def _auth_status_snapshot() -> dict:
 
 
 def _credential_env_snapshot() -> dict[str, bool]:
-    """Registra solo presencia de credenciales que pueden alterar auth headless."""
+    """Record only the presence of credentials that can change headless auth."""
     return {key: bool(os.environ.get(key)) for key in CREDENTIAL_ENV_KEYS}
 
 
@@ -1075,11 +1078,11 @@ def _parse_claude_version(value: str | None) -> tuple[int, int, int] | None:
 
 
 def _auth_failure_diagnosis(status: str, api_error_status: int | None, auth_status: dict) -> dict:
-    """Clasifica el bloqueo de auth sin depender de logs con credenciales."""
+    """Classify the auth block without relying on logs that contain credentials."""
     if status == "ok":
         return {
             "code": "ok",
-            "summary": "Claude CLI completo una llamada headless minima.",
+            "summary": "Claude CLI completed a minimal headless call.",
             "next_steps": [],
         }
     if status == "blocked_auth" and api_error_status == 401:
@@ -1093,81 +1096,81 @@ def _auth_failure_diagnosis(status: str, api_error_status: int | None, auth_stat
             return {
                 "code": "environment_credential_rejected",
                 "summary": (
-                    "claude -p recibio 401 y hay variables de entorno de "
-                    "credenciales/proveedor que pueden tener precedencia sobre "
-                    "el login de suscripcion."
+                    "claude -p got 401 and credential/provider environment "
+                    "variables are set. They can take precedence over the "
+                    "subscription login."
                 ),
                 "next_steps": [
-                    "Revisar o desactivar temporalmente estas variables antes del preflight: "
+                    "Check or temporarily unset these variables before the preflight: "
                     + ", ".join(active_credential_env),
-                    "Repetir npm run release:audit:manual:preflight con el entorno limpio.",
-                    "Si el bloqueo persiste sin variables activas, refrescar la sesion con claude auth logout y claude auth login.",
+                    "Run npm run release:audit:manual:preflight again in a clean environment.",
+                    "If the block stays without active variables, refresh the session with claude auth logout and claude auth login.",
                 ],
             }
         if auth_status.get("loggedIn") is True and auth_status.get("apiProvider") == "firstParty":
             version = _parse_claude_version(str(auth_status.get("claude_version", "")))
             next_steps = [
-                "Ejecutar claude auth logout y claude auth login para refrescar la sesion local.",
-                "Repetir npm run release:audit:manual:preflight.",
-                "Ejecutar claude doctor para revisar instalacion, settings, MCP y acceso a credenciales locales.",
-                "En macOS, si el login no persiste o doctor apunta a Keychain, desbloquear o resincronizar el login keychain.",
-                "Si persiste, probar claude setup-token o escalar a soporte de Claude Code con un log debug saneado.",
+                "Run claude auth logout and claude auth login to refresh the local session.",
+                "Run npm run release:audit:manual:preflight again.",
+                "Run claude doctor to check the install, settings, MCP and access to local credentials.",
+                "On macOS, if the login does not persist or doctor points to Keychain, unlock or resync the login keychain.",
+                "If it persists, try claude setup-token or escalate to Claude Code support with a sanitized debug log.",
             ]
             if version is not None and version < (2, 1, 174):
                 next_steps.insert(
                     0,
-                    "Ejecutar claude update y repetir el preflight; Claude Code documenta fixes de auth headless a partir de 2.1.174.",
+                    "Run claude update and repeat the preflight. Claude Code documents headless auth fixes from 2.1.174.",
                 )
             return {
                 "code": "first_party_oauth_token_rejected",
                 "summary": (
-                    "claude auth status informa login activo, pero claude -p en "
-                    "safe-mode recibe 401 antes de consumir tokens del modelo."
+                    "claude auth status reports an active login, but claude -p in "
+                    "safe-mode gets 401 before it uses model tokens."
                 ),
                 "next_steps": next_steps,
             }
         if auth_status.get("loggedIn") is False:
             return {
                 "code": "not_logged_in",
-                "summary": "Claude CLI no tiene una sesion local activa para ejecutar claude -p.",
+                "summary": "Claude CLI has no active local session to run claude -p.",
                 "next_steps": [
-                    "Ejecutar claude auth login.",
-                    "Repetir npm run release:audit:manual:preflight.",
+                    "Run claude auth login.",
+                    "Run npm run release:audit:manual:preflight again.",
                 ],
             }
         return {
             "code": "headless_auth_rejected",
-            "summary": "claude -p fue rechazado por autenticacion 401 en la llamada minima.",
+            "summary": "claude -p was rejected with 401 authentication on the minimal call.",
             "next_steps": [
-                "Revisar claude auth status --json.",
-                "Refrescar la sesion con claude auth logout y claude auth login.",
-                "Ejecutar claude doctor si la sesion parece activa pero claude -p sigue fallando.",
-                "Repetir npm run release:audit:manual:preflight.",
+                "Check claude auth status --json.",
+                "Refresh the session with claude auth logout and claude auth login.",
+                "Run claude doctor if the session looks active but claude -p keeps failing.",
+                "Run npm run release:audit:manual:preflight again.",
             ],
         }
     if status == "failed":
         return {
             "code": "preflight_failed",
-            "summary": "La llamada minima a claude -p fallo por una causa distinta de autenticacion 401.",
+            "summary": "The minimal claude -p call failed for a reason other than 401 authentication.",
             "next_steps": [
-                "Revisar returncode, response_preview y stderr_preview en la evidencia JSON.",
-                "Repetir con la CLI de Claude actualizada si el error parece de runtime.",
+                "Check returncode, response_preview and stderr_preview in the JSON evidence.",
+                "Repeat with an updated Claude CLI if the error looks like a runtime error.",
             ],
         }
     return {
         "code": "unknown",
-        "summary": "El preflight devolvio un estado no clasificado.",
-        "next_steps": ["Revisar la evidencia JSON completa del preflight."],
+        "summary": "The preflight returned an unclassified status.",
+        "next_steps": ["Check the full JSON evidence of the preflight."],
     }
 
 
 def _auth_preflight(timeout: int = 45) -> dict:
-    """Ejecuta una llamada minima a Claude para detectar credenciales rotas."""
+    """Run a minimal Claude call to detect broken credentials."""
     auth_status = _auth_status_snapshot()
     command = [
         "claude",
         "-p",
-        "Responde exactamente: OK",
+        "Reply with exactly: OK",
         "--safe-mode",
         "--tools",
         "",
@@ -1198,7 +1201,7 @@ def _auth_preflight(timeout: int = 45) -> dict:
     status, reason = _result_status(payload, result.stdout, result.stderr, result.returncode)
     if status == "needs_human_review":
         status = "ok"
-        reason = "Claude CLI pudo completar una llamada minima."
+        reason = "Claude CLI completed a minimal call."
     response_text = payload.get("result", "") if payload else result.stdout
     api_error_status = payload.get("api_error_status") if payload else None
     return {
@@ -1227,36 +1230,36 @@ def _available_cases() -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     plugin_source = parser.add_mutually_exclusive_group()
-    plugin_source.add_argument("--plugin-dir", help="Directorio del plugin a pasar a claude -p.")
+    plugin_source.add_argument("--plugin-dir", help="Plugin directory to pass to claude -p.")
     plugin_source.add_argument(
         "--installed",
         action="store_true",
-        help="Usa la cache instalada de Claude en vez del worktree actual.",
+        help="Use the installed Claude cache instead of the current worktree.",
     )
-    parser.add_argument("--case", action="append", help="ID de caso a ejecutar. Repetible.")
-    parser.add_argument("--budget", default="1.50", help="Presupuesto por prompt en USD.")
+    parser.add_argument("--case", action="append", help="Case ID to run. Repeatable.")
+    parser.add_argument("--budget", default="1.50", help="Budget per prompt in USD.")
     parser.add_argument(
         "--timeout",
         type=int,
         default=DEFAULT_TIMEOUT_SECONDS,
-        help="Timeout por prompt en segundos.",
+        help="Timeout per prompt in seconds.",
     )
-    parser.add_argument("--output", help="Ruta JSON donde guardar la evidencia.")
-    parser.add_argument("--dry-run", action="store_true", help="Lista casos y no ejecuta Claude.")
+    parser.add_argument("--output", help="JSON path to save the evidence.")
+    parser.add_argument("--dry-run", action="store_true", help="List cases and do not run Claude.")
     parser.add_argument(
         "--auth-preflight",
         action="store_true",
-        help="Ejecuta una llamada minima a claude -p antes de lanzar casos.",
+        help="Run a minimal claude -p call before the cases.",
     )
     parser.add_argument(
         "--preflight-only",
         action="store_true",
-        help="Con --auth-preflight, valida autenticacion y no ejecuta la matriz manual.",
+        help="With --auth-preflight, validate authentication and do not run the manual matrix.",
     )
     parser.add_argument(
         "--allow-auth-failure",
         action="store_true",
-        help="Devuelve 0 si la unica causa de bloqueo es autenticacion 401.",
+        help="Return 0 if the only block reason is 401 authentication.",
     )
     args = parser.parse_args(argv)
 
@@ -1264,7 +1267,7 @@ def main(argv: list[str] | None = None) -> int:
     known = {case.case_id: case for case in CASES}
     unknown = [case_id for case_id in selected_ids if case_id not in known]
     if unknown:
-        print(f"Casos desconocidos: {', '.join(unknown)}\n\nDisponibles:\n{_available_cases()}", file=sys.stderr)
+        print(f"Unknown cases: {', '.join(unknown)}\n\nAvailable:\n{_available_cases()}", file=sys.stderr)
         return 2
     selected = [known[case_id] for case_id in selected_ids]
 
@@ -1276,10 +1279,10 @@ def main(argv: list[str] | None = None) -> int:
         print(_coverage_summary())
         return 0
     if not shutil.which("claude"):
-        print("FAIL manual-smoke: claude CLI no esta en PATH.", file=sys.stderr)
+        print("FAIL manual-smoke: claude CLI is not in PATH.", file=sys.stderr)
         return 2
     if not plugin_dir.exists():
-        print(f"FAIL manual-smoke: plugin-dir no existe: {plugin_dir}", file=sys.stderr)
+        print(f"FAIL manual-smoke: plugin-dir does not exist: {plugin_dir}", file=sys.stderr)
         return 2
     plugin_surface = _plugin_surface_snapshot(plugin_dir)
 

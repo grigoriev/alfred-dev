@@ -1,141 +1,141 @@
-# Referencia de comandos
+# Справочник команд
 
-Esta página documenta la superficie publicada en `.claude-plugin/plugin.json`: **18 comandos**. `next` y `search` quedan como helpers internos, no como slash commands.
+Эта страница описывает опубликованную поверхность из `.claude-plugin/plugin.json`: **18 команд**. `next` и `search` остаются внутренними helpers, а не slash commands.
 
-La continuidad pública es `/alfred-dev:alfred`, `/alfred-dev:progress` y `/alfred-dev:retomar`.
+Публичная непрерывность работы: `/alfred-dev:alfred`, `/alfred-dev:progress` и `/alfred-dev:retomar`.
 
 ---
 
-## Mapa rápido
+## Краткая карта
 
-| Grupo | Comandos |
+| Группа | Команды |
 |---|---|
-| Orquestación | `alfred`, `ajustes`, `update` |
-| Flujos | `feature`, `quick`, `fix`, `spike`, `audit`, `ship` |
-| Continuidad | `progress`, `retomar`, `pause`, `map-codebase`, `discuss` |
-| Operación | `uat`, `sync-github`, `memory-ui`, `lucius` |
+| Оркестрация | `alfred`, `ajustes`, `update` |
+| Процессы | `feature`, `quick`, `fix`, `spike`, `audit`, `ship` |
+| Непрерывность | `progress`, `retomar`, `pause`, `map-codebase`, `discuss` |
+| Операции | `uat`, `sync-github`, `memory-ui`, `cto` |
 
 ---
 
-## Orquestación y ayuda
+## Оркестрация и помощь
 
 ### `/alfred-dev:alfred`
 
-Entrada contextual del plugin. Decide si conviene mapear el repo, retomar una sesión, abrir un flujo completo o responder con una acción más pequeña. Es el comando correcto cuando el usuario todavía no sabe qué comando quiere, pero sí qué problema tiene.
+Контекстная точка входа плагина. Решает, что лучше: построить карту репозитория, продолжить сессию, открыть полный процесс или ответить небольшим действием. Это правильная команда, когда пользователь ещё не знает, какая команда ему нужна, но знает, какая у него проблема.
 
 ### `/alfred-dev:ajustes`
 
-Configura el proyecto: autonomía, stack detectado, memoria, personalidad y el único opcional (Lucius). Es el primer comando recomendable al entrar en un repo nuevo. No ofrece el catálogo 0.6.
+Настраивает проект: автономность, определённый стек, память, личность и единственный опциональный агент (CTO). Это первая рекомендуемая команда в новом репозитории. Каталог 0.6 она не предлагает.
 
 ### `/alfred-dev:update`
 
-Comprueba si hay una versión más reciente del plugin y guía la actualización.
+Проверяет, есть ли более новая версия плагина, и ведёт через обновление.
 
 ---
 
-## Flujos de trabajo
+## Рабочие процессы
 
-### `/alfred-dev:feature <descripción>`
+### `/alfred-dev:feature <описание>`
 
-Flujo principal para desarrollar una funcionalidad. Puede recorrer hasta siete fases: producto, estilo visual condicional, arquitectura, desarrollo, calidad, documentación y entrega.
+Основной процесс разработки функциональности. Может пройти до семи фаз: продукт, условный визуальный стиль, архитектура, разработка, качество, документация и поставка.
 
-### `/alfred-dev:quick <descripción>`
+### `/alfred-dev:quick <описание>`
 
-Versión ligera para cambios pequeños o bien delimitados. Mantiene disciplina, pero con menos ceremonia que `feature`.
+Облегчённая версия для небольших или чётко ограниченных изменений. Сохраняет дисциплину, но с меньшей церемонией, чем `feature`.
 
-### `/alfred-dev:fix <descripción>`
+### `/alfred-dev:fix <описание>`
 
-Flujo orientado a bugs. Prioriza diagnóstico, corrección con TDD y validación final.
+Процесс для багов. Ставит в приоритет диагностику, исправление по TDD и финальную валидацию.
 
-### `/alfred-dev:spike <tema>`
+### `/alfred-dev:spike <тема>`
 
-Investigación sin compromiso de implementación. Sirve para explorar una tecnología, patrón o alternativa antes de decidir.
+Исследование без обязательств по реализации. Помогает изучить технологию, паттерн или альтернативу до принятия решения.
 
 ### `/alfred-dev:audit`
 
-Auditoría transversal del proyecto con foco en calidad, seguridad, arquitectura y documentación.
+Сквозной аудит проекта с фокусом на качество, безопасность, архитектуру и документацию.
 
 ### `/alfred-dev:ship`
 
-Comando de entrega y release. Reúne validación final, changelog, versionado y comprobaciones previas a producción.
+Команда поставки и релиза. Объединяет финальную валидацию, changelog, версионирование и проверки перед production.
 
 ---
 
-## Continuidad
+## Непрерывность
 
 ### `/alfred-dev:map-codebase`
 
-Analiza un repo existente y deja artefactos de descubrimiento para trabajar en brownfield con contexto real. Es el mejor punto de entrada cuando el proyecto ya existe y nadie ha documentado su estado.
+Анализирует существующий репозиторий и оставляет артефакты исследования, чтобы работать в brownfield с реальным контекстом. Лучшая точка входа, когда проект уже существует, а его состояние никто не задокументировал.
 
-### `/alfred-dev:discuss <descripción>`
+### `/alfred-dev:discuss <описание>`
 
-Refina una idea, una mejora o una fase concreta antes de abrir un flujo grande. Genera descubrimiento persistente.
+Уточняет идею, улучшение или конкретную фазу до запуска большого процесса. Сохраняет результаты исследования.
 
 ### `/alfred-dev:progress`
 
-Vista operativa del proyecto: progreso, bloqueos, trazabilidad, UAT y situación del trabajo en curso. Absorbé status, standup, blocked, in-progress y validate.
+Операционный обзор проекта: прогресс, блокеры, трассируемость, UAT и состояние текущей работы. Заменяет status, standup, blocked, in-progress и validate.
 
 ### `/alfred-dev:pause`
 
-Pausa el trabajo actual y deja handoff persistente para retomarlo más tarde sin perder continuidad.
+Ставит текущую работу на паузу и оставляет постоянный handoff, чтобы продолжить позже без потери непрерывности.
 
 ### `/alfred-dev:retomar`
 
-Recupera una sesión pausada usando el estado y el handoff guardados.
+Восстанавливает приостановленную сессию по сохранённому состоянию и handoff.
 
 ### `/alfred-dev:uat`
 
-Separa la validación humana o UAT de la validación automática. Es el comando correcto cuando el código y los tests están, pero falta confirmación funcional.
+Отделяет ручную валидацию или UAT от автоматической. Это правильная команда, когда код и тесты готовы, но нет функционального подтверждения.
 
 ---
 
-## Operación
+## Операции
 
-`next` y `search` existen como helpers internos (`commands/next.md`, `commands/search.md`) y no se publican en `plugin.json`.
+`next` и `search` существуют как внутренние helpers (`commands/next.md`, `commands/search.md`) и не публикуются в `plugin.json`.
 
 ### `/alfred-dev:sync-github [owner/repo]`
 
-Sincroniza el tablero operativo local con GitHub Issues usando `gh`, manteniendo la fuente de verdad en local.
+Синхронизирует локальную операционную доску с GitHub Issues через `gh`. Источник истины остаётся локальным.
 
 ---
 
-## Comandos especializados
+## Специализированные команды
 
 ### `/alfred-dev:memory-ui`
 
-Abre una UI local para explorar la memoria SQLite del proyecto: timeline, decisiones, commits, búsqueda y salud de memoria.
+Открывает локальный UI для просмотра SQLite-памяти проекта: timeline, решения, коммиты, поиск и состояние памяти.
 
-### `/alfred-dev:lucius [directorio] [--scope X]`
+### `/alfred-dev:cto [каталог] [--scope X]`
 
-Pide una segunda opinión técnica externa vía Codex CLI. Es una auditoría especializada, no un flujo de implementación.
+Запрашивает внешнее техническое второе мнение через Codex CLI. Это специализированный аудит, а не процесс реализации.
 
 ---
 
-## Cuándo usar cada uno
+## Когда что использовать
 
-| Necesidad | Comando recomendado |
+| Задача | Рекомендуемая команда |
 |---|---|
-| No sabes por dónde empezar | `alfred` |
-| Repo brownfield sin contexto | `map-codebase` |
-| Idea aún inmadura | `discuss` |
-| Nueva feature completa | `feature` |
-| Cambio pequeño | `quick` |
-| Bug concreto | `fix` |
-| Investigación | `spike` |
-| Estado operativo | `progress` |
-| Saber el siguiente paso | `progress` o el helper interno `next` |
-| Retomar una sesión | `retomar` |
-| Validación humana | `uat` |
-| Auditoría profunda | `audit` |
-| Release | `ship` |
-| Memoria histórica | `memory-ui` o `search` |
-| Segunda opinión externa | `lucius` |
+| Не знаешь, с чего начать | `alfred` |
+| Brownfield-репозиторий без контекста | `map-codebase` |
+| Идея ещё сырая | `discuss` |
+| Новая полноценная feature | `feature` |
+| Небольшое изменение | `quick` |
+| Конкретный баг | `fix` |
+| Исследование | `spike` |
+| Операционное состояние | `progress` |
+| Узнать следующий шаг | `progress` или внутренний helper `next` |
+| Продолжить сессию | `retomar` |
+| Ручная валидация | `uat` |
+| Глубокий аудит | `audit` |
+| Релиз | `ship` |
+| История в памяти | `memory-ui` или `search` |
+| Внешнее второе мнение | `cto` |
 
 ---
 
-## Relación con la documentación
+## Связь с документацией
 
-- La lógica de fases y gates está desarrollada en [flows.md](flows.md).
-- La composición dinámica del equipo se explica en [configuration.md](configuration.md).
-- La memoria persistente y la búsqueda se detallan en [memory.md](memory.md).
-- La documentación de operación continua está en [operations.md](operations.md).
+- Логика фаз и gates описана в [flows.md](flows.md).
+- Динамический состав команды объясняется в [configuration.md](configuration.md).
+- Постоянная память и поиск подробно описаны в [memory.md](memory.md).
+- Документация по текущим операциям находится в [operations.md](operations.md).

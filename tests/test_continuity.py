@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para la capa de continuidad inspirada en GSD."""
+"""Tests for the continuity layer inspired by GSD."""
 
 import json
 import os
@@ -12,6 +12,9 @@ from datetime import datetime, timedelta, timezone
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from core.continuity import (
+    load_handoff,
+    _canonical_slash_commands,
+    _public_command,
     CODEBASE_MAP_RELATIVE_PATH,
     CURRENT_RELATIVE_PATH,
     DISCOVERY_MD_RELATIVE_PATH,
@@ -117,7 +120,7 @@ class TestContinuitySuggestions(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo"}, fh)
             with open(os.path.join(tmpdir, CODEBASE_MAP_RELATIVE_PATH), "w", encoding="utf-8") as fh:
-                fh.write("# mapa\n")
+                fh.write("# map\n")
 
             self.assertFalse(needs_codebase_map(tmpdir))
             suggestion = suggest_next_action(tmpdir)
@@ -158,7 +161,7 @@ class TestContinuitySuggestions(unittest.TestCase):
         self.assertEqual(state["equipo_sesion"]["fuente"], "config_persistida")
         self.assertEqual(set(state["equipo_sesion"]["opcionales_activos"]), {"cto"})
         self.assertTrue(state["equipo_sesion"]["opcionales_activos"]["cto"])
-        self.assertIn("Opcionales secuenciales: `cto`.", traceability)
+        self.assertIn("Опциональные последовательно: `cto`.", traceability)
 
     def test_active_state_has_priority_over_brownfield_map(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -166,7 +169,7 @@ class TestContinuitySuggestions(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo"}, fh)
             save_state(
-                create_session("feature", "Panel de administración"),
+                create_session("feature", "Admin panel"),
                 os.path.join(tmpdir, STATE_RELATIVE_PATH),
             )
             suggestion = suggest_next_action(tmpdir)
@@ -177,7 +180,7 @@ class TestContinuitySuggestions(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             save_state(
-                create_session("feature", "Panel de administración"),
+                create_session("feature", "Admin panel"),
                 os.path.join(tmpdir, STATE_RELATIVE_PATH),
             )
 
@@ -200,7 +203,7 @@ class TestContinuitySuggestions(unittest.TestCase):
                     {
                         "command": "fix",
                         "phase": "validacion",
-                        "resume_command": "/alfred-dev:resume",
+                        "resume_command": "/alfred-dev:retomar",
                         "resolved": False,
                     },
                     fh,
@@ -216,10 +219,10 @@ class TestContinuitySuggestions(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo"}, fh)
             with open(os.path.join(tmpdir, "docs", "project", "codebase-map.md"), "w", encoding="utf-8") as fh:
-                fh.write("# mapa\n")
+                fh.write("# map\n")
             with open(os.path.join(tmpdir, "docs", "project", "current.md"), "w", encoding="utf-8") as fh:
                 fh.write("# current\n")
-            session = _complete_session("feature", "Login y usuarios")
+            session = _complete_session("feature", "Login and users")
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             suggestion = suggest_next_action(tmpdir)
@@ -234,10 +237,10 @@ class TestContinuitySuggestions(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo"}, fh)
             with open(os.path.join(tmpdir, "docs", "project", "codebase-map.md"), "w", encoding="utf-8") as fh:
-                fh.write("# mapa\n")
+                fh.write("# map\n")
             with open(os.path.join(tmpdir, "docs", "project", "current.md"), "w", encoding="utf-8") as fh:
                 fh.write("# current\n")
-            session = _complete_session("feature", "Login y usuarios")
+            session = _complete_session("feature", "Login and users")
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
             write_uat_files(tmpdir, raw_request="aprobado validado en manual")
 
@@ -262,7 +265,7 @@ class TestContinuitySuggestions(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo"}, fh)
             with open(os.path.join(tmpdir, "docs", "project", "codebase-map.md"), "w", encoding="utf-8") as fh:
-                fh.write("# mapa\n")
+                fh.write("# map\n")
             with open(os.path.join(tmpdir, "docs", "project", "current.md"), "w", encoding="utf-8") as fh:
                 fh.write("# current\n")
             with open(os.path.join(tmpdir, DISCOVERY_MD_RELATIVE_PATH), "w", encoding="utf-8") as fh:
@@ -279,11 +282,11 @@ class TestContinuitySuggestions(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo"}, fh)
             with open(os.path.join(tmpdir, "docs", "project", "codebase-map.md"), "w", encoding="utf-8") as fh:
-                fh.write("# mapa\n")
+                fh.write("# map\n")
             with open(os.path.join(tmpdir, "docs", "project", "current.md"), "w", encoding="utf-8") as fh:
                 fh.write("# current\n")
             with open(os.path.join(tmpdir, DISCOVERY_MD_RELATIVE_PATH), "w", encoding="utf-8") as fh:
-                fh.write("# Discovery\n\nComando recomendado: /alfred-dev:verify\n")
+                fh.write("# Discovery\n\nComando recomendado: /alfred-dev:uat\n")
 
             suggestion = suggest_next_action(tmpdir)
 
@@ -296,7 +299,7 @@ class TestContinuitySuggestions(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo"}, fh)
             with open(os.path.join(tmpdir, "docs", "project", "codebase-map.md"), "w", encoding="utf-8") as fh:
-                fh.write("# mapa\n")
+                fh.write("# map\n")
             with open(os.path.join(tmpdir, "docs", "project", "current.md"), "w", encoding="utf-8") as fh:
                 fh.write("# current\n")
             with open(os.path.join(tmpdir, DISCOVERY_MD_RELATIVE_PATH), "w", encoding="utf-8") as fh:
@@ -313,7 +316,7 @@ class TestContinuitySuggestions(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo"}, fh)
             with open(os.path.join(tmpdir, CODEBASE_MAP_RELATIVE_PATH), "w", encoding="utf-8") as fh:
-                fh.write("# mapa\n")
+                fh.write("# map\n")
             with open(os.path.join(tmpdir, CURRENT_RELATIVE_PATH), "w", encoding="utf-8") as fh:
                 fh.write("# current\n")
             with open(os.path.join(tmpdir, DISCOVERY_MD_RELATIVE_PATH), "w", encoding="utf-8") as fh:
@@ -334,7 +337,7 @@ class TestContinuitySuggestions(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo"}, fh)
             with open(os.path.join(tmpdir, "README.md"), "w", encoding="utf-8") as fh:
-                fh.write("# Demo\n\nProyecto de prueba.\n")
+                fh.write("# Demo\n\nTest project.\n")
 
             write_codebase_map_files(tmpdir, raw_request="login")
             suggestion = suggest_next_action(tmpdir)
@@ -348,7 +351,7 @@ class TestContinuitySuggestions(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo"}, fh)
             with open(os.path.join(tmpdir, CODEBASE_MAP_RELATIVE_PATH), "w", encoding="utf-8") as fh:
-                fh.write("# mapa\n")
+                fh.write("# map\n")
             with open(os.path.join(tmpdir, CURRENT_RELATIVE_PATH), "w", encoding="utf-8") as fh:
                 fh.write("# Current\n\n- Siguiente comando recomendado: /alfred\n")
 
@@ -385,7 +388,7 @@ class TestContinuityHelpers(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             save_state(
-                create_session("quick", "Ajuste pequeño en cabecera"),
+                create_session("quick", "Small header tweak"),
                 os.path.join(tmpdir, STATE_RELATIVE_PATH),
             )
 
@@ -405,14 +408,14 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("## Рабочее состояние Alfred Dev", result.stdout)
         self.assertIn("Фокус: Продолжить текущий процесс", result.stdout)
-        self.assertIn("/alfred-dev:resume", result.stdout)
+        self.assertIn("/alfred-dev:retomar", result.stdout)
 
     def test_cli_map_codebase_mode_supports_direct_execution(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo", "scripts": {"test": "vitest", "build": "vite build"}}, fh)
             with open(os.path.join(tmpdir, "README.md"), "w", encoding="utf-8") as fh:
-                fh.write("# Demo\n\nRepositorio de prueba para map-codebase.\n")
+                fh.write("# Demo\n\nTest repository for map-codebase.\n")
             with open(os.path.join(tmpdir, "index.js"), "w", encoding="utf-8") as fh:
                 fh.write("console.log('demo')\n")
 
@@ -440,7 +443,7 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo"}, fh)
             with open(os.path.join(tmpdir, "README.md"), "w", encoding="utf-8") as fh:
-                fh.write("# Demo\n\nRepositorio de prueba.\n")
+                fh.write("# Demo\n\nTest repository.\n")
 
             continuity_script = os.path.join(
                 os.path.dirname(__file__),
@@ -532,11 +535,11 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, TRACEABILITY_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 traceability = fh.read()
 
-        self.assertIn("Estado: completado y verificado.", current)
-        self.assertIn("Siguiente comando recomendado: /alfred", current)
-        self.assertIn("Verificación/UAT: aprobada.", progress)
-        self.assertIn("UAT actual: aprobada.", traceability)
-        self.assertIn("Estado de verify: `done`.", traceability)
+        self.assertIn("Статус: завершено и проверено.", current)
+        self.assertIn("Рекомендуемая следующая команда: /alfred", current)
+        self.assertIn("Проверка/UAT: одобрена.", progress)
+        self.assertIn("Текущая UAT: одобрена.", traceability)
+        self.assertIn("Статус verify: `done`.", traceability)
 
     def test_cli_helper_first_chain_updates_next_step_consistently(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -656,7 +659,7 @@ class TestContinuityHelpers(unittest.TestCase):
             )
             self.assertEqual(quick.returncode, 0, msg=quick.stderr)
             self.assertIn("## Quick подготовлен", quick.stdout)
-            self.assertIn("/alfred-dev:verify", quick.stdout)
+            self.assertIn("/alfred-dev:uat", quick.stdout)
             self.assertIn("без блоков Insight", quick.stdout)
             self.assertFalse(quick.stdout.lstrip().startswith("{"))
 
@@ -677,7 +680,7 @@ class TestContinuityHelpers(unittest.TestCase):
             self.assertEqual(quick_json.returncode, 0, msg=quick_json.stderr)
             quick_json_payload = json.loads(quick_json.stdout)
             self.assertEqual(quick_json_payload["command"], "quick")
-            self.assertEqual(quick_json_payload["next_command"], "/alfred-dev:verify")
+            self.assertEqual(quick_json_payload["next_command"], "/alfred-dev:uat")
 
             next_after_quick = subprocess.run(
                 [sys.executable, continuity_script, "next", tmpdir, "--json"],
@@ -717,7 +720,7 @@ class TestContinuityHelpers(unittest.TestCase):
 
             summary = render_flow_start_summary(result)
             self.assertIn("`FEATURE_HEADLESS_START`", summary)
-            self.assertIn("/alfred-dev:resume", summary)
+            self.assertIn("/alfred-dev:retomar", summary)
             self.assertIn("Я не отмечал фазы как завершённые", summary)
 
     def test_cli_start_flow_outputs_markdown_and_json(self):
@@ -852,7 +855,7 @@ class TestContinuityHelpers(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, "src"), exist_ok=True)
             with open(os.path.join(tmpdir, "src", "main.py"), "w", encoding="utf-8") as fh:
-                fh.write("print('hola')\n")
+                fh.write("print('hello')\n")
             self.assertTrue(project_has_codebase(tmpdir))
             self.assertTrue(needs_codebase_map(tmpdir))
 
@@ -860,22 +863,47 @@ class TestContinuityHelpers(unittest.TestCase):
         session = create_session("feature", "Autenticación")
         self.assertEqual(get_pending_gate(session), "usuario")
 
+    def test_load_handoff_maps_legacy_resume_command(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
+            with open(os.path.join(tmpdir, HANDOFF_JSON_RELATIVE_PATH), "w", encoding="utf-8") as fh:
+                json.dump(
+                    {
+                        "command": "fix",
+                        "phase": "validacion",
+                        "resume_command": "/alfred-dev:resume",
+                        "resolved": False,
+                    },
+                    fh,
+                )
+            handoff = load_handoff(tmpdir)
+        self.assertEqual(handoff["resume_command"], "/alfred-dev:retomar")
+
+    def test_public_command_maps_internal_keys(self):
+        self.assertEqual(_public_command("resume"), "retomar")
+        self.assertEqual(_public_command("verify"), "uat")
+        self.assertEqual(_public_command("feature"), "feature")
+        self.assertEqual(
+            _canonical_slash_commands("Закрой через /alfred-dev:verify."),
+            "Закрой через /alfred-dev:uat.",
+        )
+
     def test_build_handoff_uses_active_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            state = create_session("feature", "Sistema de login")
+            state = create_session("feature", "Login system")
             save_state(state, os.path.join(tmpdir, STATE_RELATIVE_PATH))
             handoff = build_handoff(tmpdir)
         self.assertIsNotNone(handoff)
         self.assertEqual(handoff["command"], "feature")
         self.assertEqual(handoff["phase"], "producto")
-        self.assertEqual(handoff["resume_command"], "/alfred-dev:resume")
+        self.assertEqual(handoff["resume_command"], "/alfred-dev:retomar")
         self.assertIn("Продолжить", handoff["next_step"])
 
     def test_write_handoff_files_creates_json_and_markdown(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            state = create_session("fix", "Bug en login")
+            state = create_session("fix", "Login bug")
             save_state(state, os.path.join(tmpdir, STATE_RELATIVE_PATH))
             result = write_handoff_files(tmpdir)
             self.assertIsNotNone(result)
@@ -885,13 +913,13 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, HANDOFF_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 content = fh.read()
 
-        self.assertIn("Handoff de Alfred Dev", content)
-        self.assertIn("Comando de retorno", content)
+        self.assertIn("Handoff Alfred Dev", content)
+        self.assertIn("Команда возврата", content)
 
     def test_mark_and_clear_paused_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            state = create_session("feature", "Panel de usuarios")
+            state = create_session("feature", "Users panel")
             save_state(state, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             paused = mark_session_paused(tmpdir)
@@ -908,7 +936,7 @@ class TestContinuityHelpers(unittest.TestCase):
     def test_pause_and_resume_session_helpers(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            state = create_session("feature", "Panel de usuarios")
+            state = create_session("feature", "Users panel")
             save_state(state, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             paused = pause_session(tmpdir)
@@ -928,7 +956,7 @@ class TestContinuityHelpers(unittest.TestCase):
     def test_cli_pause_and_resume_render_markdown_by_default_and_json_on_demand(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            state = create_session("feature", "Panel de usuarios")
+            state = create_session("feature", "Users panel")
             save_state(state, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             continuity_script = os.path.join(
@@ -946,7 +974,7 @@ class TestContinuityHelpers(unittest.TestCase):
             )
             self.assertEqual(paused.returncode, 0, msg=paused.stderr)
             self.assertIn("## Сессия на паузе", paused.stdout)
-            self.assertIn("`/alfred-dev:resume`", paused.stdout)
+            self.assertIn("`/alfred-dev:retomar`", paused.stdout)
             self.assertFalse(paused.stdout.lstrip().startswith("{"))
 
             paused_json = subprocess.run(
@@ -990,7 +1018,7 @@ class TestContinuityHelpers(unittest.TestCase):
                     {
                         "command": "fix",
                         "phase": "calidad",
-                        "resume_command": "/alfred-dev:resume",
+                        "resume_command": "/alfred-dev:retomar",
                         "resolved": False,
                     },
                     fh,
@@ -1012,7 +1040,7 @@ class TestContinuityHelpers(unittest.TestCase):
     def test_resume_session_does_not_reopen_completed_state_without_handoff(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            session = _complete_session("feature", "Entrega cerrada")
+            session = _complete_session("feature", "Closed delivery")
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             resumed = resume_session(tmpdir)
@@ -1036,7 +1064,7 @@ class TestContinuityHelpers(unittest.TestCase):
     def test_build_verification_target_blocks_active_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            session = create_session("feature", "Panel de usuarios")
+            session = create_session("feature", "Users panel")
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             target = build_verification_target(tmpdir)
@@ -1059,8 +1087,8 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, UAT_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 content = fh.read()
 
-        self.assertIn("Verificación manual / UAT", content)
-        self.assertIn("/alfred-dev:verify aprobado", content)
+        self.assertIn("Ручная проверка / UAT", content)
+        self.assertIn("/alfred-dev:uat aprobado", content)
 
     def test_cli_verify_renders_markdown_by_default_and_json_on_demand(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1082,9 +1110,9 @@ class TestContinuityHelpers(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(verify.returncode, 0, msg=verify.stderr)
-            self.assertIn("Verificación manual / UAT", verify.stdout)
-            self.assertIn("**Estado:** pendiente", verify.stdout)
-            self.assertIn("## Checklist de validación", verify.stdout)
+            self.assertIn("Ручная проверка / UAT", verify.stdout)
+            self.assertIn("**Статус:** в ожидании", verify.stdout)
+            self.assertIn("## Checklist проверки", verify.stdout)
             self.assertFalse(verify.stdout.lstrip().startswith("{"))
 
             verify_json = subprocess.run(
@@ -1148,7 +1176,7 @@ class TestContinuityHelpers(unittest.TestCase):
 
         self.assertEqual(result["status"], "rejected")
         blocked = next(task for task in board["blocked"] if task["id"] == active["kanban_task_id"])
-        self.assertIn("UAT rechazada", blocked["notes"])
+        self.assertIn("UAT отклонена", blocked["notes"])
         self.assertFalse(any(task["id"] == active["kanban_verify_task_id"] for task in board["backlog"]))
 
     def test_write_uat_files_approved_creates_done_task_when_no_kanban_exists(self):
@@ -1241,7 +1269,7 @@ class TestContinuityHelpers(unittest.TestCase):
             save_prefetch_result(tmpdir, payload)
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             save_state(
-                create_session("feature", "Panel de usuarios"),
+                create_session("feature", "Users panel"),
                 os.path.join(tmpdir, STATE_RELATIVE_PATH),
             )
 
@@ -1267,7 +1295,7 @@ class TestContinuityHelpers(unittest.TestCase):
                     {
                         "command": "feature",
                         "phase": "producto",
-                        "resume_command": "/alfred-dev:resume",
+                        "resume_command": "/alfred-dev:retomar",
                         "resolved": False,
                     },
                     fh,
@@ -1290,7 +1318,7 @@ class TestContinuityHelpers(unittest.TestCase):
             }
             save_prefetch_result(tmpdir, payload)
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            session = _complete_session("feature", "Login y usuarios")
+            session = _complete_session("feature", "Login and users")
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             consumed = consume_prefetch_result(tmpdir, "alfred")
@@ -1371,7 +1399,7 @@ class TestContinuityHelpers(unittest.TestCase):
                 "phase": "ejecucion_acotada",
                 "description": "Ajustar copy",
                 "needs_codebase_map": False,
-                "next_command": "/alfred-dev:verify",
+                "next_command": "/alfred-dev:uat",
             }
         )
 
@@ -1381,7 +1409,7 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertIn("Главный риск", discuss_summary)
         self.assertIn("/alfred-dev:feature", discuss_summary)
         self.assertIn("## Quick подготовлен", quick_summary)
-        self.assertIn("/alfred-dev:verify", quick_summary)
+        self.assertIn("/alfred-dev:uat", quick_summary)
 
     def test_start_quick_session_blocks_when_uat_is_pending(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1390,10 +1418,10 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo"}, fh)
             with open(os.path.join(tmpdir, "docs", "project", "codebase-map.md"), "w", encoding="utf-8") as fh:
-                fh.write("# mapa\n")
+                fh.write("# map\n")
             with open(os.path.join(tmpdir, "docs", "project", "current.md"), "w", encoding="utf-8") as fh:
                 fh.write("# current\n")
-            session = _complete_session("feature", "Login y usuarios")
+            session = _complete_session("feature", "Login and users")
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             with self.assertRaises(RuntimeError):
@@ -1422,9 +1450,9 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(current_path, "r", encoding="utf-8") as fh:
                 current_content = fh.read()
 
-        self.assertIn("## Comando recomendado", discovery_content)
+        self.assertIn("## Рекомендуемая команда", discovery_content)
         self.assertIn("/alfred-dev:feature", discovery_content)
-        self.assertIn("Estado: refinado previo preparado", current_content)
+        self.assertIn("Статус: предварительное уточнение подготовлено", current_content)
 
     def test_helper_first_commands_capture_richer_memory_when_enabled(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1432,7 +1460,7 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo", "scripts": {"test": "vitest"}}, fh)
             with open(os.path.join(tmpdir, "README.md"), "w", encoding="utf-8") as fh:
-                fh.write("# Demo\n\nProyecto para validar memoria helper-first.\n")
+                fh.write("# Demo\n\nProject to validate helper-first memory.\n")
 
             write_codebase_map_files(tmpdir, raw_request="login")
             write_discovery_files(tmpdir, raw_request="Refinar login social")
@@ -1452,9 +1480,9 @@ class TestContinuityHelpers(unittest.TestCase):
             self.assertGreaterEqual(len(decisions), 3)
             self.assertGreaterEqual(len(helper_events), 3)
             titles = [item["title"] for item in decisions]
-            self.assertIn("Arrancar por map-codebase antes de implementar", titles)
-            self.assertTrue(any(title.startswith("Refinar antes de implementar:") for title in titles))
-            self.assertTrue(any(title.startswith("Clasificar como quick:") for title in titles))
+            self.assertIn("Начать с map-codebase перед реализацией", titles)
+            self.assertTrue(any(title.startswith("Уточнить перед реализацией:") for title in titles))
+            self.assertTrue(any(title.startswith("Классифицировать как quick:") for title in titles))
 
     def test_helper_first_commands_seed_operational_artifacts_for_ui(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1462,7 +1490,7 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
                 json.dump({"name": "demo", "scripts": {"test": "vitest"}}, fh)
             with open(os.path.join(tmpdir, "README.md"), "w", encoding="utf-8") as fh:
-                fh.write("# Demo\n\nProyecto para validar artefactos helper-first.\n")
+                fh.write("# Demo\n\nProject to validate helper-first artifacts.\n")
 
             write_codebase_map_files(tmpdir, raw_request="login")
             write_discovery_files(tmpdir, raw_request="Refinar login social")
@@ -1477,8 +1505,8 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, KANBAN_IN_PROGRESS_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 in_progress_content = fh.read()
 
-        self.assertIn("Flujo operativo: `quick`.", progress_content)
-        self.assertIn("Riesgo principal", traceability_content)
+        self.assertIn("Рабочий процесс: `quick`.", progress_content)
+        self.assertIn("Главный риск", traceability_content)
         self.assertIn("/alfred-dev:feature", backlog_content)
         self.assertIn("ajustar copy del login", in_progress_content)
 
@@ -1498,13 +1526,13 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, KANBAN_BACKLOG_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 backlog_content = fh.read()
 
-        self.assertIn("Estado: activo.", current_content)
-        self.assertIn("/alfred-dev:resume", current_content)
-        self.assertIn("Flujo operativo: `quick`.", progress_content)
+        self.assertIn("Статус: активно.", current_content)
+        self.assertIn("/alfred-dev:retomar", current_content)
+        self.assertIn("Рабочий процесс: `quick`.", progress_content)
         self.assertIn("ajustar copy del login", progress_content)
-        self.assertIn("Kanban visible:", progress_content)
+        self.assertIn("Видимый kanban:", progress_content)
         self.assertIn("ajustar copy del login", in_progress_content)
-        self.assertIn("/alfred-dev:verify", backlog_content)
+        self.assertIn("/alfred-dev:uat", backlog_content)
 
     def test_write_codebase_map_files_creates_brownfield_artifacts(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1517,9 +1545,9 @@ class TestContinuityHelpers(unittest.TestCase):
                     fh,
                 )
             with open(os.path.join(tmpdir, "README.md"), "w", encoding="utf-8") as fh:
-                fh.write("# Demo\n\nAplicación de ejemplo para validar Alfred.\n")
+                fh.write("# Demo\n\nSample app to validate Alfred.\n")
             with open(os.path.join(tmpdir, "index.js"), "w", encoding="utf-8") as fh:
-                fh.write("console.log('hola')\n")
+                fh.write("console.log('hello')\n")
 
             result = write_codebase_map_files(tmpdir, raw_request="autenticación")
 
@@ -1535,15 +1563,30 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(current_path, "r", encoding="utf-8") as fh:
                 current_content = fh.read()
 
-        self.assertIn("## Stack y runtime detectados", codebase_map_content)
-        self.assertIn("Aplicación de ejemplo para validar Alfred.", codebase_map_content)
+        self.assertIn("## Обнаруженный stack и runtime", codebase_map_content)
+        self.assertIn("Sample app to validate Alfred.", codebase_map_content)
         self.assertIn("index.js", codebase_map_content)
         self.assertIn("/alfred-dev:discuss", current_content)
+
+    def test_write_codebase_map_files_names_jvm_project_after_directory(self):
+        with tempfile.TemporaryDirectory() as parent:
+            tmpdir = os.path.join(parent, "invoices")
+            os.makedirs(tmpdir)
+            with open(os.path.join(tmpdir, "pom.xml"), "w", encoding="utf-8") as fh:
+                fh.write("<project><artifactId>spring-boot-starter-web</artifactId></project>")
+            with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
+                json.dump({"name": "invoices-frontend", "dependencies": {"htmx.org": "2.0.0"}}, fh)
+
+            result = write_codebase_map_files(tmpdir)
+
+        self.assertEqual(result["project_name"], "invoices")
+        self.assertEqual(result["stack"]["runtime"], "jvm")
+        self.assertEqual(result["stack"]["framework"], "spring-boot")
 
     def test_write_codebase_map_files_blocks_active_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            save_state(create_session("feature", "Alta de usuarios"), os.path.join(tmpdir, STATE_RELATIVE_PATH))
+            save_state(create_session("feature", "User signup"), os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             with self.assertRaises(RuntimeError):
                 write_codebase_map_files(tmpdir, raw_request="Refinar onboarding")
@@ -1551,7 +1594,7 @@ class TestContinuityHelpers(unittest.TestCase):
     def test_write_discovery_files_blocks_active_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            save_state(create_session("feature", "Alta de usuarios"), os.path.join(tmpdir, STATE_RELATIVE_PATH))
+            save_state(create_session("feature", "User signup"), os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             with self.assertRaises(RuntimeError):
                 write_discovery_files(tmpdir, raw_request="Refinar onboarding")
@@ -1560,11 +1603,11 @@ class TestContinuityHelpers(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             os.makedirs(os.path.join(tmpdir, "docs", "project", "kanban"), exist_ok=True)
-            save_state(create_session("quick", "Ajuste local"), os.path.join(tmpdir, STATE_RELATIVE_PATH))
+            save_state(create_session("quick", "Local tweak"), os.path.join(tmpdir, STATE_RELATIVE_PATH))
             with open(os.path.join(tmpdir, "docs", "project", "progress.md"), "w", encoding="utf-8") as fh:
-                fh.write("# Progreso\n\n- 1 tarea en curso\n")
+                fh.write("# Progress\n\n- 1 task in progress\n")
             with open(os.path.join(tmpdir, "docs", "project", "traceability.md"), "w", encoding="utf-8") as fh:
-                fh.write("# Traceability\n\n- CA-01 sin test asociado\n")
+                fh.write("# Traceability\n\n- CA-01 without a linked test\n")
             with open(os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"), "w", encoding="utf-8") as fh:
                 fh.write("# Backlog\n\n- T-002 Pulir copy\n")
             with open(os.path.join(tmpdir, "docs", "project", "kanban", "in-progress.md"), "w", encoding="utf-8") as fh:
@@ -1630,7 +1673,7 @@ class TestContinuityHelpers(unittest.TestCase):
             with open(os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"), "w", encoding="utf-8") as fh:
                 fh.write(
                     "# Backlog\n\n"
-                    "### [T-010] Validar 'Login' con /alfred-dev:verify.\n\n"
+                    "### [T-010] Validar 'Login' con /alfred-dev:uat.\n\n"
                     "- **Agente:** alfred:verify\n"
                 )
             with open(os.path.join(tmpdir, "docs", "project", "kanban", "in-progress.md"), "w", encoding="utf-8") as fh:
@@ -1658,7 +1701,7 @@ class TestContinuityHelpers(unittest.TestCase):
     def test_build_progress_snapshot_overview_cards_prefer_handoff_for_paused_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            state = create_session("feature", "Panel de usuarios")
+            state = create_session("feature", "Users panel")
             state["paused_at"] = datetime.now(timezone.utc).isoformat()
             state["paused_via"] = "/alfred-dev:pause"
             save_state(state, os.path.join(tmpdir, STATE_RELATIVE_PATH))
@@ -1667,29 +1710,29 @@ class TestContinuityHelpers(unittest.TestCase):
             snapshot = build_progress_snapshot(tmpdir)
 
         labels = [card["label"] for card in snapshot["overview_cards"]]
-        self.assertIn("Handoff pendiente", labels)
+        self.assertIn("Незакрытый handoff", labels)
         self.assertNotIn("Flujo activo", labels)
-        self.assertEqual(snapshot["overview_cards"][0]["label"], "Handoff pendiente")
+        self.assertEqual(snapshot["overview_cards"][0]["label"], "Незакрытый handoff")
 
     def test_build_progress_snapshot_overview_cards_show_completed_session_not_active(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            session = _complete_session("feature", "Checkout nuevo")
+            session = _complete_session("feature", "New checkout")
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             snapshot = build_progress_snapshot(tmpdir)
 
         labels = [card["label"] for card in snapshot["overview_cards"]]
-        self.assertIn("Último flujo completado", labels)
+        self.assertIn("Последний завершённый процесс", labels)
         self.assertNotIn("Flujo activo", labels)
-        self.assertEqual(snapshot["overview_cards"][0]["label"], "Último flujo completado")
-        self.assertIn("UAT pendiente", snapshot["overview_cards"][0]["body"])
+        self.assertEqual(snapshot["overview_cards"][0]["label"], "Последний завершённый процесс")
+        self.assertIn("UAT в ожидании", snapshot["overview_cards"][0]["body"])
 
     def test_build_progress_snapshot_is_pure_by_default(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             save_state(
-                create_session("feature", "Checkout nuevo"),
+                create_session("feature", "New checkout"),
                 os.path.join(tmpdir, STATE_RELATIVE_PATH),
             )
 
@@ -1701,7 +1744,7 @@ class TestContinuityHelpers(unittest.TestCase):
     def test_build_progress_snapshot_project_signal_cards_prefer_handoff_for_paused_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            state = create_session("feature", "Panel de usuarios")
+            state = create_session("feature", "Users panel")
             state["paused_at"] = datetime.now(timezone.utc).isoformat()
             state["paused_via"] = "/alfred-dev:pause"
             save_state(state, os.path.join(tmpdir, STATE_RELATIVE_PATH))
@@ -1717,7 +1760,7 @@ class TestContinuityHelpers(unittest.TestCase):
     def test_build_progress_snapshot_project_signal_cards_do_not_repeat_completed_state_or_next_step(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            session = _complete_session("feature", "Checkout nuevo")
+            session = _complete_session("feature", "New checkout")
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             snapshot = build_progress_snapshot(tmpdir)
@@ -1725,36 +1768,36 @@ class TestContinuityHelpers(unittest.TestCase):
         titles = [card["title"] for card in snapshot["project_signal_cards"]]
         self.assertNotIn("Current", titles)
         all_items = [item for card in snapshot["project_signal_cards"] for item in card["items"]]
-        self.assertFalse(any(item.startswith("Trabajo en curso:") for item in all_items))
+        self.assertFalse(any(item.startswith("Работа в процессе:") for item in all_items))
 
     def test_build_progress_snapshot_project_signal_cards_do_not_repeat_uat_from_overview(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            session = _complete_session("feature", "Checkout nuevo")
+            session = _complete_session("feature", "New checkout")
             save_state(session, os.path.join(tmpdir, STATE_RELATIVE_PATH))
             write_uat_files(tmpdir, raw_request="aprobado smoke manual correcto")
 
             snapshot = build_progress_snapshot(tmpdir)
 
         traceability_card = next(
-            card for card in snapshot["project_signal_cards"] if card["title"] == "Trazabilidad"
+            card for card in snapshot["project_signal_cards"] if card["title"] == "Трассируемость"
         )
         self.assertFalse(any(item.startswith("UAT actual:") for item in traceability_card["items"]))
         self.assertFalse(any(item.startswith("Objetivo trazado:") for item in traceability_card["items"]))
 
-    def test_build_progress_snapshot_project_signal_cards_use_spanish_lane_titles(self):
+    def test_build_progress_snapshot_project_signal_cards_use_russian_lane_titles(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            state = create_session("feature", "Panel de usuarios")
+            state = create_session("feature", "Users panel")
             save_state(state, os.path.join(tmpdir, STATE_RELATIVE_PATH))
             with open(os.path.join(tmpdir, KANBAN_BLOCKED_RELATIVE_PATH), "w", encoding="utf-8") as fh:
-                fh.write("# Blocked\n\n### [T-090] Contrato legal\n")
+                fh.write("# Blocked\n\n### [T-090] Legal contract\n")
 
             snapshot = build_progress_snapshot(tmpdir)
 
         titles = [card["title"] for card in snapshot["project_signal_cards"]]
-        self.assertIn("En curso", titles)
-        self.assertIn("Bloqueos", titles)
+        self.assertIn("В работе", titles)
+        self.assertIn("Блокеры", titles)
         self.assertNotIn("In progress", titles)
         self.assertNotIn("Blocked", titles)
 
@@ -1765,7 +1808,7 @@ class TestContinuityHelpers(unittest.TestCase):
                 json.dump(
                     {
                         "comando": "spike",
-                        "descripcion": "Evaluar Bun para jobs",
+                        "descripcion": "Evaluate Bun for jobs",
                         "fase_actual": "exploracion",
                         "fase_numero": 0,
                         "fases_completadas": [],
@@ -1784,11 +1827,11 @@ class TestContinuityHelpers(unittest.TestCase):
             snapshot = build_progress_snapshot(tmpdir)
 
         team_card = next(
-            card for card in snapshot["project_signal_cards"] if card["title"] == "Equipo runtime"
+            card for card in snapshot["project_signal_cards"] if card["title"] == "Runtime-команда"
         )
-        self.assertIn("Origen runtime: configuración persistida.", team_card["items"])
+        self.assertIn("Источник runtime: сохранённая конфигурация.", team_card["items"])
         self.assertIn(
-            "Opcionales solo bajo demanda en este flujo: `cto`.",
+            "Опциональные агенты только по запросу в этом процессе: `cto`.",
             team_card["items"],
         )
 
@@ -1796,7 +1839,7 @@ class TestContinuityHelpers(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             save_state(
-                create_session("fix", "Regresión en checkout"),
+                create_session("fix", "Checkout regression"),
                 os.path.join(tmpdir, STATE_RELATIVE_PATH),
             )
 
@@ -1812,11 +1855,11 @@ class TestContinuityHelpers(unittest.TestCase):
             "state": None,
             "handoff": None,
             "uat": None,
-            "progress_signals": ["2 tareas completadas"],
+            "progress_signals": ["2 tasks done"],
             "current_signals": [],
-            "traceability_signals": ["CA-01 cubierto"],
+            "traceability_signals": ["CA-01 covered"],
             "kanban": {
-                "backlog": ["T-003 Ajustar copy"],
+                "backlog": ["T-003 Adjust copy"],
                 "in_progress": [],
                 "done": ["T-001 Login", "T-002 Logout"],
                 "blocked": [],
@@ -1825,7 +1868,7 @@ class TestContinuityHelpers(unittest.TestCase):
             },
             "next_action": {
                 "command": "quick",
-                "reason": "La siguiente tarea es pequeña y acotada.",
+                "reason": "The next task is small and bounded.",
             },
             "bypass_path": None,
         }
@@ -1835,16 +1878,16 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertIn("Рабочая сводка проекта", content)
         self.assertIn("Команда: `/alfred-dev:quick`", content)
         self.assertIn("Фокус:", content)
-        self.assertIn("CA-01 cubierto", content)
+        self.assertIn("CA-01 covered", content)
 
     def test_render_progress_markdown_prefers_handoff_for_paused_session(self):
-        state = create_session("feature", "Panel de usuarios")
+        state = create_session("feature", "Users panel")
         state["paused_at"] = datetime.now(timezone.utc).isoformat()
         state["paused_via"] = "/alfred-dev:pause"
         handoff = {
             "command": "feature",
             "phase": "producto",
-            "resume_command": "/alfred-dev:resume",
+            "resume_command": "/alfred-dev:retomar",
             "resolved": False,
         }
         snapshot = {
@@ -1864,7 +1907,7 @@ class TestContinuityHelpers(unittest.TestCase):
             },
             "next_action": {
                 "command": "resume",
-                "reason": "Hay un handoff pendiente.",
+                "reason": "There is an open handoff.",
             },
             "bypass_path": None,
         }
@@ -1873,30 +1916,30 @@ class TestContinuityHelpers(unittest.TestCase):
 
         self.assertIn("### Незакрытый handoff", content)
         self.assertNotIn("### Активный процесс", content)
-        self.assertIn("Команда: `/alfred-dev:resume`", content)
+        self.assertIn("Команда: `/alfred-dev:retomar`", content)
 
     def test_render_next_markdown_uses_structured_guidance(self):
         content = render_next_markdown(
             {
                 "command": "verify",
-                "reason": "Falta cerrar la UAT.",
+                "reason": "The UAT is still open.",
                 "source": "verify",
-                "source_label": "verificación/UAT",
-                "focus": "Cerrar la verificación pendiente",
-                "directive": "Registra la UAT antes de seguir.",
+                "source_label": "verification/UAT",
+                "focus": "Close the pending verification",
+                "directive": "Record the UAT before you continue.",
             }
         )
 
         self.assertIn("## Следующий рабочий шаг", content)
-        self.assertIn("Фокус: Cerrar la verificación pendiente", content)
-        self.assertIn("Источник: verificación/UAT (`verify`)", content)
-        self.assertIn("Команда: `/alfred-dev:verify`", content)
-        self.assertIn("Что делать сейчас: Registra la UAT antes de seguir.", content)
+        self.assertIn("Фокус: Close the pending verification", content)
+        self.assertIn("Источник: verification/UAT (`verify`)", content)
+        self.assertIn("Команда: `/alfred-dev:uat`", content)
+        self.assertIn("Что делать сейчас: Record the UAT before you continue.", content)
 
     def test_render_status_markdown_includes_structured_next_action_and_runtime_summary(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
-            state = create_session("feature", "Checkout nuevo")
+            state = create_session("feature", "New checkout")
             save_state(state, os.path.join(tmpdir, STATE_RELATIVE_PATH))
 
             snapshot = build_status_snapshot(tmpdir)
@@ -1907,11 +1950,11 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertIn("### Проект", content)
         self.assertIn("### Записанные фазы", content)
         self.assertIn("Фокус: Продолжить текущий процесс", content)
-        self.assertIn("Команда: `/alfred-dev:resume`", content)
+        self.assertIn("Команда: `/alfred-dev:retomar`", content)
 
 
 class TestLegacyDesignerPhaseResult(unittest.TestCase):
-    """Estados antiguos guardan la elección visual como `selina_*`."""
+    """Old states store the visual choice as `selina_*`."""
 
     def test_legacy_selina_keys_are_read(self):
         from core.continuity import _designer_field, _phase_task_evidence

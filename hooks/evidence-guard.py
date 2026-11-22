@@ -1,24 +1,23 @@
 #!/usr/bin/env python3
 """
-Hook PostToolUse para Bash: verificacion de evidencia.
+PostToolUse hook for Bash: evidence verification.
 
-Implementa el patron «evidencia antes que afirmaciones» inspirado en el
-plugin Ralph Loop. Registra en un fichero temporal las ejecuciones de
-tests detectadas durante la sesion, de modo que otros componentes del
-plugin (stop-hook, check_gate) puedan verificar que cuando un agente
-afirma que los tests pasan, efectivamente se ejecutaron.
+Implements the "evidence before claims" pattern, inspired by the Ralph
+Loop plugin. Records the test runs detected during the session in a
+temporary file, so other plugin components (stop-hook, check_gate) can
+verify that tests really ran when an agent claims that they pass.
 
-La logica de deteccion y almacenamiento esta en ``evidence_guard_lib.py``
-para que otros modulos puedan importarla sin ejecutar el hook.
+The detection and storage logic lives in ``evidence_guard_lib.py`` so
+other modules can import it without running the hook.
 
-Politica fail-open: nunca bloquea el flujo de trabajo.
+Fail-open policy: never blocks the workflow.
 """
 
 import json
 import os
 import sys
 
-# Anadir el directorio de hooks al path para importar la libreria
+# Add the hooks directory to the path to import the library
 _HOOKS_DIR = os.path.dirname(os.path.abspath(__file__))
 if _HOOKS_DIR not in sys.path:
     sys.path.insert(0, _HOOKS_DIR)
@@ -33,7 +32,7 @@ _LOG_PREFIX = "[evidence-guard]"
 
 
 def _get_tool_result(data: dict) -> dict:
-    """Normaliza payloads actuales e historicos del runtime de hooks."""
+    """Normalize current and legacy payloads of the hook runtime."""
     for key in ("tool_response", "tool_result", "tool_output"):
         value = data.get(key)
         if isinstance(value, dict):
@@ -44,13 +43,13 @@ def _get_tool_result(data: dict) -> dict:
 
 
 def main():
-    """Punto de entrada del hook PostToolUse para Bash.
+    """Entry point of the PostToolUse hook for Bash.
 
-    Lee el JSON de stdin, detecta si el comando ejecutado es un runner
-    de tests, analiza su resultado y lo registra como evidencia.
+    Reads the JSON from stdin, checks if the command is a test runner,
+    analyzes its result and records it as evidence.
 
-    Politica fail-open: cualquier error inesperado se reporta en stderr
-    pero el hook siempre termina con exit 0 para no bloquear el flujo.
+    Fail-open policy: any unexpected error goes to stderr, but the hook
+    always exits with 0 so it does not block the workflow.
     """
     try:
         data = json.load(sys.stdin)
@@ -69,13 +68,13 @@ def main():
         if not command or not is_test_command(command):
             sys.exit(0)
 
-        # Extraer la salida del comando
+        # Extract the command output
         stdout = tool_result.get("stdout", "") or tool_result.get("output", "")
         stderr = tool_result.get("stderr", "")
         exit_code = tool_result.get("exit_code")
         output = f"{stdout}\n{stderr}"
 
-        # Detectar resultado y registrar evidencia
+        # Detect the result and record evidence
         result = detect_test_result(output, exit_code=exit_code)
         record_evidence(command, result)
 

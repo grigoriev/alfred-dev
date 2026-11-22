@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""UserPromptSubmit fail-open: inyecta la ruta Alfred si el texto no trae slash."""
+"""UserPromptSubmit, fail-open: inject the Alfred route if the prompt has no slash command."""
 
 from __future__ import annotations
 

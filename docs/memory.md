@@ -1,17 +1,17 @@
-# Memoria persistente
+# Постоянная память
 
-Las conversaciones de Claude Code son efímeras por naturaleza: cuando una sesión termina, todo el contexto acumulado --decisiones de diseño, razones para descartar alternativas, compromisos entre rendimiento y mantenibilidad, el hilo de razonamiento que llevo a elegir una arquitectura concreta-- desaparece sin dejar rastro. Esto significa que cada vez que el desarrollador abre una sesión nueva, Alfred parte de cero. Si hace tres semanas se decidio usar SQLite en lugar de PostgreSQL tras un análisis detallado de las restricciones del proyecto, Alfred no lo sabe; si se descarto una aproximacion con Redis porque el despliegue no podia depender de servicios externos, Alfred tampoco lo recuerda.
+Разговоры в Claude Code по своей природе эфемерны: когда сессия заканчивается, весь накопленный контекст исчезает без следа. Это решения по дизайну, причины отказа от альтернатив, компромиссы между производительностью и сопровождаемостью, ход рассуждений, который привёл к конкретной архитектуре. Значит, каждый раз, когда разработчик открывает новую сессию, Alfred начинает с нуля. Если три недели назад после подробного анализа ограничений проекта решили использовать SQLite вместо PostgreSQL, Alfred этого не знает. Если отказались от подхода с Redis, потому что развёртывание не могло зависеть от внешних сервисов, Alfred этого тоже не помнит.
 
-La memoria persistente resuelve este problema almacenando decisiones, iteraciones, commits y eventos del flujo de trabajo en una base de datos SQLite local. Cada proyecto tiene su propia base de datos en `.claude/alfred-memory.db`, aislada del resto. Gracias a esta capa, Alfred puede responder preguntas como "por que decidimos no usar un ORM" o "que se implemento en la iteracion 3" con evidencia verificable, no con inferencias. La trazabilidad que proporciona es completa: desde el problema que se resolvia hasta el commit que lo implemento, pasando por las alternativas que se descartaron y la justificacion de cada eleccion.
+Постоянная память решает эту проблему: она хранит решения, итерации, коммиты и события процесса в локальной базе SQLite. У каждого проекта своя база в `.claude/alfred-memory.db`, изолированная от остальных. Благодаря этому слою Alfred может отвечать на вопросы вроде «почему мы решили не использовать ORM» или «что реализовали в итерации 3» с проверяемыми подтверждениями, а не догадками. Трассируемость полная: от решаемой проблемы до коммита, который её реализовал, включая отвергнутые альтернативы и обоснование каждого выбора.
 
-La memoria es una **capa lateral configurable**. `load_config()` parte de `enabled: false`, pero el bootstrap del proyecto siembra `.claude/alfred-dev.local.md` con memoria activa en la primera sesión si el fichero local no existía. A partir de ahí, el usuario puede desactivarla explícitamente. Si la memoria no está activa, el flujo del plugin sigue funcionando; simplemente, las sesiones futuras no tendran acceso al histórico.
+Память это **настраиваемый боковой слой**. `load_config()` стартует с `enabled: false`, но bootstrap проекта создаёт `.claude/alfred-dev.local.md` с включённой памятью в первой сессии, если локального файла не было. Дальше пользователь может явно её выключить. Если память не активна, процесс плагина продолжает работать; просто у будущих сессий не будет доступа к истории.
 
 
-## Esquema de la base de datos
+## Схема базы данных
 
-El esquema esta disenado para capturar cuatro tipos de información que se complementan entre si. Las **iteraciones** representan ciclos completos de trabajo (un feature, un fix, un spike); las **decisiones** capturan el razonamiento formal detrás de cada eleccion; los **commits** vinculan las decisiones con el código real; y los **eventos** registran la cronología mecánica del flujo (fases completadas, gates superadas).
+Схема рассчитана на четыре типа информации, которые дополняют друг друга. **Итерации** это полные рабочие циклы (feature, fix, spike); **решения** фиксируют формальное обоснование каждого выбора; **коммиты** связывают решения с реальным кодом; **события** записывают механическую хронологию процесса (завершённые фазы, пройденные gates).
 
-La relación entre estas tablas permite reconstruir la historia completa de un cambio: desde la iteracion que lo inicio, pasando por las decisiones que lo fundamentaron, hasta los commits que lo materializaron. La tabla intermedia `commit_links` establece la trazabilidad muchos-a-muchos entre commits y decisiones, porque un commit puede implementar varias decisiones y una decisión puede requerir varios commits.
+Связи между таблицами позволяют восстановить полную историю изменения: от итерации, которая его начала, через решения, на которых оно основано, до коммитов, которые его воплотили. Промежуточная таблица `commit_links` задаёт трассируемость «многие-ко-многим» между коммитами и решениями: один коммит может реализовать несколько решений, а одно решение может потребовать нескольких коммитов.
 
 ```mermaid
 erDiagram
@@ -55,14 +55,14 @@ erDiagram
     }
 
     commit_links {
-        INTEGER commit_id FK "PK compuesta"
-        INTEGER decision_id FK "PK compuesta"
+        INTEGER commit_id FK "составной PK"
+        INTEGER decision_id FK "составной PK"
         TEXT link_type
     }
 
     decision_links {
-        INTEGER source_id FK "PK compuesta"
-        INTEGER target_id FK "PK compuesta"
+        INTEGER source_id FK "составной PK"
+        INTEGER target_id FK "составной PK"
         TEXT link_type "supersedes|depends_on|contradicts|relates"
         TEXT created_at
     }
@@ -81,430 +81,430 @@ erDiagram
         TEXT value
     }
 
-    iterations ||--o{ decisions : "contiene"
-    iterations ||--o{ commits : "agrupa"
-    iterations ||--o{ events : "registra"
-    commits ||--o{ commit_links : "vincula"
-    decisions ||--o{ commit_links : "vincula"
-    decisions ||--o{ decision_links : "origen"
-    decisions ||--o{ decision_links : "destino"
+    iterations ||--o{ decisions : "содержит"
+    iterations ||--o{ commits : "группирует"
+    iterations ||--o{ events : "записывает"
+    commits ||--o{ commit_links : "связывает"
+    decisions ||--o{ commit_links : "связывает"
+    decisions ||--o{ decision_links : "источник"
+    decisions ||--o{ decision_links : "цель"
 ```
 
-### Detalle de cada tabla
+### Подробности по каждой таблице
 
-**iterations** almacena los ciclos de trabajo. El campo `command` indica el tipo de flujo (`feature`, `fix`, `spike`, `ship`, `audit`). El campo `status` evoluciona de `active` a `completed` o `abandoned`. Los campos `phases_completed` y `artifacts` son JSON opcionales que enriquecen el registro.
+**iterations** хранит рабочие циклы. Поле `command` указывает тип процесса (`feature`, `fix`, `spike`, `ship`, `audit`). Поле `status` переходит из `active` в `completed` или `abandoned`. Поля `phases_completed` и `artifacts` это необязательный JSON, который дополняет запись.
 
-**decisions** captura el razonamiento formal. Cada decisión tiene un `title` corto, el `context` del problema, la opcion `chosen`, las `alternatives` descartadas (almacenadas como array JSON), la `rationale` que justifica la eleccion, el `impact` (low, medium, high, critical) y la `phase` del flujo en la que se tomo. Si no se proporciona `iteration_id`, se vincula automáticamente a la iteracion activa. Desde la v2 del esquema, cada decisión incorpora `tags` (array JSON de etiquetas libres, por defecto vacio) y `status` (`active`, `superseded` o `deprecated`, por defecto `active`) para gestionar su ciclo de vida sin duplicar registros.
+**decisions** фиксирует формальное обоснование. У каждого решения есть короткий `title`, `context` проблемы, выбранный вариант `chosen`, отвергнутые `alternatives` (хранятся как JSON-массив), `rationale` с обоснованием выбора, `impact` (low, medium, high, critical) и `phase` процесса, на которой решение приняли. Если `iteration_id` не передан, решение автоматически привязывается к активной итерации. С v2 схемы у каждого решения есть `tags` (JSON-массив свободных меток, по умолчанию пустой) и `status` (`active`, `superseded` или `deprecated`, по умолчанию `active`), чтобы управлять его жизненным циклом без дублирования записей.
 
-**commits** registra metadatos de los commits de Git. El campo `sha` es único para garantizar idempotencia: si se intenta registrar un commit que ya existe, la operación se ignora silenciosamente. Esto permite que la captura automática invoque `log_commit()` sin preocuparse de duplicados. Desde la v2, el campo `files` (array JSON de rutas) almacena los ficheros afectados por el commit, facilitando busquedas por fichero y trazabilidad de cambios.
+**commits** хранит метаданные коммитов Git. Поле `sha` уникально, это даёт идемпотентность: если попытаться записать уже существующий коммит, операция молча игнорируется. Поэтому автоматический захват может вызывать `log_commit()`, не заботясь о дубликатах. С v2 поле `files` (JSON-массив путей) хранит файлы, затронутые коммитом. Это упрощает поиск по файлу и трассируемость изменений.
 
-**commit_links** establece vinculos entre commits y decisiones. El campo `link_type` indica el tipo de relación: `implements` (el commit implementa la decisión), `reverts` (lo deshace) o `relates` (relación genérica). La clave primaria compuesta `(commit_id, decision_id)` impide duplicados.
+**commit_links** связывает коммиты и решения. Поле `link_type` указывает тип связи: `implements` (коммит реализует решение), `reverts` (отменяет его) или `relates` (общая связь). Составной первичный ключ `(commit_id, decision_id)` не допускает дубликатов.
 
-**decision_links** (v2) establece relaciones entre pares de decisiones. El campo `link_type` admite cuatro valores: `supersedes` (la decisión origen reemplaza a la destino), `depends_on` (depende de ella), `contradicts` (entra en conflicto) y `relates` (relación genérica). La clave primaria compuesta `(source_id, target_id)` impide duplicados. Las consultas son bidireccionales: `get_decision_links(id)` devuelve tanto los enlaces donde la decisión es origen como aquellos donde es destino.
+**decision_links** (v2) задаёт связи между парами решений. Поле `link_type` принимает четыре значения: `supersedes` (решение-источник заменяет решение-цель), `depends_on` (зависит от него), `contradicts` (конфликтует с ним) и `relates` (общая связь). Составной первичный ключ `(source_id, target_id)` не допускает дубликатов. Запросы двунаправленные: `get_decision_links(id)` возвращает и связи, где решение является источником, и связи, где оно является целью.
 
-**events** captura hechos mecanicos del flujo: fases completadas, gates superadas, aprobaciones. El campo `payload` es un JSON libre que almacena datos adicionales. Los eventos proporcionan la cronología detallada que las decisiones no cubren.
+**events** фиксирует механические факты процесса: завершённые фазы, пройденные gates, одобрения. Поле `payload` это свободный JSON с дополнительными данными. События дают подробную хронологию, которую решения не покрывают.
 
-**meta** almacena pares clave-valor de metadatos internos: versión del esquema (`schema_version`), fecha de creación (`created_at`), estado de FTS5 (`fts_enabled`).
+**meta** хранит пары ключ-значение с внутренними метаданными: версия схемы (`schema_version`), дата создания (`created_at`), состояние FTS5 (`fts_enabled`).
 
-### Índices
+### Индексы
 
-El esquema incluye cinco índices para acelerar las consultas mas frecuentes:
+Схема включает индексы, которые ускоряют самые частые запросы:
 
-| Índice | Tabla | Columna | Propósito |
-|--------|-------|---------|-----------|
-| `idx_iterations_status` | iterations | status | Filtrar iteraciones activas rapidamente |
-| `idx_decisions_iteration` | decisions | iteration_id | Obtener decisiones de una iteracion |
-| `idx_commits_iteration` | commits | iteration_id | Obtener commits de una iteracion |
-| `idx_events_iteration` | events | iteration_id | Obtener eventos de una iteracion |
-| `idx_events_type` | events | event_type | Filtrar eventos por tipo |
-| `idx_decision_links_target` | decision_links | target_id | Busqueda bidireccional de relaciones entre decisiones |
-
-
-## FTS5 (busqueda de texto completo)
-
-FTS5 es una extensión de SQLite que proporciona busqueda de texto completo de alto rendimiento. En el contexto de la memoria de Alfred Dev, permite buscar por terminos en el contenido de decisiones, commits y eventos con contenido sin necesidad de operadores `LIKE %termino%`, que son lentos porque requieren un recorrido completo de la tabla.
-
-La razon de usar FTS5 en lugar de depender exclusivamente de `LIKE` es el rendimiento a escala. Un proyecto con cientos de decisiones y miles de commits necesita busquedas rapidas para que el agente Bibliotecario pueda responder consultas historicas sin latencia perceptible. FTS5 crea un índice invertido que permite busquedas en tiempo constante independientemente del tamaño de la tabla.
-
-### Tabla virtual `memory_fts`
-
-Cuando FTS5 esta disponible, `MemoryDB` crea la tabla virtual `memory_fts` con tres columnas:
-
-| Columna | Tipo | Contenido |
-|---------|------|-----------|
-| `source_type` | TEXT | Tipo de registro: `decision`, `commit` o `event` |
-| `source_id` | TEXT | ID del registro original (cast a texto) |
-| `content` | TEXT | Texto indexado (concatenacion de campos relevantes) |
-
-Para las decisiones, el campo `content` concatena `title`, `context`, `chosen`, `rationale` y `alternatives`. Para los commits, combina `message` y `files`. Para los eventos, el contenido indexable se compone a partir de `summary` y `content`.
-
-### Triggers de sincronizacion
-
-El índice FTS5 mezcla dos mecanismos de sincronización:
-
-- **`fts_insert_decision`**: se dispara al insertar una nueva decisión. Concatena los campos de texto con `COALESCE` para manejar valores nulos y los inserta en `memory_fts`.
-- **`fts_insert_commit`**: se dispara al insertar un nuevo commit. Inserta el mensaje y los ficheros afectados.
-- **Eventos con contenido**: no usan trigger SQL dedicado; se indexan desde la propia lógica de `MemoryDB.log_event()` y, si hace falta, el índice completo se reconstruye con `_rebuild_fts_index()`.
-
-Esta combinación permite mantener el índice alineado sin obligar a modelar toda la semántica de eventos como SQL declarativo.
-
-### Detección en runtime y fallback a LIKE
-
-No todos los entornos SQLite incluyen la extensión FTS5. La detección se realiza en el método `_detect_fts5()` de `MemoryDB`, que intenta crear una tabla FTS5 temporal (`_fts5_test`). Si la operación tiene exito, FTS5 esta disponible y se crea la tabla real con sus triggers. Si lanza un `OperationalError`, se marca `_fts_enabled = False` y todas las busquedas utilizan `LIKE %termino%` como fallback.
-
-El resultado de la detección se persiste en la tabla `meta` con la clave `fts_enabled` (`"1"` o `"0"`) para que otros componentes --como el servidor MCP-- puedan consultarlo sin repetir la prueba.
-
-El método `search()` de `MemoryDB` comprueba el flag `_fts_enabled` y delega automáticamente en `_search_fts()` o `_search_like()`. Desde el punto de vista del consumidor, la interfaz es identica en ambos casos; solo cambia la velocidad.
+| Индекс | Таблица | Колонка | Назначение |
+|--------|---------|---------|------------|
+| `idx_iterations_status` | iterations | status | Быстро отфильтровать активные итерации |
+| `idx_decisions_iteration` | decisions | iteration_id | Получить решения итерации |
+| `idx_commits_iteration` | commits | iteration_id | Получить коммиты итерации |
+| `idx_events_iteration` | events | iteration_id | Получить события итерации |
+| `idx_events_type` | events | event_type | Отфильтровать события по типу |
+| `idx_decision_links_target` | decision_links | target_id | Двунаправленный поиск связей между решениями |
 
 
-## Sanitizacion de secretos
+## FTS5 (полнотекстовый поиск)
 
-La base de datos de memoria podria acabar almacenando secretos si un agente menciona una clave API en una decisión o si un mensaje de commit contiene credenciales por error. Para evitar esta fuga, todo texto que entra en la base de datos pasa por `sanitize_content()`, que aplica 13 patrones regex y reemplaza cada coincidencia por un marcador `[REDACTED:<tipo>]`.
+FTS5 это расширение SQLite для быстрого полнотекстового поиска. В памяти Alfred Dev оно позволяет искать по словам в решениях, коммитах и событиях с содержимым без операторов `LIKE %термин%`. Такие операторы медленные, потому что требуют полного прохода по таблице.
 
-La razon de sanitizar en la capa de persistencia (no en la de presentacion) es que el dano de un secreto almacenado es permanente: una vez que la clave esta en la DB, cualquier consulta futura la expondria. Sanitizar antes de escribir garantiza que la información sensible nunca llega al disco.
+Причина использовать FTS5, а не только `LIKE`: производительность на масштабе. Проекту с сотнями решений и тысячами коммитов нужен быстрый поиск, чтобы Alfred отвечал на исторические вопросы без заметной задержки. FTS5 строит инвертированный индекс, и время поиска почти не зависит от размера таблицы.
 
-Los patrones son los mismos que utiliza el hook `secret-guard.py` para mantener coherencia en toda la cadena de seguridad del plugin. El orden importa: los patrones mas específicos van primero para evitar que uno genérico consuma un match que deberia ser mas preciso.
+### Виртуальная таблица `memory_fts`
 
-### Patrones detectados
+Если FTS5 доступен, `MemoryDB` создаёт виртуальную таблицу `memory_fts` с тремя колонками:
 
-| # | Etiqueta | Que detecta | Patron resumido |
-|---|----------|-------------|-----------------|
-| 1 | `AWS_KEY` | Claves de acceso de AWS | `AKIA` seguido de 16 caracteres alfanumericos |
-| 2 | `ANTHROPIC_KEY` | Claves API de Anthropic | Prefijo `sk-ant-` seguido de 20+ caracteres |
-| 3 | `SK_KEY` | Claves con prefijo sk- genérico (OpenAI, etc.) | Prefijo `sk-` seguido de 20+ caracteres alfanumericos |
-| 4 | `GITHUB_TOKEN` | Tokens personales y PAT de GitHub | Prefijos `ghp_` (36 chars) o `github_pat_` (20+ chars) |
-| 5 | `SLACK_TOKEN` | Tokens de Slack (bot, app, user) | Prefijo `xox[bpsa]-` seguido de 10+ caracteres |
-| 6 | `GOOGLE_KEY` | Claves API de Google | Prefijo `AIza` seguido de 35 caracteres |
-| 7 | `SENDGRID_KEY` | Claves API de SendGrid | Prefijo `SG.` con dos segmentos de 22+ caracteres |
-| 8 | `PRIVATE_KEY` | Claves privadas (RSA, EC, DSA, OPENSSH) | Cabecera `-----BEGIN [...] PRIVATE KEY-----` |
-| 9 | `JWT` | Tokens JWT codificados en Base64 | Tres segmentos Base64URL separados por puntos |
-| 10 | `CONNECTION_STRING` | Cadenas de conexión a base de datos | Protocolo (mysql, postgresql, mongodb, redis, amqp) seguido de credenciales |
-| 11 | `SLACK_WEBHOOK` | Webhooks de Slack | URL `hooks.slack.com/services/...` |
-| 12 | `DISCORD_WEBHOOK` | Webhooks de Discord | URL `discord.com/api/webhooks/...` |
-| 13 | `HARDCODED_CREDENTIAL` | Credenciales hardcodeadas en código | Asignaciones directas como `api_key = "valor"` |
+| Колонка | Тип | Содержимое |
+|---------|-----|------------|
+| `source_type` | TEXT | Тип записи: `decision`, `commit` или `event` |
+| `source_id` | TEXT | ID исходной записи (приведён к тексту) |
+| `content` | TEXT | Индексируемый текст (конкатенация нужных полей) |
 
-### Campos sanitizados
+Для решений поле `content` объединяет `title`, `context`, `chosen`, `rationale` и `alternatives`. Для коммитов оно объединяет `message` и `files`. Для событий индексируемое содержимое собирается из `summary` и `content`.
 
-Los siguientes campos de la base de datos pasan por `sanitize_content()` antes de cada escritura:
+### Триггеры синхронизации
 
-| Tabla | Campos sanitizados |
-|-------|--------------------|
-| decisions | `context`, `chosen`, `rationale`, `alternatives` (cada elemento del array) |
+Индекс FTS5 сочетает два механизма синхронизации:
+
+- **`fts_insert_decision`**: срабатывает при вставке нового решения. Объединяет текстовые поля через `COALESCE`, чтобы обработать null, и вставляет их в `memory_fts`.
+- **`fts_insert_commit`**: срабатывает при вставке нового коммита. Вставляет сообщение и затронутые файлы.
+- **События с содержимым**: отдельного SQL-триггера нет; они индексируются в логике `MemoryDB.log_event()`, а при необходимости полный индекс перестраивается через `_rebuild_fts_index()`.
+
+Такое сочетание держит индекс в актуальном состоянии и не заставляет описывать всю семантику событий декларативным SQL.
+
+### Определение в runtime и fallback на LIKE
+
+Не все сборки SQLite включают расширение FTS5. Проверку выполняет метод `_detect_fts5()` класса `MemoryDB`: он пытается создать временную таблицу FTS5 (`_fts5_test`). Если операция успешна, FTS5 доступен, и создаётся настоящая таблица с триггерами. Если возникает `OperationalError`, ставится `_fts_enabled = False`, и весь поиск использует `LIKE %термин%` как fallback.
+
+Результат проверки сохраняется в таблице `meta` с ключом `fts_enabled` (`"1"` или `"0"`), чтобы другие компоненты, например MCP-сервер, могли прочитать его без повторной проверки.
+
+Метод `search()` класса `MemoryDB` проверяет флаг `_fts_enabled` и автоматически делегирует `_search_fts()` или `_search_like()`. Для потребителя интерфейс одинаков в обоих случаях; меняется только скорость.
+
+
+## Очистка секретов
+
+База памяти могла бы сохранить секреты, если агент упомянет API-ключ в решении или если сообщение коммита по ошибке содержит учётные данные. Чтобы не допустить утечки, весь текст, который попадает в базу, проходит через `sanitize_content()`. Функция применяет 13 regex-шаблонов и заменяет каждое совпадение маркером `[REDACTED:<тип>]`.
+
+Очистка идёт на слое хранения, а не на слое отображения, потому что вред от сохранённого секрета постоянен: если ключ попал в БД, любой будущий запрос может его раскрыть. Очистка до записи гарантирует, что чувствительная информация не попадает на диск.
+
+Шаблоны те же, что использует хук `secret-guard.py`, чтобы вся цепочка безопасности плагина была согласованной. Порядок важен: более конкретные шаблоны идут первыми, чтобы общий шаблон не перехватил совпадение, которое должен поймать более точный.
+
+### Обнаруживаемые шаблоны
+
+| # | Метка | Что обнаруживает | Краткий шаблон |
+|---|-------|------------------|----------------|
+| 1 | `AWS_KEY` | Ключи доступа AWS | `AKIA` и 16 буквенно-цифровых символов |
+| 2 | `ANTHROPIC_KEY` | API-ключи Anthropic | Префикс `sk-ant-` и 20+ символов |
+| 3 | `SK_KEY` | Ключи с общим префиксом sk- (OpenAI и др.) | Префикс `sk-` и 20+ буквенно-цифровых символов |
+| 4 | `GITHUB_TOKEN` | Персональные токены и PAT GitHub | Префиксы `ghp_` (36 символов) или `github_pat_` (20+ символов) |
+| 5 | `SLACK_TOKEN` | Токены Slack (bot, app, user) | Префикс `xox[bpsa]-` и 10+ символов |
+| 6 | `GOOGLE_KEY` | API-ключи Google | Префикс `AIza` и 35 символов |
+| 7 | `SENDGRID_KEY` | API-ключи SendGrid | Префикс `SG.` и два сегмента по 22+ символа |
+| 8 | `PRIVATE_KEY` | Приватные ключи (RSA, EC, DSA, OPENSSH) | Заголовок `-----BEGIN [...] PRIVATE KEY-----` |
+| 9 | `JWT` | JWT-токены в Base64 | Три сегмента Base64URL, разделённые точками |
+| 10 | `CONNECTION_STRING` | Строки подключения к базам данных | Протокол (mysql, postgresql, mongodb, redis, amqp) и учётные данные |
+| 11 | `SLACK_WEBHOOK` | Webhooks Slack | URL `hooks.slack.com/services/...` |
+| 12 | `DISCORD_WEBHOOK` | Webhooks Discord | URL `discord.com/api/webhooks/...` |
+| 13 | `HARDCODED_CREDENTIAL` | Захардкоженные учётные данные в коде | Прямые присваивания вроде `api_key = "valor"` |
+
+### Очищаемые поля
+
+Эти поля базы проходят через `sanitize_content()` перед каждой записью:
+
+| Таблица | Очищаемые поля |
+|---------|----------------|
+| decisions | `context`, `chosen`, `rationale`, `alternatives` (каждый элемент массива) |
 | commits | `message` |
-| events | `payload` (cada valor de tipo string dentro del diccionario) |
+| events | `payload` (каждое строковое значение в словаре) |
 | iterations | `description` |
 
 
-## Servidor MCP
+## MCP-сервер
 
-El servidor MCP (Model Context Protocol) es el proceso que expone la memoria persistente como herramientas invocables por los agentes de Claude Code. Se comunica mediante JSON-RPC 2.0 sobre stdin/stdout en formato MCP actual (un mensaje JSON por linea), con lectura compatible para el framing historico `Content-Length`.
+MCP-сервер (Model Context Protocol) это процесс, который открывает постоянную память как инструменты, доступные агентам Claude Code. Он общается по JSON-RPC 2.0 через stdin/stdout в текущем формате MCP (одно JSON-сообщение на строку) и умеет читать исторический framing `Content-Length`.
 
-La razon de implementar un servidor MCP en lugar de acceder a la DB directamente desde los agentes es el modelo de ejecución de Claude Code: los agentes no ejecutan Python arbitrario, sino que invocan herramientas definidas en un protocolo estandarizado. El servidor traduce las invocaciones MCP en llamadas a la API de `MemoryDB`.
+MCP-сервер нужен вместо прямого доступа агентов к БД из-за модели выполнения Claude Code: агенты не запускают произвольный Python, а вызывают инструменты, описанные в стандартном протоколе. Сервер переводит вызовы MCP в вызовы API `MemoryDB`.
 
-### Ciclo de vida
+### Жизненный цикл
 
-Claude Code lanza el servidor al inicio de sesión y lo mantiene vivo como proceso persistente. La secuencia de arranque es:
+Claude Code запускает сервер в начале сессии и держит его как постоянный процесс. Последовательность запуска:
 
-1. **Resolución de ruta**: la DB se ubica en `$PWD/.claude/alfred-memory.db`, relativa al directorio de trabajo del proyecto.
-2. **Apertura de conexión**: se crea una instancia de `MemoryDB` con WAL activado y foreign keys habilitadas. La apertura es perezosa (se difiere hasta la primera invocación de herramienta).
-3. **Esquema**: `ensure_schema()` crea las tablas e índices si no existen. Si la DB es nueva, registra la versión del esquema y la fecha de creación en `meta`.
-4. **Detección de FTS5**: `_detect_fts5()` comprueba el soporte de FTS5 y crea la tabla virtual con triggers si esta disponible.
-5. **Purga de eventos**: si `retention_days > 0`, se eliminan los eventos anteriores a la ventana de retención.
-6. **Escucha**: el servidor queda a la espera de mensajes JSON-RPC por stdin.
+1. **Определение пути**: БД лежит в `$PWD/.claude/alfred-memory.db`, относительно рабочего каталога проекта.
+2. **Открытие соединения**: создаётся экземпляр `MemoryDB` с WAL и включёнными foreign keys. Открытие ленивое (откладывается до первого вызова инструмента).
+3. **Схема**: `ensure_schema()` создаёт таблицы и индексы, если их нет. Если БД новая, записывает версию схемы и дату создания в `meta`.
+4. **Определение FTS5**: `_detect_fts5()` проверяет поддержку FTS5 и создаёт виртуальную таблицу с триггерами, если она доступна.
+5. **Очистка событий**: если `retention_days > 0`, удаляются события старше окна хранения.
+6. **Ожидание**: сервер ждёт сообщений JSON-RPC из stdin.
 
-### Herramientas expuestas
+### Открытые инструменты
 
-El servidor expone quince herramientas. Las diez originales cubren busqueda, registro y consulta; las cinco nuevas (v2) añaden gestion del ciclo de vida de decisiones, validación de integridad y exportacion/importacion. Cada una se describe con un JSON Schema de entrada y se despacha internamente al método correspondiente de `MemoryDB`.
+Сервер открывает пятнадцать инструментов. Десять исходных покрывают поиск, запись и запросы; пять новых (v2) добавляют управление жизненным циклом решений, проверку целостности и экспорт/импорт. Каждый описан входной JSON Schema и внутри передаётся соответствующему методу `MemoryDB`.
 
 #### `memory_search(query, limit?, iteration_id?)`
 
-Busca en la memoria del proyecto (decisiones, commits y eventos con contenido indexable) por texto. Usa FTS5 si esta disponible, o `LIKE` como fallback. Devuelve una lista de resultados con el tipo de fuente (`decision`, `commit` o `event`), los datos completos del registro y metadatos de la busqueda (total de resultados, modo FTS activo o no).
+Ищет по тексту в памяти проекта (решения, коммиты и события с индексируемым содержимым). Использует FTS5, если он доступен, или `LIKE` как fallback. Возвращает список результатов с типом источника (`decision`, `commit` или `event`), полными данными записи и метаданными поиска (общее число результатов, активен ли режим FTS).
 
-| Parámetro | Tipo | Obligatorio | Descripción |
-|-----------|------|-------------|-------------|
-| `query` | string | si | Termino de busqueda textual |
-| `limit` | integer | no | Máximo de resultados (por defecto 20) |
-| `iteration_id` | integer | no | Filtrar por iteracion concreta |
-| `since` | string | no | Fecha mínima (ISO 8601) para filtrar resultados |
-| `until` | string | no | Fecha máxima (ISO 8601) para filtrar resultados |
-| `tags` | string[] | no | Filtrar decisiones que contengan todas las etiquetas indicadas |
-| `status` | string | no | Filtrar decisiones por estado (`active`, `superseded`, `deprecated`) |
+| Параметр | Тип | Обязателен | Описание |
+|----------|-----|------------|----------|
+| `query` | string | да | Текст для поиска |
+| `limit` | integer | нет | Максимум результатов (по умолчанию 20) |
+| `iteration_id` | integer | нет | Фильтр по конкретной итерации |
+| `since` | string | нет | Минимальная дата (ISO 8601) для фильтрации |
+| `until` | string | нет | Максимальная дата (ISO 8601) для фильтрации |
+| `tags` | string[] | нет | Решения, у которых есть все указанные метки |
+| `status` | string | нет | Фильтр решений по статусу (`active`, `superseded`, `deprecated`) |
 
 #### `memory_log_decision(title, chosen, context?, alternatives?, rationale?, impact?, phase?)`
 
-Registra una decisión de diseño formal. Se vincula automáticamente a la iteracion activa si no se indica otra. Todos los campos de texto se sanitizan antes de persistir.
+Записывает формальное решение по дизайну. Автоматически привязывает его к активной итерации, если не указана другая. Все текстовые поля очищаются до записи.
 
-| Parámetro | Tipo | Obligatorio | Descripción |
-|-----------|------|-------------|-------------|
-| `title` | string | si | Titulo corto de la decisión |
-| `chosen` | string | si | Opcion elegida |
-| `context` | string | no | Problema que se resolvia |
-| `alternatives` | string[] | no | Opciones descartadas |
-| `rationale` | string | no | Justificacion de la eleccion |
-| `impact` | enum | no | Nivel: `low`, `medium`, `high`, `critical` |
-| `phase` | string | no | Fase del flujo en la que se tomo |
-| `tags` | string[] | no | Etiquetas libres para categorizar la decisión |
+| Параметр | Тип | Обязателен | Описание |
+|----------|-----|------------|----------|
+| `title` | string | да | Короткий заголовок решения |
+| `chosen` | string | да | Выбранный вариант |
+| `context` | string | нет | Решаемая проблема |
+| `alternatives` | string[] | нет | Отвергнутые варианты |
+| `rationale` | string | нет | Обоснование выбора |
+| `impact` | enum | нет | Уровень: `low`, `medium`, `high`, `critical` |
+| `phase` | string | нет | Фаза процесса, на которой приняли решение |
+| `tags` | string[] | нет | Свободные метки для классификации решения |
 
 #### `memory_log_commit(sha, message?, decision_ids?, iteration_id?)`
 
-Registra un commit y opcionalmente lo vincula a decisiones previas. Si el SHA ya existe, la operación se ignora (idempotente). Las vinculaciones se crean como enlaces de tipo `implements`.
+Записывает коммит и при желании привязывает его к прошлым решениям. Если SHA уже есть, операция игнорируется (идемпотентно). Привязки создаются как связи типа `implements`.
 
-| Parámetro | Tipo | Obligatorio | Descripción |
-|-----------|------|-------------|-------------|
-| `sha` | string | si | Hash SHA del commit |
-| `message` | string | no | Mensaje del commit |
-| `decision_ids` | integer[] | no | IDs de decisiones a vincular |
-| `iteration_id` | integer | no | ID de iteracion (auto-detectado si se omite) |
-| `files` | string[] | no | Lista de ficheros afectados por el commit |
+| Параметр | Тип | Обязателен | Описание |
+|----------|-----|------------|----------|
+| `sha` | string | да | SHA-хеш коммита |
+| `message` | string | нет | Сообщение коммита |
+| `decision_ids` | integer[] | нет | ID решений для привязки |
+| `iteration_id` | integer | нет | ID итерации (определяется автоматически, если не указан) |
+| `files` | string[] | нет | Список файлов, затронутых коммитом |
 
 #### `memory_get_iteration(id?)`
 
-Obtiene los datos completos de una iteracion, enriquecidos con las decisiones asociadas. Si no se indica ID, devuelve la iteracion activa; si no hay activa, devuelve la mas reciente.
+Возвращает полные данные итерации вместе со связанными решениями. Если ID не указан, возвращает активную итерацию; если активной нет, самую свежую.
 
-| Parámetro | Tipo | Obligatorio | Descripción |
-|-----------|------|-------------|-------------|
-| `id` | integer | no | ID de la iteracion |
+| Параметр | Тип | Обязателен | Описание |
+|----------|-----|------------|----------|
+| `id` | integer | нет | ID итерации |
 
 #### `memory_get_timeline(iteration_id)`
 
-Obtiene la cronología completa de eventos de una iteracion, ordenados del mas antiguo al mas reciente. Permite reconstruir la secuencia exacta de fases, gates y aprobaciones.
+Возвращает полную хронологию событий итерации, от самого старого к самому новому. Позволяет восстановить точную последовательность фаз, gates и одобрений.
 
-| Parámetro | Tipo | Obligatorio | Descripción |
-|-----------|------|-------------|-------------|
-| `iteration_id` | integer | si | ID de la iteracion |
+| Параметр | Тип | Обязателен | Описание |
+|----------|-----|------------|----------|
+| `iteration_id` | integer | да | ID итерации |
 
 #### `memory_stats()`
 
-Devuelve estadisticas generales de la memoria: contadores de iteraciones, decisiones, commits y eventos; estado de FTS5; versión del esquema y fecha de creación.
+Возвращает общую статистику памяти: счётчики итераций, решений, коммитов и событий; состояние FTS5; версию схемы и дату создания.
 
-No requiere parámetros.
+Параметров нет.
 
 #### `memory_get_decisions(tags?, status?)`
 
-Obtiene todas las decisiones registradas, con filtros opcionales por etiquetas y estado. Util para obtener listados filtrados sin necesidad de texto de busqueda.
+Возвращает все записанные решения с необязательными фильтрами по меткам и статусу. Полезно для отфильтрованных списков без текстового запроса.
 
-| Parámetro | Tipo | Obligatorio | Descripción |
-|-----------|------|-------------|-------------|
-| `tags` | string[] | no | Filtrar por etiquetas (coincidencia total) |
-| `status` | string | no | Filtrar por estado (`active`, `superseded`, `deprecated`) |
+| Параметр | Тип | Обязателен | Описание |
+|----------|-----|------------|----------|
+| `tags` | string[] | нет | Фильтр по меткам (полное совпадение) |
+| `status` | string | нет | Фильтр по статусу (`active`, `superseded`, `deprecated`) |
 
 #### `memory_update_decision(id, status?, tags?)`
 
-Actualiza el estado o las etiquetas de una decisión existente sin duplicar registros. Permite gestionar el ciclo de vida de las decisiones: marcar una como `superseded` cuando se reemplaza, o como `deprecated` cuando deja de ser relevante.
+Обновляет статус или метки существующего решения без дублирования записей. Позволяет управлять жизненным циклом решений: пометить решение как `superseded`, когда его заменили, или как `deprecated`, когда оно потеряло актуальность.
 
-| Parámetro | Tipo | Obligatorio | Descripción |
-|-----------|------|-------------|-------------|
-| `id` | integer | si | ID de la decisión a actualizar |
-| `status` | string | no | Nuevo estado: `active`, `superseded` o `deprecated` |
-| `tags` | string[] | no | Etiquetas a añadir (sin duplicar las existentes) |
+| Параметр | Тип | Обязателен | Описание |
+|----------|-----|------------|----------|
+| `id` | integer | да | ID решения для обновления |
+| `status` | string | нет | Новый статус: `active`, `superseded` или `deprecated` |
+| `tags` | string[] | нет | Метки для добавления (существующие не дублируются) |
 
 #### `memory_link_decisions(source_id, target_id, link_type)`
 
-Crea una relación direccional entre dos decisiones. Permite construir el grafo de evolucion y dependencias de las decisiones del proyecto.
+Создаёт направленную связь между двумя решениями. Позволяет строить граф эволюции и зависимостей решений проекта.
 
-| Parámetro | Tipo | Obligatorio | Descripción |
-|-----------|------|-------------|-------------|
-| `source_id` | integer | si | ID de la decisión origen |
-| `target_id` | integer | si | ID de la decisión destino |
-| `link_type` | string | si | Tipo de relación: `supersedes`, `depends_on`, `contradicts`, `relates` |
+| Параметр | Тип | Обязателен | Описание |
+|----------|-----|------------|----------|
+| `source_id` | integer | да | ID решения-источника |
+| `target_id` | integer | да | ID решения-цели |
+| `link_type` | string | да | Тип связи: `supersedes`, `depends_on`, `contradicts`, `relates` |
 
 #### `memory_health()`
 
-Valida la integridad de la base de datos de memoria. Comprueba la versión del esquema, la sincronizacion de FTS5, los permisos del fichero (0600) y el tamaño de la base de datos (aviso si supera 50 MB). Devuelve un informe con estado general (`healthy`, `warnings`, `errors`) y la lista de problemas detectados.
+Проверяет целостность базы памяти. Проверяет версию схемы, синхронизацию FTS5, права файла (0600) и размер базы (предупреждение, если больше 50 MB). Возвращает отчёт с общим состоянием (`healthy`, `warnings`, `errors`) и списком найденных проблем.
 
-No requiere parámetros.
+Параметров нет.
 
 #### `memory_export(format, path?, iteration_id?)`
 
-Exporta decisiones a un fichero Markdown con formato ADR-like (Architecture Decisión Record). Cada decisión incluye fecha, estado, etiquetas, contexto, opcion elegida, alternativas descartadas, justificacion e iteracion asociada.
+Экспортирует решения в файл Markdown в формате, похожем на ADR (Architecture Decision Record). Каждое решение включает дату, статус, метки, контекст, выбранный вариант, отвергнутые альтернативы, обоснование и связанную итерацию.
 
-| Parámetro | Tipo | Obligatorio | Descripción |
-|-----------|------|-------------|-------------|
-| `format` | string | si | Formato de exportacion (actualmente solo `markdown`) |
-| `path` | string | no | Ruta del fichero de salida, siempre dentro del proyecto actual |
-| `iteration_id` | integer | no | Exportar solo decisiones de una iteracion concreta |
+| Параметр | Тип | Обязателен | Описание |
+|----------|-----|------------|----------|
+| `format` | string | да | Формат экспорта (сейчас только `markdown`) |
+| `path` | string | нет | Путь к выходному файлу, всегда внутри текущего проекта |
+| `iteration_id` | integer | нет | Экспортировать только решения конкретной итерации |
 
 #### `memory_import(source, path?, limit?)`
 
-Importa datos desde fuentes externas a la memoria persistente. Admite dos fuentes: `git` (importa commits del historial Git) y `adr` (importa decisiones desde ficheros Markdown en formato ADR).
+Импортирует данные из внешних источников в постоянную память. Поддерживает два источника: `git` (импорт коммитов из истории Git) и `adr` (импорт решений из файлов Markdown в формате ADR).
 
-| Parámetro | Tipo | Obligatorio | Descripción |
-|-----------|------|-------------|-------------|
-| `source` | string | si | Fuente de importacion: `git` o `adr` |
-| `path` | string | no | Ruta del repositorio (git) o directorio de ADRs (adr), siempre dentro del proyecto actual |
-| `limit` | integer | no | Máximo de registros a importar (por defecto 100, maximo 1000, solo git) |
-
-
-## Consulta de memoria
-
-No hay agente `librarian`. La interfaz de consulta es el servidor MCP `alfred-memory` y `/alfred-dev:memory-ui`. Cada dato mostrado debe poder rastrearse hasta su origen. Si la memoria no tiene registros, se dice sin rodeos.
-
-### Clasificacion de preguntas
-
-Antes de consultar la memoria, Alfred clasifica cada pregunta en una de cuatro categorías para elegir la herramienta MCP mas adecuada:
-
-| Categoría | Tipo de pregunta | Herramienta principal | Ejemplo |
-|-----------|------------------|-----------------------|---------|
-| Decisión | que / por que | `memory_search` | "Por que usamos SQLite en vez de PostgreSQL" |
-| Implementacion | que commit | `memory_search` (commits) | "En que commit se anadio el hook de seguridad" |
-| Cronología | cuando | `memory_get_timeline` | "Que paso en la iteracion 3" |
-| Estadistica | cuantas / cuanto | `memory_stats` | "Cuantas decisiones hay registradas" |
-
-### Formato de citas
-
-Toda respuesta que incluya datos de la memoria debe citar su fuente. Los formatos validos son:
-
-| Tipo | Formato | Ejemplo |
-|------|---------|---------|
-| Decisión | `[D#<id>]` | `[D#12] 2026-02-15 -- Usar SQLite` |
-| Commit | `[C#<sha_corto>]` | `[C#a1b2c3d] 2026-02-16 -- feat: memoria persistente` |
-| Iteracion | `[I#<id>]` | `[I#5] feature -- Sistema de memoria` |
-| Evento | `[E#<id>]` | `[E#42] phase_completed 2026-02-15` |
-
-Si no puede citar una fuente concreta, Alfred no incluye el dato en la respuesta. Esta regla no admite excepciones.
+| Параметр | Тип | Обязателен | Описание |
+|----------|-----|------------|----------|
+| `source` | string | да | Источник импорта: `git` или `adr` |
+| `path` | string | нет | Путь к репозиторию (git) или каталогу ADR (adr), всегда внутри текущего проекта |
+| `limit` | integer | нет | Максимум записей для импорта (по умолчанию 100, максимум 1000, только git) |
 
 
-## Captura automática
+## Запросы к памяти
 
-Desde v0.3.6 la captura automática esta centralizada en un único hook: `activity-capture.py`. Este hook sustituye a los anteriores `memory-capture.py` y `commit-capture.py`, que se unificaron para simplificar el mantenimiento y ampliar la cobertura de captura.
+Агента `librarian` нет. Интерфейс запросов: MCP-сервер `alfred-memory` и `/alfred-dev:memory-ui`. Каждый показанный факт должен прослеживаться до источника. Если в памяти нет записей, это говорится прямо.
 
-### activity-capture.py (captura centralizada)
+### Классификация вопросов
 
-Este script esta registrado en `UserPromptSubmit` y en `PostToolUse` para `Write|Edit` y `Bash`. Actua como un hook fail-open: no bloquea la operación ni interfiere con el flujo de trabajo. Este plugin no registra `UserPromptExpansion`, `PreCompact` ni `Stop`. Si algo falla --DB inexistente, JSON corrupto, configuración ausente--, imprime un aviso en stderr y sale con `exit 0`.
+Перед запросом к памяти Alfred относит каждый вопрос к одной из четырёх категорий, чтобы выбрать подходящий MCP-инструмент:
 
-La razon de automatizar la captura en lugar de depender de que los agentes registren eventos manualmente es la fiabilidad: un agente puede olvidarse de llamar a `memory_log_event()`, pero el hook siempre se ejecuta porque esta conectado al ciclo de vida de las herramientas.
+| Категория | Тип вопроса | Основной инструмент | Пример |
+|-----------|-------------|---------------------|--------|
+| Решение | что / почему | `memory_search` | «Почему мы используем SQLite вместо PostgreSQL» |
+| Реализация | какой коммит | `memory_search` (коммиты) | «В каком коммите добавили хук безопасности» |
+| Хронология | когда | `memory_get_timeline` | «Что было в итерации 3» |
+| Статистика | сколько | `memory_stats` | «Сколько решений записано» |
 
-Cada evento se registra con tres niveles de detalle: un `summary` legible en castellano, un `payload` JSON estructurado para filtrado programático, y un `content` pensado para consulta bajo demanda. En eventos de alto volumen como `Glob`, `Grep`, `WebFetch` o `WebSearch`, ese `content` puede guardarse como preview recortado junto con metadatos (`content_truncated`, `content_lines`, `content_chars`) para evitar que la memoria se llene de listados o blobs HTML poco útiles.
+### Формат ссылок
 
-### Lógica de captura de iteraciones y fases
+Каждый ответ с данными из памяти должен ссылаться на источник. Допустимые форматы:
 
-Cuando detecta una escritura en `alfred-dev-state.json`, el hook ejecuta tres comprobaciones en secuencia:
+| Тип | Формат | Пример |
+|-----|--------|--------|
+| Решение | `[D#<id>]` | `[D#12] 2026-02-15 -- Использовать SQLite` |
+| Коммит | `[C#<sha_corto>]` | `[C#a1b2c3d] 2026-02-16 -- feat: постоянная память` |
+| Итерация | `[I#<id>]` | `[I#5] feature -- Система памяти` |
+| Событие | `[E#<id>]` | `[E#42] phase_completed 2026-02-15` |
 
-1. **Iteracion nueva**: si no hay iteracion activa en la DB, se inicia una nueva con los datos del estado (`comando`, `descripción`) y se registra un evento `iteration_started`.
-
-2. **Fases completadas**: compara las fases completadas del estado nuevo con los eventos `phase_completed` ya registrados en la DB. Por cada fase nueva que no tenga evento, registra un `phase_completed` con el nombre de la fase, su resultado, la fecha de completado y los artefactos generados.
-
-3. **Iteracion completada**: si la `fase_actual` del estado es `"completado"`, cierra la iteracion activa y registra un evento `iteration_completed`.
-
-### Captura de commits
-
-Cuando el dispatcher de Bash detecta un comando `git commit` exitoso (exit code 0), ejecuta `git log -1 --format=%H|%s|%an|%aI --name-only` para extraer SHA, mensaje, autor, fecha y ficheros. Los registra con `MemoryDB.log_commit()`, que es idempotente por SHA.
-
-### Verificación previa
-
-Antes de procesar cualquier evento, el hook comprueba que la memoria esta habilitada leyendo `.claude/alfred-dev.local.md`. Busca el patron `memoria:` seguido de `enabled: true` usando una expresión regular que tolera comentarios y otras claves intermedias. También excluye automáticamente ficheros de rutas internas y comandos triviales para evitar ruido.
+Если Alfred не может сослаться на конкретный источник, он не включает факт в ответ. Исключений у этого правила нет.
 
 
-## Flujo completo de captura y consulta
+## Автоматический захват
 
-El siguiente diagrama muestra como se conectan todos los componentes, desde la accion del usuario hasta la consulta histórica en una sesión futura.
+С v0.3.6 автоматический захват собран в одном хуке: `activity-capture.py`. Он заменяет прежние `memory-capture.py` и `commit-capture.py`, которые объединили, чтобы упростить сопровождение и расширить охват захвата.
+
+### activity-capture.py (централизованный захват)
+
+Скрипт зарегистрирован в `UserPromptSubmit` и в `PostToolUse` для `Write|Edit` и `Bash`. Это fail-open хук: он не блокирует операцию и не мешает рабочему процессу. Плагин не регистрирует `UserPromptExpansion`, `PreCompact` и `Stop`. Если что-то ломается (нет БД, повреждён JSON, нет конфигурации), хук пишет предупреждение в stderr и выходит с `exit 0`.
+
+Захват автоматизирован, а не оставлен агентам, ради надёжности: агент может забыть вызвать `memory_log_event()`, а хук срабатывает всегда, потому что подключён к жизненному циклу инструментов.
+
+Каждое событие записывается с тремя уровнями детализации: читаемый `summary`, структурированный JSON `payload` для программной фильтрации и `content` для запросов по требованию. Для событий большого объёма, таких как `Glob`, `Grep`, `WebFetch` или `WebSearch`, `content` может сохраняться как обрезанный preview с метаданными (`content_truncated`, `content_lines`, `content_chars`), чтобы память не заполнялась бесполезными списками или HTML-блобами.
+
+### Логика захвата итераций и фаз
+
+Когда хук видит запись в `alfred-dev-state.json`, он выполняет три проверки подряд:
+
+1. **Новая итерация**: если в БД нет активной итерации, начинается новая с данными из состояния (`comando`, `descripcion`) и записывается событие `iteration_started`.
+
+2. **Завершённые фазы**: сравнивает завершённые фазы нового состояния с уже записанными в БД событиями `phase_completed`. Для каждой новой фазы без события записывает `phase_completed` с именем фазы, результатом, датой завершения и созданными артефактами.
+
+3. **Завершённая итерация**: если `fase_actual` в состоянии равна `"completado"`, закрывает активную итерацию и записывает событие `iteration_completed`.
+
+### Захват коммитов
+
+Когда диспетчер Bash видит успешную команду `git commit` (exit code 0), он выполняет `git log -1 --format=%H|%s|%an|%aI --name-only`, чтобы получить SHA, сообщение, автора, дату и файлы. Затем записывает их через `MemoryDB.log_commit()`, который идемпотентен по SHA.
+
+### Предварительная проверка
+
+Перед обработкой любого события хук проверяет, что память включена, читая `.claude/alfred-dev.local.md`. Он ищет шаблон `memoria:` с последующим `enabled: true` через регулярное выражение, которое допускает комментарии и другие ключи между ними. Также он автоматически исключает файлы внутренних путей и тривиальные команды, чтобы не было шума.
+
+
+## Полный поток захвата и запросов
+
+Диаграмма показывает, как связаны все компоненты: от действия пользователя до исторического запроса в будущей сессии.
 
 ```mermaid
 sequenceDiagram
-    participant U as Usuario
+    participant U as Пользователь
     participant A as Alfred
     participant S as state.json
     participant H as activity-capture.py
     participant DB as MemoryDB
-    participant MCP as Servidor MCP
-    participant B as Bibliotecario
+    participant MCP as MCP-сервер
+    participant B as Alfred (будущая сессия)
 
-    Note over U,B: --- Sesión actual: registro ---
+    Note over U,B: --- Текущая сессия: запись ---
 
-    U->>A: /alfred-dev:feature "Sistema de cache"
-    A->>S: Escribe estado inicial (comando, descripción)
-    S-->>H: PostToolUse dispara el hook
-    H->>H: Lee state.json, verifica memoria activa
+    U->>A: /alfred-dev:feature "Система кэша"
+    A->>S: Пишет начальное состояние (comando, descripcion)
+    S-->>H: PostToolUse запускает хук
+    H->>H: Читает state.json, проверяет, что память активна
     H->>DB: start_iteration() + log_event(iteration_started)
 
-    A->>A: Ejecuta fase de producto
-    A->>S: Actualiza fases_completadas
-    S-->>H: PostToolUse dispara el hook
+    A->>A: Выполняет фазу продукта
+    A->>S: Обновляет fases_completadas
+    S-->>H: PostToolUse запускает хук
     H->>DB: log_event(phase_completed, fase: producto)
 
-    A->>A: Ejecuta fase de arquitectura
-    A->>S: Actualiza fases_completadas
-    S-->>H: PostToolUse dispara el hook
+    A->>A: Выполняет фазу архитектуры
+    A->>S: Обновляет fases_completadas
+    S-->>H: PostToolUse запускает хук
     H->>DB: log_event(phase_completed, fase: arquitectura)
 
     A->>MCP: memory_log_decision(title, chosen, rationale...)
     MCP->>DB: log_decision()
     DB-->>MCP: decision_id
 
-    A->>A: Completa todas las fases
+    A->>A: Завершает все фазы
     A->>S: fase_actual = "completado"
-    S-->>H: PostToolUse dispara el hook
+    S-->>H: PostToolUse запускает хук
     H->>DB: complete_iteration() + log_event(iteration_completed)
 
-    Note over U,B: --- Sesión futura: consulta ---
+    Note over U,B: --- Будущая сессия: запрос ---
 
-    U->>B: "Por que decidimos usar Redis para la cache?"
+    U->>B: "Почему мы решили использовать Redis для кэша?"
     B->>MCP: memory_search(query: "Redis cache")
     MCP->>DB: search("Redis cache")
-    DB-->>MCP: Resultados con decision_id, titulo, rationale
-    MCP-->>B: JSON con resultados
-    B->>U: "[D#14] Se eligio Redis porque..."
+    DB-->>MCP: Результаты с decision_id, title, rationale
+    MCP-->>B: JSON с результатами
+    B->>U: "[D#14] Выбрали Redis, потому что..."
 ```
 
 
-## Ciclo de vida de la base de datos
+## Жизненный цикл базы данных
 
-La base de datos se crea automáticamente la primera vez que se activa la memoria en un proyecto. El proceso de creación sigue una secuencia deliberada para garantizar seguridad e integridad desde el primer momento.
+База создаётся автоматически, когда память впервые включается в проекте. Создание идёт в продуманной последовательности, чтобы обеспечить безопасность и целостность с первого момента.
 
-### Creación
+### Создание
 
-El constructor de `MemoryDB` crea el directorio padre (`.claude/`) si no existe, abre la conexión SQLite y ejecuta la siguiente secuencia:
+Конструктор `MemoryDB` создаёт родительский каталог (`.claude/`), если его нет, открывает соединение SQLite и выполняет такую последовательность:
 
-1. **PRAGMA journal_mode=WAL**: activa el modo Write-Ahead Logging, que permite lecturas concurrentes mientras se realizan escrituras. Esto es importante porque el servidor MCP y el hook de captura pueden acceder a la DB simultaneamente.
+1. **PRAGMA journal_mode=WAL**: включает режим Write-Ahead Logging, который позволяет параллельное чтение во время записи. Это важно, потому что MCP-сервер и хук захвата могут обращаться к БД одновременно.
 
-2. **PRAGMA foreign_keys=ON**: activa las restricciones de clave foranea. Sin este pragma, SQLite ignora las declaraciones `REFERENCES` y permite inconsistencias (por ejemplo, una decisión que referencia una iteracion inexistente).
+2. **PRAGMA foreign_keys=ON**: включает ограничения внешних ключей. Без этой pragma SQLite игнорирует объявления `REFERENCES` и допускает несогласованность (например, решение, которое ссылается на несуществующую итерацию).
 
-3. **ensure_schema()**: crea las tablas e índices si no existen. Si la DB es nueva, registra `schema_version` y `created_at` en la tabla `meta`.
+3. **ensure_schema()**: создаёт таблицы и индексы, если их нет. Если БД новая, записывает `schema_version` и `created_at` в таблицу `meta`.
 
-4. **_detect_fts5()**: comprueba el soporte de FTS5 y crea la tabla virtual con triggers si esta disponible.
+4. **_detect_fts5()**: проверяет поддержку FTS5 и создаёт виртуальную таблицу с триггерами, если она доступна.
 
-5. **chmod 0600**: establece permisos restrictivos (solo el propietario puede leer y escribir). Si el sistema de ficheros no soporta `chmod` (por ejemplo, FAT32), se continua sin permisos restrictivos.
+5. **chmod 0600**: ставит строгие права (читать и писать может только владелец). Если файловая система не поддерживает `chmod` (например, FAT32), работа продолжается без строгих прав.
 
-### Retención
+### Хранение
 
-La politica de retención diferencia entre tipos de datos segun su valor a largo plazo:
+Политика хранения различает типы данных по их долгосрочной ценности:
 
-| Tipo de dato | Politica de retención | Razon |
-|--------------|----------------------|-------|
-| Decisiones | No se purgan nunca | El razonamiento detrás de una decisión es valioso indefinidamente |
-| Iteraciones | No se purgan nunca | Son el contexto de las decisiones y commits |
-| Commits | No se purgan nunca | Son el vinculo con el código real |
-| Eventos | Se purgan tras `retention_days` | Son datos mecanicos cuyo valor decrece con el tiempo |
+| Тип данных | Политика хранения | Причина |
+|------------|-------------------|---------|
+| Решения | Не удаляются никогда | Обоснование решения ценно бессрочно |
+| Итерации | Не удаляются никогда | Это контекст решений и коммитов |
+| Коммиты | Не удаляются никогда | Это связь с реальным кодом |
+| События | Удаляются после `retention_days` | Это механические данные, их ценность со временем падает |
 
-La purga de eventos se ejecuta automáticamente al arrancar el servidor MCP. El método `purge_old_events()` elimina los eventos cuyo `created_at` sea anterior a la fecha actual menos `retention_days` y limpia también sus filas en `memory_fts`. El valor por defecto es 365 dias, configurable via la variable de entorno `ALFRED_MEMORY_RETENTION_DAYS` o la clave `memoria.retention_days` en la configuración del proyecto.
+Очистка событий выполняется автоматически при запуске MCP-сервера. Метод `purge_old_events()` удаляет события, у которых `created_at` раньше текущей даты минус `retention_days`, и очищает их строки в `memory_fts`. Значение по умолчанию: 365 дней. Его можно задать через переменную окружения `ALFRED_MEMORY_RETENTION_DAYS` или ключ `memoria.retention_days` в конфигурации проекта.
 
-### Versionado del esquema
+### Версионирование схемы
 
-La tabla `meta` almacena la versión del esquema con la clave `schema_version`. La versión actual es `4`.
+Таблица `meta` хранит версию схемы под ключом `schema_version`. Текущая версия: `4`.
 
-Desde la v0.2.3, el sistema incluye un mecanismo de migración automática. Al abrir una base de datos, `MemoryDB` compara la versión almacenada con `_SCHEMA_VERSION`. Si es inferior, ejecuta las migraciones pendientes dentro de una transaccion y crea una copia de seguridad (`.bak`) antes de modificar el esquema. El diccionario `_MIGRATIONS` asocia cada versión con la lista de sentencias SQL necesarias para migrar desde la versión anterior.
+С v0.2.3 есть механизм автоматической миграции. При открытии базы `MemoryDB` сравнивает сохранённую версию с `_SCHEMA_VERSION`. Если она ниже, выполняет ожидающие миграции в одной транзакции и перед изменением схемы создаёт резервную копию (`.bak`). Словарь `_MIGRATIONS` связывает каждую версию со списком SQL-команд для миграции с предыдущей версии.
 
-La migración de v1 a v2 añade tres columnas (`decisions.tags`, `decisions.status`, `commits.files`) y crea la tabla `decision_links` con su índice. La v2 a v3 añade tablas auxiliares históricas y la v3 a v4 incorpora `summary` y `content` en `events` para la captura total y la indexación de eventos. Al tratarse de operaciones `ALTER TABLE` y `CREATE TABLE`, son seguras y no requieren reescritura de datos existentes.
+Миграция с v1 на v2 добавляет три колонки (`decisions.tags`, `decisions.status`, `commits.files`) и создаёт таблицу `decision_links` с индексом. Миграция с v2 на v3 добавляет исторические вспомогательные таблицы, а с v3 на v4 добавляет `summary` и `content` в `events` для полного захвата и индексации событий. Это операции `ALTER TABLE` и `CREATE TABLE`, они безопасны и не требуют перезаписи существующих данных.
 
 
-## Configuración
+## Конфигурация
 
-La memoria persistente se configura en la sección `memoria` del fichero `.claude/alfred-dev.local.md` del proyecto. También se puede gestionar de forma interactiva con `/alfred-dev:ajustes`.
+Постоянная память настраивается в секции `memoria` файла `.claude/alfred-dev.local.md` проекта. Её также можно настроить интерактивно через `/alfred-dev:ajustes`.
 
-### Claves de configuración
+### Ключи конфигурации
 
-| Clave | Tipo | Defecto | Descripción |
-|-------|------|---------|-------------|
-| `enabled` | boolean | `false` | Activa o desactiva la memoria persistente |
-| `sync_to_native` | boolean | `true` | Proyectar SQLite a memoria `.md` nativa de Claude Code |
-| `sync_commits_limit` | integer | `10` | Numero de commits recientes a proyectar en la memoria nativa |
-| `capture_decisions` | boolean | `true` | Registrar decisiones de diseño automáticamente |
-| `capture_commits` | boolean | `true` | Registrar commits automáticamente |
-| `retention_days` | integer | `365` | Dias de retención de eventos (decisiones e iteraciones no se purgan) |
+| Ключ | Тип | По умолчанию | Описание |
+|------|-----|--------------|----------|
+| `enabled` | boolean | `false` | Включает или выключает постоянную память |
+| `sync_to_native` | boolean | `true` | Проецировать SQLite в нативную память `.md` Claude Code |
+| `sync_commits_limit` | integer | `10` | Сколько последних коммитов проецировать в нативную память |
+| `capture_decisions` | boolean | `true` | Автоматически записывать решения по дизайну |
+| `capture_commits` | boolean | `true` | Автоматически записывать коммиты |
+| `retention_days` | integer | `365` | Сколько дней хранить события (решения и итерации не удаляются) |
 
-### Ejemplo mínimo de activacion
+### Минимальный пример включения
 
-Para activar la memoria con los valores por defecto, basta con añadir lo siguiente al frontmatter del fichero de configuración:
+Чтобы включить память со значениями по умолчанию, достаточно добавить во frontmatter файла конфигурации:
 
 ```yaml
 ---
@@ -513,7 +513,7 @@ memoria:
 ---
 ```
 
-### Ejemplo completo
+### Полный пример
 
 ```yaml
 ---
@@ -526,19 +526,19 @@ memoria:
   retention_days: 365
 
 agentes_opcionales:
-  lucius: false
+  cto: false
 ---
 ```
 
-La memoria funciona sin Lucius. Las consultas historicas van por MCP o `/alfred-dev:memory-ui`.
+Память работает без CTO. Исторические запросы идут через MCP или `/alfred-dev:memory-ui`.
 
 
-## Ficheros fuente de referencia
+## Исходные файлы для справки
 
-| Fichero | Contenido |
-|---------|-----------|
-| `core/memory.py` | Clase `MemoryDB`, función `sanitize_content()`, esquema SQL, migraciones, patrones de secretos, lógica de FTS5 |
-| `mcp/memory_server.py` | Clase `MemoryMCPServer`, 15 herramientas MCP, transporte JSON-RPC stdio |
-| `hooks/activity-capture.py` | Hook de captura en UserPromptSubmit y PostToolUse (Write/Edit/Bash). Incluye seguimiento de iteraciones/fases y captura de commits. |
-| `hooks/session-start.sh` | Briefing de sesión con decisiones y ADRs |
-| `commands/memory-ui.md` | Visor local GET de la memoria SQLite |
+| Файл | Содержимое |
+|------|------------|
+| `core/memory.py` | Класс `MemoryDB`, функция `sanitize_content()`, SQL-схема, миграции, шаблоны секретов, логика FTS5 |
+| `mcp/memory_server.py` | Класс `MemoryMCPServer`, 15 MCP-инструментов, транспорт JSON-RPC stdio |
+| `hooks/activity-capture.py` | Хук захвата в UserPromptSubmit и PostToolUse (Write/Edit/Bash). Включает отслеживание итераций/фаз и захват коммитов. |
+| `hooks/session-start.sh` | Брифинг сессии с решениями и ADR |
+| `commands/memory-ui.md` | Локальный GET-просмотрщик памяти SQLite |

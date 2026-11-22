@@ -1,39 +1,39 @@
 #!/usr/bin/env python3
 """
-Orquestador de flujos del plugin Alfred Dev.
+Flow orchestrator for the Alfred Dev plugin.
 
-Este módulo gestiona el ciclo de vida completo de los flujos de trabajo
-(feature, fix, quick, spike, ship, audit). Cada flujo se compone de fases
-secuenciales con gates de control que determinan si se puede avanzar
-a la siguiente fase.
+This module manages the full lifecycle of the work flows
+(feature, fix, quick, spike, ship, audit). Each flow has sequential
+phases with control gates. A gate decides if the flow can move to
+the next phase.
 
-El orquestador se encarga de:
-- Definir los flujos disponibles y sus fases.
-- Crear y gestionar sesiones de trabajo.
-- Evaluar las gates de cada fase para decidir si se aprueba el avance.
-- Persistir y recuperar el estado de las sesiones en disco.
-- Gestionar el loop iterativo dentro de cada fase (v0.4.0).
-- Soportar el modo autopilot para ejecucion sin interrupcion (v0.4.0).
+The orchestrator:
+- Defines the available flows and their phases.
+- Creates and manages work sessions.
+- Evaluates the gate of each phase to approve the advance.
+- Saves and loads session state on disk.
+- Manages the iterative loop inside each phase (v0.4.0).
+- Supports autopilot mode to run without interruption (v0.4.0).
 
-Arquitectura de gates:
-    Las gates actúan como puntos de control entre fases. Su comportamiento
-    depende del tipo definido en cada fase: las gates de tipo «usuario»
-    requieren aprobación explícita; las «automático» se evalúan contra
-    métricas objetivas como tests verdes o pipeline OK; las combinadas
-    (ej. «automático+seguridad») acumulan ambas condiciones.
+Gate architecture:
+    Gates are checkpoints between phases. Their behavior depends on the
+    type set in each phase: "usuario" gates require explicit approval;
+    "automatico" gates check objective metrics such as green tests or
+    a passing pipeline; combined gates (for example
+    "automatico+seguridad") require both conditions.
 
-Loop iterativo (v0.4.0):
-    Dentro de cada fase, los agentes pueden iterar hasta que los
-    entregables esten completos o se alcance el maximo de iteraciones.
-    El loop es interno a la fase: no avanza a la siguiente hasta que
-    la gate se supere. Esto permite ciclos TDD (rojo-verde-refactor)
-    y pasadas de QA repetidas sin intervencion manual.
+Iterative loop (v0.4.0):
+    Inside each phase, agents can iterate until the deliverables are
+    complete or the iteration limit is reached. The loop stays inside
+    the phase: the flow does not advance until the gate passes. This
+    allows TDD cycles (red-green-refactor) and repeated QA passes
+    without manual intervention.
 
-Modo autopilot (v0.4.0):
-    Cuando ``autopilot=True``, el flujo recorre todas las fases sin
-    pedir aprobacion al usuario en las gates de tipo «usuario». Las
-    gates automaticas y de seguridad siguen evaluandose normalmente.
-    Solo se detiene si una gate automatica o de seguridad falla.
+Autopilot mode (v0.4.0):
+    When ``autopilot=True``, the flow runs through all phases and does
+    not ask the user for approval at "usuario" gates. Automatic and
+    security gates are still evaluated as usual. The flow stops only
+    when an automatic or security gate fails.
 """
 
 import json
@@ -48,9 +48,8 @@ from core.optional_agents import (
     normalize_optional_agent_flags,
 )
 
-# --- Constantes de tipos de gate -------------------------------------------
-# Se extraen como constantes para evitar la duplicación de literales
-# y facilitar la validación centralizada.
+# --- Gate type constants ----------------------------------------------------
+# Constants prevent duplicate literals and keep validation in one place.
 
 GATE_USUARIO = "usuario"
 GATE_AUTOMATICO = "automatico"
@@ -63,9 +62,9 @@ _KNOWN_GATE_TYPES = {
     GATE_USUARIO_SEGURIDAD, GATE_AUTOMATICO_SEGURIDAD,
 }
 
-# --- Agentes opcionales conocidos -------------------------------------------
-# Lista canónica de agentes opcionales del plugin. Se usa para validar la
-# estructura del equipo de sesión en composición dinámica.
+# --- Known optional agents ---------------------------------------------------
+# Canonical list of the plugin's optional agents. Used to validate the
+# structure of the session team in dynamic composition.
 
 _KNOWN_OPTIONAL_AGENTS = frozenset(get_optional_agent_names())
 _KNOWN_EQUIPO_SESSION_SOURCES = frozenset({
@@ -73,9 +72,9 @@ _KNOWN_EQUIPO_SESSION_SOURCES = frozenset({
     "config_persistida",
 })
 
-# --- Definición de flujos ---------------------------------------------------
-# Cada flujo describe una secuencia de fases que el orquestador recorre.
-# Los agentes listados en cada fase son los responsables de ejecutarla.
+# --- Flow definitions --------------------------------------------------------
+# Each flow describes a sequence of phases that the orchestrator runs.
+# The agents listed in each phase are responsible for running it.
 
 FLOWS: Dict[str, Dict[str, Any]] = {
         "feature": {
@@ -88,8 +87,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_producto",
                 "gate_tipo": GATE_USUARIO,
                 "descripcion": (
-                    "Análisis de requisitos y definición del alcance "
-                    "funcional de la nueva característica."
+                    "Анализ требований и определение функционального "
+                    "объёма новой feature."
                 ),
             },
             {
@@ -100,8 +99,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate_tipo": GATE_USUARIO,
                 "condicion": "tiene_frontend",
                 "descripcion": (
-                    "Definicion de la direccion de estilo visual "
-                    "del producto con tres propuestas comparativas."
+                    "Определение направления визуального стиля "
+                    "продукта на основе трёх сопоставимых предложений."
                 ),
             },
             {
@@ -111,8 +110,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_arquitectura",
                 "gate_tipo": GATE_USUARIO_SEGURIDAD,
                 "descripcion": (
-                    "Diseño técnico, elección de patrones y validación "
-                    "de la propuesta arquitectónica con threat model."
+                    "Техническое проектирование, выбор паттернов и проверка "
+                    "архитектурного решения с threat model."
                 ),
             },
             {
@@ -122,8 +121,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_desarrollo",
                 "gate_tipo": GATE_AUTOMATICO,
                 "descripcion": (
-                    "Implementación del código siguiendo TDD estricto "
-                    "con ciclos rojo-verde-refactor."
+                    "Реализация кода по строгому TDD "
+                    "с циклами red-green-refactor."
                 ),
             },
             {
@@ -133,8 +132,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_calidad",
                 "gate_tipo": GATE_AUTOMATICO_SEGURIDAD,
                 "descripcion": (
-                    "Revisión de calidad, ejecución de tests y "
-                    "auditoría de seguridad en paralelo."
+                    "Проверка качества, запуск тестов и "
+                    "аудит безопасности параллельно."
                 ),
             },
             {
@@ -144,8 +143,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_documentacion",
                 "gate_tipo": GATE_LIBRE,
                 "descripcion": (
-                    "Generación de documentación técnica y de usuario "
-                    "para la comunidad."
+                    "Создание технической и пользовательской "
+                    "документации для сообщества."
                 ),
             },
             {
@@ -155,8 +154,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_entrega",
                 "gate_tipo": GATE_USUARIO_SEGURIDAD,
                 "descripcion": (
-                    "Preparación del entregable, changelog y "
-                    "validación final antes del merge."
+                    "Подготовка поставки, changelog и "
+                    "финальная проверка перед merge."
                 ),
             },
         ],
@@ -171,8 +170,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_diagnostico",
                 "gate_tipo": GATE_USUARIO,
                 "descripcion": (
-                    "Identificación de la causa raíz del bug "
-                    "mediante análisis de logs, trazas y reproducción."
+                    "Поиск первопричины бага "
+                    "через анализ логов, трассировок и воспроизведение."
                 ),
             },
             {
@@ -182,8 +181,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_correccion",
                 "gate_tipo": GATE_AUTOMATICO,
                 "descripcion": (
-                    "Aplicación del fix con test de regresión "
-                    "que demuestre que el bug queda resuelto."
+                    "Применение fix с регрессионным тестом, "
+                    "который доказывает, что баг устранён."
                 ),
             },
             {
@@ -193,8 +192,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_validacion",
                 "gate_tipo": GATE_AUTOMATICO_SEGURIDAD,
                 "descripcion": (
-                    "Validación completa: tests de regresión, "
-                    "suite existente y revisión de seguridad."
+                    "Полная проверка: регрессионные тесты, "
+                    "существующий набор тестов и проверка безопасности."
                 ),
             },
         ],
@@ -209,8 +208,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_ejecucion_acotada",
                 "gate_tipo": GATE_AUTOMATICO,
                 "descripcion": (
-                    "Implementación acotada para cambios pequeños, "
-                    "locales y de bajo riesgo, con validación automática."
+                    "Ограниченная реализация для небольших, "
+                    "локальных изменений с низким риском и автоматической проверкой."
                 ),
             },
             {
@@ -220,8 +219,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_validacion_rapida",
                 "gate_tipo": GATE_AUTOMATICO_SEGURIDAD,
                 "descripcion": (
-                    "Validación rápida del cambio sobre la superficie tocada: "
-                    "regresión local, tests y revisión de seguridad."
+                    "Быстрая проверка изменения на затронутой области: "
+                    "локальная регрессия, тесты и проверка безопасности."
                 ),
             },
         ],
@@ -236,8 +235,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_exploracion",
                 "gate_tipo": GATE_LIBRE,
                 "descripcion": (
-                    "Investigación exploratoria: pruebas de concepto, "
-                    "benchmarks y evaluación de alternativas."
+                    "Исследование: proof of concept, "
+                    "бенчмарки и оценка альтернатив."
                 ),
             },
             {
@@ -247,8 +246,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_conclusiones",
                 "gate_tipo": GATE_USUARIO,
                 "descripcion": (
-                    "Consolidación de hallazgos en un informe "
-                    "con recomendaciones accionables."
+                    "Сведение находок в отчёт "
+                    "с практическими рекомендациями."
                 ),
             },
         ],
@@ -263,8 +262,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_auditoria_final",
                 "gate_tipo": GATE_AUTOMATICO_SEGURIDAD,
                 "descripcion": (
-                    "Auditoría completa de calidad y seguridad "
-                    "antes de la release."
+                    "Полный аудит качества и безопасности "
+                    "перед релизом."
                 ),
             },
             {
@@ -274,8 +273,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_documentacion_ship",
                 "gate_tipo": GATE_LIBRE,
                 "descripcion": (
-                    "Actualización de la documentación de release, "
-                    "changelog y guías de migración."
+                    "Обновление документации релиза, "
+                    "changelog и руководств по миграции."
                 ),
             },
             {
@@ -285,8 +284,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_empaquetado",
                 "gate_tipo": GATE_AUTOMATICO_SEGURIDAD,
                 "descripcion": (
-                    "Generación del artefacto de release, "
-                    "versionado semántico y etiquetado."
+                    "Сборка артефакта релиза, "
+                    "семантическое версионирование и тегирование."
                 ),
             },
             {
@@ -297,8 +296,8 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate_tipo": GATE_USUARIO_SEGURIDAD,
                 "autopilot_force_user_confirmation": True,
                 "descripcion": (
-                    "Despliegue a producción con validación "
-                    "post-deploy y rollback preparado."
+                    "Развёртывание в production с проверкой "
+                    "после deploy и подготовленным rollback."
                 ),
             },
         ],
@@ -318,9 +317,9 @@ FLOWS: Dict[str, Dict[str, Any]] = {
                 "gate": "gate_auditoria",
                 "gate_tipo": GATE_AUTOMATICO_SEGURIDAD,
                 "descripcion": (
-                    "Auditoría completa del código en paralelo: "
-                    "calidad, seguridad, arquitectura "
-                    "y documentación."
+                    "Полный параллельный аудит кода: "
+                    "качество, безопасность, архитектура "
+                    "и документация."
                 ),
             },
         ],
@@ -328,33 +327,33 @@ FLOWS: Dict[str, Dict[str, Any]] = {
 }
 
 
-# --- Integracion de agentes opcionales -------------------------------------
-# Este mapa define en que fases puede participar cada agente opcional como
-# refuerzo de los agentes de nucleo. La posicion indica si se ejecuta en
-# paralelo con los de nucleo o de forma secuencial despues de ellos.
+# --- Optional agent integration ----------------------------------------------
+# This map defines the phases where each optional agent can support the
+# core agents. The position tells if the agent runs in parallel with the
+# core agents or sequentially after them.
 #
-# El Bibliotecario no participa en flujos activos: es consultivo (via MCP)
-# y no necesita integrarse en ninguna fase de ejecucion.
+# The Librarian does not take part in active flows: it is advisory (via MCP)
+# and does not need a place in any execution phase.
 
 OPTIONAL_INTEGRATIONS: Dict[str, Dict[str, Any]] = get_optional_integrations()
 
-# --- Evaluadores de condiciones de fase ---------------------------------------
-# Mapa de condiciones declarativas a funciones evaluadoras.
-# Cada condicion recibe el stack del proyecto y devuelve True si la fase debe
-# ejecutarse. Se importa de forma perezosa (lazy) dentro de la funcion para
-# evitar importaciones circulares con config_loader.
+# --- Phase condition evaluators ----------------------------------------------
+# Map from declarative conditions to evaluator functions.
+# Each condition receives the project stack and returns True if the phase
+# must run. The import is lazy, inside the function, to prevent circular
+# imports with config_loader.
 
 _PHASE_CONDITIONS: Optional[Dict[str, Any]] = None
 
 
 def _get_phase_conditions() -> Dict[str, Any]:
-    """Devuelve el mapa de condiciones, inicializandolo de forma perezosa."""
+    """Return the condition map. Initialize it lazily."""
     global _PHASE_CONDITIONS
     if _PHASE_CONDITIONS is None:
         from core.config_loader import has_frontend  # noqa: PLC0415
-        # "tiene_frontend" evalua config_loader.has_frontend(stack) para decidir
-        # si la fase estilo_visual debe ejecutarse. La importacion es perezosa para
-        # evitar importaciones circulares entre orchestrator y config_loader.
+        # "tiene_frontend" calls config_loader.has_frontend(stack) to decide
+        # if the estilo_visual phase must run. The import is lazy to prevent
+        # circular imports between orchestrator and config_loader.
         _PHASE_CONDITIONS = {
             "tiene_frontend": has_frontend,
         }
@@ -367,21 +366,21 @@ def _advance_skipping_phases(
     siguiente: int,
     conditions: Dict[str, Any],
 ) -> int:
-    """Avanza el índice saltando fases con condición no cumplida.
+    """Advance the index and skip phases whose condition is not met.
 
-    Registra cada fase saltada en ``session["fases_completadas"]`` con
-    resultado ``"saltada"``. Se detiene en la primera fase ejecutable
-    (sin condición o condición cumplida) o cuando el stack no está
-    disponible para evaluar la condición.
+    Records each skipped phase in ``session["fases_completadas"]`` with
+    result ``"saltada"``. Stops at the first runnable phase (no condition
+    or condition met) or when no stack is available to evaluate the
+    condition.
 
     Args:
-        session: estado de la sesión (se muta para registrar fases saltadas).
-        fases: lista de fases del flujo.
-        siguiente: índice de partida para la búsqueda.
-        conditions: mapa de nombre de condición a función evaluadora.
+        session: session state (mutated to record skipped phases).
+        fases: list of flow phases.
+        siguiente: start index for the search.
+        conditions: map from condition name to evaluator function.
 
     Returns:
-        Índice de la siguiente fase ejecutable.
+        Index of the next runnable phase.
     """
     stack = session.get("stack")
     while siguiente < len(fases):
@@ -390,11 +389,11 @@ def _advance_skipping_phases(
         if not condicion or condicion not in conditions:
             break
         if stack is None:
-            # Sin stack, no se puede evaluar la condición: ejecutar la fase
+            # Without a stack the condition cannot be evaluated: run the phase
             break
         if conditions[condicion](stack):
             break
-        # Condición no cumplida: registrar fase saltada y continuar
+        # Condition not met: record the skipped phase and continue
         session["fases_completadas"].append({
             "nombre": fase_siguiente["nombre"],
             "resultado": "saltada",
@@ -410,26 +409,25 @@ def get_effective_agents(
     phase_name: str,
     active_optionals: Optional[Dict[str, bool]] = None,
 ) -> Dict[str, List[str]]:
-    """Calcula los agentes que participan en una fase, incluyendo opcionales activos.
+    """Compute the agents of a phase, including active optional agents.
 
-    Fusiona los agentes de nucleo definidos en FLOWS con los agentes opcionales
-    activos que tienen integracion en esa fase. El resultado distingue entre
-    agentes en paralelo y secuenciales para que los commands sepan como lanzarlos.
+    Merges the core agents defined in FLOWS with the active optional agents
+    that integrate with that phase. The result separates parallel and
+    sequential agents so that commands know how to launch them.
 
     Args:
-        phase_name: nombre de la fase (ej. "arquitectura", "calidad").
-        active_optionals: diccionario con los agentes opcionales activos.
-            Clave = nombre del agente, valor = True si esta activo.
-            Si es None, no se anaden opcionales.
+        phase_name: phase name (for example "arquitectura", "calidad").
+        active_optionals: dict of active optional agents.
+            Key = agent name, value = True if active.
+            If None, no optional agents are added.
 
     Returns:
-        Diccionario con dos claves:
-        - "paralelo": lista de agentes opcionales que se ejecutan en paralelo
-          con los de nucleo.
-        - "secuencial": lista de agentes opcionales que se ejecutan despues
-          de los de nucleo.
+        Dict with two keys:
+        - "paralelo": optional agents that run in parallel with the
+          core agents.
+        - "secuencial": optional agents that run after the core agents.
 
-    Ejemplo:
+    Example:
         >>> get_effective_agents("calidad", {"ux-reviewer": True, "performance-engineer": True})
         {"paralelo": ["ux-reviewer", "performance-engineer"], "secuencial": []}
     """
@@ -455,34 +453,34 @@ def get_effective_agents(
 
 
 def _resolve_current_phase(session: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], str]:
-    """Resuelve y valida la fase actual de una sesión."""
+    """Resolve and validate the current phase of a session."""
     comando = session.get("comando")
     if comando not in FLOWS:
-        return None, f"Flujo '{comando}' no definido en FLOWS."
+        return None, f"Процесс '{comando}' не определён в FLOWS."
 
     fase_actual = session.get("fase_actual")
     if fase_actual == "completado":
-        return None, "Sesion completada. No hay gate pendiente."
+        return None, "Сессия завершена. Ожидающего gate нет."
 
     fase_numero = session.get("fase_numero")
     if not isinstance(fase_numero, int):
-        return None, "El índice de fase no es un entero válido."
+        return None, "Индекс фазы не является допустимым целым числом."
     if fase_numero < 0:
-        return None, f"El índice de fase no puede ser negativo: {fase_numero}."
+        return None, f"Индекс фазы не может быть отрицательным: {fase_numero}."
 
     fases = FLOWS[comando]["fases"]
     if fase_numero >= len(fases):
         return None, (
-            f"El índice de fase {fase_numero} está fuera de rango para el flujo "
-            f"'{comando}' ({len(fases)} fases)."
+            f"Индекс фазы {fase_numero} вне диапазона для процесса "
+            f"'{comando}' (фаз: {len(fases)})."
         )
 
     fase = fases[fase_numero]
     expected_name = fase["nombre"]
     if fase_actual != expected_name:
         return None, (
-            "El estado de sesión es inconsistente: "
-            f"fase_actual='{fase_actual}' no coincide con fase_numero={fase_numero} "
+            "Состояние сессии противоречиво: "
+            f"fase_actual='{fase_actual}' не совпадает с fase_numero={fase_numero} "
             f"('{expected_name}')."
         )
 
@@ -490,75 +488,75 @@ def _resolve_current_phase(session: Dict[str, Any]) -> Tuple[Optional[Dict[str, 
 
 
 def _validate_equipo_sesion(equipo_sesion: Any) -> bool:
-    """Valida la estructura del equipo de sesión generado por composición dinámica.
+    """Validate the session team structure built by dynamic composition.
 
-    Comprueba que el diccionario tenga las claves esperadas en cada nivel y que
-    los valores sean del tipo correcto. Si algo falla, imprime un aviso
-    descriptivo a stderr y devuelve False. Esto permite que el orquestador
-    descarte equipos mal formados sin romper el flujo.
+    Checks that the dict has the expected keys at each level and that the
+    values have the correct type. On failure, prints a descriptive warning
+    to stderr and returns False. This lets the orchestrator discard
+    malformed teams without breaking the flow.
 
-    Las reglas de validación por nivel son:
+    Validation rules per level:
 
-        - **Primer nivel**: exige exactamente las claves ``"opcionales_activos"``,
-          ``"infra"`` y ``"fuente"``. Claves extra o ausentes provocan rechazo.
-        - **``opcionales_activos``**: exige como mínimo las claves de
-          ``_KNOWN_OPTIONAL_AGENTS``. Acepta
-          claves extra con aviso a stderr (tolerancia ante extensiones futuras),
-          pero no las valida. Todos los valores deben ser ``bool``.
-        - **``infra``**: exige exactamente ``"memoria"``, de tipo ``bool``.
-        - **``fuente``**: debe ser una de las fuentes runtime reconocidas
-          (actualmente ``"composicion_dinamica"`` o ``"config_persistida"``).
+        - **Top level**: requires exactly the keys ``"opcionales_activos"``,
+          ``"infra"`` and ``"fuente"``. Extra or missing keys cause rejection.
+        - **``opcionales_activos``**: requires at least the keys of
+          ``_KNOWN_OPTIONAL_AGENTS``. Accepts extra keys with a warning to
+          stderr (tolerance for future extensions) but does not validate
+          them. All values must be ``bool``.
+        - **``infra``**: requires exactly ``"memoria"``, of type ``bool``.
+        - **``fuente``**: must be one of the known runtime sources
+          (currently ``"composicion_dinamica"`` or ``"config_persistida"``).
 
     Args:
-        equipo_sesion: valor a validar. Se espera un dict con las claves
-            ``"opcionales_activos"``, ``"infra"`` y ``"fuente"``.
+        equipo_sesion: value to validate. Expected: a dict with the keys
+            ``"opcionales_activos"``, ``"infra"`` and ``"fuente"``.
 
     Returns:
-        True si la estructura es válida, False en caso contrario.
+        True if the structure is valid, False otherwise.
 
-    Ejemplo:
+    Example:
         >>> _validate_equipo_sesion({"opcionales_activos": {...}, "infra": {...}, "fuente": "composicion_dinamica"})
         True
     """
-    # --- 1. Debe ser un dict ---
+    # --- 1. Must be a dict ---
     if not isinstance(equipo_sesion, dict):
         print(
-            "[Alfred Dev] Aviso: equipo_sesion no es un diccionario.",
+            "[Alfred Dev] Предупреждение: equipo_sesion не является словарём.",
             file=sys.stderr,
         )
         return False
 
-    # --- 2. Claves de primer nivel ---
+    # --- 2. Top-level keys ---
     expected_top_keys = {"opcionales_activos", "infra", "fuente"}
     if set(equipo_sesion.keys()) != expected_top_keys:
         print(
-            f"[Alfred Dev] Aviso: equipo_sesion tiene claves inesperadas. "
-            f"Esperadas: {sorted(expected_top_keys)}, "
-            f"recibidas: {sorted(equipo_sesion.keys())}.",
+            f"[Alfred Dev] Предупреждение: в equipo_sesion неожиданные ключи. "
+            f"Ожидались: {sorted(expected_top_keys)}, "
+            f"получены: {sorted(equipo_sesion.keys())}.",
             file=sys.stderr,
         )
         return False
 
-    # --- 3. opcionales_activos: dict con al menos las claves conocidas, valores bool ---
+    # --- 3. opcionales_activos: dict with at least the known keys, bool values ---
     opcionales = equipo_sesion["opcionales_activos"]
     if not isinstance(opcionales, dict):
         print(
-            "[Alfred Dev] Aviso: opcionales_activos no es un diccionario.",
+            "[Alfred Dev] Предупреждение: opcionales_activos не является словарём.",
             file=sys.stderr,
         )
         return False
 
-    # Estados antiguos pueden usar nombres legacy (p. ej. "lucius").
+    # Old states can use legacy names (for example "lucius").
     opcionales = normalize_optional_agent_flags(opcionales)
     equipo_sesion["opcionales_activos"] = opcionales
 
-    # Las claves conocidas deben estar presentes. Claves extra se aceptan
-    # con aviso (tolerancia ante extensiones futuras).
+    # The known keys must be present. Extra keys are accepted with a
+    # warning (tolerance for future extensions).
     missing = _KNOWN_OPTIONAL_AGENTS - set(opcionales.keys())
     if missing:
         print(
-            f"[Alfred Dev] Aviso: opcionales_activos no incluye los agentes "
-            f"requeridos: {sorted(missing)}.",
+            f"[Alfred Dev] Предупреждение: в opcionales_activos нет "
+            f"обязательных агентов: {sorted(missing)}.",
             file=sys.stderr,
         )
         return False
@@ -566,59 +564,59 @@ def _validate_equipo_sesion(equipo_sesion: Any) -> bool:
     extra = set(opcionales.keys()) - _KNOWN_OPTIONAL_AGENTS
     if extra:
         print(
-            f"[Alfred Dev] Aviso: opcionales_activos incluye agentes "
-            f"desconocidos que se ignorarán: {sorted(extra)}.",
+            f"[Alfred Dev] Предупреждение: в opcionales_activos есть "
+            f"неизвестные агенты, они будут проигнорированы: {sorted(extra)}.",
             file=sys.stderr,
         )
 
     for agent_name, value in opcionales.items():
         if not isinstance(value, bool):
             print(
-                f"[Alfred Dev] Aviso: opcionales_activos['{agent_name}'] no es bool "
-                f"(tipo: {type(value).__name__}, valor: {value!r}).",
+                f"[Alfred Dev] Предупреждение: opcionales_activos['{agent_name}'] не bool "
+                f"(тип: {type(value).__name__}, значение: {value!r}).",
                 file=sys.stderr,
             )
             return False
 
-    # --- 4. infra: dict con exactamente "memoria", valor bool ---
+    # --- 4. infra: dict with exactly "memoria", bool value ---
     infra = equipo_sesion["infra"]
     if not isinstance(infra, dict):
         print(
-            "[Alfred Dev] Aviso: infra no es un diccionario.",
+            "[Alfred Dev] Предупреждение: infra не является словарём.",
             file=sys.stderr,
         )
         return False
 
     expected_infra_keys = {"memoria"}
     actual_keys = set(infra.keys())
-    # Aceptar "gui" por compatibilidad con estados de sesiones anteriores
+    # Accept "gui" for compatibility with states from older sessions
     accepted_keys = actual_keys - {"gui"}
     if accepted_keys != expected_infra_keys:
         print(
-            f"[Alfred Dev] Aviso: infra tiene claves inesperadas. "
-            f"Esperadas: {sorted(expected_infra_keys)}, "
-            f"recibidas: {sorted(infra.keys())}.",
+            f"[Alfred Dev] Предупреждение: в infra неожиданные ключи. "
+            f"Ожидались: {sorted(expected_infra_keys)}, "
+            f"получены: {sorted(infra.keys())}.",
             file=sys.stderr,
         )
         return False
 
     for infra_key, value in infra.items():
         if infra_key == "gui":
-            continue  # Ignorar clave obsoleta
+            continue  # Ignore the obsolete key
         if not isinstance(value, bool):
             print(
-                f"[Alfred Dev] Aviso: infra['{infra_key}'] no es bool "
-                f"(tipo: {type(value).__name__}, valor: {value!r}).",
+                f"[Alfred Dev] Предупреждение: infra['{infra_key}'] не bool "
+                f"(тип: {type(value).__name__}, значение: {value!r}).",
                 file=sys.stderr,
             )
             return False
 
-    # --- 5. fuente: debe ser una fuente runtime conocida ---
+    # --- 5. fuente: must be a known runtime source ---
     if equipo_sesion["fuente"] not in _KNOWN_EQUIPO_SESSION_SOURCES:
         print(
-            f"[Alfred Dev] Aviso: fuente debe ser una de "
+            f"[Alfred Dev] Предупреждение: fuente должен быть одним из "
             f"{sorted(_KNOWN_EQUIPO_SESSION_SOURCES)}, "
-            f"recibido: {equipo_sesion['fuente']!r}.",
+            f"получено: {equipo_sesion['fuente']!r}.",
             file=sys.stderr,
         )
         return False
@@ -629,20 +627,20 @@ def _validate_equipo_sesion(equipo_sesion: Any) -> bool:
 def _load_persisted_equipo_sesion(
     project_dir: str,
 ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
-    """Carga el equipo runtime derivado de la configuración persistida."""
+    """Load the runtime team derived from the persisted configuration."""
     try:
         from core.config_loader import build_project_equipo_sesion  # noqa: PLC0415
 
         equipo_sesion = build_project_equipo_sesion(project_dir)
     except Exception as exc:
         print(
-            "[Alfred Dev] Aviso: no se pudo cargar el equipo persistido "
-            f"del proyecto '{project_dir}': {exc}",
+            "[Alfred Dev] Предупреждение: не удалось загрузить сохранённую команду "
+            f"проекта '{project_dir}': {exc}",
             file=sys.stderr,
         )
         return None, (
-            "No se pudo cargar la configuración persistida del proyecto; "
-            "la sesión seguirá sin agentes opcionales."
+            "Не удалось загрузить сохранённую конфигурацию проекта; "
+            "сессия продолжится без опциональных агентов."
         )
 
     if equipo_sesion is None:
@@ -650,13 +648,13 @@ def _load_persisted_equipo_sesion(
 
     if not _validate_equipo_sesion(equipo_sesion):
         print(
-            "[Alfred Dev] Aviso: el equipo derivado de la configuración "
-            "persistida no pasó la validación y se ignorará.",
+            "[Alfred Dev] Предупреждение: команда из сохранённой "
+            "конфигурации не прошла проверку и будет проигнорирована.",
             file=sys.stderr,
         )
         return None, (
-            "La configuración persistida del proyecto produjo un equipo de "
-            "sesión inválido y fue descartada."
+            "Сохранённая конфигурация проекта дала недопустимую команду "
+            "сессии и была отброшена."
         )
 
     return equipo_sesion, None
@@ -668,63 +666,63 @@ def run_flow(
     equipo_sesion: Optional[Dict[str, Any]] = None,
     project_dir: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Crea una sesión de flujo con composición dinámica de equipo opcional.
+    """Create a flow session with an optional dynamically composed team.
 
-    Combina la creación de sesión estándar con la inyección del equipo de
-    sesión generado por la composición dinámica. Si el equipo proporcionado
-    no pasa la validación, se descarta con aviso a stderr y se registra el
-    motivo en ``session["equipo_sesion_error"]`` para que los consumidores
-    downstream puedan informar al usuario.
+    Combines the standard session creation with the injection of the
+    session team built by dynamic composition. If the given team fails
+    validation, it is discarded with a warning to stderr, and the reason
+    is stored in ``session["equipo_sesion_error"]`` so that downstream
+    consumers can inform the user.
 
-    Este es el punto de entrada principal para iniciar un flujo cuando se
-    dispone de información sobre qué agentes opcionales deben participar.
+    This is the main entry point to start a flow when you know which
+    optional agents must take part.
 
     Args:
-        command: identificador del flujo (feature, fix, quick, spike, ship, audit).
-        description: descripción en lenguaje natural de la tarea.
-        equipo_sesion: diccionario con la composición del equipo generada
-            por el módulo de composición dinámica. Si es None, la sesión
-            se crea sin equipo. Si es inválido, se descarta con aviso y
-            se registra el motivo en "equipo_sesion_error".
-        project_dir: ruta al proyecto sobre el que debe detectarse stack y
-            cargarse la configuración persistida. Si no se pasa, se usa el
-            directorio de trabajo actual.
+        command: flow identifier (feature, fix, quick, spike, ship, audit).
+        description: natural language description of the task.
+        equipo_sesion: dict with the team composition built by the dynamic
+            composition module. If None, the session has no team. If
+            invalid, it is discarded with a warning and the reason is
+            stored in "equipo_sesion_error".
+        project_dir: path of the project used to detect the stack and load
+            the persisted configuration. Defaults to the current working
+            directory.
 
     Returns:
-        Diccionario con el estado de la sesión, incluyendo las claves:
-        - "equipo_sesion" (dict válido o None).
-        - "equipo_sesion_error" (str o None): motivo del descarte.
+        Dict with the session state, including the keys:
+        - "equipo_sesion" (valid dict or None).
+        - "equipo_sesion_error" (str or None): reason for the discard.
 
     Raises:
-        ValueError: si el comando no corresponde a ningún flujo definido.
+        ValueError: if the command does not match a defined flow.
 
-    Ejemplo:
+    Example:
         >>> session = run_flow("feature", "Login con OAuth", equipo_sesion={...})
         >>> session["equipo_sesion"]["opcionales_activos"]["github-manager"]
         True
     """
-    # --- 1. Validar que el comando existe ---
+    # --- 1. Validate that the command exists ---
     if command not in FLOWS:
         raise ValueError(
-            f"Flujo '{command}' no reconocido. "
-            f"Flujos disponibles: {', '.join(FLOWS.keys())}"
+            f"Процесс '{command}' не распознан. "
+            f"Доступные процессы: {', '.join(FLOWS.keys())}"
         )
 
     resolved_project_dir = os.path.abspath(project_dir or os.getcwd())
 
-    # --- 2. Validar equipo_sesion si se proporcionó ---
+    # --- 2. Validate equipo_sesion if given ---
     equipo_error = None
     explicit_team_discarded = False
     if equipo_sesion is not None and not _validate_equipo_sesion(equipo_sesion):
         print(
-            "[Alfred Dev] Error: el equipo de sesión no pasó la validación. "
-            "La sesión se creará sin agentes opcionales. Revisa la estructura "
-            "del diccionario equipo_sesion.",
+            "[Alfred Dev] Ошибка: команда сессии не прошла проверку. "
+            "Сессия будет создана без опциональных агентов. Проверь структуру "
+            "словаря equipo_sesion.",
             file=sys.stderr,
         )
         equipo_error = (
-            "El equipo de sesión proporcionado no pasó la validación "
-            "y fue descartado."
+            "Переданная команда сессии не прошла проверку "
+            "и была отброшена."
         )
         equipo_sesion = None
         explicit_team_discarded = True
@@ -735,8 +733,8 @@ def run_flow(
             equipo_sesion = persisted_team
             if explicit_team_discarded:
                 equipo_error = (
-                    f"{equipo_error} Se aplicó la configuración persistida de "
-                    "agentes opcionales del proyecto."
+                    f"{equipo_error} Применена сохранённая конфигурация "
+                    "опциональных агентов проекта."
                 )
         elif persisted_error:
             if explicit_team_discarded:
@@ -744,21 +742,21 @@ def run_flow(
             else:
                 equipo_error = persisted_error
 
-    # --- 3. Detectar stack del proyecto para fases condicionales ---
+    # --- 3. Detect the project stack for conditional phases ---
     stack = None
     try:
         from core.config_loader import detect_stack  # noqa: PLC0415
         stack = detect_stack(resolved_project_dir)
     except Exception as exc:
         print(
-            f"[Alfred Dev] Aviso: no se pudo detectar el stack del proyecto: {exc}",
+            f"[Alfred Dev] Предупреждение: не удалось определить stack проекта: {exc}",
             file=sys.stderr,
         )
 
-    # --- 4. Crear sesión base ---
+    # --- 4. Create the base session ---
     session = create_session(command, description, stack=stack)
 
-    # --- 5. Inyectar equipo_sesion y diagnóstico ---
+    # --- 5. Inject equipo_sesion and the diagnostic ---
     session["equipo_sesion"] = equipo_sesion
     session["equipo_sesion_error"] = equipo_error
 
@@ -771,28 +769,27 @@ def create_session(
     stack: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
-    Crea una nueva sesión de trabajo para el flujo indicado.
+    Create a new work session for the given flow.
 
-    La sesión contiene todo el estado necesario para que el orquestador
-    sepa en qué punto del flujo se encuentra el usuario y qué fases
-    se han completado.
+    The session holds all the state the orchestrator needs to know where
+    the user is in the flow and which phases are complete.
 
     Args:
-        command: Identificador del flujo (feature, fix, quick, spike, ship, audit).
-        description: Descripción en lenguaje natural de la tarea.
-        stack: metadatos detectados del proyecto. Si se proporciona, permite
-            evaluar fases condicionales como ``estilo_visual``.
+        command: flow identifier (feature, fix, quick, spike, ship, audit).
+        description: natural language description of the task.
+        stack: detected project metadata. If given, conditional phases
+            such as ``estilo_visual`` can be evaluated.
 
     Returns:
-        Diccionario con el estado inicial de la sesión.
+        Dict with the initial session state.
 
     Raises:
-        ValueError: Si el comando no corresponde a ningún flujo definido.
+        ValueError: if the command does not match a defined flow.
     """
     if command not in FLOWS:
         raise ValueError(
-            f"Flujo '{command}' no reconocido. "
-            f"Flujos disponibles: {', '.join(FLOWS.keys())}"
+            f"Процесс '{command}' не распознан. "
+            f"Доступные процессы: {', '.join(FLOWS.keys())}"
         )
 
     flow = FLOWS[command]
@@ -820,31 +817,31 @@ def check_gate(
     tests_ok: bool = True,
 ) -> Dict[str, Any]:
     """
-    Evalúa la gate de la fase actual para decidir si se puede avanzar.
+    Evaluate the gate of the current phase to decide if the flow can advance.
 
-    La lógica de evaluación depende del tipo de gate definido en la fase:
-    - «usuario»: requiere resultado «aprobado».
-    - «automático»: requiere resultado «aprobado» y tests verdes.
-    - «usuario+seguridad»: requiere aprobación del usuario y seguridad OK.
-    - «automático+seguridad»: requiere tests, seguridad y resultado OK.
-    - «libre»: se aprueba siempre que el resultado sea «aprobado».
+    The logic depends on the gate type defined in the phase:
+    - "usuario": requires result "aprobado".
+    - "automatico": requires result "aprobado" and green tests.
+    - "usuario+seguridad": requires user approval and a passing security check.
+    - "automatico+seguridad": requires tests, security and a passing result.
+    - "libre": passes when the result is "aprobado".
 
     Args:
-        session: Estado actual de la sesión.
-        resultado: Resultado reportado (normalmente «aprobado» o «rechazado»).
-        security_ok: Indica si la auditoría de seguridad es favorable.
-        tests_ok: Indica si los tests pasan correctamente.
+        session: current session state.
+        resultado: reported result (usually "aprobado" or "rechazado").
+        security_ok: True if the security audit passed.
+        tests_ok: True if the tests pass.
 
     Returns:
-        Diccionario con las claves «passed» (bool) y «reason» (str).
+        Dict with the keys "passed" (bool) and "reason" (str).
     """
     comando = session["comando"]
     if comando not in FLOWS:
-        return {"passed": False, "reason": f"Flujo '{comando}' no definido en FLOWS."}
+        return {"passed": False, "reason": f"Процесс '{comando}' не определён в FLOWS."}
 
-    # Sesion completada: no hay gate que evaluar.
+    # Session complete: no gate to evaluate.
     if session.get("fase_actual") == "completado":
-        return {"passed": True, "reason": "Sesion completada. No hay gate pendiente."}
+        return {"passed": True, "reason": "Сессия завершена. Ожидающего gate нет."}
 
     fase, phase_error = _resolve_current_phase(session)
     if fase is None:
@@ -852,8 +849,8 @@ def check_gate(
 
     gate_tipo = fase["gate_tipo"]
 
-    # Se acumulan las condiciones que debe cumplir la gate.
-    # El orden de comprobación determina qué error se reporta primero.
+    # Collect the conditions the gate must meet.
+    # The check order sets which error is reported first.
     failures = []
 
     requires_tests = "automatico" in gate_tipo
@@ -862,17 +859,17 @@ def check_gate(
     is_known = gate_tipo in _KNOWN_GATE_TYPES
 
     if not is_known:
-        return {"passed": False, "reason": f"Tipo de gate desconocido: {gate_tipo}"}
+        return {"passed": False, "reason": f"Неизвестный тип gate: {gate_tipo}"}
 
     if requires_tests and not tests_ok:
-        failures.append("Los tests no pasan.")
+        failures.append("Тесты не проходят.")
     if requires_security and not security_ok:
-        failures.append("La auditoría de seguridad no es favorable.")
+        failures.append("Аудит безопасности не пройден.")
     if resultado != "aprobado":
         if requires_approval:
-            failures.append("Aprobación del usuario requerida.")
+            failures.append("Требуется одобрение пользователя.")
         else:
-            failures.append("El resultado no es favorable.")
+            failures.append("Результат неудовлетворительный.")
 
     passed = len(failures) == 0
     reason = failures[0] if failures else ""
@@ -888,50 +885,50 @@ def advance_phase(
     tests_ok: bool = True,
 ) -> Dict[str, Any]:
     """
-    Intenta avanzar la sesión a la siguiente fase del flujo.
+    Try to advance the session to the next phase of the flow.
 
-    Primero evalúa la gate de la fase actual. Si la gate se supera,
-    registra la fase como completada y actualiza el puntero a la
-    siguiente. Si ya no quedan fases, marca la sesión como «completado».
+    First evaluates the gate of the current phase. If the gate passes,
+    records the phase as complete and moves the pointer to the next one.
+    If no phases remain, marks the session as "completado".
 
     Args:
-        session: Estado actual de la sesión.
-        resultado: Resultado a evaluar en la gate (por defecto «aprobado»).
-        artefactos: Lista opcional de artefactos generados en la fase.
-        security_ok: Indica si la auditoría de seguridad es favorable.
-        tests_ok: Indica si los tests pasan correctamente.
+        session: current session state.
+        resultado: result to evaluate at the gate (default "aprobado").
+        artefactos: optional list of artifacts produced in the phase.
+        security_ok: True if the security audit passed.
+        tests_ok: True if the tests pass.
 
     Returns:
-        Diccionario con el estado actualizado de la sesión.
+        Dict with the updated session state.
 
     Raises:
-        RuntimeError: Si la gate de la fase actual no se supera.
+        RuntimeError: if the gate of the current phase does not pass.
     """
     if artefactos is None:
         artefactos = []
 
     comando = session["comando"]
     if comando not in FLOWS:
-        raise RuntimeError(f"Flujo '{comando}' no definido en FLOWS.")
+        raise RuntimeError(f"Процесс '{comando}' не определён в FLOWS.")
 
     flow = FLOWS[comando]
     fases = flow["fases"]
 
-    # Si ya está completado, devolver sin cambios
+    # If already complete, return without changes
     if session["fase_actual"] == "completado":
         return session
 
-    # Evaluar la gate de la fase actual propagando todos los parámetros
+    # Evaluate the gate of the current phase with all parameters
     gate_result = check_gate(
         session, resultado=resultado, security_ok=security_ok, tests_ok=tests_ok
     )
     if not gate_result["passed"]:
         raise RuntimeError(
-            f"No se puede avanzar: {gate_result['reason']}"
+            f"Нельзя перейти дальше: {gate_result['reason']}"
         )
 
-    # Registrar la fase completada; se preserva el contador de iteraciones
-    # para que los informes de sesión puedan mostrar cuántos ciclos requirió la fase.
+    # Record the completed phase. Keep the iteration counter so that
+    # session reports can show how many cycles the phase needed.
     fase_completada = {
         "nombre": fases[session["fase_numero"]]["nombre"],
         "resultado": resultado,
@@ -941,10 +938,10 @@ def advance_phase(
     }
     session["fases_completadas"].append(fase_completada)
 
-    # Incorporar artefactos al registro global de la sesión
+    # Add the artifacts to the global session record
     session["artefactos"].extend(artefactos)
 
-    # Avanzar al siguiente índice, saltando fases con condicion no cumplida
+    # Move to the next index and skip phases whose condition is not met
     siguiente = _advance_skipping_phases(
         session, fases, session["fase_numero"] + 1, _get_phase_conditions()
     )
@@ -953,11 +950,11 @@ def advance_phase(
         session["fase_numero"] = siguiente
         session["fase_actual"] = fases[siguiente]["nombre"]
     else:
-        # No quedan más fases: el flujo está completado
+        # No phases remain: the flow is complete
         session["fase_actual"] = "completado"
         session["fase_numero"] = siguiente
 
-    # Reiniciar el contador de iteraciones internas para la nueva fase
+    # Reset the internal iteration counter for the new phase
     session["iteraciones_fase"] = 0
 
     session["actualizado_en"] = datetime.now(timezone.utc).isoformat()
@@ -966,19 +963,19 @@ def advance_phase(
 
 def save_state(session: Dict[str, Any], state_path: str) -> None:
     """
-    Persiste el estado de la sesión en un fichero JSON.
+    Save the session state to a JSON file.
 
-    Se utiliza escritura atómica (escritura + renombrado) para evitar
-    corrupción si el proceso se interrumpe a mitad de escritura. Si la
-    operación falla, se limpia el fichero temporal y se relanza el error
-    como RuntimeError para que el llamante sepa que el estado no se guardó.
+    Uses an atomic write (write + rename) to prevent corruption if the
+    process stops in the middle of the write. On failure, removes the
+    temporary file and raises the error again as RuntimeError so that the
+    caller knows the state was not saved.
 
     Args:
-        session: Estado de la sesión a guardar.
-        state_path: Ruta absoluta del fichero de destino.
+        session: session state to save.
+        state_path: absolute path of the target file.
 
     Raises:
-        RuntimeError: Si no se puede guardar el estado por cualquier razón.
+        RuntimeError: if the state cannot be saved for any reason.
     """
     persisted = session
     sync_session_state_to_operational_docs = None
@@ -1000,9 +997,9 @@ def save_state(session: Dict[str, Any], state_path: str) -> None:
         if sync_session_state_to_kanban is not None:
             try:
                 persisted = sync_session_state_to_kanban(state_path, session)
-            except Exception as exc:  # pragma: no cover - best effort operativa
+            except Exception as exc:  # pragma: no cover - operational best effort
                 print(
-                    f"[Alfred Dev] Aviso: no se pudo sincronizar el kanban desde save_state: {exc}",
+                    f"[Alfred Dev] Предупреждение: не удалось синхронизировать kanban из save_state: {exc}",
                     file=sys.stderr,
                 )
                 persisted = session
@@ -1011,7 +1008,7 @@ def save_state(session: Dict[str, Any], state_path: str) -> None:
     try:
         with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(persisted, f, indent=2, ensure_ascii=False)
-        # Renombrado atómico en sistemas POSIX
+        # Atomic rename on POSIX systems
         os.replace(tmp_path, state_path)
         if is_canonical_state_path and sync_session_state_to_operational_docs is not None:
             try:
@@ -1022,51 +1019,51 @@ def save_state(session: Dict[str, Any], state_path: str) -> None:
                 with open(tmp_path, "w", encoding="utf-8") as f:
                     json.dump(persisted, f, indent=2, ensure_ascii=False)
                 os.replace(tmp_path, state_path)
-            except Exception as exc:  # pragma: no cover - best effort operativa
+            except Exception as exc:  # pragma: no cover - operational best effort
                 if os.path.exists(tmp_path):
                     try:
                         os.unlink(tmp_path)
                     except OSError:
                         pass
                 print(
-                    f"[Alfred Dev] Aviso: no se pudo sincronizar documentación operativa desde save_state: {exc}",
+                    f"[Alfred Dev] Предупреждение: не удалось синхронизировать операционную документацию из save_state: {exc}",
                     file=sys.stderr,
                 )
     except (OSError, TypeError) as e:
-        # Limpiar el fichero temporal si quedó huérfano
+        # Remove the temporary file if it was left behind
         if os.path.exists(tmp_path):
             try:
                 os.unlink(tmp_path)
             except OSError as cleanup_err:
                 print(
-                    f"[Alfred Dev] Aviso: no se pudo limpiar el fichero temporal "
+                    f"[Alfred Dev] Предупреждение: не удалось удалить временный файл "
                     f"'{tmp_path}': {cleanup_err}",
                     file=sys.stderr,
                 )
         raise RuntimeError(
-            f"No se pudo guardar el estado de sesión en '{state_path}': {e}"
+            f"Не удалось сохранить состояние сессии в '{state_path}': {e}"
         ) from e
 
 
-# Claves mínimas que debe tener un estado de sesión válido
+# Minimum keys of a valid session state
 _REQUIRED_STATE_KEYS = {"comando", "fase_actual", "fase_numero"}
 
 
 def load_state(state_path: str) -> Optional[Dict[str, Any]]:
     """
-    Carga el estado de una sesión desde un fichero JSON.
+    Load the session state from a JSON file.
 
-    Distingue entre tres situaciones:
-    - Fichero ausente: devuelve None silenciosamente (caso normal).
-    - Fichero corrupto o ilegible: devuelve None pero avisa en stderr.
-    - Fichero con estructura inválida: devuelve None y avisa en stderr.
+    Handles three cases:
+    - Missing file: returns None silently (normal case).
+    - Corrupt or unreadable file: returns None and warns on stderr.
+    - File with an invalid structure: returns None and warns on stderr.
 
     Args:
-        state_path: Ruta absoluta del fichero a leer.
+        state_path: absolute path of the file to read.
 
     Returns:
-        Diccionario con el estado de la sesión, o None si el fichero
-        no existe, está corrupto o tiene estructura inválida.
+        Dict with the session state, or None if the file does not exist,
+        is corrupt or has an invalid structure.
     """
     try:
         with open(state_path, "r", encoding="utf-8") as f:
@@ -1075,45 +1072,45 @@ def load_state(state_path: str) -> Optional[Dict[str, Any]]:
         return None
     except json.JSONDecodeError as e:
         print(
-            f"[Alfred Dev] Error: el fichero de estado '{state_path}' esta corrupto: {e}. "
-            f"Para resolver, elimina el fichero manualmente y se creara uno nuevo "
-            f"en la proxima sesion.",
+            f"[Alfred Dev] Ошибка: файл состояния '{state_path}' повреждён: {e}. "
+            f"Чтобы исправить, удали файл вручную: в следующей сессии "
+            f"будет создан новый.",
             file=sys.stderr,
         )
         return None
     except OSError as e:
         print(
-            f"[Alfred Dev] Error al leer el estado de sesión '{state_path}': {e}",
+            f"[Alfred Dev] Ошибка чтения состояния сессии '{state_path}': {e}",
             file=sys.stderr,
         )
         return None
 
-    # Validar estructura mínima: presencia de claves obligatorias
+    # Validate the minimum structure: required keys are present
     if not isinstance(data, dict) or not _REQUIRED_STATE_KEYS.issubset(data.keys()):
         print(
-            f"[Alfred Dev] Aviso: el fichero de estado '{state_path}' tiene una "
-            f"estructura inesperada (faltan claves obligatorias). Se ignorará.",
+            f"[Alfred Dev] Предупреждение: у файла состояния '{state_path}' "
+            f"неожиданная структура (нет обязательных ключей). Файл будет проигнорирован.",
             file=sys.stderr,
         )
         return None
 
-    # Validar tipos de las claves obligatorias para evitar TypeError
-    # en comparaciones posteriores (ej.: fase_numero >= len(fases))
+    # Validate the types of the required keys to prevent TypeError
+    # in later comparisons (for example fase_numero >= len(fases))
     if not isinstance(data.get("comando"), str):
         print(
-            f"[Alfred Dev] Aviso: 'comando' no es un string en '{state_path}'. Se ignorará.",
+            f"[Alfred Dev] Предупреждение: 'comando' не строка в '{state_path}'. Файл будет проигнорирован.",
             file=sys.stderr,
         )
         return None
     if not isinstance(data.get("fase_actual"), str):
         print(
-            f"[Alfred Dev] Aviso: 'fase_actual' no es un string en '{state_path}'. Se ignorará.",
+            f"[Alfred Dev] Предупреждение: 'fase_actual' не строка в '{state_path}'. Файл будет проигнорирован.",
             file=sys.stderr,
         )
         return None
     if not isinstance(data.get("fase_numero"), int):
         print(
-            f"[Alfred Dev] Aviso: 'fase_numero' no es un entero en '{state_path}'. Se ignorará.",
+            f"[Alfred Dev] Предупреждение: 'fase_numero' не целое число в '{state_path}'. Файл будет проигнорирован.",
             file=sys.stderr,
         )
         return None
@@ -1121,8 +1118,8 @@ def load_state(state_path: str) -> Optional[Dict[str, Any]]:
     command = data["comando"]
     if command not in FLOWS:
         print(
-            f"[Alfred Dev] Aviso: 'comando' no corresponde a un flujo conocido en '{state_path}'. "
-            f"Se ignorará.",
+            f"[Alfred Dev] Предупреждение: 'comando' не соответствует известному процессу в '{state_path}'. "
+            f"Файл будет проигнорирован.",
             file=sys.stderr,
         )
         return None
@@ -1130,8 +1127,8 @@ def load_state(state_path: str) -> Optional[Dict[str, Any]]:
     phase_index = data["fase_numero"]
     if phase_index < 0:
         print(
-            f"[Alfred Dev] Aviso: 'fase_numero' no puede ser negativo en '{state_path}'. "
-            f"Se ignorará.",
+            f"[Alfred Dev] Предупреждение: 'fase_numero' не может быть отрицательным в '{state_path}'. "
+            f"Файл будет проигнорирован.",
             file=sys.stderr,
         )
         return None
@@ -1141,8 +1138,8 @@ def load_state(state_path: str) -> Optional[Dict[str, Any]]:
     if phase_name == "completado":
         if phase_index != len(fases):
             print(
-                f"[Alfred Dev] Aviso: estado completado incoherente en '{state_path}' "
-                f"(fase_numero={phase_index}, esperado={len(fases)}). Se ignorará.",
+                f"[Alfred Dev] Предупреждение: противоречивое завершённое состояние в '{state_path}' "
+                f"(fase_numero={phase_index}, ожидалось={len(fases)}). Файл будет проигнорирован.",
                 file=sys.stderr,
             )
             return None
@@ -1150,8 +1147,8 @@ def load_state(state_path: str) -> Optional[Dict[str, Any]]:
 
     if phase_index >= len(fases):
         print(
-            f"[Alfred Dev] Aviso: 'fase_numero' está fuera de rango en '{state_path}'. "
-            f"Se ignorará.",
+            f"[Alfred Dev] Предупреждение: 'fase_numero' вне диапазона в '{state_path}'. "
+            f"Файл будет проигнорирован.",
             file=sys.stderr,
         )
         return None
@@ -1159,8 +1156,8 @@ def load_state(state_path: str) -> Optional[Dict[str, Any]]:
     expected_phase_name = fases[phase_index]["nombre"]
     if phase_name != expected_phase_name:
         print(
-            f"[Alfred Dev] Aviso: fase_actual y fase_numero no coinciden en '{state_path}' "
-            f"('{phase_name}' != '{expected_phase_name}'). Se ignorará.",
+            f"[Alfred Dev] Предупреждение: fase_actual и fase_numero не совпадают в '{state_path}' "
+            f"('{phase_name}' != '{expected_phase_name}'). Файл будет проигнорирован.",
             file=sys.stderr,
         )
         return None
@@ -1168,12 +1165,12 @@ def load_state(state_path: str) -> Optional[Dict[str, Any]]:
     return data
 
 
-# --- Loop iterativo (v0.4.0) ------------------------------------------------
-# Permite que los agentes iteren dentro de una fase hasta que la gate
-# se supere o se alcance el maximo de iteraciones. Esto habilita ciclos
-# TDD, pasadas de QA repetidas y otros patrones iterativos.
+# --- Iterative loop (v0.4.0) ------------------------------------------------
+# Lets agents iterate inside a phase until the gate passes or the
+# iteration limit is reached. This enables TDD cycles, repeated QA
+# passes and other iterative patterns.
 
-# Maximo de iteraciones internas por fase antes de escalar al usuario.
+# Maximum internal iterations per phase before escalating to the user.
 MAX_PHASE_ITERATIONS = 5
 
 
@@ -1183,35 +1180,35 @@ def should_retry_phase(
     security_ok: bool = True,
     tests_ok: bool = True,
 ) -> Dict[str, Any]:
-    """Determina si la fase actual debe reintentarse o escalar al usuario.
+    """Decide if the current phase must retry or escalate to the user.
 
-    Evalua la gate de la fase actual. Si no se supera, comprueba si quedan
-    iteraciones disponibles. Si las hay, incrementa el contador y devuelve
-    instrucciones de reintento. Si se agotaron, devuelve instrucciones de
-    escalado al usuario.
+    Evaluates the gate of the current phase. If it fails, checks if
+    iterations remain. If they do, increments the counter and returns
+    retry instructions. If none remain, returns instructions to escalate
+    to the user.
 
-    El contador de iteraciones se almacena en ``session["iteraciones_fase"]``.
+    The iteration counter is stored in ``session["iteraciones_fase"]``.
 
     Args:
-        session: estado actual de la sesion.
-        resultado: resultado reportado para la gate.
-        security_ok: si la auditoria de seguridad es favorable.
-        tests_ok: si los tests pasan.
+        session: current session state.
+        resultado: reported result for the gate.
+        security_ok: True if the security audit passed.
+        tests_ok: True if the tests pass.
 
     Returns:
-        Diccionario con:
-        - ``"action"``: ``"advance"`` (gate superada), ``"retry"`` (reintentar)
-          o ``"escalate"`` (escalar al usuario).
-        - ``"reason"``: motivo de la decision.
-        - ``"iteration"``: numero de iteracion actual.
-        - ``"max_iterations"``: maximo permitido.
+        Dict with:
+        - ``"action"``: ``"advance"`` (gate passed), ``"retry"``
+          or ``"escalate"`` (escalate to the user).
+        - ``"reason"``: reason for the decision.
+        - ``"iteration"``: current iteration number.
+        - ``"max_iterations"``: allowed maximum.
     """
-    # Validacion defensiva: si la sesion esta completada o el indice
-    # esta fuera de rango, no tiene sentido reintentar.
+    # Defensive check: if the session is complete or the index is out of
+    # range, a retry makes no sense.
     if session.get("fase_actual") == "completado":
         return {
             "action": "advance",
-            "reason": "Sesion completada. No hay gate que evaluar.",
+            "reason": "Сессия завершена. Проверять gate не нужно.",
             "iteration": 0,
             "max_iterations": 0,
         }
@@ -1222,7 +1219,7 @@ def should_retry_phase(
         max_iter = session.get("max_iteraciones_fase", MAX_PHASE_ITERATIONS)
         return {
             "action": "escalate",
-            "reason": f"Estado de sesión inválido: {phase_error}",
+            "reason": f"Недопустимое состояние сессии: {phase_error}",
             "iteration": iteration,
             "max_iterations": max_iter,
         }
@@ -1240,22 +1237,22 @@ def should_retry_phase(
     if gate_result["passed"]:
         return {
             "action": "advance",
-            "reason": "Gate superada. Se puede avanzar a la siguiente fase.",
+            "reason": "Gate пройден. Можно переходить к следующей фазе.",
             "iteration": iteration,
             "max_iterations": max_iter,
         }
 
     if iteration < max_iter:
-        # Incrementar el contador
+        # Increment the counter
         session["iteraciones_fase"] = iteration + 1
         session["actualizado_en"] = datetime.now(timezone.utc).isoformat()
 
         return {
             "action": "retry",
             "reason": (
-                f"Gate no superada: {gate_result['reason']} "
-                f"Iteracion {iteration + 1}/{max_iter}. "
-                f"Corrige los problemas y vuelve a intentarlo."
+                f"Gate не пройден: {gate_result['reason']} "
+                f"Итерация {iteration + 1}/{max_iter}. "
+                f"Исправь проблемы и попробуй снова."
             ),
             "iteration": iteration + 1,
             "max_iterations": max_iter,
@@ -1264,9 +1261,9 @@ def should_retry_phase(
     return {
         "action": "escalate",
         "reason": (
-            f"Se agotaron las {max_iter} iteraciones sin superar la gate: "
+            f"Исчерпано {max_iter} итераций, gate не пройден: "
             f"{gate_result['reason']} "
-            f"Se requiere intervencion del usuario."
+            f"Нужно вмешательство пользователя."
         ),
         "iteration": iteration,
         "max_iterations": max_iter,
@@ -1274,48 +1271,48 @@ def should_retry_phase(
 
 
 def reset_phase_iterations(session: Dict[str, Any]) -> None:
-    """Reinicia el contador de iteraciones de la fase actual.
+    """Reset the iteration counter of the current phase.
 
-    Se llama automaticamente al avanzar a una nueva fase para que
-    el contador empiece en 0.
+    Called automatically when the flow advances to a new phase so that
+    the counter starts at 0.
 
     Args:
-        session: estado de la sesion a modificar in-place.
+        session: session state to modify in place.
     """
     session["iteraciones_fase"] = 0
 
 
-# --- Modo autopilot (v0.4.0) ------------------------------------------------
-# Permite ejecutar un flujo completo sin interrupcion humana. Las gates
-# de tipo «usuario» se aprueban automaticamente; las automaticas y de
-# seguridad se evaluan normalmente.
+# --- Autopilot mode (v0.4.0) ------------------------------------------------
+# Runs a full flow without human interruption. "usuario" gates are
+# approved automatically. Automatic and security gates are evaluated
+# as usual.
 
 def is_autopilot_gate_passable(
     session: Dict[str, Any],
     security_ok: bool = True,
     tests_ok: bool = True,
 ) -> Dict[str, Any]:
-    """Evalua si una gate puede superarse en modo autopilot.
+    """Evaluate if a gate can pass in autopilot mode.
 
-    En autopilot, las gates de tipo «usuario» se aprueban automaticamente.
-    Las de tipo «automatico» y «seguridad» se evaluan con los parametros
-    proporcionados.
+    In autopilot, "usuario" gates are approved automatically.
+    "automatico" and "seguridad" gates are evaluated with the given
+    parameters.
 
     Args:
-        session: estado de la sesion.
-        security_ok: resultado de la auditoria de seguridad.
-        tests_ok: resultado de los tests.
+        session: session state.
+        security_ok: result of the security audit.
+        tests_ok: result of the tests.
 
     Returns:
-        Diccionario con ``"passed"`` (bool) y ``"reason"`` (str).
+        Dict with ``"passed"`` (bool) and ``"reason"`` (str).
     """
     comando = session["comando"]
     if comando not in FLOWS:
-        return {"passed": False, "reason": f"Flujo '{comando}' no definido."}
+        return {"passed": False, "reason": f"Процесс '{comando}' не определён."}
 
-    # Sesion completada: no hay gate que evaluar.
+    # Session complete: no gate to evaluate.
     if session.get("fase_actual") == "completado":
-        return {"passed": True, "reason": "Sesion completada (autopilot)."}
+        return {"passed": True, "reason": "Сессия завершена (autopilot)."}
 
     fase, phase_error = _resolve_current_phase(session)
     if fase is None:
@@ -1327,15 +1324,15 @@ def is_autopilot_gate_passable(
         return {
             "passed": False,
             "reason": (
-                "La fase requiere confirmación explícita del usuario incluso en autopilot."
+                "Фаза требует явного подтверждения пользователя даже в autopilot."
             ),
         }
 
-    # En autopilot, las gates de usuario se aprueban automaticamente
+    # In autopilot, user gates are approved automatically
     if gate_tipo == GATE_USUARIO:
-        return {"passed": True, "reason": "Aprobacion automatica (autopilot)."}
+        return {"passed": True, "reason": "Автоматическое одобрение (autopilot)."}
 
-    # El resto se evalua normalmente con resultado «aprobado»
+    # The rest is evaluated as usual with result "aprobado"
     return check_gate(
         session,
         resultado="aprobado",
@@ -1350,24 +1347,23 @@ def run_flow_autopilot(
     equipo_sesion: Optional[Dict[str, Any]] = None,
     project_dir: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Crea una sesion de flujo en modo autopilot.
+    """Create a flow session in autopilot mode.
 
-    Identica a ``run_flow()`` pero marca la sesion con ``autopilot=True``
-    para que el stop-hook y las gates sepan que deben comportarse de
-    forma autonoma.
+    Same as ``run_flow()``, but marks the session with ``autopilot=True``
+    so that the stop hook and the gates know they must act autonomously.
 
     Args:
-        command: identificador del flujo.
-        description: descripcion de la tarea.
-        equipo_sesion: composicion del equipo opcional.
-        project_dir: ruta del proyecto sobre el que debe resolverse stack y
-            configuración persistida.
+        command: flow identifier.
+        description: task description.
+        equipo_sesion: optional team composition.
+        project_dir: project path used to resolve the stack and the
+            persisted configuration.
 
     Returns:
-        Estado de la sesion con ``autopilot=True``.
+        Session state with ``autopilot=True``.
 
     Raises:
-        ValueError: si el comando no corresponde a ningun flujo definido.
+        ValueError: if the command does not match a defined flow.
     """
     session = run_flow(
         command,

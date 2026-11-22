@@ -1,72 +1,72 @@
-# Designer -- Dirección de sistema de diseño
+# Designer -- направление дизайн-системы
 
-## Quien es
+## Кто это
 
-Designer define el sistema de diseño del producto antes de que el equipo empiece a
-construir UI de verdad. No diseña “pantallas finales” ni componentes listos para
-producción: parte de un catálogo de **10 sistemas de diseño base**, reduce ese
-espacio a **tres caminos comparables**, el usuario elige uno y esa decisión se
-convierte en `docs/style-direction.md`.
+Designer определяет дизайн-систему продукта до того, как команда начнёт
+строить настоящий UI. Она не рисует «финальные экраны» и не делает компоненты, готовые для
+production: она отталкивается от каталога из **10 базовых дизайн-систем**, сужает это
+пространство до **трёх сопоставимых направлений**, пользователь выбирает одно, и это решение
+превращается в `docs/style-direction.md`.
 
-Su criterio es deliberado y con opinión. La fase existe para que `architect` y
-`senior-dev` no tomen decisiones visuales de rebote ni improvisen un lenguaje de
-interfaz sin acuerdo previo.
+Её подход осознанный и с собственным мнением. Фаза существует, чтобы `architect` и
+`senior-dev` не принимали визуальные решения мимоходом и не импровизировали язык
+интерфейса без предварительной договорённости.
 
-El catálogo base cubre: **Libre / Contextual**, **Maximalismo & Neo-retro**,
-**Tipografía cinética**, **3D interactivo & WebGL**, **Glassmorphism 2.0**,
-**Colores dopamina**, **Nature distilled / Orgánico**,
-**Anti-diseño / Neo-brutalismo**, **AI Hyperminimalismo** y
-**Scroll narrativo & Gamificación**.
+Базовый каталог: **Свободный / Контекстный**, **Максимализм и неоретро**,
+**Кинетическая типографика**, **Интерактивное 3D и WebGL**, **Glassmorphism 2.0**,
+**Дофаминовые цвета**, **Nature distilled / Органика**,
+**Антидизайн / Необрутализм**, **AI-гиперминимализм** и
+**Нарративный скролл и геймификация**.
 
-## Configuración técnica
+## Техническая конфигурация
 
-| Parámetro | Valor |
+| Параметр | Значение |
 |-----------|-------|
-| **Modelo** | opus |
-| **Color** | purple |
-| **Herramientas** | Glob, Grep, Read, Write, Bash |
-| **Tipo** | Núcleo |
+| **Модель** | opus |
+| **Цвет** | purple |
+| **Инструменты** | Glob, Grep, Read, Write, Bash |
+| **Тип** | Базовый |
 
-## Responsabilidades
+## Обязанности
 
-### Qué hace
+### Что делает
 
-- Lee PRD, contexto de proyecto y estilo previo si existe.
-- Explora 10 sistemas de diseño base y baja sólo a tres propuestas comparables.
-- Registra la elección del usuario y la transforma en `docs/style-direction.md`.
-- Entrega una dirección que `architect` y `senior-dev` deben respetar.
+- Читает PRD, контекст проекта и предыдущий стиль, если он есть.
+- Исследует 10 базовых дизайн-систем и сужает их только до трёх сопоставимых предложений.
+- Фиксирует выбор пользователя и превращает его в `docs/style-direction.md`.
+- Передаёт направление, которое `architect` и `senior-dev` обязаны соблюдать.
 
-### Qué NO hace
+### Чего НЕ делает
 
-- No implementa la UI final del producto.
-- No sustituye el diseño de arquitectura de frontend.
-- No sobreescribe una dirección visual previa sin confirmación explícita.
+- Не реализует финальный UI продукта.
+- Не заменяет проектирование архитектуры фронтенда.
+- Не перезаписывает предыдущее визуальное направление без явного подтверждения.
 
-## Cuando se activa
+## Когда активируется
 
-Designer se activa en la fase **1b: estilo visual** del flujo `feature`, solo
-cuando el proyecto tiene frontend. También puede invocarse directamente para
-revisar o redefinir una dirección visual existente.
+Designer активируется в фазе **1b: визуальный стиль** процесса `feature`, только
+если у проекта есть фронтенд. Её также можно вызвать напрямую, чтобы
+пересмотреть или переопределить существующее визуальное направление.
 
-## Colaboraciones
+## Взаимодействие
 
-| Relación | Agente | Contexto |
+| Связь | Агент | Контекст |
 |----------|--------|----------|
-| **Activada por** | Alfred | Fase 1b del flujo `feature` |
-| **Entrega a** | architect, senior-dev | Dirección visual elegida y ejecutable |
-| **Colabora con** | ux-reviewer / copywriter / seo-specialist | Consumen `docs/style-direction.md` cuando están activos |
+| **Активирует** | Alfred | Фаза 1b процесса `feature` |
+| **Передаёт** | architect, senior-dev | Выбранное и исполнимое визуальное направление |
+| **Работает с** | ux-reviewer / copywriter / seo-specialist | Используют `docs/style-direction.md`, когда активны |
 
-## Flujos
+## Процессы
 
-1. **Feature con frontend**: recorre el catálogo de 10 sistemas, presenta tres
-   propuestas, el usuario elige y se cierra la gate visual.
-2. **Revisión de estilo**: si ya existe `docs/style-direction.md`, permite
-   mantener, revisar o redefinir la dirección.
+1. **Feature с фронтендом**: проходит каталог из 10 систем, показывает три
+   предложения, пользователь выбирает, и визуальная gate закрывается.
+2. **Пересмотр стиля**: если `docs/style-direction.md` уже есть, позволяет
+   оставить, пересмотреть или переопределить направление.
 
-## Artefactos
+## Артефакты
 
-Designer produce:
+Designer создаёт:
 
 - `docs/style-direction.md`
-- `style-options.html` y `style-options.json` en la sesión visual
-- eventos de elección en `.alfred-dev/visual/.../state/events`
+- `style-options.html` и `style-options.json` в визуальной сессии
+- события выбора в `.alfred-dev/visual/.../state/events`

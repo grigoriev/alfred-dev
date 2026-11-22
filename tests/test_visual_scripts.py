@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests de integración para start-server.sh y stop-server.sh."""
+"""Integration tests for start-server.sh and stop-server.sh."""
 
 import json
 import os
@@ -47,7 +47,7 @@ class TestVisualScripts(unittest.TestCase):
             os.path.join(payload["session_dir"], "state"),
         ):
             mode = stat.S_IMODE(os.stat(path).st_mode)
-            self.assertEqual(mode & 0o077, 0, msg=f"{path} no es privado: {oct(mode)}")
+            self.assertEqual(mode & 0o077, 0, msg=f"{path} is not private: {oct(mode)}")
 
         info_path = os.path.join(payload["session_dir"], "state", "server-info")
         self.assertTrue(os.path.isfile(info_path))
@@ -118,7 +118,7 @@ class TestVisualScripts(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         payload = json.loads(result.stdout)
         self.assertEqual(payload["type"], "error")
-        self.assertIn("Falta valor para --project-dir", payload["message"])
+        self.assertIn("Нет значения для --project-dir", payload["message"])
 
     def test_start_server_escapes_unknown_argument_json(self):
         result = subprocess.run(

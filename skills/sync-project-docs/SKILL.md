@@ -29,7 +29,7 @@ description: "Использовать для синхронизации жив�
 5. Проверь gate:
 
    ```bash
-   python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command <comando> --phase <fase>
+   python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command <команда> --phase <фаза>
    ```
 
 6. Если helper падает, не объявляй фазу закрытой.

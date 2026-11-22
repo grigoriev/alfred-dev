@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """
-Hook PreToolUse para Read: aviso informativo al leer ficheros sensibles.
+PreToolUse hook for Read: informational warning on sensitive file reads.
 
-Intercepta las operaciones de lectura de ficheros y emite un aviso por stderr
-si el fichero solicitado coincide con un patron de fichero sensible (claves
-privadas, variables de entorno, credenciales, etc.).
+Intercepts file reads and writes a warning to stderr if the requested file
+matches a sensitive file pattern (private keys, environment variables,
+credentials, etc.).
 
-A diferencia de secret-guard.sh, este hook NO bloquea la operacion. Su
-proposito es informar al agente de que esta accediendo a contenido sensible
-para que tenga cuidado de no filtrar ese contenido en respuestas, commits
-o artefactos generados.
+Unlike secret-guard.sh, this hook does NOT block the operation. It tells
+the agent that it is reading sensitive content, so the agent takes care
+not to leak that content into replies, commits or generated artifacts.
 
-Politica de seguridad: informativa (exit 0 siempre). Si no se puede parsear
-la entrada, se permite la operacion sin aviso.
+Security policy: informational (always exit 0). If the input cannot be
+parsed, the operation is allowed with no warning.
 """
 
 import json
@@ -63,29 +62,28 @@ def _is_java_keystore(_base_name, ext):
     return ext in (".jks", ".keystore")
 
 
-# --- Patrones de ficheros sensibles ----------------------------------------
-# Cada tupla contiene (condicion_lambda, descripcion).
-# Las condiciones se evaluan sobre el nombre base del fichero o la ruta
-# completa segun convenga.
+# --- Sensitive file patterns -----------------------------------------------
+# Each tuple holds (condition_function, description).
+# Conditions check the file base name or the full path, as needed.
 
 _SENSITIVE_PATTERNS = [
-    # Variables de entorno
+    # Environment variables
     (_is_env_file, "Файл переменных окружения"),
-    # Claves privadas
+    # Private keys
     (_is_private_key, "Приватный ключ или сертификат"),
     # SSH keys
     (_is_ssh_private_key, "Приватный SSH-ключ"),
-    # Credenciales de servicios
+    # Service credentials
     (_is_service_credentials_file, "Учётные данные сервиса"),
     # htpasswd
     (_is_htpasswd, "Файл паролей Apache"),
-    # Nota: credenciales AWS se detectan por ruta en _PATH_PATTERNS,
-    # no por nombre base, porque "credentials" y "config" son demasiado genericos.
+    # Note: AWS credentials are detected by path in _PATH_PATTERNS,
+    # not by base name, because "credentials" and "config" are too generic.
     # Keystore
     (_is_java_keystore, "Хранилище ключей Java"),
 ]
 
-# Patrones evaluados sobre la ruta completa (no solo el nombre base)
+# Patterns checked against the full path (not only the base name)
 _PATH_PATTERNS = [
     (".aws/credentials", "Учётные данные AWS"),
     (".aws/config", "Конфигурация AWS, возможно с учётными данными"),
@@ -98,11 +96,11 @@ _PATH_PATTERNS = [
 
 
 def main():
-    """Punto de entrada del hook.
+    """Hook entry point.
 
-    Lee el JSON de stdin proporcionado por PreToolUse, extrae la ruta del
-    fichero de ``tool_input.file_path`` y la compara contra los patrones
-    de ficheros sensibles. Si coincide, emite un aviso informativo.
+    Reads the PreToolUse JSON from stdin, extracts the file path from
+    ``tool_input.file_path`` and checks it against the sensitive file
+    patterns. On a match, writes an informational warning.
     """
     try:
         data = json.load(sys.stdin)
@@ -117,11 +115,11 @@ def main():
 
     normalized_path = file_path.replace("\\", "/")
 
-    # Obtener nombre base y extension para las comparaciones
+    # Get the base name and extension for the checks
     base_name = os.path.basename(normalized_path)
     _, ext = os.path.splitext(base_name)
 
-    # Comprobar patrones por nombre base
+    # Check base name patterns
     warning = None
     for check_fn, description in _SENSITIVE_PATTERNS:
         try:
@@ -136,7 +134,7 @@ def main():
             )
             continue
 
-    # Comprobar patrones por ruta completa
+    # Check full path patterns
     if warning is None:
         for pattern, description in _PATH_PATTERNS:
             if pattern in normalized_path:
@@ -153,7 +151,7 @@ def main():
             file=sys.stderr,
         )
 
-    # Siempre permitir la lectura (informativo, no bloqueante)
+    # Always allow the read (informational, not blocking)
     sys.exit(0)
 
 

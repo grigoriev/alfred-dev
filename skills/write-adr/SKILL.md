@@ -16,7 +16,7 @@ auth, границы, интеграция).
 1. Создай скелет через helper. Не придумывай номер вручную:
 
    ```bash
-   python3 .claude/alfred-continuity.py next-adr "$PWD" --title "Título corto"
+   python3 .claude/alfred-continuity.py next-adr "$PWD" --title "Короткий заголовок"
    ```
 
 2. Прочитай `templates/adr.md`, если он есть, и только что созданный файл.

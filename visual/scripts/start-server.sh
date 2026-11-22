@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# start-server.sh — Arranca el servidor visual de Alfred.
+# start-server.sh: starts the Alfred visual server.
 #
-# Uso:
-#   start-server.sh [--project-dir <ruta>] [--host <host>] [--url-host <host>]
+# Usage:
+#   start-server.sh [--project-dir <path>] [--host <host>] [--url-host <host>]
 #                   [--foreground | --background]
 #
-# En modo foreground el proceso de Node se ejecuta directamente (bloqueante).
-# En modo background se lanza con nohup + disown y se espera hasta 5 s a que
-# aparezca la linea "server-started" en el log.
+# In foreground mode the Node process runs directly (blocking).
+# In background mode it starts with nohup + disown, and the script waits up
+# to 5 s for the "server-started" line in the log.
 #
-# Salida JSON en stdout:
-#   Exito:  {"type":"server-started","port":...,"url":"...","session_dir":"..."}
-#   Error:  {"type":"error","message":"..."}
+# JSON output on stdout:
+#   Success: {"type":"server-started","port":...,"url":"...","session_dir":"..."}
+#   Error:   {"type":"error","message":"..."}
 
 set -euo pipefail
 umask 077
@@ -34,22 +34,22 @@ json_error() {
 require_value() {
   local flag="$1"
   if [[ $# -lt 2 || -z "${2:-}" || "${2:-}" == --* ]]; then
-    json_error "Falta valor para ${flag}"
+    json_error "Нет значения для ${flag}"
     exit 1
   fi
 }
 
 # ---------------------------------------------------------------------------
-# Valores por defecto
+# Defaults
 # ---------------------------------------------------------------------------
 
 PROJECT_DIR=""
 HOST="127.0.0.1"
 URL_HOST=""
-MODE=""          # foreground | background (se resuelve abajo)
+MODE=""          # foreground | background (resolved below)
 
 # ---------------------------------------------------------------------------
-# Parseo de argumentos
+# Argument parsing
 # ---------------------------------------------------------------------------
 
 while [[ $# -gt 0 ]]; do
@@ -78,15 +78,15 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     *)
-      json_error "Argumento desconocido: $1"
+      json_error "Неизвестный аргумент: $1"
       exit 1
       ;;
   esac
 done
 
 # ---------------------------------------------------------------------------
-# Autodeteccion de entorno que exige foreground
-# Codex CI y entornos Windows (MSYS/Cygwin) no soportan nohup + disown bien.
+# Detect environments that need foreground mode.
+# Codex CI and Windows environments (MSYS/Cygwin) do not handle nohup + disown well.
 # ---------------------------------------------------------------------------
 
 if [[ -z "$MODE" ]]; then
@@ -101,26 +101,26 @@ if [[ -z "$MODE" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Directorio del script — necesario para localizar server.cjs
+# Script directory: needed to find server.cjs
 # ---------------------------------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVER_CJS="$SCRIPT_DIR/server.cjs"
 
 if ! command -v node >/dev/null 2>&1; then
-  json_error "Node.js no esta en PATH"
+  json_error "Node.js не найден в PATH"
   exit 1
 fi
 
 if [[ ! -f "$SERVER_CJS" ]]; then
-  json_error "No se encontro server.cjs en $SCRIPT_DIR"
+  json_error "Не найден server.cjs в $SCRIPT_DIR"
   exit 1
 fi
 
 # ---------------------------------------------------------------------------
-# Resolucion del PID propietario (abuelo del proceso actual).
-# Claude Code invoca este script como hijo; el "dueno" real es el proceso
-# que lanzo Claude Code, es decir el abuelo (PPID del PPID).
+# Resolve the owner PID (grandparent of the current process).
+# Claude Code runs this script as a child. The real "owner" is the process
+# that started Claude Code, that is, the grandparent (PPID of the PPID).
 # ---------------------------------------------------------------------------
 
 OWNER_PID=""
@@ -128,7 +128,7 @@ _ppid="$$"
 _parent=""
 _grandparent=""
 
-# Intentar obtener el PPID del proceso actual
+# Try to get the PPID of the current process
 _parent="$(ps -o ppid= -p "$_ppid" 2>/dev/null | tr -d ' ')" || true
 
 if [[ -n "$_parent" && "$_parent" != "0" ]]; then
@@ -139,20 +139,20 @@ if [[ -n "$_parent" && "$_parent" != "0" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Construccion del directorio de sesion
+# Build the session directory
 # ---------------------------------------------------------------------------
 
 TIMESTAMP="$(date +%s)"
 
 if [[ -n "$PROJECT_DIR" ]]; then
-  # Directorio persistente dentro del proyecto
+  # Persistent directory inside the project
   SESSION_DIR="${PROJECT_DIR}/.alfred-dev/visual/${$}-${TIMESTAMP}"
 else
-  # Directorio temporal si no hay proyecto
+  # Temporary directory when there is no project
   SESSION_DIR="/tmp/alfred-visual-${$}-${TIMESTAMP}"
 fi
 
-# Crear subdirectorios requeridos por server.cjs
+# Create the subdirectories that server.cjs needs
 mkdir -p "${SESSION_DIR}/content" "${SESSION_DIR}/state"
 
 PID_FILE="${SESSION_DIR}/state/server.pid"
@@ -163,17 +163,17 @@ cleanup_failed_start() {
 }
 
 # ---------------------------------------------------------------------------
-# Matar servidor anterior si existe un PID file de una sesion anterior.
-# Esto solo aplica cuando reutilizamos un directorio de sesion fijo; en este
-# script cada sesion tiene un directorio unico, pero dejamos la logica por
-# si en el futuro se pasa un SESSION_DIR ya existente.
+# Kill the previous server if a PID file from an older session exists.
+# This applies only when a fixed session directory is reused. In this
+# script each session has a unique directory, but the logic stays in case
+# an existing SESSION_DIR is passed in the future.
 # ---------------------------------------------------------------------------
 
 if [[ -f "$PID_FILE" ]]; then
   OLD_PID="$(cat "$PID_FILE" 2>/dev/null || true)"
   if [[ -n "$OLD_PID" ]] && kill -0 "$OLD_PID" 2>/dev/null; then
     kill "$OLD_PID" 2>/dev/null || true
-    # Esperar hasta 2 s a que muera
+    # Wait up to 2 s for it to exit
     _waited=0
     while kill -0 "$OLD_PID" 2>/dev/null && [[ $_waited -lt 20 ]]; do
       sleep 0.1
@@ -184,7 +184,7 @@ if [[ -f "$PID_FILE" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Variables de entorno para el proceso Node
+# Environment variables for the Node process
 # ---------------------------------------------------------------------------
 
 export ALFRED_VISUAL_DIR="$SESSION_DIR"
@@ -197,7 +197,7 @@ if [[ -n "$OWNER_PID" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Arranque en modo foreground (bloqueante)
+# Start in foreground mode (blocking)
 # ---------------------------------------------------------------------------
 
 if [[ "$MODE" == "foreground" ]]; then
@@ -205,19 +205,19 @@ if [[ "$MODE" == "foreground" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Arranque en modo background
+# Start in background mode
 # ---------------------------------------------------------------------------
 
-# Iniciar el servidor redirigiendo stdout/stderr al log
+# Start the server and redirect stdout/stderr to the log
 nohup node "$SERVER_CJS" > "$LOG_FILE" 2>&1 &
 SERVER_PID=$!
 disown "$SERVER_PID" 2>/dev/null || true
 
-# Guardar PID para que stop-server.sh pueda detenerlo
+# Save the PID so that stop-server.sh can stop it
 echo "$SERVER_PID" > "$PID_FILE"
 
-# Esperar hasta 5 s a que el servidor emita la linea "server-started"
-MAX_WAIT=50   # 50 iteraciones x 0.1 s = 5 s
+# Wait up to 5 s for the server to write the "server-started" line
+MAX_WAIT=50   # 50 iterations x 0.1 s = 5 s
 _iter=0
 SERVER_STARTED_LINE=""
 
@@ -225,17 +225,17 @@ while [[ $_iter -lt $MAX_WAIT ]]; do
   sleep 0.1
   (( _iter++ )) || true
 
-  # Comprobar que el proceso sigue vivo
+  # Check that the process is still alive
   if ! kill -0 "$SERVER_PID" 2>/dev/null; then
     ERROR_LOG="$(cat "$LOG_FILE" 2>/dev/null || echo "")"
     cleanup_failed_start
-    printf '{"type":"error","message":"El proceso del servidor termino inesperadamente","session_dir":"%s","log":%s}\n' \
+    printf '{"type":"error","message":"Процесс сервера неожиданно завершился","session_dir":"%s","log":%s}\n' \
       "$SESSION_DIR" \
       "$(printf '%s' "$ERROR_LOG" | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>process.stdout.write(JSON.stringify(d)))' 2>/dev/null || printf '""')"
     exit 1
   fi
 
-  # Buscar linea JSON con type=server-started en el log
+  # Find the JSON line with type=server-started in the log
   if [[ -f "$LOG_FILE" ]]; then
     SERVER_STARTED_LINE="$(grep -m1 '"server-started"' "$LOG_FILE" 2>/dev/null || true)"
     if [[ -n "$SERVER_STARTED_LINE" ]]; then
@@ -244,19 +244,19 @@ while [[ $_iter -lt $MAX_WAIT ]]; do
   fi
 done
 
-# Verificar si finalmente obtuvimos la confirmacion
+# Check that the confirmation arrived
 if [[ -z "$SERVER_STARTED_LINE" ]]; then
-  # Matar el proceso huerfano si aun vive
+  # Kill the orphan process if it is still alive
   kill "$SERVER_PID" 2>/dev/null || true
   cleanup_failed_start
-  printf '{"type":"error","message":"El servidor no arranco en 5 segundos","session_dir":"%s"}\n' "$SESSION_DIR"
+  printf '{"type":"error","message":"Сервер не запустился за 5 секунд","session_dir":"%s"}\n' "$SESSION_DIR"
   exit 1
 fi
 
-# Enriquecer la salida con session_dir y pid_file para que el llamador
-# pueda invocar stop-server.sh correctamente.
-# Pasar datos como variable de entorno en lugar de interpolar en codigo
-# para evitar inyeccion de codigo a traves del contenido del log.
+# Add session_dir and pid_file to the output so that the caller
+# can run stop-server.sh correctly.
+# Pass data as environment variables instead of interpolating it into code
+# to prevent code injection through the log content.
 ALFRED_RAW_LINE="$SERVER_STARTED_LINE" \
 ALFRED_SESSION_DIR="$SESSION_DIR" \
 ALFRED_PID_FILE="$PID_FILE" \

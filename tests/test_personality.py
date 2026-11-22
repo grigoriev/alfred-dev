@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para el motor de personalidad."""
+"""Tests for the personality engine."""
 
 import os
 import sys
@@ -31,7 +31,7 @@ class TestPersonality(unittest.TestCase):
         for name in core_names:
             self.assertFalse(
                 AGENTS[name].get("opcional", False),
-                f"El agente '{name}' no debería ser opcional"
+                f"Agent '{name}' must not be optional"
             )
 
     def test_intro_respects_sarcasm_level(self):
@@ -46,11 +46,11 @@ class TestPersonality(unittest.TestCase):
         for agent_name in AGENTS:
             phrases = get_agent_voice(agent_name)
             self.assertIsInstance(phrases, list)
-            self.assertTrue(len(phrases) >= 2, f"{agent_name} necesita al menos 2 frases")
+            self.assertTrue(len(phrases) >= 2, f"{agent_name} needs at least 2 phrases")
 
     def test_unknown_agent_raises(self):
         with self.assertRaises(ValueError):
-            get_agent_intro("agente-fantasma")
+            get_agent_intro("ghost-agent")
 
 
 if __name__ == "__main__":

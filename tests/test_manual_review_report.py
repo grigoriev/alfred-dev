@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests del reporte asistido de revision manual."""
+"""Tests for the assisted manual review report."""
 
 import importlib.util
 import json
@@ -30,7 +30,7 @@ class TestManualReviewReport(unittest.TestCase):
             "plugin_surface": {"sha256": "abc123", "file_count": 1},
             "auth_preflight": {
                 "status": "ok",
-                "reason": "Claude CLI pudo completar una llamada minima.",
+                "reason": "Claude CLI completed a minimal call.",
                 "auth_status": {"claude_version": "2.1.183 (Claude Code)"},
             },
             "counts": {
@@ -47,7 +47,7 @@ class TestManualReviewReport(unittest.TestCase):
                     "returncode": 0,
                     "api_error_status": None,
                     "total_cost_usd": 0.25,
-                    "response_preview": "Quick preparado sin sorpresas.",
+                    "response_preview": "Quick is ready with no surprises.",
                     "stderr_preview": "",
                 },
                 {
@@ -58,7 +58,7 @@ class TestManualReviewReport(unittest.TestCase):
                     "api_error_status": None,
                     "total_cost_usd": 1.51,
                     "response_preview": "Reached maximum budget sk-ant-" + ("a" * 24),
-                    "stderr_preview": "Traceback de prueba",
+                    "stderr_preview": "Test traceback",
                 },
             ],
         }
@@ -71,9 +71,9 @@ class TestManualReviewReport(unittest.TestCase):
 
             markdown = report.build_report(evidence_path)
 
-        self.assertIn("# Reporte asistido de revision manual", markdown)
-        self.assertIn("Este reporte no aprueba la release", markdown)
-        self.assertIn("Review template: no suministrada", markdown)
+        self.assertIn("# Assisted manual review report", markdown)
+        self.assertIn("This report does not approve the release", markdown)
+        self.assertIn("Review template: not provided", markdown)
         self.assertIn("`quick-cta`", markdown)
         self.assertIn("`feature-login`", markdown)
         self.assertIn("status=failed", markdown)
@@ -96,17 +96,17 @@ class TestManualReviewReport(unittest.TestCase):
 
             markdown = report.build_report(evidence_path)
 
-        self.assertIn("## Superficie Del Plugin", markdown)
-        self.assertIn("evidence.plugin_surface.roots no coincide", markdown)
-        self.assertIn("evidence.plugin_surface.file_count no coincide", markdown)
-        self.assertIn("evidence.plugin_surface.sha256 no coincide", markdown)
+        self.assertIn("## Plugin Surface", markdown)
+        self.assertIn("evidence.plugin_surface.roots does not match", markdown)
+        self.assertIn("evidence.plugin_surface.file_count does not match", markdown)
+        self.assertIn("evidence.plugin_surface.sha256 does not match", markdown)
 
     def test_report_reads_optional_review_state_without_mutating_it(self):
         report = _load_report_module()
         with tempfile.TemporaryDirectory() as tmpdir:
             evidence_path = Path(tmpdir) / "evidence.json"
             review_path = Path(tmpdir) / "review.json"
-            review = {"approved": False, "reviewer": "persona revisora"}
+            review = {"approved": False, "reviewer": "test reviewer"}
             evidence_path.write_text(json.dumps(self._evidence()), encoding="utf-8")
             review_path.write_text(json.dumps(review), encoding="utf-8")
 
@@ -115,7 +115,7 @@ class TestManualReviewReport(unittest.TestCase):
 
         self.assertEqual(after, review)
         self.assertIn("Review approved: `False`", markdown)
-        self.assertIn("Reviewer: `persona revisora`", markdown)
+        self.assertIn("Reviewer: `test reviewer`", markdown)
 
     def test_report_flags_generic_and_repeated_human_notes(self):
         report = _load_report_module()
@@ -127,7 +127,7 @@ class TestManualReviewReport(unittest.TestCase):
                 json.dumps(
                     {
                         "approved": False,
-                        "reviewer": "persona revisora",
+                        "reviewer": "test reviewer",
                         "cases": {
                             "quick-cta": {"approved": True, "notes": "ok"},
                             "feature-login": {"approved": True, "notes": "ok"},
@@ -139,7 +139,7 @@ class TestManualReviewReport(unittest.TestCase):
 
             markdown = report.build_report(evidence_path, review_path)
 
-        self.assertIn("## Calidad De Review Humana", markdown)
+        self.assertIn("## Human Review Quality", markdown)
         self.assertIn("notes_low_quality", markdown)
         self.assertIn("notes_repeated", markdown)
         self.assertIn("`quick-cta`", markdown)
@@ -155,15 +155,15 @@ class TestManualReviewReport(unittest.TestCase):
                 json.dumps(
                     {
                         "approved": False,
-                        "reviewer": "persona revisora",
+                        "reviewer": "test reviewer",
                         "cases": {
                             "quick-cta": {
                                 "approved": True,
-                                "notes": "Quick CTA revisado: respuesta util, honesta y acotada al contrato.",
+                                "notes": "Quick CTA reviewed: useful, honest answer that stays within the contract.",
                             },
                             "feature-login": {
                                 "approved": True,
-                                "notes": "Feature login revisada: el fallo queda visible y bloquea publicacion.",
+                                "notes": "Feature login reviewed: the failure stays visible and blocks the release.",
                             },
                         },
                     }
@@ -173,7 +173,7 @@ class TestManualReviewReport(unittest.TestCase):
 
             markdown = report.build_report(evidence_path, review_path)
 
-        self.assertIn("Sin flags automaticos de notas humanas", markdown)
+        self.assertIn("No automatic human note flags", markdown)
         self.assertNotIn("notes_low_quality", markdown)
         self.assertNotIn("notes_repeated", markdown)
 
@@ -192,7 +192,7 @@ class TestManualReviewReport(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(mode, 0o600)
-        self.assertIn("# Reporte asistido de revision manual", body)
+        self.assertIn("# Assisted manual review report", body)
 
 
 if __name__ == "__main__":

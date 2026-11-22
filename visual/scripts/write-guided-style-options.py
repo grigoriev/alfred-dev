@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera la ronda final de tres variantes desde la selección guiada de Designer."""
+"""Generates the final round of three variants from the Designer guided selection."""
 
 from __future__ import annotations
 
@@ -16,12 +16,12 @@ from core.designer_style_variants import write_guided_style_options
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generar style-options.html/json desde la selección guiada de Designer"
+        description="Generate style-options.html/json from the Designer guided selection"
     )
-    parser.add_argument("--visual-path", required=True, help="Ruta a session_dir o state_dir del servidor visual")
-    parser.add_argument("--style-id", help="Sobrescribe la familia visual seleccionada.")
-    parser.add_argument("--font-pairing-id", help="Sobrescribe el pairing tipográfico seleccionado.")
-    parser.add_argument("--palette-mode", help="Sobrescribe el modo de paleta seleccionado.")
+    parser.add_argument("--visual-path", required=True, help="Path to session_dir or state_dir of the visual server")
+    parser.add_argument("--style-id", help="Override the selected visual family.")
+    parser.add_argument("--font-pairing-id", help="Override the selected font pairing.")
+    parser.add_argument("--palette-mode", help="Override the selected palette mode.")
     return parser
 
 

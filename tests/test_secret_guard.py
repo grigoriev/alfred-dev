@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para hooks/secret-guard.sh."""
+"""Tests for hooks/secret-guard.sh."""
 
 import json
 import os
@@ -12,7 +12,7 @@ HOOK_PATH = os.path.join(PROJECT_ROOT, "hooks", "secret-guard.sh")
 
 
 class TestSecretGuard(unittest.TestCase):
-    """Verifica el comportamiento end-to-end del guard de secretos."""
+    """Verify the end-to-end behavior of the secret guard."""
 
     def _run_hook(self, tool_input=None, raw_input=None):
         if raw_input is None:
@@ -28,7 +28,7 @@ class TestSecretGuard(unittest.TestCase):
         )
 
     def test_env_file_is_allowed(self):
-        """Un .env real es un contenedor legitimo y no debe bloquearse."""
+        """A real .env file is a valid container and must not be blocked."""
         fake_key = "sk-" + "a" * 24
         result = self._run_hook({
             "file_path": "/tmp/.env",
@@ -38,7 +38,7 @@ class TestSecretGuard(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_local_env_file_is_allowed(self):
-        """local.env tambien debe permitirse."""
+        """local.env must also be allowed."""
         fake_key = "sk-" + "b" * 24
         result = self._run_hook({
             "file_path": "/tmp/local.env",
@@ -48,7 +48,7 @@ class TestSecretGuard(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_env_example_blocks_real_secret(self):
-        """.env.example no debe actuar como whitelist para secretos reales."""
+        """.env.example must not act as a whitelist for real secrets."""
         fake_key = "sk-" + "c" * 24
         result = self._run_hook({
             "file_path": "/tmp/.env.example",
@@ -59,7 +59,7 @@ class TestSecretGuard(unittest.TestCase):
         self.assertIn("ТРЕВОГА БЕЗОПАСНОСТИ", result.stderr)
 
     def test_edit_new_string_blocks_secret(self):
-        """Edit usa new_string y debe bloquear igual que Write."""
+        """Edit uses new_string and must block the same as Write."""
         fake_key = "sk-" + "d" * 24
         result = self._run_hook({
             "file_path": "/tmp/config.py",
@@ -70,7 +70,7 @@ class TestSecretGuard(unittest.TestCase):
         self.assertIn("префиксом sk-", result.stderr)
 
     def test_short_connection_string_with_credentials_is_blocked(self):
-        """Las DSN con user:pass cortos tambien deben bloquearse."""
+        """DSNs with short user:pass must also be blocked."""
         conn_str = "postgres://user:pass@example.com/app"
         result = self._run_hook({
             "file_path": "/tmp/settings.py",
@@ -81,7 +81,7 @@ class TestSecretGuard(unittest.TestCase):
         self.assertIn("Connection string", result.stderr)
 
     def test_private_key_header_blocks_without_grep_noise(self):
-        """Una cabecera PEM debe bloquear sin errores espurios de grep."""
+        """A PEM header must block without spurious grep errors."""
         pem_header = "-----BEGIN " + "PRIVATE KEY-----"
         result = self._run_hook({
             "file_path": "/tmp/credentials.py",
@@ -111,8 +111,8 @@ class TestSecretGuard(unittest.TestCase):
         self.assertIn("ТРЕВОГА БЕЗОПАСНОСТИ", result.stderr)
 
     def test_invalid_json_blocks_fail_closed(self):
-        """Si no puede parsear la entrada debe bloquear por precaucion."""
-        result = self._run_hook(raw_input="{esto no es json")
+        """If the hook cannot parse the input, it must block as a precaution."""
+        result = self._run_hook(raw_input="{this is not json")
 
         self.assertEqual(result.returncode, 2)
         self.assertIn("Операция заблокирована из предосторожности", result.stderr)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Avisos antes de que duela y cierre enseñable de un quick/fix."""
+"""Early warnings before it hurts, and a shareable wrap-up for a quick/fix."""
 
 from __future__ import annotations
 
@@ -90,7 +90,7 @@ def _doc_status_map(project_dir: str) -> Dict[str, str]:
 
 
 def run_hygiene(project_dir: str, command: str = "") -> Dict[str, Any]:
-    """Comprueba UAT, docs vivos y manifiestos tocados sin evaluación."""
+    """Check UAT, living docs and touched manifests without an evaluation."""
     root = os.path.abspath(project_dir)
     comando = (command or "").strip().lower()
     blockers: List[str] = []
@@ -100,13 +100,13 @@ def run_hygiene(project_dir: str, command: str = "") -> Dict[str, Any]:
     uat_status = str(uat.get("status") or "")
     verify = suggest_verify_action(root)
     if uat_status == "rejected":
-        msg = "UAT rechazada: no despliegues hasta corregir lo apuntado en docs/project/uat.md."
+        msg = "UAT отклонена: не выполняй deploy, пока не исправишь замечания из docs/project/uat.md."
         if comando in {"ship", "audit"}:
             blockers.append(msg)
         else:
             warnings.append(msg)
     elif verify is not None or uat_status == "pending":
-        msg = "UAT pendiente del último entregable. Cierra `/alfred-dev:uat` antes de ship."
+        msg = "UAT последнего результата в ожидании. Закрой `/alfred-dev:uat` перед ship."
         if comando == "ship":
             blockers.append(msg)
         else:
@@ -120,8 +120,8 @@ def run_hygiene(project_dir: str, command: str = "") -> Dict[str, Any]:
 
     if arch == "filled" and threat in {"scaffold", "missing", "empty"}:
         msg = (
-            "La arquitectura está rellena y el threat-model sigue en esqueleto. "
-            "Actualiza `docs/project/threat-model.md`."
+            "Архитектура заполнена, а threat-model всё ещё скелет. "
+            "Обнови `docs/project/threat-model.md`."
         )
         if comando in {"ship", "audit", "feature"}:
             blockers.append(msg)
@@ -130,8 +130,8 @@ def run_hygiene(project_dir: str, command: str = "") -> Dict[str, Any]:
 
     if comando in {"ship", "audit"} and compliance in {"scaffold", "missing", "empty"}:
         blockers.append(
-            "El registro de compliance sigue en esqueleto. "
-            "Rellena `docs/project/compliance.md` con evidencia."
+            "Реестр compliance всё ещё скелет. "
+            "Заполни `docs/project/compliance.md` с подтверждениями."
         )
 
     changed = _git_changed_files(root)
@@ -141,10 +141,10 @@ def run_hygiene(project_dir: str, command: str = "") -> Dict[str, Any]:
     ]
     if touched_manifests and deps in {"scaffold", "missing", "empty"}:
         warnings.append(
-            "Hay manifiestos de dependencias tocados ("
+            "Манифесты зависимостей изменены ("
             + ", ".join(touched_manifests)
-            + ") y `docs/project/dependencies.md` no tiene evaluación. "
-            "Usa el skill evaluate-dependency."
+            + "), а в `docs/project/dependencies.md` нет оценки. "
+            "Используй skill evaluate-dependency."
         )
 
     passed = not blockers
@@ -159,20 +159,20 @@ def run_hygiene(project_dir: str, command: str = "") -> Dict[str, Any]:
 
 
 def render_hygiene_markdown(result: Dict[str, Any]) -> str:
-    lines = ["## Higiene del repo", ""]
+    lines = ["## Гигиена репозитория", ""]
     if result["passed"] and not result["warnings"]:
-        lines.append("Nada urgente. Puedes seguir.")
+        lines.append("Ничего срочного. Можно продолжать.")
         return "\n".join(lines)
     if result["blockers"]:
-        lines.append("Bloquea:")
+        lines.append("Блокирует:")
         lines.extend(f"- {item}" for item in result["blockers"])
         lines.append("")
     if result["warnings"]:
-        lines.append("Aviso:")
+        lines.append("Предупреждение:")
         lines.extend(f"- {item}" for item in result["warnings"])
     if not result["passed"]:
         lines.append("")
-        lines.append("No declares ship ni la gate de entrega hasta resolver los bloqueos.")
+        lines.append("Не объявляй ship и не закрывай gate поставки, пока не устранишь блокеры.")
     return "\n".join(lines)
 
 
@@ -186,15 +186,15 @@ def build_cierre(project_dir: str) -> Dict[str, Any]:
     hygiene = run_hygiene(root, str(state.get("comando") or ""))
     brief = build_session_brief(root)
 
-    what = str(state.get("descripcion") or "cambio de esta sesión")
+    what = str(state.get("descripcion") or "изменение этой сессии")
     command = str(state.get("comando") or "quick")
     phase = str(state.get("fase_actual") or "")
 
-    verified = "sin evidencia de tests en los últimos minutos"
+    verified = "нет подтверждения тестами за последние минуты"
     if evidence:
         command_run = str(evidence.get("command") or "tests")
         result = str(evidence.get("result") or evidence.get("status") or "")
-        verified = f"`{command_run}` → {result or 'registrado'}"
+        verified = f"`{command_run}` → {result or 'зарегистрировано'}"
 
     pending: List[str] = []
     if hygiene["blockers"] or hygiene["warnings"]:
@@ -203,7 +203,7 @@ def build_cierre(project_dir: str) -> Dict[str, Any]:
     if brief.get("verify_pending") or brief.get("uat_status") == "pending":
         pending.append("UAT: `/alfred-dev:uat`")
     if not pending:
-        pending.append("nada bloqueante")
+        pending.append("ничего блокирующего")
 
     return {
         "command": command,
@@ -216,7 +216,7 @@ def build_cierre(project_dir: str) -> Dict[str, Any]:
 
 
 def write_session_cierre(project_dir: str) -> Optional[str]:
-    """Persiste el cierre al salir de la sesión si hubo trabajo."""
+    """Save the wrap-up on session exit if there was work."""
     root = os.path.abspath(project_dir)
     state_path = os.path.join(root, STATE_RELATIVE_PATH)
     state = load_state(state_path) if os.path.isfile(state_path) else None
@@ -235,17 +235,17 @@ def write_session_cierre(project_dir: str) -> Optional[str]:
 
 
 def render_cierre_markdown(result: Dict[str, Any]) -> str:
-    pending = result.get("pending") or ["nada bloqueante"]
+    pending = result.get("pending") or ["ничего блокирующего"]
     lines = [
-        "## Cierre Alfred",
+        "## Итог Alfred",
         "",
-        f"- Qué: {result.get('what')}",
-        f"- Flujo: `{result.get('command')}`"
+        f"- Что: {result.get('what')}",
+        f"- Процесс: `{result.get('command')}`"
         + (f" / `{result.get('phase')}`" if result.get("phase") else ""),
-        f"- Cómo se comprobó: {result.get('verified')}",
-        "- Pendiente:",
+        f"- Как проверено: {result.get('verified')}",
+        "- Осталось:",
     ]
     lines.extend(f"  - {item}" for item in pending)
     lines.append("")
-    lines.append("Puedes pegar este bloque en el PR o en el chat del equipo.")
+    lines.append("Этот блок можно вставить в PR или в чат команды.")
     return "\n".join(lines)

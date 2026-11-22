@@ -114,50 +114,50 @@ digraph feature_flow {
     rankdir=TB;
     node [shape=box];
 
-    producto [label="FASE 1: PRODUCTO\n(product-owner)"];
-    kanban [label="SonIA: crear kanban\ny descomponer PRD" style=filled fillcolor="#2a1a2e"];
-    arquitectura [label="FASE 2: ARQUITECTURA\n(architect + security-officer)"];
-    desarrollo [label="FASE 3: DESARROLLO\n(senior-dev)"];
-    doc_inline [label="FASE 3b: DOC INLINE\n(tech-writer)"];
-    calidad [label="FASE 4: CALIDAD\n(qa-engineer + security-officer)"];
-    documentacion [label="FASE 5: DOCUMENTACIÓN\n(tech-writer)"];
-    entrega [label="FASE 6: ENTREGA\n(devops-engineer + security-officer)"];
-    cierre [label="SonIA: verificar\ntrazabilidad completa" style=filled fillcolor="#2a1a2e"];
+    producto [label="ФАЗА 1: ПРОДУКТ\n(product-owner)"];
+    kanban [label="SonIA: создать kanban\nи разбить PRD" style=filled fillcolor="#2a1a2e"];
+    arquitectura [label="ФАЗА 2: АРХИТЕКТУРА\n(architect + security-officer)"];
+    desarrollo [label="ФАЗА 3: РАЗРАБОТКА\n(senior-dev)"];
+    doc_inline [label="ФАЗА 3b: INLINE-ДОКУМЕНТАЦИЯ\n(tech-writer)"];
+    calidad [label="ФАЗА 4: КАЧЕСТВО\n(qa-engineer + security-officer)"];
+    documentacion [label="ФАЗА 5: ДОКУМЕНТАЦИЯ\n(tech-writer)"];
+    entrega [label="ФАЗА 6: ПОСТАВКА\n(devops-engineer + security-officer)"];
+    cierre [label="SonIA: проверить\nполную трассируемость" style=filled fillcolor="#2a1a2e"];
 
-    gate_prd [label="GATE: Usuario aprueba PRD" shape=diamond];
-    gate_arq [label="GATE: Diseño aprobado\n+ seguridad válida" shape=diamond];
-    gate_dev [label="GATE: Tests pasan\n+ seguridad válida" shape=diamond];
-    gate_doc_inline [label="GATE: Código documentado\n(cabeceras, docstrings)" shape=diamond];
-    gate_qa [label="GATE: QA aprueba\n+ seguridad aprueba" shape=diamond];
-    gate_doc [label="GATE: Documentación\nde proyecto completa" shape=diamond];
-    gate_ship [label="GATE: Pipeline verde\n+ seguridad válida" shape=diamond];
-    gate_traza [label="GATE: Trazabilidad\ncompleta" shape=diamond];
+    gate_prd [label="GATE: пользователь одобряет PRD" shape=diamond];
+    gate_arq [label="GATE: дизайн одобрен\n+ безопасность проверена" shape=diamond];
+    gate_dev [label="GATE: тесты проходят\n+ безопасность проверена" shape=diamond];
+    gate_doc_inline [label="GATE: код задокументирован\n(заголовки, docstrings)" shape=diamond];
+    gate_qa [label="GATE: QA одобряет\n+ безопасность одобряет" shape=diamond];
+    gate_doc [label="GATE: документация\nпроекта полная" shape=diamond];
+    gate_ship [label="GATE: pipeline зелёный\n+ безопасность проверена" shape=diamond];
+    gate_traza [label="GATE: трассируемость\nполная" shape=diamond];
 
     producto -> gate_prd;
-    gate_prd -> kanban [label="aprobado"];
-    gate_prd -> producto [label="rechazado" style=dashed];
+    gate_prd -> kanban [label="одобрено"];
+    gate_prd -> producto [label="отклонено" style=dashed];
     kanban -> arquitectura;
     arquitectura -> gate_arq;
-    gate_arq -> desarrollo [label="aprobado"];
-    gate_arq -> arquitectura [label="rechazado" style=dashed];
+    gate_arq -> desarrollo [label="одобрено"];
+    gate_arq -> arquitectura [label="отклонено" style=dashed];
     desarrollo -> gate_dev;
-    gate_dev -> doc_inline [label="aprobado"];
-    gate_dev -> desarrollo [label="rechazado" style=dashed];
+    gate_dev -> doc_inline [label="одобрено"];
+    gate_dev -> desarrollo [label="отклонено" style=dashed];
     doc_inline -> gate_doc_inline;
-    gate_doc_inline -> calidad [label="aprobado"];
-    gate_doc_inline -> doc_inline [label="rechazado" style=dashed];
+    gate_doc_inline -> calidad [label="одобрено"];
+    gate_doc_inline -> doc_inline [label="отклонено" style=dashed];
     calidad -> gate_qa;
-    gate_qa -> documentacion [label="aprobado"];
-    gate_qa -> calidad [label="rechazado" style=dashed];
+    gate_qa -> documentacion [label="одобрено"];
+    gate_qa -> calidad [label="отклонено" style=dashed];
     documentacion -> gate_doc;
-    gate_doc -> entrega [label="aprobado"];
-    gate_doc -> documentacion [label="rechazado" style=dashed];
+    gate_doc -> entrega [label="одобрено"];
+    gate_doc -> documentacion [label="отклонено" style=dashed];
     entrega -> gate_ship;
-    gate_ship -> cierre [label="aprobado"];
-    gate_ship -> entrega [label="rechazado" style=dashed];
+    gate_ship -> cierre [label="одобрено"];
+    gate_ship -> entrega [label="отклонено" style=dashed];
     cierre -> gate_traza;
-    gate_traza -> completado [label="aprobado" shape=doublecircle];
-    gate_traza -> cierre [label="rechazado" style=dashed];
+    gate_traza -> completado [label="одобрено" shape=doublecircle];
+    gate_traza -> cierre [label="отклонено" style=dashed];
 }
 ```
 
@@ -170,23 +170,23 @@ digraph fix_flow {
     rankdir=TB;
     node [shape=box];
 
-    diagnostico [label="FASE 1: DIAGNÓSTICO\n(senior-dev)"];
-    correccion [label="FASE 2: CORRECCIÓN\n(senior-dev, TDD)"];
-    validacion [label="FASE 3: VALIDACIÓN\n(qa-engineer + security-officer)"];
+    diagnostico [label="ФАЗА 1: ДИАГНОСТИКА\n(senior-dev)"];
+    correccion [label="ФАЗА 2: ИСПРАВЛЕНИЕ\n(senior-dev, TDD)"];
+    validacion [label="ФАЗА 3: ВАЛИДАЦИЯ\n(qa-engineer + security-officer)"];
 
-    gate_diag [label="GATE: Causa raíz\naprobada por usuario" shape=diamond];
-    gate_fix [label="GATE: Todos los tests\npasan" shape=diamond];
-    gate_val [label="GATE: QA aprueba\n+ seguridad aprueba" shape=diamond];
+    gate_diag [label="GATE: первопричина\nодобрена пользователем" shape=diamond];
+    gate_fix [label="GATE: все тесты\nпроходят" shape=diamond];
+    gate_val [label="GATE: QA одобряет\n+ безопасность одобряет" shape=diamond];
 
     diagnostico -> gate_diag;
-    gate_diag -> correccion [label="aprobado"];
-    gate_diag -> diagnostico [label="rechazado" style=dashed];
+    gate_diag -> correccion [label="одобрено"];
+    gate_diag -> diagnostico [label="отклонено" style=dashed];
     correccion -> gate_fix;
-    gate_fix -> validacion [label="aprobado"];
-    gate_fix -> correccion [label="rechazado" style=dashed];
+    gate_fix -> validacion [label="одобрено"];
+    gate_fix -> correccion [label="отклонено" style=dashed];
     validacion -> gate_val;
-    gate_val -> completado [label="aprobado" shape=doublecircle];
-    gate_val -> validacion [label="rechazado" style=dashed];
+    gate_val -> completado [label="одобрено" shape=doublecircle];
+    gate_val -> validacion [label="отклонено" style=dashed];
 }
 ```
 
@@ -199,17 +199,17 @@ digraph spike_flow {
     rankdir=TB;
     node [shape=box];
 
-    exploracion [label="FASE 1: EXPLORACIÓN\n(architect + senior-dev)"];
-    conclusiones [label="FASE 2: CONCLUSIONES\n(architect)"];
+    exploracion [label="ФАЗА 1: ИССЛЕДОВАНИЕ\n(architect + senior-dev)"];
+    conclusiones [label="ФАЗА 2: ВЫВОДЫ\n(architect)"];
 
-    gate_exp [label="GATE: Libre\n(se documenta)" shape=diamond];
-    gate_con [label="GATE: Usuario revisa\ny acepta" shape=diamond];
+    gate_exp [label="GATE: свободный\n(документируется)" shape=diamond];
+    gate_con [label="GATE: пользователь проверяет\nи принимает" shape=diamond];
 
     exploracion -> gate_exp;
-    gate_exp -> conclusiones [label="continuar"];
+    gate_exp -> conclusiones [label="продолжить"];
     conclusiones -> gate_con;
-    gate_con -> completado [label="aprobado" shape=doublecircle];
-    gate_con -> conclusiones [label="revisar" style=dashed];
+    gate_con -> completado [label="одобрено" shape=doublecircle];
+    gate_con -> conclusiones [label="доработать" style=dashed];
 }
 ```
 
@@ -332,7 +332,7 @@ HARD-GATES это условия, которые не считаются про�
 ```json
 {
   "comando": "feature",
-  "descripcion": "Sistema de autenticación OAuth2",
+  "descripcion": "Система аутентификации OAuth2",
   "fase_actual": "arquitectura",
   "fase_numero": 1,
   "fases_completadas": [...],

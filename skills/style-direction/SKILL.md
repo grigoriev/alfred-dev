@@ -20,7 +20,7 @@ Designer: он служит и для показа галереи из 10 баз
 ## Запуск сессии
 
 ```bash
-visual/scripts/start-server.sh --project-dir /ruta/al/proyecto
+visual/scripts/start-server.sh --project-dir /путь/к/проекту
 ```
 
 Ожидаемый JSON-ответ:
@@ -30,8 +30,8 @@ visual/scripts/start-server.sh --project-dir /ruta/al/proyecto
   "type": "server-started",
   "port": 7432,
   "url": "http://localhost:7432",
-  "screen_dir": "/ruta/al/proyecto/.alfred-dev/visual/<pid-timestamp>/content",
-  "state_dir": "/ruta/al/proyecto/.alfred-dev/visual/<pid-timestamp>/state",
+  "screen_dir": "/путь/к/проекту/.alfred-dev/visual/<pid-timestamp>/content",
+  "state_dir": "/путь/к/проекту/.alfred-dev/visual/<pid-timestamp>/state",
   "state": "ready"
 }
 ```

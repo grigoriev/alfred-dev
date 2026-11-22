@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para la generación canónica de docs/style-direction.md."""
+"""Tests for the canonical generation of docs/style-direction.md."""
 
 import json
 import os
@@ -40,20 +40,20 @@ class TestDesignerStyleDirection(unittest.TestCase):
     def _write_fixture_files(self):
         with open(self.events_path, "w", encoding="utf-8") as fh:
             fh.write(
-                '{"type":"click","choice":"B","label":"Editorial cálido","ts":"2026-04-07T10:00:02Z"}\n'
+                '{"type":"click","choice":"B","label":"Warm editorial","ts":"2026-04-07T10:00:02Z"}\n'
             )
 
         proposals = {
             "proposals": [
                 {
                     "choice": "A",
-                    "name": "Oscuro espacial",
-                    "concept": "Alta densidad visual con foco tecnológico.",
+                    "name": "Space dark",
+                    "concept": "High visual density with a tech focus.",
                 },
                 {
                     "choice": "B",
-                    "name": "Editorial cálido",
-                    "concept": "Una interfaz con jerarquía editorial y tono premium.",
+                    "name": "Warm editorial",
+                    "concept": "An interface with editorial hierarchy and a premium tone.",
                     "palette": {
                         "primario": "#f5f0e8",
                         "secundario": "#c8a96e",
@@ -64,34 +64,34 @@ class TestDesignerStyleDirection(unittest.TestCase):
                         "body": "Source Sans 3",
                         "scale": "16 / 20 / 28 / 40",
                     },
-                    "spacing_density": "Aireada, con bloques respirables y ritmo editorial.",
-                    "tone": "Editorial cálido",
-                    "sample_component": "Tarjeta de resumen con titular serif, métricas cortas y CTA sobrio.",
+                    "spacing_density": "Airy, with breathing blocks and an editorial rhythm.",
+                    "tone": "Warm editorial",
+                    "sample_component": "Summary card with a serif headline, short metrics and a restrained CTA.",
                     "visual_principles": [
-                        "Calma editorial con jerarquía visible.",
-                        "Mucho aire y ritmo de lectura curado.",
+                        "Editorial calm with a visible hierarchy.",
+                        "Lots of air and a curated reading rhythm.",
                     ],
-                    "layout_grammar": "Titular protagonista + bloque de apoyo + CTA sobrio.",
-                    "surface_treatment": "Campos crema con contraste suave y elevación mínima.",
-                    "shape_language": "Tarjetas serenas y cápsulas discretas.",
-                    "motion_language": "Transiciones suaves y sobrias.",
-                    "signature_elements": ["Titular serif", "Bloque editorial", "CTA sobrio"],
+                    "layout_grammar": "Lead headline + support block + restrained CTA.",
+                    "surface_treatment": "Cream fields with soft contrast and minimal elevation.",
+                    "shape_language": "Calm cards and discreet pills.",
+                    "motion_language": "Soft, restrained transitions.",
+                    "signature_elements": ["Serif headline", "Editorial block", "Restrained CTA"],
                     "implementation_guardrails": [
-                        "No convertir la dirección en dashboard técnico denso."
+                        "Do not turn the direction into a dense technical dashboard."
                     ],
-                    "prompt_seed": "Mantén una dirección editorial cálida y curada.",
-                    "rationale": "Encaja con un producto que necesita transmitir criterio y confianza.",
+                    "prompt_seed": "Keep a warm, curated editorial direction.",
+                    "rationale": "Fits a product that must convey judgment and trust.",
                     "not_this_direction": [
-                        "No es una UI dashboard densa ni hiper-técnica.",
-                        "No busca estética startup genérica.",
+                        "Not a dense or hyper-technical dashboard UI.",
+                        "Not a generic startup look.",
                     ],
                     "tokens": {
                         "color.bg.canvas": "#f5f0e8",
                         "color.text.primary": "#2c2c2c",
                     },
                     "context_signals": [
-                        "Audiencia profesional no técnica.",
-                        "Necesidad de transmitir calma y credibilidad.",
+                        "Non-technical professional audience.",
+                        "Need to convey calm and credibility.",
                     ],
                 },
             ]
@@ -115,68 +115,68 @@ class TestDesignerStyleDirection(unittest.TestCase):
             content = fh.read()
 
         self.assertIn(
-            "Designer recomienda `B` — Editorial cálido como sistema de diseño base para esta fase.",
+            "Designer рекомендует `B` — Warm editorial как базовую дизайн-систему для этой фазы.",
             content,
         )
-        self.assertIn("## Por qué gana esta opción", content)
+        self.assertIn("## Почему выигрывает этот вариант", content)
         self.assertIn("Fraunces", content)
-        self.assertIn("No es una UI dashboard densa ni hiper-técnica.", content)
+        self.assertIn("Not a dense or hyper-technical dashboard UI.", content)
         self.assertIn("color.bg.canvas", content)
-        self.assertIn("## Principios ejecutables del sistema", content)
-        self.assertIn("### Gramática de composición", content)
-        self.assertIn("### Guardrails de implementación", content)
-        self.assertIn("## Semilla de dirección", content)
-        self.assertIn("Propuestas fuente: `content/style-options.json`", content)
+        self.assertIn("## Выполнимые принципы системы", content)
+        self.assertIn("### Грамматика композиции", content)
+        self.assertIn("### Guardrails реализации", content)
+        self.assertIn("## Зерно направления", content)
+        self.assertIn("Исходные предложения: `content/style-options.json`", content)
 
     def test_render_style_direction_markdown_has_required_sections(self):
         record = {
             "generated_at": "2026-04-07T10:00:02Z",
             "choice": "C",
-            "selected_label": "Minimalismo vibrante",
+            "selected_label": "Vibrant minimalism",
             "selected_at": "2026-04-07T10:00:02Z",
             "proposals_file": "/tmp/style-options.json",
             "proposal": {
                 "choice": "C",
-                "name": "Minimalismo vibrante",
-                "concept": "Sistema limpio con acento energético.",
+                "name": "Vibrant minimalism",
+                "concept": "Clean system with an energetic accent.",
                 "palette": [{"role": "primario", "value": "#0d7377"}],
                 "typography": {"headings": "Sora", "body": "Inter"},
-                "spacing_density": "Aireada",
-                "tone": "Moderno y ligero",
-                "sample_component": "Dashboard de cards con foco en highlights.",
-                "visual_principles": ["Claridad inmediata", "Contraste energético"],
-                "layout_grammar": "Hero limpio con support de cards ligeras.",
-                "surface_treatment": "Fondos limpios con un único acento vibrante.",
-                "shape_language": "Tarjetas suaves y geometría contenida.",
-                "motion_language": "Microtransiciones limpias y cortas.",
-                "signature_elements": ["Acento vibrante", "Mucho aire"],
-                "implementation_guardrails": ["No saturar la pantalla con demasiadas capas."],
-                "prompt_seed": "Mantén una dirección mínima y muy enfocada.",
-                "rationale": "Conviene a un producto claro y visual.",
-                "not_this_direction": ["No es sobrio corporativo."],
+                "spacing_density": "Airy",
+                "tone": "Modern and light",
+                "sample_component": "Card dashboard focused on highlights.",
+                "visual_principles": ["Instant clarity", "Energetic contrast"],
+                "layout_grammar": "Clean hero with light supporting cards.",
+                "surface_treatment": "Clean backgrounds with a single vibrant accent.",
+                "shape_language": "Soft cards and restrained geometry.",
+                "motion_language": "Short, clean micro-transitions.",
+                "signature_elements": ["Vibrant accent", "Lots of air"],
+                "implementation_guardrails": ["Do not overload the screen with too many layers."],
+                "prompt_seed": "Keep a minimal, highly focused direction.",
+                "rationale": "Suits a clear, visual product.",
+                "not_this_direction": ["Not restrained corporate."],
                 "tokens": [{"name": "color.brand.primary", "value": "#0d7377"}],
-                "context_signals": ["Producto orientado a descubrimiento visual."],
+                "context_signals": ["Product focused on visual discovery."],
             },
         }
         content = render_style_direction_markdown(record)
-        self.assertIn("## Sistema de diseño elegido", content)
-        self.assertIn("## Por qué gana esta opción", content)
-        self.assertIn("## Qué NO es este sistema", content)
-        self.assertIn("## Tokens iniciales sugeridos", content)
-        self.assertIn("## Principios ejecutables del sistema", content)
-        self.assertIn("## Semilla de dirección", content)
-        self.assertIn("Producto orientado a descubrimiento visual.", content)
+        self.assertIn("## Выбранная дизайн-система", content)
+        self.assertIn("## Почему выигрывает этот вариант", content)
+        self.assertIn("## Чем эта система НЕ является", content)
+        self.assertIn("## Предлагаемые начальные токены", content)
+        self.assertIn("## Выполнимые принципы системы", content)
+        self.assertIn("## Зерно направления", content)
+        self.assertIn("Product focused on visual discovery.", content)
 
     def test_render_style_direction_markdown_uses_basename_when_project_context_missing(self):
         record = {
             "generated_at": "2026-04-07T10:00:02Z",
             "choice": "A",
-            "selected_label": "Oscuro espacial",
+            "selected_label": "Space dark",
             "selected_at": "",
             "proposals_file": "/tmp/nested/style-options.json",
             "proposal": {
                 "choice": "A",
-                "name": "Oscuro espacial",
+                "name": "Space dark",
                 "concept": "",
                 "palette": [],
                 "typography": {},
@@ -191,52 +191,52 @@ class TestDesignerStyleDirection(unittest.TestCase):
         }
 
         content = render_style_direction_markdown(record)
-        self.assertIn("Propuestas fuente: `style-options.json`", content)
+        self.assertIn("Исходные предложения: `style-options.json`", content)
         self.assertNotIn("../../", content)
 
     def test_render_style_direction_markdown_shows_variant_and_pairing_metadata(self):
         record = {
             "generated_at": "2026-04-07T10:00:02Z",
             "choice": "B",
-            "selected_label": "Producto operativo",
+            "selected_label": "Operational product",
             "selected_at": "2026-04-07T10:00:02Z",
             "proposals_file": "/tmp/style-options.json",
             "proposal": {
                 "choice": "B",
-                "name": "Anti-diseno / Neo-brutalismo — Producto operativo",
-                "concept": "Direccion brutalista aterrizada a producto real.",
+                "name": "Anti-design / Neo-brutalism - Operational product",
+                "concept": "Brutalist direction grounded in a real product.",
                 "style_family": "neo-brutalism",
-                "style_family_label": "Anti-diseno / Neo-brutalismo",
+                "style_family_label": "Anti-design / Neo-brutalism",
                 "palette_mode": "solid",
-                "palette_mode_label": "Solidos",
-                "variant_label": "Producto operativo",
+                "palette_mode_label": "Solid",
+                "variant_label": "Operational product",
                 "palette": [{"role": "surface", "value": "#fff0b3"}],
                 "typography": {
                     "pairing_id": "brutal-readable",
-                    "pairing_label": "Brutal legible",
+                    "pairing_label": "Brutal readable",
                     "headings": "Archivo Black",
                     "body": "Space Grotesk",
                 },
-                "spacing_density": "Media",
-                "tone": "Directo y claro",
-                "sample_component": "Resumen operativo con bloques duros.",
-                "rationale": "Conviene para uso continuo de producto.",
-                "not_this_direction": ["No es la variante más editorial."],
+                "spacing_density": "Medium",
+                "tone": "Direct and clear",
+                "sample_component": "Operational summary with hard blocks.",
+                "rationale": "Suits continuous product use.",
+                "not_this_direction": ["Not the most editorial variant."],
                 "tokens": [],
                 "context_signals": [],
             },
         }
 
         content = render_style_direction_markdown(record)
-        self.assertIn("Variante final: **Producto operativo**", content)
-        self.assertIn("Modo de paleta: **Solidos**", content)
-        self.assertIn("Pairing: Brutal legible", content)
+        self.assertIn("Финальный вариант: **Operational product**", content)
+        self.assertIn("Режим палитры: **Solid**", content)
+        self.assertIn("Pairing: Brutal readable", content)
         self.assertIn("Id pairing: `brutal-readable`", content)
 
     def test_sparse_proposal_gets_semantic_defaults(self):
         with open(self.events_path, "w", encoding="utf-8") as fh:
             fh.write(
-                '{"type":"click","choice":"A","label":"Editorial cálido","ts":"2026-04-07T10:00:02Z"}\n'
+                '{"type":"click","choice":"A","label":"Warm editorial","ts":"2026-04-07T10:00:02Z"}\n'
             )
         with open(self.proposals_path, "w", encoding="utf-8") as fh:
             json.dump(
@@ -244,7 +244,7 @@ class TestDesignerStyleDirection(unittest.TestCase):
                     "proposals": [
                         {
                             "choice": "A",
-                            "name": "Editorial cálido",
+                            "name": "Warm editorial",
                             "palette": {"primario": "#f5f0e8"},
                             "typography": {"headings": "Fraunces"},
                         }
@@ -262,18 +262,18 @@ class TestDesignerStyleDirection(unittest.TestCase):
         with open(artifact_path, "r", encoding="utf-8") as fh:
             content = fh.read()
 
-        self.assertIn("Lenguaje editorial con jerarquía clara", content)
-        self.assertIn("Funciona bien cuando el producto necesita transmitir criterio", content)
-        self.assertIn("Hero editorial con titular protagonista", content)
-        self.assertIn("## Principios ejecutables del sistema", content)
-        self.assertIn("## Semilla de dirección", content)
-        self.assertIn("No es una UI de dashboard densa", content)
-        self.assertIn("Necesidad de transmitir criterio, calma y sensación de cuidado.", content)
+        self.assertIn("Редакционный язык с ясной иерархией", content)
+        self.assertIn("Подходит, когда продукту нужно передать вкус", content)
+        self.assertIn("Редакционный hero с главным заголовком", content)
+        self.assertIn("## Выполнимые принципы системы", content)
+        self.assertIn("## Зерно направления", content)
+        self.assertIn("Это не плотный dashboard UI", content)
+        self.assertIn("Нужно передать вкус, спокойствие и ощущение заботы.", content)
 
     def test_sidecar_alias_fields_are_normalized(self):
         with open(self.events_path, "w", encoding="utf-8") as fh:
             fh.write(
-                '{"type":"click","choice":"C","label":"Minimalismo vibrante","ts":"2026-04-07T10:00:02Z"}\n'
+                '{"type":"click","choice":"C","label":"Vibrant minimalism","ts":"2026-04-07T10:00:02Z"}\n'
             )
         with open(self.proposals_path, "w", encoding="utf-8") as fh:
             json.dump(
@@ -281,14 +281,14 @@ class TestDesignerStyleDirection(unittest.TestCase):
                     "proposals": [
                         {
                             "choice": "C",
-                            "title": "Minimalismo vibrante",
-                            "description": "Sistema limpio con acento energético.",
-                            "mood": "Ligero y nítido",
-                            "layout_density": "Muy aireada",
-                            "component_example": "Hero con claim corto y CTA dominante.",
-                            "why": "Ayuda a reducir ruido visual desde el primer pantallazo.",
-                            "anti_patterns": ["No es una interfaz ornamental."],
-                            "audience": "Equipo de producto con poco tiempo de lectura",
+                            "title": "Vibrant minimalism",
+                            "description": "Clean system with an energetic accent.",
+                            "mood": "Light and crisp",
+                            "layout_density": "Very airy",
+                            "component_example": "Hero with a short claim and a dominant CTA.",
+                            "why": "Helps reduce visual noise from the first screen.",
+                            "anti_patterns": ["Not an ornamental interface."],
+                            "audience": "Product team with little reading time",
                         }
                     ]
                 },
@@ -304,17 +304,17 @@ class TestDesignerStyleDirection(unittest.TestCase):
         with open(artifact_path, "r", encoding="utf-8") as fh:
             content = fh.read()
 
-        self.assertIn("Sistema limpio con acento energético.", content)
-        self.assertIn("Ligero y nítido", content)
-        self.assertIn("Muy aireada", content)
-        self.assertIn("Hero con claim corto y CTA dominante.", content)
-        self.assertIn("Ayuda a reducir ruido visual desde el primer pantallazo.", content)
-        self.assertIn("No es una interfaz ornamental.", content)
-        self.assertIn("Equipo de producto con poco tiempo de lectura", content)
+        self.assertIn("Clean system with an energetic accent.", content)
+        self.assertIn("Light and crisp", content)
+        self.assertIn("Very airy", content)
+        self.assertIn("Hero with a short claim and a dominant CTA.", content)
+        self.assertIn("Helps reduce visual noise from the first screen.", content)
+        self.assertIn("Not an ornamental interface.", content)
+        self.assertIn("Product team with little reading time", content)
 
     def test_write_style_direction_script_returns_pending_without_choice(self):
         with open(self.proposals_path, "w", encoding="utf-8") as fh:
-            json.dump({"A": {"name": "Oscuro espacial"}}, fh)
+            json.dump({"A": {"name": "Space dark"}}, fh)
 
         result = subprocess.run(
             [

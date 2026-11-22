@@ -45,7 +45,7 @@ python3 .claude/alfred-continuity.py sync-project-docs "$PWD"
 ## Перед закрытием gate
 
 ```bash
-python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command <comando> --phase <fase>
+python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command <команда> --phase <фаза>
 ```
 
 Если helper завершается с ненулевым кодом, gate не считается пройденным. Заполни

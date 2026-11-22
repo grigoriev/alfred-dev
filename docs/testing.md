@@ -1,35 +1,35 @@
-# Tests
+# Тесты
 
-Alfred Dev 0.7.0 usa pruebas por capas. La suite Python cubre la lógica local del plugin; los scripts de auditoría validan la superficie pública que Claude Code carga; los smokes manuales ejecutan Claude CLI con el plugin real; y la revisión humana comprueba la calidad generativa que no se puede reducir a una aserción estable.
+Alfred Dev 0.7.0 использует многоуровневое тестирование. Набор тестов на Python покрывает локальную логику плагина; скрипты аудита проверяют публичную поверхность, которую загружает Claude Code; ручные smoke-тесты запускают Claude CLI с реальным плагином; а проверка человеком оценивает качество генерации, которое нельзя свести к стабильной проверке.
 
-Esta página es la guía operativa para desarrollar sin romper la release. Si solo estas tocando una función pequeña, empieza por `python3 -m pytest tests/ -v`. Si estas preparando publicación, usa los gates de release descritos más abajo.
+Эта страница: операционное руководство, как разрабатывать и не сломать релиз. Если ты меняешь небольшую функцию, начни с `python3 -m pytest tests/ -v`. Если готовишь публикацию, используй gates релиза, описанные ниже.
 
-La suite se ejecuta con `pytest`, pero la mayoría de los ficheros siguen el estilo de clases `unittest.TestCase`. Cada fichero de test cubre un modulo o contrato concreto y se puede ejecutar de forma aislada o en conjunto.
+Набор запускается через `pytest`, но большинство файлов написаны в стиле классов `unittest.TestCase`. Каждый файл тестов покрывает конкретный модуль или контракт и запускается отдельно или вместе с остальными.
 
 ---
 
-## Comandos rápidos
+## Быстрые команды
 
-Para ejecutar toda la suite local:
+Запустить весь локальный набор:
 
 ```bash
 python3 -m pytest tests/ -v
 ```
 
-Para medir cobertura del core y los adaptadores Python:
+Измерить покрытие ядра и адаптеров на Python:
 
 ```bash
 python3 -m pytest tests/ -v --cov=core --cov=mcp
 ```
 
-Para validar la superficie publicable del plugin:
+Проверить публикуемую поверхность плагина:
 
 ```bash
 npm run release:audit
 npm run release:audit:full
 ```
 
-Para validar también la web de la rama `Alfred-Astro`:
+Проверить также сайт из ветки `Alfred-Astro`:
 
 ```bash
 python3 scripts/release_audit.py --with-site
@@ -37,7 +37,7 @@ npm --prefix site run check
 npm --prefix site run build
 ```
 
-Para comprobar que la autenticación de Claude CLI permite smokes manuales:
+Проверить, что аутентификация Claude CLI позволяет ручные smoke-тесты:
 
 ```bash
 npm run release:audit:manual:preflight
@@ -45,40 +45,40 @@ npm run release:audit:manual:preflight
 
 ---
 
-## Gates de release 0.7.0
+## Gates релиза 0.7.0
 
-La release 0.7.0 no depende de un único comando mágico. Cada gate cubre una frontera distinta y evita que una mejora local rompa la instalación global, el selector de comandos, el MCP de memoria o la documentación pública.
+Релиз 0.7.0 не зависит от одной волшебной команды. Каждый gate покрывает свою границу и не даёт локальному улучшению сломать глобальную установку, выбор команд, MCP памяти или публичную документацию.
 
-| Gate | Comando | Qué valida |
+| Gate | Команда | Что проверяет |
 |------|---------|------------|
-| Suite local | `python3 -m pytest tests/ -v` | Core Python, hooks, MCP, instaladores, comandos, contratos de prompts y scripts auxiliares. |
-| Auditoría base | `npm run release:audit` | Versionado 0.7.0, manifiestos, inventario publicable, frontmatter soportado, nombres de herramientas, package files y docs de auditoría. |
-| Auditoría completa | `npm run release:audit:full` | Auditoría base más checks de continuidad, herramientas MCP y contratos externos sin side effects. |
-| Web | `python3 scripts/release_audit.py --with-site` | Coherencia entre plugin, docs y landing Astro; evita claims públicos que no estén cubiertos por evidencia. |
-| Claude commands | `npm run release:audit:claude:commands` | Descubrimiento real de comandos con Claude CLI cuando el entorno local lo permite. |
-| Preflight manual | `npm run release:audit:manual:preflight` | Autenticación, disponibilidad de Claude CLI y preparación para smokes manuales. |
-| Evidencia manual | `npm run release:audit:manual:evidence` | Ejecuta casos smoke contra el worktree y genera evidencia gitignorada (`docs/manual-smoke-0.7.0.json` es el nombre del artefacto de salida). |
-| Evidencia instalada | `npm run release:audit:manual:evidence:installed` | Repite smokes contra la caché instalada de usuario para detectar drift entre worktree e instalación. |
-| Revisión humana | `npm run release:audit:manual:review` | Bloquea publicación si la plantilla de revisión no esta aprobada, fechada y anotada caso por caso. |
+| Локальный набор | `python3 -m pytest tests/ -v` | Ядро на Python, хуки, MCP, установщики, команды, контракты промптов и вспомогательные скрипты. |
+| Базовый аудит | `npm run release:audit` | Версионирование 0.7.0, манифесты, публикуемый инвентарь, поддерживаемый frontmatter, имена инструментов, package files и документы аудита. |
+| Полный аудит | `npm run release:audit:full` | Базовый аудит плюс проверки непрерывности, MCP-инструментов и внешних контрактов без side effects. |
+| Сайт | `python3 scripts/release_audit.py --with-site` | Согласованность плагина, docs и лендинга Astro; не допускает публичных claims без подтверждений. |
+| Команды Claude | `npm run release:audit:claude:commands` | Реальное обнаружение команд через Claude CLI, если локальное окружение это позволяет. |
+| Ручной preflight | `npm run release:audit:manual:preflight` | Аутентификация, доступность Claude CLI и готовность к ручным smoke-тестам. |
+| Ручные подтверждения | `npm run release:audit:manual:evidence` | Запускает smoke-кейсы против worktree и создаёт подтверждения, игнорируемые git (`docs/manual-smoke-0.7.0.json`: имя выходного артефакта). |
+| Подтверждения установки | `npm run release:audit:manual:evidence:installed` | Повторяет smoke-тесты против установленного кэша пользователя, чтобы найти drift между worktree и установкой. |
+| Проверка человеком | `npm run release:audit:manual:review` | Блокирует публикацию, если шаблон проверки не одобрен, не датирован и не прокомментирован по каждому кейсу. |
 
-El gate `release:audit:prepublish` encadena la auditoría completa, el preflight de Claude CLI y las revisiones humanas del worktree y de la instalación. Debe fallar si la revisión manual sigue pendiente; no se debe rellenar esa aprobación de forma automática.
+Gate `release:audit:prepublish` последовательно запускает полный аудит, preflight Claude CLI и проверки человеком для worktree и установки. Он должен падать, если ручная проверка ещё не закрыта; заполнять это одобрение автоматически нельзя.
 
 ---
 
-## Cobertura principal
+## Основное покрытие
 
-La suite de `tests/` cubre las superficies que Claude Code consume en 0.7.0:
+Набор в `tests/` покрывает поверхности, которые Claude Code использует в 0.7.0:
 
-- **Core y memoria**: orquestador, configuración, continuidad, memoria SQLite, sincronización, UI local y sanitización de secretos.
-- **MCP**: servidor `alfred-memory`, forma JSON-RPC, herramientas publicadas y fallback cuando la memoria no esta disponible.
-- **Hooks**: captura de actividad, prompt-route, guardas de comandos peligrosos, evidencias, secretos, lecturas sensibles, quality gates y session start/end.
-- **Instaladores**: `install.sh`, `install.ps1`, `uninstall.sh` y `uninstall.ps1`, incluyendo instalación global de usuario y la limpieza de un shim obsoleto en `~/.claude/commands/alfred.md` si existe. No crean alias global `/alfred`.
-- **Comandos y agentes**: contratos de frontmatter, nombres de herramientas soportadas, ausencia de referencias operativas a `Task`, composición contextual de Alfred y 18 comandos publicados en `plugin.json`.
-- **Skills**: inventario de 11 `SKILL.md` planas, campos de frontmatter soportados, colisiones de nombres, longitud de listing y skills manuales con `disable-model-invocation: true`.
-- **Release y publicación**: scripts de auditoría, evidencia manual, reporte de revisión, freshness de caché instalada y consistencia de versión.
-- **Selina y visual**: catálogo de estilos, dirección visual, variantes, helper visual y servidor local de apoyo.
+- **Ядро и память**: оркестратор, конфигурация, непрерывность, память SQLite, синхронизация, локальный UI и очистка секретов.
+- **MCP**: сервер `alfred-memory`, форма JSON-RPC, опубликованные инструменты и fallback, когда память недоступна.
+- **Хуки**: сбор активности, prompt-route, защита от опасных команд, подтверждения, секреты, чтение чувствительных файлов, quality gates и session start/end.
+- **Установщики**: `install.sh`, `install.ps1`, `uninstall.sh` и `uninstall.ps1`, включая глобальную установку для пользователя и очистку устаревшего shim в `~/.claude/commands/alfred.md`, если он есть. Глобальный алиас `/alfred` они не создают.
+- **Команды и агенты**: контракты frontmatter, имена поддерживаемых инструментов, отсутствие операционных ссылок на `Task`, контекстная композиция Alfred и 18 команд, опубликованных в `plugin.json`.
+- **Skills**: инвентарь из 11 плоских `SKILL.md`, поддерживаемые поля frontmatter, конфликты имён, длина listing и ручные skills с `disable-model-invocation: true`.
+- **Релиз и публикация**: скрипты аудита, ручные подтверждения, отчёт проверки, свежесть установленного кэша и согласованность версий.
+- **Designer и визуал**: каталог стилей, визуальное направление, варианты, визуальный хелпер и вспомогательный локальный сервер.
 
-Los tests siguen usando `unittest` como estilo interno y `pytest` como runner. Cada fichero se puede ejecutar de forma aislada cuando quieres iterar rápido:
+Тесты по-прежнему используют `unittest` как внутренний стиль и `pytest` как раннер. Каждый файл можно запустить отдельно, когда нужно быстро итерировать:
 
 ```bash
 python3 -m pytest tests/test_release_audit.py -q
@@ -88,21 +88,21 @@ python3 -m pytest tests/test_memory_server.py -q
 
 ---
 
-## Patrones de testing usados
+## Используемые паттерны тестирования
 
-Los tests que necesitan disco usan `tempfile.NamedTemporaryFile` o `tempfile.TemporaryDirectory` y limpian en `tearDown()` o `try/finally`. Ningun test debe escribir estado permanente en el repositorio, en `~/.claude/` ni en una base de datos real salvo que el propio test lo aísle en un directorio temporal.
+Тесты, которым нужен диск, используют `tempfile.NamedTemporaryFile` или `tempfile.TemporaryDirectory` и убирают за собой в `tearDown()` или `try/finally`. Ни один тест не должен записывать постоянное состояние в репозиторий, в `~/.claude/` или в реальную базу данных, если сам тест не изолирует это во временном каталоге.
 
-Los modulos del core se importan añadiendo la raiz del proyecto a `sys.path`:
+Модули ядра импортируются после добавления корня проекта в `sys.path`:
 
 ```python
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 ```
 
-Los ficheros con guion, como `hooks/secret-guard.py`, se cargan con `importlib.util.spec_from_file_location` porque no se pueden importar con sintaxis Python normal.
+Файлы с дефисом, например `hooks/secret-guard.py`, загружаются через `importlib.util.spec_from_file_location`, потому что их нельзя импортировать обычным синтаксисом Python.
 
-Los tests de memoria verifican a dos niveles: usan la API pública de `MemoryDB` y, cuando hace falta, abren SQLite directamente para comprobar tablas, índices, permisos, WAL y relaciones persistidas.
+Тесты памяти проверяют на двух уровнях: используют публичный API `MemoryDB` и, когда нужно, открывают SQLite напрямую, чтобы проверить таблицы, индексы, права, WAL и сохранённые связи.
 
-Los tests de sanitización construyen patrones sensibles en runtime para no dejar secretos falsos completos en el código fuente:
+Тесты очистки секретов собирают чувствительные шаблоны в runtime, чтобы не оставлять полные фальшивые секреты в исходном коде:
 
 ```python
 fake_key = "AKIA" + "TESTMEMORYDB1234"
@@ -111,58 +111,58 @@ fake_sk = "sk-" + "a" * 25
 
 ---
 
-## Integraciones externas
+## Внешние интеграции
 
-Algunos checks viven detrás de flags porque pueden necesitar credenciales, red, Docker, GitHub CLI o servicios externos:
+Некоторые проверки спрятаны за флагами, потому что им могут понадобиться учётные данные, сеть, Docker, GitHub CLI или внешние сервисы:
 
 ```bash
 npm run release:audit:external
 npm run release:audit:external:preflight
 ```
 
-Estos comandos no deben ejecutarse como parte silenciosa de una suite local si el entorno no esta preparado. Su función es probar contratos externos de forma explícita: GitHub, Codex CLI, SonarQube/Docker y otras integraciones que pueden tener side effects o depender de autenticación.
+Эти команды не должны молча запускаться в составе локального набора, если окружение не готово. Их задача: явно проверять внешние контракты: GitHub, Codex CLI, SonarQube/Docker и другие интеграции, которые могут иметь side effects или зависеть от аутентификации.
 
 ---
 
-## Límites honestos de cobertura
+## Честные границы покрытия
 
-### Calidad generativa
+### Качество генерации
 
-Los prompts de comandos, agentes y skills se pueden auditar por estructura, herramientas, referencias y coherencia, pero no se puede garantizar con un test determinista que Claude produzca siempre una respuesta excelente. Por eso 0.7.0 mantiene `scripts/manual_smoke.py`, plantillas de revisión humana y un gate que exige aprobación explícita caso por caso antes de publicar.
+Промпты команд, агентов и skills можно проверить по структуре, инструментам, ссылкам и согласованности, но детерминированный тест не может гарантировать, что Claude всегда даст отличный ответ. Поэтому в 0.7.0 остаются `scripts/manual_smoke.py`, шаблоны проверки человеком и gate, который требует явного одобрения по каждому кейсу перед публикацией.
 
-### Sesiones reales de Claude Code
+### Реальные сессии Claude Code
 
-La suite simula hooks, MCP y discovery hasta donde es razonable, pero la carga final depende de Claude Code, su caché de plugins, el estado de autenticación y el selector interactivo. La evidencia de release debe incluir smokes en worktree e instalación global de usuario, especialmente para `/alfred-dev:alfred`, `/alfred-dev:*` y `claude -p`.
+Набор симулирует хуки, MCP и discovery в разумных пределах, но итоговая загрузка зависит от Claude Code, его кэша плагинов, состояния аутентификации и интерактивного выбора. Подтверждения релиза должны включать smoke-тесты в worktree и в глобальной установке пользователя, особенно для `/alfred-dev:alfred`, `/alfred-dev:*` и `claude -p`.
 
-Aunque la cobertura automatizada ya es amplia, todavía hay zonas donde la validación manual dentro de Claude Code sigue siendo importante: la experiencia completa de los slash commands en conversación real, la ergonomía de los agentes como prompts largos, el encadenado completo de hooks con eventos reales del runtime y, en la rama `Alfred-Astro`, la UX final del companion visual de Selina.
+Автоматическое покрытие уже широкое, но есть зоны, где ручная проверка внутри Claude Code остаётся важной: полный опыт slash-команд в реальном разговоре, эргономика агентов как длинных промптов, полная цепочка хуков с реальными событиями runtime и, в ветке `Alfred-Astro`, итоговый UX визуального companion Designer.
 
-### Servicios con side effects
+### Сервисы с side effects
 
-GitHub, SonarQube, Docker y cualquier herramienta externa con credenciales se prueban con preflights y contratos. Los tests no deben crear issues, releases, contenedores persistentes ni cambios remotos sin una bandera explícita y documentación de evidencia.
+GitHub, SonarQube, Docker и любые внешние инструменты с учётными данными проверяются через preflight и контракты. Тесты не должны создавать issues, релизы, постоянные контейнеры или удалённые изменения без явного флага и документирования подтверждений.
 
-Los commands son prompts, no código imperativo, pero eso no significa que queden fuera de la suite. El repo incluye tests de contratos para continuidad, PM ops, ayuda, auditoría y superficie pública (`test_progress_contract.py`, `test_pm_contract.py`, `test_discuss_contract.py`, `test_audit_prompt_contract.py`, `test_public_surface_contract.py`, entre otros). Lo que no se puede automatizar por completo es la calidad conversacional final del comando dentro de Claude Code.
+Commands это промпты, а не императивный код, но это не значит, что они вне набора тестов. В репозитории есть контрактные тесты для непрерывности, PM ops, справки, аудита и публичной поверхности (`test_progress_contract.py`, `test_pm_contract.py`, `test_discuss_contract.py`, `test_audit_prompt_contract.py`, `test_public_surface_contract.py` и другие). Полностью автоматизировать нельзя только итоговое качество диалога команды внутри Claude Code.
 
-### Plataformas no presentes
+### Отсутствующие платформы
 
-Los instaladores de Bash y PowerShell tienen tests de contrato, pero una release pública debe revisarse en macOS/Linux y, cuando sea posible, en Windows real o PowerShell disponible. Si solo se ha probado una plataforma, esa limitación debe quedar reflejada en `docs/release.md`.
+У установщиков на Bash и PowerShell есть контрактные тесты, но публичный релиз нужно проверить на macOS/Linux и, когда возможно, на реальной Windows или с доступным PowerShell. Если проверена только одна платформа, это ограничение нужно отразить в `docs/release.md`.
 
-Los agentes siguen la misma lógica que los commands: son ficheros Markdown que definen la personalidad y las instrucciones de cada agente especializado. El motor de personalidad (`core/personality.py`) y parte de la composición del equipo sí están cubiertos por tests, pero la calidad final del prompt de cada agente sigue requiriendo validación empírica.
+Агенты следуют той же логике, что и commands: это файлы Markdown, которые задают личность и инструкции каждого специализированного агента. Движок личности (`core/personality.py`) и часть композиции команды покрыты тестами, но итоговое качество промпта каждого агента по-прежнему требует эмпирической проверки.
 
 ---
 
-## Como añadir un nuevo test
+## Как добавить новый тест
 
-1. Crea un fichero `tests/test_<modulo>.py` con clases `unittest.TestCase` y nombres de test descriptivos.
-2. Usa directorios temporales para cualquier escritura.
-3. Evita depender de una instalación real en `~/.claude/` salvo que el test cree un `HOME` temporal.
-4. Si el cambio afecta comandos, agentes, skills, hooks, MCP, instaladores o package files, añade también un contrato en `scripts/release_audit.py` o en una suite existente.
-5. Ejecuta el test nuevo, la suite relacionada y al menos `npm run release:audit` antes de cerrar el cambio.
+1. Создай файл `tests/test_<модуль>.py` с классами `unittest.TestCase` и понятными именами тестов.
+2. Для любой записи используй временные каталоги.
+3. Не завись от реальной установки в `~/.claude/`, если тест не создаёт временный `HOME`.
+4. Если изменение затрагивает команды, агентов, skills, хуки, MCP, установщики или package files, добавь также контракт в `scripts/release_audit.py` или в существующий набор.
+5. Перед закрытием изменения запусти новый тест, связанный набор и как минимум `npm run release:audit`.
 
-Ejemplo mínimo:
+Минимальный пример:
 
 ```python
 #!/usr/bin/env python3
-"""Tests para mi_modulo."""
+"""Tests for my_module."""
 
 import os
 import sys
@@ -170,12 +170,12 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from core.mi_modulo import funcion_a_testear
+from core.my_module import function_under_test
 
 
-class TestMiModulo(unittest.TestCase):
-    def test_comportamiento_esperado(self):
-        self.assertEqual(funcion_a_testear("entrada"), "salida")
+class TestMyModule(unittest.TestCase):
+    def test_expected_behavior(self):
+        self.assertEqual(function_under_test("input"), "output")
 
 
 if __name__ == "__main__":

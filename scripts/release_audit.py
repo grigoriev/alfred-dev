@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Verificador reproducible para la auditoria de release 0.7.0.
+"""Reproducible checker for the 0.7.0 release audit.
 
-El modo por defecto ejecuta checks locales rapidos: versionado, manifiestos,
-inventario del repositorio, documentacion de la auditoria y forma del MCP.
-Los smokes que dependen de herramientas externas se activan con flags.
+The default mode runs fast local checks: versioning, manifests,
+repository inventory, audit documentation and MCP shape.
+Smokes that depend on external tools are enabled with flags.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-VERSION = "0.7.0"
+VERSION = "0.7.1"
 OLD_VERSION = "0.5" + ".3"
 INSTALLED_PLUGIN_DIR = Path.home() / ".claude" / "plugins" / "cache" / "alfred-dev" / "alfred-dev" / VERSION
 GLOBAL_ALFRED_ALIAS_FILE = Path.home() / ".claude" / "skills" / "alfred" / "SKILL.md"
@@ -84,29 +84,29 @@ TEMPLATE_PATHS = (
 )
 
 PLUGIN_COMPONENT_FIELDS_REQUIRING_EXPLICIT_AUDIT = {
-    "agents": "Claude los descubre desde agents/",
-    "hooks": "usar hooks/hooks.json y mantener el gate especifico de hooks",
-    "mcpServers": "usar .mcp.json raiz y mantener el gate especifico de MCP",
-    "lspServers": "anadir gate de LSP antes de publicarlo",
-    "outputStyles": "anadir gate de output-styles antes de publicarlo",
-    "channels": "anadir gate de channels/MCP antes de publicarlo",
-    "dependencies": "anadir gate de dependencias de plugins antes de publicarlas",
+    "agents": "Claude discovers them from agents/",
+    "hooks": "use hooks/hooks.json and keep the hook-specific gate",
+    "mcpServers": "use the root .mcp.json and keep the MCP-specific gate",
+    "lspServers": "add an LSP gate before publishing it",
+    "outputStyles": "add an output-styles gate before publishing it",
+    "channels": "add a channels/MCP gate before publishing it",
+    "dependencies": "add a plugin dependency gate before publishing them",
 }
 PLUGIN_EXPERIMENTAL_FIELDS_REQUIRING_EXPLICIT_AUDIT = {
-    "themes": "anadir gate de themes antes de publicarlo",
-    "monitors": "anadir gate de monitors antes de publicarlo",
+    "themes": "add a themes gate before publishing it",
+    "monitors": "add a monitors gate before publishing it",
 }
 MARKETPLACE_ENTRY_FIELDS_REQUIRING_EXPLICIT_AUDIT = {
-    "agents": "no suplementar agentes fuera de plugin.json",
-    "commands": "no suplementar comandos fuera de plugin.json",
-    "dependencies": "no introducir dependencias de marketplace sin gate",
-    "hooks": "no suplementar hooks fuera de hooks/hooks.json",
-    "lspServers": "no activar LSP desde marketplace sin gate",
-    "mcpServers": "no suplementar MCP fuera de .mcp.json",
-    "outputStyles": "no activar output-styles desde marketplace sin gate",
-    "skills": "no suplementar skills fuera de plugin.json",
-    "experimental": "no activar componentes experimentales desde marketplace sin gate",
-    "defaultEnabled": "no cambiar enablement desde marketplace; plugin.json/documentacion deben ser la autoridad",
+    "agents": "do not supplement agents outside plugin.json",
+    "commands": "do not supplement commands outside plugin.json",
+    "dependencies": "do not add marketplace dependencies without a gate",
+    "hooks": "do not supplement hooks outside hooks/hooks.json",
+    "lspServers": "do not enable LSP from the marketplace without a gate",
+    "mcpServers": "do not supplement MCP outside .mcp.json",
+    "outputStyles": "do not enable output-styles from the marketplace without a gate",
+    "skills": "do not supplement skills outside plugin.json",
+    "experimental": "do not enable experimental components from the marketplace without a gate",
+    "defaultEnabled": "do not change enablement from the marketplace; plugin.json and the docs are the authority",
 }
 
 HOOK_EVENTS_WITHOUT_MATCHER = {
@@ -231,7 +231,7 @@ ALFRED_AGENT_MODEL_POLICY = Counter({"inherit": 10})
 
 
 class AuditError(AssertionError):
-    """Error de contrato de release."""
+    """Release contract error."""
 
 
 def _read(path: str) -> str:
@@ -248,6 +248,21 @@ def _has_site() -> bool:
 
 def _fail(message: str) -> None:
     raise AuditError(message)
+
+
+def _contains(text: str, needle: str | tuple[str, ...]) -> bool:
+    """Return True when text contains the needle or one of its alternatives.
+
+    A tuple holds the legacy Spanish phrase first and accepted translations next.
+    """
+    if isinstance(needle, tuple):
+        return any(alternative in text for alternative in needle)
+    return needle in text
+
+
+def _needle_label(needle: str | tuple[str, ...]) -> str:
+    """Return the primary phrase of a needle for error messages."""
+    return needle[0] if isinstance(needle, tuple) else needle
 
 
 def _rel(path: Path) -> str:
@@ -320,7 +335,7 @@ def check_versions() -> list[str]:
         if value != VERSION
     }
     if bad:
-        _fail(f"Versiones no alineadas a {VERSION}: {bad}")
+        _fail(f"Versions not aligned to {VERSION}: {bad}")
 
     offenders: list[str] = []
     for path in _iter_text_files():
@@ -331,9 +346,9 @@ def check_versions() -> list[str]:
         if OLD_VERSION in text or f"v{OLD_VERSION}" in text:
             offenders.append(_rel(path))
     if offenders:
-        _fail(f"Quedan restos vivos de {OLD_VERSION}: {offenders}")
+        _fail(f"Live leftovers of {OLD_VERSION} remain: {offenders}")
 
-    return [f"versiones alineadas a {VERSION}", f"sin restos de {OLD_VERSION}"]
+    return [f"versions aligned to {VERSION}", f"no leftovers of {OLD_VERSION}"]
 
 
 def _skill_files_from_manifest(plugin: dict) -> list[Path]:
@@ -353,7 +368,7 @@ def _manifest_component_paths(plugin: dict, field: str) -> tuple[list[Path], lis
     if field == "skills" and values is None:
         return [ROOT / "skills"], []
     if not isinstance(values, list):
-        return [], [f"plugin.json {field} debe ser una lista"]
+        return [], [f"plugin.json {field} must be a list"]
 
     paths: list[Path] = []
     problems: list[str] = []
@@ -362,23 +377,23 @@ def _manifest_component_paths(plugin: dict, field: str) -> tuple[list[Path], lis
     for index, raw_value in enumerate(values):
         label = f"plugin.json {field}[{index}]"
         if not isinstance(raw_value, str):
-            problems.append(f"{label} debe ser string relativo: {raw_value!r}")
+            problems.append(f"{label} must be a relative string: {raw_value!r}")
             continue
         if not raw_value.startswith("./"):
-            problems.append(f"{label} debe empezar por ./ para resolverse desde el root del plugin: {raw_value!r}")
+            problems.append(f"{label} must start with ./ to resolve from the plugin root: {raw_value!r}")
         if Path(raw_value).is_absolute():
-            problems.append(f"{label} no puede ser absoluto: {raw_value!r}")
+            problems.append(f"{label} must not be absolute: {raw_value!r}")
         if ".." in Path(raw_value).parts:
-            problems.append(f"{label} no puede atravesar fuera del plugin con ..: {raw_value!r}")
+            problems.append(f"{label} must not escape the plugin with ..: {raw_value!r}")
         normalized = raw_value[2:] if raw_value.startswith("./") else raw_value
         if normalized in seen:
-            problems.append(f"{label} duplica una ruta del manifest: {raw_value!r}")
+            problems.append(f"{label} duplicates a manifest path: {raw_value!r}")
         seen.add(normalized)
         target = (ROOT / normalized).resolve()
         try:
             target.relative_to(root)
         except ValueError:
-            problems.append(f"{label} resuelve fuera del root del plugin: {raw_value!r}")
+            problems.append(f"{label} resolves outside the plugin root: {raw_value!r}")
         paths.append(ROOT / normalized)
     return paths, problems
 
@@ -390,64 +405,64 @@ def check_inventory() -> list[str]:
     marketplace_problems: list[str] = []
     if marketplace.get("name") != plugin.get("name"):
         marketplace_problems.append(
-            f"marketplace.name debe coincidir con plugin.name: {marketplace.get('name')!r}"
+            f"marketplace.name must match plugin.name: {marketplace.get('name')!r}"
         )
     if not isinstance(marketplace.get("owner"), dict) or not marketplace["owner"].get("name"):
-        marketplace_problems.append("marketplace.owner.name es obligatorio")
+        marketplace_problems.append("marketplace.owner.name is required")
     if not isinstance(marketplace_plugins, list) or len(marketplace_plugins) != 1:
-        marketplace_problems.append("marketplace.plugins debe contener exactamente una entrada")
+        marketplace_problems.append("marketplace.plugins must contain exactly one entry")
         marketplace_plugin = {}
     else:
         marketplace_plugin = marketplace_plugins[0]
         if not isinstance(marketplace_plugin, dict):
-            marketplace_problems.append("marketplace.plugins[0] debe ser objeto")
+            marketplace_problems.append("marketplace.plugins[0] must be an object")
             marketplace_plugin = {}
     if marketplace_plugin:
         if marketplace_plugin.get("name") != plugin.get("name"):
             marketplace_problems.append(
-                "marketplace.plugins[0].name debe coincidir con plugin.name: "
+                "marketplace.plugins[0].name must match plugin.name: "
                 f"{marketplace_plugin.get('name')!r}"
             )
         if marketplace_plugin.get("strict") is False:
             marketplace_problems.append(
-                "marketplace.plugins[0].strict=false haria que marketplace reemplace plugin.json"
+                "marketplace.plugins[0].strict=false would make the marketplace replace plugin.json"
             )
         marketplace_problems.extend(
-            f"marketplace.plugins[0] no debe declarar {field}: {reason}"
+            f"marketplace.plugins[0] must not declare {field}: {reason}"
             for field, reason in sorted(MARKETPLACE_ENTRY_FIELDS_REQUIRING_EXPLICIT_AUDIT.items())
             if field in marketplace_plugin
         )
     if marketplace_problems:
-        _fail("Marketplace de Alfred Dev desalineado: " + "; ".join(marketplace_problems))
+        _fail("Alfred Dev marketplace out of sync: " + "; ".join(marketplace_problems))
 
     plugin_component_problems = [
-        f"plugin.json no debe declarar {field}: {reason}"
+        f"plugin.json must not declare {field}: {reason}"
         for field, reason in sorted(PLUGIN_COMPONENT_FIELDS_REQUIRING_EXPLICIT_AUDIT.items())
         if field in plugin
     ]
     experimental = plugin.get("experimental")
     if experimental is not None and not isinstance(experimental, dict):
-        plugin_component_problems.append("plugin.json experimental debe ser un objeto")
+        plugin_component_problems.append("plugin.json experimental must be an object")
     elif isinstance(experimental, dict):
         plugin_component_problems.extend(
-            f"plugin.json no debe declarar experimental.{field}: {reason}"
+            f"plugin.json must not declare experimental.{field}: {reason}"
             for field, reason in sorted(
                 PLUGIN_EXPERIMENTAL_FIELDS_REQUIRING_EXPLICIT_AUDIT.items()
             )
             if field in experimental
         )
     if plugin_component_problems:
-        _fail("Componentes de plugin sin auditoria explicita: " + "; ".join(plugin_component_problems))
+        _fail("Plugin components without explicit audit: " + "; ".join(plugin_component_problems))
 
     command_paths, command_path_problems = _manifest_component_paths(plugin, "commands")
     _skill_manifest_paths, skill_path_problems = _manifest_component_paths(plugin, "skills")
     path_problems = command_path_problems + skill_path_problems
     if path_problems:
-        _fail("Paths de componentes del manifest incompatibles: " + "; ".join(path_problems))
+        _fail("Incompatible manifest component paths: " + "; ".join(path_problems))
 
     missing_commands = [_rel(path) for path in command_paths if not path.exists()]
     if missing_commands:
-        _fail(f"Comandos publicados inexistentes: {missing_commands}")
+        _fail(f"Published commands do not exist: {missing_commands}")
     public_command_paths = {path.resolve() for path in command_paths}
     extra_command_files = sorted(
         path for path in (ROOT / "commands").glob("*.md")
@@ -460,7 +475,7 @@ def check_inventory() -> list[str]:
         "commands/search.md",
     }:
         _fail(
-            "commands/ contiene ficheros no publicados inesperados: "
+            "commands/ contains unexpected unpublished files: "
             f"{[_rel(path) for path in extra_command_files]}"
         )
 
@@ -479,26 +494,26 @@ def check_inventory() -> list[str]:
         unknown = sorted(field_set - AGENT_SUPPORTED_FIELDS - PLUGIN_IGNORED_AGENT_FIELDS)
         if ignored:
             agent_frontmatter_problems.append(
-                f"{_rel(path)} usa campos ignorados en agentes de plugin: {ignored}"
+                f"{_rel(path)} uses fields ignored in plugin agents: {ignored}"
             )
         if unknown:
             agent_frontmatter_problems.append(
-                f"{_rel(path)} usa campos no soportados en frontmatter: {unknown}"
+                f"{_rel(path)} uses unsupported frontmatter fields: {unknown}"
             )
         for required in ("name", "description", "model"):
             if required not in field_set:
-                agent_frontmatter_problems.append(f"{_rel(path)} no declara {required}")
+                agent_frontmatter_problems.append(f"{_rel(path)} does not declare {required}")
         model = frontmatter_values.get("model")
         if model:
             agent_models[model] += 1
             if not _is_supported_agent_model(model):
                 agent_frontmatter_problems.append(
-                    f"{_rel(path)} usa modelo no soportado por Claude Code actual: {model!r}"
+                    f"{_rel(path)} uses a model not supported by current Claude Code: {model!r}"
                 )
         color = frontmatter_values.get("color")
         if color and color not in AGENT_COLOR_VALUES:
             agent_frontmatter_problems.append(
-                f"{_rel(path)} usa color de subagente no soportado por Claude Code actual: {color!r}"
+                f"{_rel(path)} uses a subagent color not supported by current Claude Code: {color!r}"
             )
         unavailable_tools = sorted(
             _frontmatter_tool_names(frontmatter_values.get("tools", ""))
@@ -511,27 +526,27 @@ def check_inventory() -> list[str]:
         )
         if unknown_tools:
             agent_frontmatter_problems.append(
-                f"{_rel(path)} lista herramientas desconocidas por Claude Code actual: {unknown_tools}"
+                f"{_rel(path)} lists tools unknown to current Claude Code: {unknown_tools}"
             )
         if unavailable_tools:
             agent_frontmatter_problems.append(
-                f"{_rel(path)} lista herramientas no disponibles en subagentes: {unavailable_tools}"
+                f"{_rel(path)} lists tools not available in subagents: {unavailable_tools}"
             )
         unavailable_mentions = sorted(
             tool for tool in SUBAGENT_UNAVAILABLE_TOOLS if tool in agent_text
         )
         if unavailable_mentions:
             agent_frontmatter_problems.append(
-                f"{_rel(path)} instruye herramientas no disponibles en subagentes: {unavailable_mentions}"
+                f"{_rel(path)} instructs tools not available in subagents: {unavailable_mentions}"
             )
     if agent_models and agent_models != ALFRED_AGENT_MODEL_POLICY:
         agent_frontmatter_problems.append(
-            "distribucion de modelos de agentes desalineada con la politica 0.7.0: "
+            "agent model distribution does not match the 0.7.0 policy: "
             f"actual={dict(sorted(agent_models.items()))} "
-            f"esperada={dict(sorted(ALFRED_AGENT_MODEL_POLICY.items()))}"
+            f"expected={dict(sorted(ALFRED_AGENT_MODEL_POLICY.items()))}"
         )
     if agent_frontmatter_problems:
-        _fail("Frontmatter de agentes incompatible: " + "; ".join(agent_frontmatter_problems))
+        _fail("Incompatible agent frontmatter: " + "; ".join(agent_frontmatter_problems))
 
     skill_files = _skill_files_from_manifest(plugin)
     skill_frontmatter_problems: list[str] = []
@@ -543,18 +558,18 @@ def check_inventory() -> list[str]:
         unknown = sorted(field_set - SKILL_SUPPORTED_FIELDS)
         if unknown:
             skill_frontmatter_problems.append(
-                f"{_rel(path)} usa campos no soportados en skill frontmatter: {unknown}"
+                f"{_rel(path)} uses unsupported skill frontmatter fields: {unknown}"
             )
         for required in ("name", "description"):
             if required not in field_set:
-                skill_frontmatter_problems.append(f"{_rel(path)} no declara {required}")
+                skill_frontmatter_problems.append(f"{_rel(path)} does not declare {required}")
         listing_text_length = len(
             _frontmatter_field_text(skill_text, "description")
             + _frontmatter_field_text(skill_text, "when_to_use")
         )
         if listing_text_length > SKILL_LISTING_TEXT_LIMIT:
             skill_frontmatter_problems.append(
-                f"{_rel(path)} excede el limite de listing de skills "
+                f"{_rel(path)} exceeds the skill listing limit "
                 f"{SKILL_LISTING_TEXT_LIMIT} chars: {listing_text_length}"
             )
         name = frontmatter_values.get("name")
@@ -562,37 +577,37 @@ def check_inventory() -> list[str]:
             skill_names.setdefault(name, []).append(_rel(path))
             if name != path.parent.name:
                 skill_frontmatter_problems.append(
-                    f"{_rel(path)} declara name={name!r} pero el directorio es {path.parent.name!r}"
+                    f"{_rel(path)} declares name={name!r} but the directory is {path.parent.name!r}"
                 )
         for boolean_field in sorted(SKILL_BOOLEAN_FIELDS):
             value = frontmatter_values.get(boolean_field)
             if value and value.lower() not in SKILL_BOOLEAN_VALUES:
                 skill_frontmatter_problems.append(
-                    f"{_rel(path)} usa {boolean_field} no booleano: {value!r}"
+                    f"{_rel(path)} uses non-boolean {boolean_field}: {value!r}"
                 )
         model = frontmatter_values.get("model")
         if model and not _is_supported_agent_model(model):
             skill_frontmatter_problems.append(
-                f"{_rel(path)} usa modelo de skill no soportado por Claude Code actual: {model!r}"
+                f"{_rel(path)} uses a skill model not supported by current Claude Code: {model!r}"
             )
         effort = frontmatter_values.get("effort")
         if effort and effort not in SKILL_EFFORT_VALUES:
             skill_frontmatter_problems.append(
-                f"{_rel(path)} usa effort no soportado por Claude Code actual: {effort!r}"
+                f"{_rel(path)} uses an effort not supported by current Claude Code: {effort!r}"
             )
         context = frontmatter_values.get("context")
         if context and context not in SKILL_CONTEXT_VALUES:
             skill_frontmatter_problems.append(
-                f"{_rel(path)} usa context no soportado por Claude Code actual: {context!r}"
+                f"{_rel(path)} uses a context not supported by current Claude Code: {context!r}"
             )
         if frontmatter_values.get("agent") and context != "fork":
             skill_frontmatter_problems.append(
-                f"{_rel(path)} declara agent sin context: fork"
+                f"{_rel(path)} declares agent without context: fork"
             )
         shell = frontmatter_values.get("shell")
         if shell and shell not in SKILL_SHELL_VALUES:
             skill_frontmatter_problems.append(
-                f"{_rel(path)} usa shell no soportado por Claude Code actual: {shell!r}"
+                f"{_rel(path)} uses a shell not supported by current Claude Code: {shell!r}"
             )
         for tools_field in ("allowed-tools", "disallowed-tools"):
             unknown_tools = sorted(
@@ -604,17 +619,17 @@ def check_inventory() -> list[str]:
             )
             if unknown_tools:
                 skill_frontmatter_problems.append(
-                    f"{_rel(path)} {tools_field} declara herramientas desconocidas {unknown_tools}"
+                    f"{_rel(path)} {tools_field} declares unknown tools {unknown_tools}"
                 )
     duplicated_skill_names = {
         name: paths for name, paths in sorted(skill_names.items()) if len(paths) > 1
     }
     if duplicated_skill_names:
         skill_frontmatter_problems.append(
-            f"skills con name duplicado: {duplicated_skill_names}"
+            f"skills with duplicate name: {duplicated_skill_names}"
         )
     if skill_frontmatter_problems:
-        _fail("Frontmatter de skills incompatible: " + "; ".join(skill_frontmatter_problems))
+        _fail("Incompatible skill frontmatter: " + "; ".join(skill_frontmatter_problems))
 
     domains = {
         path.relative_to(ROOT / "skills").parts[0]
@@ -623,24 +638,24 @@ def check_inventory() -> list[str]:
     }
     if plugin.get("skills"):
         _fail(
-            "plugin.json no debe listar skills: Claude las descubre en skills/*/SKILL.md"
+            "plugin.json must not list skills: Claude discovers them in skills/*/SKILL.md"
         )
     if plugin.get("displayName") != "Alfred Dev":
-        _fail("plugin.json debe declarar displayName humano 'Alfred Dev'")
+        _fail("plugin.json must declare the human displayName 'Alfred Dev'")
     if marketplace_plugin.get("displayName") != plugin.get("displayName"):
-        _fail("marketplace.json debe reutilizar el displayName humano del plugin")
+        _fail("marketplace.json must reuse the human displayName of the plugin")
     if "version" in marketplace_plugin:
         _fail(
-            "marketplace.json no debe duplicar version cuando plugin.json ya "
-            "declara version; Claude Code usa plugin.json como fuente canonica"
+            "marketplace.json must not duplicate version when plugin.json already "
+            "declares version; Claude Code uses plugin.json as the canonical source"
         )
     marketplace_source = marketplace_plugin.get("source")
     if isinstance(marketplace_source, str) and ".." in marketplace_source.split("/"):
-        _fail("El source relativo del marketplace no debe escapar del root")
+        _fail("The relative marketplace source must not escape the root")
     if marketplace_source != "./":
         _fail(
-            "El marketplace local debe apuntar al root del plugin para esta "
-            f"auditoria: {marketplace_source!r}"
+            "The local marketplace must point to the plugin root for this "
+            f"audit: {marketplace_source!r}"
         )
 
     expected = {
@@ -656,31 +671,31 @@ def check_inventory() -> list[str]:
         if actual != wanted
     }
     if bad:
-        _fail(f"Inventario desalineado: {bad}")
+        _fail(f"Inventory out of sync: {bad}")
 
     if not (ROOT / "commands" / "alfred.md").is_file():
-        _fail("commands/alfred.md debe existir como comando publico")
+        _fail("commands/alfred.md must exist as a public command")
     if "./commands/alfred.md" not in plugin.get("commands", []):
-        _fail("plugin.json debe publicar ./commands/alfred.md")
+        _fail("plugin.json must publish ./commands/alfred.md")
 
     return [
-        "18 comandos namespaced publicados",
-        "commands/alfred.md publicado como entrada contextual",
-        "commands/_composicion.md interno",
-        "10 agentes en agents/ raiz",
-        "frontmatter de agentes compatible con plugins",
-        "herramientas de agentes validadas contra nombres oficiales de Claude Code",
-        "herramientas no disponibles excluidas de subagentes",
-        "modelos inherit en los 10 agentes",
-        "11 skills planas",
-        "frontmatter de skills compatible con Claude Code actual",
-        "valores de frontmatter de skills validados contra Claude Code actual",
-        "descripciones de skills dentro del limite de listing 1536",
-        "displayName humano alineado entre manifest y marketplace",
-        "version canonica solo en plugin.json; marketplace sin version duplicada",
-        "marketplace no suplementa componentes ni enablement",
-        "paths de comandos/skills acotados al root del plugin",
-        "manifest sin componentes no auditados",
+        "18 namespaced commands published",
+        "commands/alfred.md published as contextual entry",
+        "commands/_composicion.md internal",
+        "10 agents in root agents/",
+        "agent frontmatter compatible with plugins",
+        "agent tools validated against official Claude Code names",
+        "unavailable tools excluded from subagents",
+        "inherit models in all 10 agents",
+        "11 flat skills",
+        "skill frontmatter compatible with current Claude Code",
+        "skill frontmatter values validated against current Claude Code",
+        "skill descriptions within the 1536 listing limit",
+        "human displayName aligned between manifest and marketplace",
+        "canonical version only in plugin.json; marketplace without duplicate version",
+        "marketplace does not supplement components or enablement",
+        "command/skill paths bounded to the plugin root",
+        "manifest without unaudited components",
     ]
 
 
@@ -698,7 +713,7 @@ def _public_route_names(plugin: dict | None = None) -> set[str]:
 
 
 def _public_argument_commands(plugin: dict | None = None) -> set[str]:
-    """Comandos cuya superficie publica acepta texto, flags u opciones libres."""
+    """Return commands whose public surface accepts free text, flags or options."""
     plugin = plugin or _json(".claude-plugin/plugin.json")
     commands: set[str] = set()
     for relative_path in plugin["commands"]:
@@ -712,7 +727,7 @@ def _public_argument_commands(plugin: dict | None = None) -> set[str]:
 
 
 def _validate_manual_option_contract_shape(manual_smoke, option_coverage: dict[str, list[str]]) -> None:
-    """Evita falsos verdes por typos en los IDs de opciones manuales."""
+    """Prevent false greens caused by typos in manual option IDs."""
     option_contracts = tuple(manual_smoke.OPTION_CONTRACTS)
     problems: list[str] = []
 
@@ -721,14 +736,14 @@ def _validate_manual_option_contract_shape(manual_smoke, option_coverage: dict[s
         if option_contracts.count(key) > 1
     })
     if duplicates:
-        problems.append(f"OPTION_CONTRACTS duplicados: {duplicates}")
+        problems.append(f"Duplicate OPTION_CONTRACTS: {duplicates}")
 
     malformed = sorted(
         key for key in option_contracts
         if key.count(":") != 1 or not key.split(":", 1)[0] or not key.split(":", 1)[1]
     )
     if malformed:
-        problems.append(f"OPTION_CONTRACTS mal formados: {malformed}")
+        problems.append(f"Malformed OPTION_CONTRACTS: {malformed}")
 
     public_commands = _public_route_names(_json(".claude-plugin/plugin.json"))
     aliases = getattr(manual_smoke, "_PUBLIC_COMMAND_ALIASES", {})
@@ -740,7 +755,7 @@ def _validate_manual_option_contract_shape(manual_smoke, option_coverage: dict[s
         and aliases.get(key.split(":", 1)[0]) not in public_commands
     })
     if unknown_prefixes:
-        problems.append(f"OPTION_CONTRACTS con comandos no publicados: {unknown_prefixes}")
+        problems.append(f"OPTION_CONTRACTS with unpublished commands: {unknown_prefixes}")
 
     from core import config_loader
 
@@ -759,7 +774,7 @@ def _validate_manual_option_contract_shape(manual_smoke, option_coverage: dict[s
     extra_config_options = sorted(actual_config_options - expected_config_options)
     if missing_config_options or extra_config_options:
         problems.append(
-            "OPTION_CONTRACTS de /config desalineados: "
+            "/config OPTION_CONTRACTS out of sync: "
             f"missing={missing_config_options} extra={extra_config_options}"
         )
 
@@ -781,7 +796,7 @@ def _validate_manual_option_contract_shape(manual_smoke, option_coverage: dict[s
     extra_cto_options = sorted(actual_cto_options - expected_cto_options)
     if missing_cto_options or extra_cto_options:
         problems.append(
-            "OPTION_CONTRACTS de /cto desalineados: "
+            "/cto OPTION_CONTRACTS out of sync: "
             f"missing={missing_cto_options} extra={extra_cto_options}"
         )
 
@@ -799,20 +814,20 @@ def _validate_manual_option_contract_shape(manual_smoke, option_coverage: dict[s
     missing_human_menu_options = sorted(expected_human_menu_options - set(option_contracts))
     if missing_human_menu_options:
         problems.append(
-            "OPTION_CONTRACTS sin menus humanos obligatorios: "
+            "OPTION_CONTRACTS missing required human menus: "
             f"{missing_human_menu_options}"
         )
 
     coverage_only = sorted(set(option_coverage) - set(option_contracts))
     if coverage_only:
-        problems.append(f"option_coverage contiene claves fuera de OPTION_CONTRACTS: {coverage_only}")
+        problems.append(f"option_coverage contains keys outside OPTION_CONTRACTS: {coverage_only}")
 
     if problems:
-        _fail("Contratos de opciones manuales invalidos: " + "; ".join(problems))
+        _fail("Invalid manual option contracts: " + "; ".join(problems))
 
 
 def _validate_manual_runtime_contract_shape(manual_smoke, runtime_coverage: dict[str, list[str]]) -> None:
-    """Valida que los contratos runtime describan scopes reales de /update."""
+    """Check that runtime contracts describe real /update scopes."""
     runtime_contracts = tuple(manual_smoke.RUNTIME_CONTRACTS)
     problems: list[str] = []
 
@@ -821,14 +836,14 @@ def _validate_manual_runtime_contract_shape(manual_smoke, runtime_coverage: dict
         if runtime_contracts.count(key) > 1
     })
     if duplicates:
-        problems.append(f"RUNTIME_CONTRACTS duplicados: {duplicates}")
+        problems.append(f"Duplicate RUNTIME_CONTRACTS: {duplicates}")
 
     malformed = sorted(
         key for key in runtime_contracts
         if key.count(":") != 1 or not key.split(":", 1)[0] or not key.split(":", 1)[1]
     )
     if malformed:
-        problems.append(f"RUNTIME_CONTRACTS mal formados: {malformed}")
+        problems.append(f"Malformed RUNTIME_CONTRACTS: {malformed}")
 
     public_commands = _public_route_names(_json(".claude-plugin/plugin.json"))
     unknown_prefixes = sorted({
@@ -837,7 +852,7 @@ def _validate_manual_runtime_contract_shape(manual_smoke, runtime_coverage: dict
         if key.count(":") == 1 and key.split(":", 1)[0] not in public_commands
     })
     if unknown_prefixes:
-        problems.append(f"RUNTIME_CONTRACTS con comandos no publicados: {unknown_prefixes}")
+        problems.append(f"RUNTIME_CONTRACTS with unpublished commands: {unknown_prefixes}")
 
     expected_update_contracts = {
         "update:scope-user-or-unknown",
@@ -853,20 +868,20 @@ def _validate_manual_runtime_contract_shape(manual_smoke, runtime_coverage: dict
     extra_update = sorted(actual_update_contracts - expected_update_contracts)
     if missing_update or extra_update:
         problems.append(
-            "RUNTIME_CONTRACTS de /update desalineados: "
+            "/update RUNTIME_CONTRACTS out of sync: "
             f"missing={missing_update} extra={extra_update}"
         )
 
     coverage_only = sorted(set(runtime_coverage) - set(runtime_contracts))
     if coverage_only:
-        problems.append(f"runtime_coverage contiene claves fuera de RUNTIME_CONTRACTS: {coverage_only}")
+        problems.append(f"runtime_coverage contains keys outside RUNTIME_CONTRACTS: {coverage_only}")
 
     if problems:
-        _fail("Contratos runtime manuales invalidos: " + "; ".join(problems))
+        _fail("Invalid manual runtime contracts: " + "; ".join(problems))
 
 
 def _validate_manual_case_contract_links(manual_smoke) -> None:
-    """Asegura que cada contrato manual esté cubierto por un caso del comando correcto."""
+    """Ensure that a case of the correct command covers each manual contract."""
     aliases = getattr(manual_smoke, "_PUBLIC_COMMAND_ALIASES", {})
 
     def _canon(name: str) -> str:
@@ -886,26 +901,26 @@ def _validate_manual_case_contract_links(manual_smoke) -> None:
             extra_prompt_commands = sorted(mapped_prompt - mapped_case)
             if missing_prompt_commands:
                 problems.append(
-                    f"{case.case_id}: prompt no invoca {missing_prompt_commands}"
+                    f"{case.case_id}: prompt does not invoke {missing_prompt_commands}"
                 )
             if extra_prompt_commands:
                 problems.append(
-                    f"{case.case_id}: prompt invoca comandos no declarados {extra_prompt_commands}"
+                    f"{case.case_id}: prompt invokes undeclared commands {extra_prompt_commands}"
                 )
         elif prompt_commands:
             problems.append(
-                f"{case.case_id}: prompt invoca comandos sin declarar {sorted(prompt_commands)}"
+                f"{case.case_id}: prompt invokes commands without declaring {sorted(prompt_commands)}"
             )
         for key in getattr(case, "option_keys", ()) or ():
             command_name = key.split(":", 1)[0] if ":" in key else ""
             if _canon(command_name) not in mapped_case:
-                problems.append(f"{case.case_id}: option {key} no corresponde a {sorted(case_commands)}")
+                problems.append(f"{case.case_id}: option {key} does not belong to {sorted(case_commands)}")
         for key in getattr(case, "runtime_keys", ()) or ():
             command_name = key.split(":", 1)[0] if ":" in key else ""
             if _canon(command_name) not in mapped_case:
-                problems.append(f"{case.case_id}: runtime {key} no corresponde a {sorted(case_commands)}")
+                problems.append(f"{case.case_id}: runtime {key} does not belong to {sorted(case_commands)}")
     if problems:
-        _fail("Contratos manuales enlazados al caso equivocado: " + "; ".join(problems))
+        _fail("Manual contracts linked to the wrong case: " + "; ".join(problems))
 
 
 def _slash_command_names(text: str) -> list[str]:
@@ -935,34 +950,34 @@ def check_command_catalog() -> list[str]:
     problems: list[str] = []
     if manifest_set != disk_names:
         problems.append(
-            "comandos publicados y commands/*.md no coinciden: "
-            f"faltan={sorted(disk_names - manifest_set)} sobran={sorted(manifest_set - disk_names)}"
+            "published commands and commands/*.md do not match: "
+            f"missing={sorted(disk_names - manifest_set)} extra={sorted(manifest_set - disk_names)}"
         )
     if "alfred" not in manifest_set:
-        problems.append("falta el comando publico alfred")
+        problems.append("public command alfred is missing")
     if "/alfred-dev:alfred" not in alfred_text and "/alfred" not in alfred_text:
-        problems.append("commands/alfred.md debe describir la entrada contextual")
-    if "18 comandos" not in architecture and "/alfred-dev:alfred" not in architecture:
-        problems.append("docs/architecture.md debe mencionar 18 comandos o /alfred-dev:alfred")
+        problems.append("commands/alfred.md must describe the contextual entry")
+    if "18 команд" not in architecture and "/alfred-dev:alfred" not in architecture:
+        problems.append("docs/architecture.md must mention 18 commands or /alfred-dev:alfred")
 
     for relative_path, name in zip(plugin["commands"], manifest_names):
         text = _read(relative_path.lstrip("./"))
         if not text.startswith("---\n"):
-            problems.append(f"{relative_path}: falta frontmatter")
+            problems.append(f"{relative_path}: frontmatter is missing")
             continue
         frontmatter = text.split("---", 2)[1]
         frontmatter_values = _frontmatter_top_level_values(text)
         unknown_fields = sorted(set(frontmatter_values) - COMMAND_SUPPORTED_FIELDS)
         if unknown_fields:
             problems.append(
-                f"{relative_path}: campos de frontmatter no soportados {unknown_fields}"
+                f"{relative_path}: unsupported frontmatter fields {unknown_fields}"
             )
         if not re.search(r"(?m)^description:\s*['\"]?.+['\"]?\s*$", frontmatter):
-            problems.append(f"{relative_path}: falta description en frontmatter")
+            problems.append(f"{relative_path}: description is missing in frontmatter")
         model = frontmatter_values.get("model")
         if model and not _is_supported_agent_model(model):
             problems.append(
-                f"{relative_path}: usa modelo de comando no soportado por Claude Code actual: {model!r}"
+                f"{relative_path}: uses a command model not supported by current Claude Code: {model!r}"
             )
         for tools_field in ("allowed-tools", "disallowed-tools"):
             unknown_tools = sorted(
@@ -974,20 +989,20 @@ def check_command_catalog() -> list[str]:
             )
             if unknown_tools:
                 problems.append(
-                    f"{relative_path}: {tools_field} declara herramientas desconocidas {unknown_tools}"
+                    f"{relative_path}: {tools_field} declares unknown tools {unknown_tools}"
                 )
         if f"/alfred-dev:{name}" not in text:
-            problems.append(f"{relative_path}: no menciona su slash command")
+            problems.append(f"{relative_path}: does not mention its slash command")
 
     if problems:
-        _fail("Catalogo de comandos desalineado: " + "; ".join(problems))
+        _fail("Command catalog out of sync: " + "; ".join(problems))
 
     return [
-        "18 comandos namespaced alineados entre plugin.json y arquitectura",
-        "commands/alfred.md publicado como entrada contextual",
-        "frontmatter de comandos con description",
-        "frontmatter de comandos compatible con Claude Code actual",
-        "model de comandos validado contra Claude Code actual",
+        "18 namespaced commands aligned between plugin.json and architecture",
+        "commands/alfred.md published as contextual entry",
+        "command frontmatter with description",
+        "command frontmatter compatible with current Claude Code",
+        "command model validated against current Claude Code",
     ]
 
 
@@ -1062,7 +1077,7 @@ def _frontmatter_tool_rule_names(rules: str) -> set[str]:
 
 
 def _frontmatter_field_rule_text(text: str, field: str) -> str:
-    """Devuelve reglas inline o de lista YAML simple para allowed/disallowed tools."""
+    """Return inline or simple YAML list rules for allowed/disallowed tools."""
     lines = _frontmatter_block(text).splitlines()
     values: list[str] = []
     collecting = False
@@ -1090,7 +1105,7 @@ def _is_known_permission_rule_name(tool_name: str) -> bool:
 
 
 def check_command_execution_contracts() -> list[str]:
-    """Verifica que cada comando publicado conserve su estrategia operativa."""
+    """Check that each published command keeps its operating strategy."""
     plugin = _json(".claude-plugin/plugin.json")
     commands = {
         Path(relative_path).stem: _read(relative_path.lstrip("./"))
@@ -1104,19 +1119,19 @@ def check_command_execution_contracts() -> list[str]:
         has_arguments = "$ARGUMENTS" in text
         has_hint = re.search(r"(?m)^argument-hint:\s*.+$", frontmatter) is not None
         if has_arguments and not has_hint:
-            problems.append(f"{name}: usa $ARGUMENTS pero no declara argument-hint")
+            problems.append(f"{name}: uses $ARGUMENTS but does not declare argument-hint")
         if has_hint and not has_arguments:
-            problems.append(f"{name}: declara argument-hint pero no inserta $ARGUMENTS")
+            problems.append(f"{name}: declares argument-hint but does not insert $ARGUMENTS")
         if re.search(r"`/alfred:[^`]*`|^/alfred:", text, re.MULTILINE):
-            problems.append(f"{name}: contiene slash command legacy /alfred:")
+            problems.append(f"{name}: contains legacy slash command /alfred:")
         if re.search(r"\bTask\b", text):
-            problems.append(f"{name}: contiene nomenclatura obsoleta Task")
+            problems.append(f"{name}: contains obsolete Task naming")
         if re.search(
             r"\*\*GATE \((?:libre|свободный)\):\*\*.*\b(?:Se aprueba siempre|Всегда одобряется)\b",
             text,
         ):
             problems.append(
-                f"{name}: gate libre promete aprobacion incondicional sin evidencia"
+                f"{name}: free gate promises unconditional approval without evidence"
             )
 
     helper_contracts = {
@@ -1187,7 +1202,7 @@ def check_command_execution_contracts() -> list[str]:
         text = commands_for_contracts[name]
         for needle in needles:
             if needle not in text:
-                problems.append(f"{name}: falta contrato helper {needle!r}")
+                problems.append(f"{name}: helper contract is missing {needle!r}")
 
     flow_contracts = {
         "feature": [
@@ -1242,7 +1257,7 @@ def check_command_execution_contracts() -> list[str]:
         text = commands[name]
         for needle in needles:
             if needle not in text:
-                problems.append(f"{name}: falta contrato de flujo {needle!r}")
+                problems.append(f"{name}: flow contract is missing {needle!r}")
 
     composition_reader_contracts = ("feature", "fix", "quick", "spike", "ship", "audit")
     for name in composition_reader_contracts:
@@ -1251,14 +1266,14 @@ def check_command_execution_contracts() -> list[str]:
             "${CLAUDE_PLUGIN_ROOT}/commands/_composicion.md",
         ):
             if needle not in text:
-                problems.append(f"{name}: carga _composicion sin contrato de plugin: {needle!r}")
+                problems.append(f"{name}: loads _composicion without plugin contract: {needle!r}")
 
     docs_reader_contracts = ("feature", "fix", "quick", "spike", "ship", "audit")
     for name in docs_reader_contracts:
         text = commands[name]
         if "${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md" not in text:
             problems.append(
-                f"{name}: carga _docs_vivas sin contrato de plugin: "
+                f"{name}: loads _docs_vivas without plugin contract: "
                 "'${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md'"
             )
 
@@ -1270,9 +1285,9 @@ def check_command_execution_contracts() -> list[str]:
     }
     for name, text in autopilot_texts.items():
         if '"autopilot": true' not in text:
-            problems.append(f"{name}: no reconoce el flag canonico de estado autopilot")
+            problems.append(f"{name}: does not recognize the canonical autopilot state flag")
         if '"modo": "autopilot"' not in text:
-            problems.append(f"{name}: no conserva el alias legacy de estado autopilot")
+            problems.append(f"{name}: does not keep the legacy autopilot state alias")
 
     interactive_contracts = {
         "ajustes": [
@@ -1307,19 +1322,19 @@ def check_command_execution_contracts() -> list[str]:
         text = commands[name]
         for needle in needles:
             if needle not in text:
-                problems.append(f"{name}: falta contrato interactivo {needle!r}")
+                problems.append(f"{name}: interactive contract is missing {needle!r}")
 
     if problems:
-        _fail("Contratos de ejecución de comandos incompletos: " + "; ".join(problems))
+        _fail("Command execution contracts incomplete: " + "; ".join(problems))
 
     return [
-        "18 comandos namespaced preservan argumentos, prefijo y nomenclatura actual",
-        "18 wrappers helper-first cubiertos",
-        "6 flujos principales con cierre canónico",
-        "_composicion se carga desde la instalación del plugin",
-        "config/cto/update con contratos interactivos verificables",
-        "gates libres sin aprobacion incondicional",
-        "autopilot por config/estado sin flag publico fantasma",
+        "18 namespaced commands keep arguments, prefix and current naming",
+        "18 helper-first wrappers covered",
+        "6 main flows with canonical closing",
+        "_composicion loads from the plugin install",
+        "config/cto/update with verifiable interactive contracts",
+        "free gates without unconditional approval",
+        "autopilot via config/state without phantom public flag",
     ]
 
 
@@ -1339,7 +1354,7 @@ def _registered_hook_script_count() -> int:
 
 
 def check_public_claims() -> list[str]:
-    """Mantiene los claims publicos alineados con inventario y docs actuales."""
+    """Keep public claims aligned with the inventory and current docs."""
     readme = _read("README.md")
     architecture = _read("docs/architecture.md")
     skills_doc = _read("docs/skills.md")
@@ -1364,7 +1379,7 @@ def check_public_claims() -> list[str]:
     }
     for label, (actual, expected) in expected_counts.items():
         if actual != expected:
-            _fail(f"Inventario publico {label}={actual}, esperado {expected}")
+            _fail(f"Public inventory {label}={actual}, expected {expected}")
 
     required = {
         "README.md": [
@@ -1375,14 +1390,14 @@ def check_public_claims() -> list[str]:
             "Новое в v0.7.0",
         ],
         "docs/skills.md": [
-            "catalogo de 11 skills",
+            "каталог из 11 skills",
             "disable-model-invocation: true",
             "memory",
             "style-direction",
         ],
         "docs/architecture.md": [
-            "18 comandos",
-            "El manifiesto no declara la clave `agents`",
+            "18 команд",
+            "Манифест не объявляет ключ `agents`",
         ],
         "commands/alfred.md": [
             "Agent Teams",
@@ -1392,11 +1407,11 @@ def check_public_claims() -> list[str]:
             "Alfred",
         ],
         "docs/agents/README.md": [
-            "Claude Code los descubre directamente desde `agents/`",
-            "el manifiesto `plugin.json` no declara una seccion `agents` manual",
-            "quality gates verificables con evidencia",
-            "El resultado no se promete determinista",
-            "reduce variabilidad",
+            "Claude Code находит их напрямую в `agents/`",
+            "манифест `plugin.json` не объявляет ручную секцию `agents`",
+            "quality gates, проверяемые по подтверждению",
+            "Результат не обещается детерминированным",
+            "снижают вариативность",
         ],
         "agents/cto.md": [
             "Не навязывай модель по собственной инициативе",
@@ -1414,9 +1429,9 @@ def check_public_claims() -> list[str]:
         "CHANGELOG.md": [
             "displayName: \"Alfred Dev\"",
             "Alfred Dev (alfred-dev)",
-            "namespace técnico",
-            "42 opciones públicas",
-            "4 contratos runtime de `/update`",
+            "технического namespace",
+            "42 публичные опции",
+            "4 runtime-контракта `/update`",
         ],
         "site/src/i18n/data.es.ts": [
             "displayName: \"Alfred Dev\"",
@@ -1460,10 +1475,10 @@ def check_public_claims() -> list[str]:
     missing: list[str] = []
     for path, needles in required.items():
         for needle in needles:
-            if needle not in sources[path]:
-                missing.append(f"{path}: {needle}")
+            if not _contains(sources[path], needle):
+                missing.append(f"{path}: {_needle_label(needle)}")
     if missing:
-        _fail(f"Claims publicos incompletos: {missing}")
+        _fail(f"Public claims incomplete: {missing}")
 
     stale_exact = {
         "README.md": [
@@ -1477,7 +1492,7 @@ def check_public_claims() -> list[str]:
             "https://docs.anthropic.com/en/docs/claude-code",
             "quality gates infranqueables",
             "No hay excepciones, no hay modo de saltárselas",
-            # Equivalentes rusos: README esta traducido.
+            # Russian equivalents: README is translated.
             "quality gates непреодолим",
             "Исключений нет",
         ],
@@ -1493,7 +1508,7 @@ def check_public_claims() -> list[str]:
             "9 agentes de nucleo + 8 opcionales",
             "reglas infranqueables",
             "NUNCA se pueden saltar",
-            # Equivalentes rusos: agents/ esta traducido.
+            # Russian equivalents: agents/ is translated.
             "непреодолим",
             "НИКОГДА нельзя пропускать",
         ],
@@ -1563,7 +1578,7 @@ def check_public_claims() -> list[str]:
             "garantiza que nada con vulnerabilidades conocidas llega a los usuarios",
             "bloqueantes absolutos. Sin excepciones",
             "seguridad infranqueable",
-            # Equivalentes rusos: agents/ esta traducido.
+            # Russian equivalents: agents/ is translated.
             "Без исключений",
             "непреодолим",
             "ничто с известными уязвимостями",
@@ -1603,7 +1618,7 @@ def check_public_claims() -> list[str]:
             if needle in stale_sources[path]:
                 stale_hits.append(f"{path}: {needle}")
     if stale_hits:
-        _fail(f"Claims obsoletos en superficie actual: {stale_hits}")
+        _fail(f"Stale claims on the current surface: {stale_hits}")
 
     manual_only_problems: list[str] = []
     for relative_path in MANUAL_ONLY_SKILLS:
@@ -1612,7 +1627,7 @@ def check_public_claims() -> list[str]:
             manual_only_problems.append(relative_path)
     if manual_only_problems:
         _fail(
-            "Skills delicados sin activacion manual explicita: "
+            "Sensitive skills without explicit manual activation: "
             f"{manual_only_problems}"
         )
 
@@ -1623,58 +1638,58 @@ def check_public_claims() -> list[str]:
         for match in legacy_pattern.finditer(text):
             legacy_runtime.append(f"{_rel(path)}:{match.group(0)}")
     if legacy_runtime:
-        _fail(f"Prompts runtime con slash command legacy: {legacy_runtime}")
+        _fail(f"Runtime prompts with legacy slash command: {legacy_runtime}")
 
     surface_message = (
-        "README, landing, arquitectura, help y agentes sin contadores antiguos"
+        "README, landing, architecture, help and agents without old counters"
         if has_site
-        else "README, arquitectura, help y agentes sin contadores antiguos"
+        else "README, architecture, help and agents without old counters"
     )
     display_name_message = (
-        "displayName humano reflejado en README, changelog y landing"
+        "human displayName reflected in README, changelog and landing"
         if has_site
-        else "displayName humano reflejado en README y changelog"
+        else "human displayName reflected in README and changelog"
     )
     return [
-        "inventario publico 10/11/18 verificado",
+        "public inventory 10/11/18 verified",
         surface_message,
         display_name_message,
-        "skills delicados mantienen activacion manual explicita",
-        "CTO no fija modelo obsoleto de Codex CLI",
-        "prompts runtime sin /alfred legacy",
+        "sensitive skills keep explicit manual activation",
+        "CTO does not pin an obsolete Codex CLI model",
+        "runtime prompts without legacy /alfred",
     ]
 
 
 def check_config_contracts() -> list[str]:
-    """Verifica que /alfred-dev:ajustes exponga las opciones reales del runtime."""
+    """Check that /alfred-dev:ajustes exposes the real runtime options."""
     from core import config_loader
     from core import optional_agents
 
     def assert_ask_user_question_payload(label: str, payload: dict) -> None:
         questions = payload.get("questions")
         if not isinstance(questions, list) or len(questions) != 1:
-            _fail(f"{label} no expone questions[0] para AskUserQuestion: {payload}")
+            _fail(f"{label} does not expose questions[0] for AskUserQuestion: {payload}")
         question = questions[0]
         if not isinstance(question, dict):
-            _fail(f"{label}.questions[0] no es objeto: {question}")
+            _fail(f"{label}.questions[0] is not an object: {question}")
         for field in ("question", "header", "options", "multiSelect"):
             if field not in question:
-                _fail(f"{label}.questions[0] no declara {field}")
+                _fail(f"{label}.questions[0] does not declare {field}")
         if question["multiSelect"] is not False:
-            _fail(f"{label}.questions[0].multiSelect debe ser false")
+            _fail(f"{label}.questions[0].multiSelect must be false")
         if question["question"] != payload.get("question"):
-            _fail(f"{label}.questions[0].question no coincide con legacy question")
+            _fail(f"{label}.questions[0].question does not match legacy question")
         if question["header"] != payload.get("header"):
-            _fail(f"{label}.questions[0].header no coincide con legacy header")
+            _fail(f"{label}.questions[0].header does not match legacy header")
         if question["options"] != payload.get("options"):
-            _fail(f"{label}.questions[0].options no coincide con legacy options")
+            _fail(f"{label}.questions[0].options does not match legacy options")
         for index, option in enumerate(question["options"]):
             if not isinstance(option, dict):
-                _fail(f"{label}.questions[0].options[{index}] no es objeto")
+                _fail(f"{label}.questions[0].options[{index}] is not an object")
             if not str(option.get("label", "")).strip():
-                _fail(f"{label}.questions[0].options[{index}] no declara label")
+                _fail(f"{label}.questions[0].options[{index}] does not declare label")
             if not str(option.get("description", "")).strip():
-                _fail(f"{label}.questions[0].options[{index}] no declara description")
+                _fail(f"{label}.questions[0].options[{index}] does not declare description")
 
     def assert_prompt_examples_use_current_ask_user_question_schema(
         relative_path: str,
@@ -1689,8 +1704,8 @@ def check_config_contracts() -> list[str]:
             ]
             if missing:
                 _fail(
-                    "Ejemplo AskUserQuestion obsoleto en "
-                    f"{relative_path}: faltan {missing}"
+                    "Obsolete AskUserQuestion example in "
+                    f"{relative_path}: missing {missing}"
                 )
 
     expected_sections = (
@@ -1704,30 +1719,31 @@ def check_config_contracts() -> list[str]:
     )
     if tuple(config_loader._CONFIG_SECTION_ORDER) != expected_sections:
         _fail(
-            "Orden de secciones config desalineado: "
+            "Config section order out of sync: "
             f"{config_loader._CONFIG_SECTION_ORDER}"
         )
 
     labels = config_loader._CONFIG_SECTION_LABELS
     if set(labels) != set(expected_sections):
-        _fail(f"Labels config desalineados: {sorted(labels)}")
+        _fail(f"Config labels out of sync: {sorted(labels)}")
 
     summaries = config_loader.build_config_section_summaries(config_loader.DEFAULT_CONFIG)
     summary_sections = tuple(section["section"] for section in summaries)
     if summary_sections != expected_sections:
-        _fail(f"Summaries config desalineados: {summary_sections}")
+        _fail(f"Config summaries out of sync: {summary_sections}")
 
     menu = config_loader.build_config_section_menu(config_loader.DEFAULT_CONFIG)
     menu_labels = [option["label"] for option in menu["options"]]
-    if menu_labels[0] != "Salir sin cambios":
-        _fail(f"Menu config sin salida inicial: {menu_labels}")
+    # core/config_loader.py may still use the Spanish label or a Russian one.
+    if menu_labels[0] != "Выйти без изменений" and not menu_labels[0].startswith("Выйти"):
+        _fail(f"Config menu has no initial exit option: {menu_labels}")
     missing_labels = [
         labels[section]
         for section in expected_sections
         if labels[section] not in menu_labels
     ]
     if missing_labels:
-        _fail(f"Menu config no expone secciones: {missing_labels}")
+        _fail(f"Config menu does not expose sections: {missing_labels}")
     assert_ask_user_question_payload("build_config_section_menu", menu)
 
     for group_name in optional_agents.OPTIONAL_AGENT_GROUP_ORDER:
@@ -1742,7 +1758,7 @@ def check_config_contracts() -> list[str]:
         {"enabled": True},
     )
     if not preview["changed"] or not preview["updated_config"]["memoria"]["enabled"]:
-        _fail(f"Preview config no detecta cambio de memoria: {preview}")
+        _fail(f"Config preview does not detect the memory change: {preview}")
 
     section_updates = {
         "autonomia": {
@@ -1783,7 +1799,7 @@ def check_config_contracts() -> list[str]:
         },
     }
     if tuple(section_updates) != expected_sections:
-        _fail(f"Matriz config desalineada: {tuple(section_updates)}")
+        _fail(f"Config matrix out of sync: {tuple(section_updates)}")
 
     stack_fixtures = {
         "node-typescript": {
@@ -1867,7 +1883,7 @@ def check_config_contracts() -> list[str]:
                 actual = stack.get(key)
                 if actual != expected_value:
                     _fail(
-                        "Deteccion de stack prometido desalineada: "
+                        "Promised stack detection out of sync: "
                         f"{fixture_name}.{key}={actual!r} != {expected_value!r}"
                     )
 
@@ -1889,12 +1905,12 @@ def check_config_contracts() -> list[str]:
                 values,
             )
             if not section_preview["changed"]:
-                _fail(f"Preview config no detecta cambio en {section_name}: {section_preview}")
+                _fail(f"Config preview does not detect the change in {section_name}: {section_preview}")
             for key, value in values.items():
                 actual = section_preview["updated_config"][section_name].get(key)
                 if actual != value:
                     _fail(
-                        "Preview config no aplica valor "
+                        "Config preview does not apply value "
                         f"{section_name}.{key}: {actual!r} != {value!r}"
                     )
 
@@ -1906,7 +1922,7 @@ def check_config_contracts() -> list[str]:
             )
             if persisted_preview["section"] != section_name:
                 _fail(
-                    "Persistencia config devuelve seccion incorrecta: "
+                    "Config persistence returns the wrong section: "
                     f"{persisted_preview}"
                 )
             reloaded = config_loader.load_config(str(config_path))
@@ -1914,11 +1930,11 @@ def check_config_contracts() -> list[str]:
                 actual = reloaded[section_name].get(key)
                 if actual != value:
                     _fail(
-                        "Persistencia config no conserva valor "
+                        "Config persistence does not keep value "
                         f"{section_name}.{key}: {actual!r} != {value!r}"
                     )
             if "Nota estable" not in reloaded.get("notas", ""):
-                _fail(f"Persistencia config pierde notas tras {section_name}")
+                _fail(f"Config persistence loses notes after {section_name}")
 
     command_norm = _normalize(_read("commands/ajustes.md"))
     docs_norm = _normalize(_read("docs/configuration.md"))
@@ -1931,17 +1947,8 @@ def check_config_contracts() -> list[str]:
         "commands/_composicion.md",
         _read("commands/_composicion.md"),
     )
-    required_human_labels = [
-        "autonomia por fase",
-        "proyecto",
-        "agentes opcionales",
-        "memoria persistente",
-        "compliance",
-        "integraciones",
-        "personalidad",
-    ]
-    # commands/ajustes.md esta traducido al ruso; docs/configuration.md sigue en
-    # espanol (upstream). Cada superficie se verifica con sus propias etiquetas.
+    # commands/ajustes.md and docs/configuration.md are translated to Russian.
+    # Both surfaces use the same labels.
     required_command_labels = [
         "автономность по фазам",
         "проект",
@@ -1955,8 +1962,8 @@ def check_config_contracts() -> list[str]:
     for label in required_command_labels:
         if _normalize(label) not in command_norm:
             missing.append(f"commands/config.md: {label}")
-    for label in required_human_labels:
-        if label not in docs_norm:
+    for label in required_command_labels:
+        if _normalize(label) not in docs_norm:
             missing.append(f"docs/configuration.md: {label}")
 
     helper_names = [
@@ -1980,21 +1987,21 @@ def check_config_contracts() -> list[str]:
             missing.append(f"docs/configuration.md: {needle}")
 
     if missing:
-        _fail("Contratos config incompletos: " + "; ".join(missing))
+        _fail("Config contracts incomplete: " + "; ".join(missing))
 
     return [
-        "7 secciones config alineadas con runtime",
-        "deteccion automatica cubre stacks prometidos",
-        "menu config principal expone salida y secciones canonicas",
-        "preview config antes/despues operativo",
-        "7 secciones config con round-trip preview/persistencia",
-        "docs y comando config cubren helpers canonicos",
-        "AskUserQuestion config/optional usa questions[] y multiSelect actuales",
+        "7 config sections aligned with runtime",
+        "automatic detection covers promised stacks",
+        "main config menu exposes exit and canonical sections",
+        "config before/after preview works",
+        "7 config sections with preview/persistence round-trip",
+        "config docs and command cover canonical helpers",
+        "AskUserQuestion config/optional uses current questions[] and multiSelect",
     ]
 
 
 def check_flow_gate_claims() -> list[str]:
-    """Ejercita claims publicos de flujos, Designer, gates y autopilot."""
+    """Exercise public claims about flows, Designer, gates and autopilot."""
     from core.config_loader import has_frontend
     from core.orchestrator import (
         FLOWS,
@@ -2012,12 +2019,12 @@ def check_flow_gate_claims() -> list[str]:
 
     free_gate_doc_requirements = {
         "docs/flows.md": (
-            "evidencia directa del artefacto o checklist esperado",
-            "no la convierte en una aprobacion incondicional",
-            "Docs completas, gate libre con evidencia",
+            "прямое подтверждение ожидаемого артефакта или чек-листа",
+            "не делает её безусловным одобрением",
+            "Docs готовы, свободная gate с подтверждением",
         ),
         "docs/configuration.md": (
-            "Requiere resultado favorable y evidencia/checklist; no pide aprobacion humana.",
+            "Нужен положительный результат и подтверждение/чек-лист; одобрение человека не требуется.",
         ),
         "README.md": (
             "Все артефакты задокументированы, есть проверяемый чек-лист/подтверждение",
@@ -2030,8 +2037,10 @@ def check_flow_gate_claims() -> list[str]:
     }
     for path, needles in free_gate_doc_requirements.items():
         for needle in needles:
-            if needle not in free_gate_sources[path]:
-                problems.append(f"{path}: gate libre/documentacion sin contrato honesto {needle!r}")
+            if not _contains(free_gate_sources[path], needle):
+                problems.append(
+                    f"{path}: free gate/docs without honest contract {_needle_label(needle)!r}"
+                )
     stale_free_gate_claims = {
         "docs/flows.md": (
             "Se supera siempre que el resultado sea favorable.",
@@ -2048,7 +2057,7 @@ def check_flow_gate_claims() -> list[str]:
     for path, needles in stale_free_gate_claims.items():
         for needle in needles:
             if needle in free_gate_sources[path]:
-                problems.append(f"{path}: claim de gate libre demasiado laxo {needle!r}")
+                problems.append(f"{path}: free gate claim is too loose {needle!r}")
     public_gate_sources = {
         "README.md": readme,
         "docs/README.md": _read("docs/README.md"),
@@ -2062,10 +2071,10 @@ def check_flow_gate_claims() -> list[str]:
             "Autopilot решает только настроенные пользовательские gates",
             "не пропускает тесты, безопасность, подтверждение и ручное подтверждение развёртывания",
         ),
-        "docs/README.md": ("quality gates verificables con evidencia",),
-        "docs/agents/README.md": ("quality gates verificables con evidencia",),
-        "docs/hooks.md": ("quality gates verificables con evidencia",),
-        "docs/release.md": ("quality gates son verificables por contrato local",),
+        "docs/README.md": ("quality gates, проверяемые по подтверждению",),
+        "docs/agents/README.md": ("quality gates, проверяемые по подтверждению",),
+        "docs/hooks.md": ("Quality gates, проверяемые по подтверждению",),
+        "docs/release.md": ("quality gates проверяемы по локальному контракту",),
     }
     if has_site:
         public_gate_sources["site/src/i18n/data.en.ts"] = _read("site/src/i18n/data.en.ts")
@@ -2075,7 +2084,7 @@ def check_flow_gate_claims() -> list[str]:
     for path, needles in public_gate_requirements.items():
         for needle in needles:
             if needle not in public_gate_sources[path]:
-                problems.append(f"{path}: claim de gates sin evidencia verificable {needle!r}")
+                problems.append(f"{path}: gate claim without verifiable evidence {_needle_label(needle)!r}")
     public_gate_stale = {
         "README.md": (
             "quality gates infranqueables",
@@ -2093,11 +2102,11 @@ def check_flow_gate_claims() -> list[str]:
     for path, needles in public_gate_stale.items():
         for needle in needles:
             if needle in public_gate_sources[path]:
-                problems.append(f"{path}: claim absoluto de gate sin matiz de evidencia {needle!r}")
+                problems.append(f"{path}: absolute gate claim without evidence nuance {needle!r}")
 
     feature_phases = FLOWS["feature"]["fases"]
     if len(feature_phases) != 7:
-        problems.append(f"feature debe tener 7 fases, tiene {len(feature_phases)}")
+        problems.append(f"feature must have 7 phases, has {len(feature_phases)}")
     estilo = feature_phases[1] if len(feature_phases) > 1 else {}
     expected_style_contract = {
         "nombre": "estilo_visual",
@@ -2110,22 +2119,22 @@ def check_flow_gate_claims() -> list[str]:
             problems.append(f"estilo_visual.{key}={estilo.get(key)!r} != {expected!r}")
 
     if not has_frontend({"framework": "next", "runtime": "node"}):
-        problems.append("has_frontend no reconoce Next como frontend")
+        problems.append("has_frontend does not recognize Next as frontend")
     if has_frontend({"framework": "fastapi", "runtime": "python"}):
-        problems.append("has_frontend trata FastAPI como frontend")
+        problems.append("has_frontend treats FastAPI as frontend")
 
     frontend_session = create_session(
         "feature",
-        "Panel con UI",
+        "Panel with UI",
         stack={"runtime": "node", "framework": "next"},
     )
     frontend_session = advance_phase(frontend_session, resultado="aprobado")
     if frontend_session["fase_actual"] != "estilo_visual":
-        problems.append("feature con frontend no entra en estilo_visual tras producto")
+        problems.append("feature with frontend does not enter estilo_visual after producto")
 
     backend_session = create_session(
         "feature",
-        "API sin UI",
+        "API without UI",
         stack={"runtime": "python", "framework": "fastapi"},
     )
     backend_session = advance_phase(backend_session, resultado="aprobado")
@@ -2135,29 +2144,29 @@ def check_flow_gate_claims() -> list[str]:
         if phase.get("nombre") == "estilo_visual"
     ]
     if backend_session["fase_actual"] != "arquitectura" or not skipped_style:
-        problems.append("feature sin frontend no salta estilo_visual hacia arquitectura")
+        problems.append("feature without frontend does not skip estilo_visual to arquitectura")
     elif skipped_style[0].get("resultado") != "saltada":
-        problems.append(f"estilo_visual saltada registra resultado inesperado: {skipped_style[0]}")
+        problems.append(f"skipped estilo_visual records an unexpected result: {skipped_style[0]}")
 
-    gate_session = create_session("feature", "Gates estrictas")
+    gate_session = create_session("feature", "Strict gates")
     gate_session = advance_phase(gate_session, resultado="aprobado")
     gate_session = advance_phase(gate_session, resultado="aprobado")
     gate_session = advance_phase(gate_session, resultado="aprobado")
     if check_gate(gate_session, resultado="aprobado", tests_ok=False)["passed"]:
-        problems.append("gate automatica de desarrollo no bloquea tests rojos")
+        problems.append("automatic development gate does not block red tests")
     gate_session = advance_phase(gate_session, resultado="aprobado", tests_ok=True)
     if check_gate(gate_session, resultado="aprobado", security_ok=False)["passed"]:
-        problems.append("gate automatico+seguridad de calidad no bloquea seguridad KO")
+        problems.append("automatic+security quality gate does not block failed security")
 
     autopilot_session = create_session("feature", "Autopilot")
     autopilot_session["autopilot"] = True
     if not is_autopilot_gate_passable(autopilot_session)["passed"]:
-        problems.append("autopilot no aprueba gate de usuario")
+        problems.append("autopilot approves a user gate")
     autopilot_session = advance_phase(autopilot_session, resultado="aprobado")
     autopilot_session = advance_phase(autopilot_session, resultado="aprobado")
     autopilot_session = advance_phase(autopilot_session, resultado="aprobado")
     if is_autopilot_gate_passable(autopilot_session, tests_ok=False)["passed"]:
-        problems.append("autopilot salta gate automatica con tests rojos")
+        problems.append("autopilot skips an automatic gate with red tests")
 
     ship_session = create_session("ship", "Release autopilot")
     ship_session["autopilot"] = True
@@ -2166,28 +2175,33 @@ def check_flow_gate_claims() -> list[str]:
     ship_session = advance_phase(ship_session, resultado="aprobado", tests_ok=True, security_ok=True)
     ship_gate = is_autopilot_gate_passable(ship_session, security_ok=True)
     if ship_session["fase_actual"] != "despliegue":
-        problems.append(f"ship no llega a despliegue en la fase esperada: {ship_session['fase_actual']}")
-    if ship_gate["passed"] or "confirmación explícita del usuario" not in ship_gate.get("reason", ""):
-        problems.append("ship autopilot no conserva confirmacion humana de despliegue")
+        problems.append(f"ship does not reach despliegue in the expected phase: {ship_session['fase_actual']}")
+    ship_reason = ship_gate.get("reason", "")
+    # core/orchestrator.py may still return the Spanish reason or a Russian one.
+    explicit_confirmation = "confirmación explícita del usuario" in ship_reason or (
+        "явн" in ship_reason and "подтвержд" in ship_reason
+    )
+    if ship_gate["passed"] or not explicit_confirmation:
+        problems.append("ship autopilot does not keep human deploy confirmation")
 
     if problems:
-        _fail("Claims de flujos/gates desalineados: " + "; ".join(problems))
+        _fail("Flow/gate claims out of sync: " + "; ".join(problems))
 
     return [
-        "feature mantiene 7 fases con Designer condicional",
-        "Designer se ejecuta solo con frontend y se salta con backend",
-        "gates libres documentadas como evidencia sin aprobacion humana",
-        "gates automaticas bloquean tests rojos y seguridad KO",
-        "autopilot no salta gates automaticas ni despliegue humano",
+        "feature keeps 7 phases with conditional Designer",
+        "Designer runs only with frontend and is skipped with backend",
+        "free gates documented as evidence without human approval",
+        "automatic gates block red tests and failed security",
+        "autopilot does not skip automatic gates or human deploy",
     ]
 
 
 def check_hook_contracts() -> list[str]:
-    """Verifica que hooks.json siga el contrato moderno de Claude Code."""
+    """Check that hooks.json follows the modern Claude Code contract."""
     hooks_config = _json("hooks/hooks.json")
     hooks_by_event = hooks_config.get("hooks")
     if not isinstance(hooks_by_event, dict):
-        _fail("hooks/hooks.json no declara hooks")
+        _fail("hooks/hooks.json does not declare hooks")
 
     expected_events = {
         "SessionStart",
@@ -2201,7 +2215,7 @@ def check_hook_contracts() -> list[str]:
         missing_events = sorted(expected_events - actual_events)
         extra_events = sorted(actual_events - expected_events)
         _fail(
-            "Eventos de hooks desalineados: "
+            "Hook events out of sync: "
             f"actual={sorted(hooks_by_event)} missing={missing_events} extra={extra_events}"
         )
 
@@ -2213,68 +2227,68 @@ def check_hook_contracts() -> list[str]:
         and path.name not in {"evidence_guard_lib.py", "secret-guard.sh"}
     )
     if len(visible_scripts) != 10:
-        _fail(f"Hooks visibles inesperados: {visible_scripts}")
+        _fail(f"Unexpected visible hooks: {visible_scripts}")
 
     registered: list[tuple[str, str, dict]] = []
     problems: list[str] = []
     for event, groups in hooks_by_event.items():
         if not isinstance(groups, list) or not groups:
-            problems.append(f"{event}: debe contener grupos")
+            problems.append(f"{event}: must contain groups")
             continue
         for group in groups:
             if not isinstance(group, dict):
-                problems.append(f"{event}: grupo no es objeto")
+                problems.append(f"{event}: group is not an object")
                 continue
             if event in HOOK_EVENTS_WITHOUT_MATCHER and "matcher" in group:
                 problems.append(
-                    f"{event}: declara matcher que Claude Code ignora en este evento"
+                    f"{event}: declares a matcher that Claude Code ignores for this event"
                 )
             for hook in group.get("hooks", []):
                 if not isinstance(hook, dict) or hook.get("type") != "command":
-                    problems.append(f"{event}: hook no command")
+                    problems.append(f"{event}: hook is not command")
                     continue
                 if "if" in hook:
                     if event not in HOOK_EVENTS_WITH_IF_SUPPORT:
                         problems.append(
-                            f"{event}: declara if que Claude Code no evalua en este evento"
+                            f"{event}: declares an if that Claude Code does not evaluate for this event"
                         )
                     elif not isinstance(hook["if"], str) or not hook["if"].strip():
-                        problems.append(f"{event}: if debe ser string no vacio")
+                        problems.append(f"{event}: if must be a non-empty string")
                 command = hook.get("command")
                 args = hook.get("args")
                 if not isinstance(command, str) or not command:
-                    problems.append(f"{event}: command invalido")
+                    problems.append(f"{event}: invalid command")
                     continue
                 if "|| true" in command or "test -f" in command:
-                    problems.append(f"{event}: command shell neutraliza errores: {command}")
+                    problems.append(f"{event}: shell command masks errors: {command}")
                 if "${CLAUDE_PLUGIN_ROOT}" in command:
-                    problems.append(f"{event}: usa placeholder en command en vez de args: {command}")
+                    problems.append(f"{event}: uses a placeholder in command instead of args: {command}")
                 if not isinstance(args, list) or len(args) != 1 or not isinstance(args[0], str):
-                    problems.append(f"{event}: hook sin args exec form para {command}")
+                    problems.append(f"{event}: hook without exec form args for {command}")
                     continue
                 script_arg = args[0]
                 prefix = "${CLAUDE_PLUGIN_ROOT}/hooks/"
                 if not script_arg.startswith(prefix):
-                    problems.append(f"{event}: args no apunta a hooks/: {script_arg}")
+                    problems.append(f"{event}: args does not point to hooks/: {script_arg}")
                     continue
                 script_name = script_arg.removeprefix(prefix)
                 script_path = ROOT / "hooks" / script_name
                 if not script_path.is_file():
-                    problems.append(f"{event}: script no existe {script_name}")
+                    problems.append(f"{event}: script does not exist {script_name}")
                     continue
                 if script_name.endswith(".py") and command != "python3":
-                    problems.append(f"{script_name}: debe usar command python3")
+                    problems.append(f"{script_name}: must use command python3")
                 if script_name.endswith(".sh") and command != "bash":
-                    problems.append(f"{script_name}: debe usar command bash")
+                    problems.append(f"{script_name}: must use command bash")
                 if "async" in hook and not isinstance(hook["async"], bool):
-                    problems.append(f"{script_name}: async debe ser booleano")
+                    problems.append(f"{script_name}: async must be boolean")
                 timeout = hook.get("timeout")
                 if hook.get("async") is not True:
                     if type(timeout) is not int:
-                        problems.append(f"{script_name}: hook sincronico sin timeout entero")
+                        problems.append(f"{script_name}: synchronous hook without integer timeout")
                     elif timeout > HOOK_SYNC_TIMEOUT_LIMIT:
                         problems.append(
-                            f"{script_name}: hook sincronico supera timeout "
+                            f"{script_name}: synchronous hook exceeds timeout "
                             f"{HOOK_SYNC_TIMEOUT_LIMIT}s ({timeout}s)"
                         )
                 registered.append((event, script_name, hook))
@@ -2283,9 +2297,9 @@ def check_hook_contracts() -> list[str]:
     missing = sorted(set(visible_scripts) - registered_names)
     extras = sorted(registered_names - set(visible_scripts))
     if missing:
-        problems.append(f"scripts sin registrar: {missing}")
+        problems.append(f"unregistered scripts: {missing}")
     if extras:
-        problems.append(f"scripts registrados inesperados: {extras}")
+        problems.append(f"unexpected registered scripts: {extras}")
 
     blocking = {
         "secret-guard.py",
@@ -2298,15 +2312,15 @@ def check_hook_contracts() -> list[str]:
             if registered_script == script_name
         ]
         if not matches:
-            problems.append(f"{script_name}: no registrado")
+            problems.append(f"{script_name}: not registered")
             continue
         for event, hook in matches:
             if event != "PreToolUse":
-                problems.append(f"{script_name}: debe registrarse en PreToolUse, no {event}")
+                problems.append(f"{script_name}: must register in PreToolUse, not {event}")
             if hook.get("async"):
-                problems.append(f"{script_name}: no puede ser async")
+                problems.append(f"{script_name}: must not be async")
             if hook.get("timeout", 99) > 5:
-                problems.append(f"{script_name}: timeout debe ser <= 5")
+                problems.append(f"{script_name}: timeout must be <= 5")
 
     for path in sorted((ROOT / "hooks").glob("*.py")):
         source = path.read_text(encoding="utf-8")
@@ -2322,7 +2336,7 @@ def check_hook_contracts() -> list[str]:
             check=False,
         )
         if result.returncode != 0:
-            problems.append(f"{_rel(path)}: bash -n fallo: {result.stdout}")
+            problems.append(f"{_rel(path)}: bash -n failed: {result.stdout}")
 
     wrapper_needles = (
         "EMBEDDED_PLUGIN_ROOT",
@@ -2335,11 +2349,11 @@ def check_hook_contracts() -> list[str]:
         source = _read(f"hooks/{script_name}")
         for needle in wrapper_needles:
             if needle not in source:
-                problems.append(f"{script_name}: wrapper no contiene {needle}")
+                problems.append(f"{script_name}: wrapper does not contain {needle}")
 
     hooks_doc = _read("docs/hooks.md")
     if '"decisión": "block"' in hooks_doc:
-        problems.append("docs/hooks.md usa clave obsoleta \"decisión\" en vez de decision")
+        problems.append("docs/hooks.md uses the obsolete key \"decisión\" instead of decision")
     nested_hook_output = re.findall(
         r"hookSpecificOutput\.(?:"
         r"SessionStart|UserPromptSubmit|UserPromptExpansion|Stop|PreToolUse|PreCompact|PostToolUse|"
@@ -2350,7 +2364,7 @@ def check_hook_contracts() -> list[str]:
     )
     if nested_hook_output:
         problems.append(
-            "docs/hooks.md usa hookSpecificOutput anidado por evento: "
+            "docs/hooks.md uses hookSpecificOutput nested by event: "
             f"{sorted(set(nested_hook_output))}"
         )
     for needle in (
@@ -2358,15 +2372,15 @@ def check_hook_contracts() -> list[str]:
         "hookSpecificOutput.hookEventName",
         "hookSpecificOutput.additionalContext",
         "systemMessage",
-        "Claude Code ignora `matcher`",
-        "El campo `if` solo se evalua en eventos de herramientas",
-        "`manual\\|auto` omitido para cubrir ambos",
-        "Claude Code ignora cualquier JSON cuando el proceso sale con `2`",
-        "no mezcles JSON de control con `exit 2`",
+        "Claude Code игнорирует `matcher`",
+        "Поле `if` вычисляется только в событиях инструментов",
+        "`manual\\|auto` опускается, чтобы покрыть оба",
+        "Claude Code игнорирует любой JSON, когда процесс завершается с `2`",
+        "не смешивай управляющий JSON с `exit 2`",
     ):
         if needle not in hooks_doc:
             problems.append(f"docs/hooks.md no documenta contrato moderno de hooks: {needle}")
-    if "Los hooks sincronos no deben superar los 10 segundos" not in hooks_doc:
+    if "Timeout синхронных хуков не должен превышать 10 секунд" not in hooks_doc:
         problems.append("docs/hooks.md no documenta limite de timeout sincronico")
 
     direct_checks = [
@@ -2405,13 +2419,13 @@ def check_hook_contracts() -> list[str]:
         )
         if result.returncode != 2:
             problems.append(
-                f"{name}: esperaba exit 2, obtuvo {result.returncode}; "
+                f"{name}: expected exit 2, got {result.returncode}; "
                 f"stdout={result.stdout!r} stderr={result.stderr!r}"
             )
         if result.stdout:
             problems.append(
-                f"{name}: un hook con exit 2 no debe emitir JSON/stdout "
-                f"porque Claude Code lo ignora: {result.stdout!r}"
+                f"{name}: a hook with exit 2 must not emit JSON/stdout "
+                f"because Claude Code ignores it: {result.stdout!r}"
             )
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -2422,7 +2436,7 @@ def check_hook_contracts() -> list[str]:
                 {
                     "source_command": "alfred",
                     "prefetched_command": "map-codebase",
-                    "response_text": "prefetch listo",
+                    "response_text": "prefetch ready",
                     "expires_at": "2999-01-01T00:00:00+00:00",
                 }
             ),
@@ -2431,21 +2445,21 @@ def check_hook_contracts() -> list[str]:
         pass
 
     if problems:
-        _fail("Contratos de hooks incompletos: " + "; ".join(problems))
+        _fail("Hook contracts incomplete: " + "; ".join(problems))
 
     return [
-        "10 hooks visibles registrados",
-        "scripts de hooks declarados existen y cubren los 9 visibles",
-        "exec form sin shell wrappers ni rutas sin comillas",
-        "hooks bloqueantes conservan exit 2",
-        "hooks con exit 2 no emiten JSON ignorado por Claude Code",
-        "eventos SessionStart, SessionEnd, UserPromptSubmit, PreToolUse y PostToolUse",
-        "eventos sin matcher no declaran matcher ignorado",
-        "hooks no usan if fuera de eventos de herramienta",
-        "hooks sincronos declaran timeout entero <= 10 segundos",
-        "sintaxis de hooks validada",
-        "wrapper helper-first resiliente a cache de plugin rotada",
-        "docs de hooks usan decision/hookSpecificOutput actuales",
+        "10 visible hooks registered",
+        "declared hook scripts exist and cover the 9 visible ones",
+        "exec form without shell wrappers or unquoted paths",
+        "blocking hooks keep exit 2",
+        "hooks with exit 2 do not emit JSON that Claude Code ignores",
+        "events SessionStart, SessionEnd, UserPromptSubmit, PreToolUse and PostToolUse",
+        "events without matcher do not declare an ignored matcher",
+        "hooks do not use if outside tool events",
+        "synchronous hooks declare integer timeout <= 10 seconds",
+        "hook syntax validated",
+        "helper-first wrapper resilient to a rotated plugin cache",
+        "hook docs use current decision/hookSpecificOutput",
     ]
 
 
@@ -2453,16 +2467,16 @@ def check_mcp_config() -> list[str]:
     mcp = _json(".mcp.json")
     server = mcp.get("mcpServers", {}).get("alfred-memory")
     if not isinstance(server, dict):
-        _fail(".mcp.json no declara mcpServers.alfred-memory")
+        _fail(".mcp.json does not declare mcpServers.alfred-memory")
     if server.get("command") != "python3":
-        _fail("alfred-memory debe arrancar con command python3 para que los instaladores puedan parchearlo")
+        _fail("alfred-memory must start with command python3 so that the installers can patch it")
     args = server.get("args")
     if not isinstance(args, list) or not args or "memory_server.py" not in str(args[0]):
-        _fail("alfred-memory debe apuntar a mcp/memory_server.py")
+        _fail("alfred-memory must point to mcp/memory_server.py")
     if "${CLAUDE_PLUGIN_ROOT}" not in str(args[0]):
-        _fail("alfred-memory debe usar CLAUDE_PLUGIN_ROOT")
+        _fail("alfred-memory must use CLAUDE_PLUGIN_ROOT")
 
-    return ["MCP raiz portable con memory_server.py"]
+    return ["portable root MCP with memory_server.py"]
 
 
 def _npm_pack_dry_run_package() -> dict:
@@ -2476,17 +2490,17 @@ def _npm_pack_dry_run_package() -> dict:
         check=False,
     )
     if completed.returncode != 0:
-        _fail(f"npm pack --dry-run fallo: {completed.stderr.strip()}")
+        _fail(f"npm pack --dry-run failed: {completed.stderr.strip()}")
 
     try:
         payload = json.loads(completed.stdout)
     except json.JSONDecodeError as exc:
-        _fail(f"npm pack no devolvio JSON valido: {exc}: {completed.stdout[:500]}")
+        _fail(f"npm pack did not return valid JSON: {exc}: {completed.stdout[:500]}")
     if not isinstance(payload, list) or not payload:
-        _fail(f"npm pack devolvio payload inesperado: {payload!r}")
+        _fail(f"npm pack returned an unexpected payload: {payload!r}")
     package = payload[0]
     if not isinstance(package, dict):
-        _fail(f"npm pack devolvio paquete inesperado: {package!r}")
+        _fail(f"npm pack returned an unexpected package: {package!r}")
     return package
 
 
@@ -2506,22 +2520,22 @@ def _publishable_symlink_problems() -> list[str]:
             try:
                 target = path.resolve(strict=True)
             except FileNotFoundError:
-                problems.append(f"{_rel(path)} es un symlink roto")
+                problems.append(f"{_rel(path)} is a broken symlink")
                 continue
             try:
                 target.relative_to(root)
             except ValueError:
                 problems.append(
-                    f"{_rel(path)} es un symlink fuera del plugin: {os.readlink(path)!r}"
+                    f"{_rel(path)} is a symlink outside the plugin: {os.readlink(path)!r}"
                 )
     return problems
 
 
 def check_packaging_contracts() -> list[str]:
-    """Verifica el paquete real que produciría npm antes de publicar."""
+    """Check the real package that npm would produce before publishing."""
     package = _npm_pack_dry_run_package()
     if package.get("name") != "alfred-dev" or package.get("version") != VERSION:
-        _fail(f"npm pack empaqueta identidad inesperada: {package}")
+        _fail(f"npm pack packs an unexpected identity: {package}")
 
     packed_paths = {
         entry.get("path")
@@ -2554,7 +2568,7 @@ def check_packaging_contracts() -> list[str]:
     required_paths.update(TEMPLATE_PATHS)
     missing_required = sorted(required_paths - packed_paths)
     if missing_required:
-        _fail(f"npm pack no incluye artefactos criticos: {missing_required}")
+        _fail(f"npm pack does not include critical artifacts: {missing_required}")
 
     forbidden_prefixes = (
         ".alfred-dev/",
@@ -2582,10 +2596,10 @@ def check_packaging_contracts() -> list[str]:
         )
     )
     if leaked:
-        _fail(f"npm pack incluye artefactos locales o de test: {leaked[:20]}")
+        _fail(f"npm pack includes local or test artifacts: {leaked[:20]}")
     symlink_problems = _publishable_symlink_problems()
     if symlink_problems:
-        _fail("Symlinks publicables incompatibles con la cache de Claude: " + "; ".join(symlink_problems))
+        _fail("Publishable symlinks incompatible with the Claude cache: " + "; ".join(symlink_problems))
 
     manifest_command_paths = {
         path.lstrip("./")
@@ -2609,28 +2623,28 @@ def check_packaging_contracts() -> list[str]:
     ]
     if len(public_command_paths) != 18 or len(agent_paths) != 10 or len(skill_paths) != 11:
         _fail(
-            "npm pack desalineado con inventario publico: "
+            "npm pack out of sync with the public inventory: "
             f"commands={len(public_command_paths)} agents={len(agent_paths)} skills={len(skill_paths)}"
         )
     if sorted(template_paths) != sorted(TEMPLATE_PATHS):
         _fail(
-            "npm pack desalineado con templates de artefactos: "
+            "npm pack out of sync with artifact templates: "
             f"{sorted(template_paths)}"
         )
 
     return [
-        f"npm pack dry-run {VERSION} valido",
-        "paquete sin caches locales ni tests",
-        "paquete sin .claude/.crupier ni evidencias manuales",
-        "paquete sin symlinks publicables fuera del plugin",
-        "paquete contiene 18 comandos namespaced, 10 agentes y 11 skills",
-        "paquete contiene 8 templates de artefactos",
-        "paquete contiene runtime visual de Designer",
+        f"npm pack dry-run {VERSION} valid",
+        "package without local caches or tests",
+        "package without .claude/.crupier or manual evidence",
+        "package without publishable symlinks outside the plugin",
+        "package contains 18 namespaced commands, 10 agents and 11 skills",
+        "package contains 8 artifact templates",
+        "package contains the Designer visual runtime",
     ]
 
 
 def check_published_secret_scan() -> list[str]:
-    """Escanea el artefacto publicable para detectar secretos reales."""
+    """Scan the publishable artifact for real secrets."""
     from core.secrets import find_secret_label
 
     package = _npm_pack_dry_run_package()
@@ -2654,15 +2668,15 @@ def check_published_secret_scan() -> list[str]:
 
     if findings:
         _fail(
-            "El paquete publicable contiene posibles secretos reales: "
+            "The publishable package contains possible real secrets: "
             + "; ".join(findings[:20])
         )
 
-    return ["paquete publicable sin patrones de secretos reales"]
+    return ["publishable package without real secret patterns"]
 
 
 def check_install_update_contracts() -> list[str]:
-    """Verifica instalación, desinstalación y update con scopes explícitos."""
+    """Check install, uninstall and update with explicit scopes."""
     install_sh = _read("install.sh")
     install_ps1 = _read("install.ps1")
     uninstall_sh = _read("uninstall.sh")
@@ -2681,12 +2695,12 @@ def check_install_update_contracts() -> list[str]:
             'claude plugin marketplace add "${REPO}" --scope user',
             'claude plugin install "${PLUGIN_NAME}@${PLUGIN_NAME}" --scope user',
             "claude plugin list --json",
-            "Instalacion global de usuario confirmada (--scope user)",
-            "No se pisa ~/.claude/skills",
+            "Глобальная установка для пользователя подтверждена (--scope user)",
+            "~/.claude/skills не затрагивается",
             'HOOKS_JSON="${PLUGIN_ROOT}/hooks/hooks.json"',
             'MCP_JSON="${PLUGIN_ROOT}/.mcp.json"',
             "/reload-plugins",
-            "MCP/coste de cache",
+            "MCP/стоимости cache",
         ],
         "install.ps1": [
             "claude plugin uninstall $PluginKey --scope local",
@@ -2698,12 +2712,12 @@ def check_install_update_contracts() -> list[str]:
             "claude plugin marketplace add $Repo --scope user",
             "claude plugin install $pluginKey --scope user",
             "claude plugin list --json",
-            "Instalacion global de usuario confirmada (--scope user)",
-            "No se pisa ~/.claude/skills",
+            "Глобальная установка для пользователя подтверждена (--scope user)",
+            "~/.claude/skills не затрагивается",
             'Join-Path $PluginRoot "hooks/hooks.json"',
             'Join-Path $PluginRoot ".mcp.json"',
             "/reload-plugins",
-            "MCP/coste de cache",
+            "MCP/стоимости cache",
         ],
         "uninstall.sh": [
             'claude plugin uninstall "${PLUGIN_KEY}" --scope user',
@@ -2711,8 +2725,8 @@ def check_install_update_contracts() -> list[str]:
             'known_marketplaces.json',
             'installed_plugins.json',
             'enabledPlugins',
-            "Alias global /alfred eliminado",
-            "Shim de comando global /alfred eliminado",
+            "Глобальный alias /alfred удалён",
+            "Глобальный shim команды /alfred удалён",
         ],
         "uninstall.ps1": [
             "claude plugin uninstall $PluginKey --scope user",
@@ -2720,8 +2734,8 @@ def check_install_update_contracts() -> list[str]:
             "known_marketplaces.json",
             "installed_plugins.json",
             "enabledPlugins",
-            "Alias global /alfred eliminado",
-            "Shim de comando global /alfred eliminado",
+            "Глобальный alias /alfred удалён",
+            "Глобальный shim команды /alfred удалён",
         ],
         "commands/update.md": [
             "claude plugin list --json",
@@ -2740,12 +2754,12 @@ def check_install_update_contracts() -> list[str]:
         ],
         "docs/installation.md": [
             "--scope user",
-            "instalación global de usuario",
-            "No pisa",
+            "глобальную пользовательскую установку",
+            "не перезаписывает",
             "~/.claude/commands/alfred.md",
             "claude plugin list --json",
-            "No usa un marketplace oficial de Anthropic",
-            "`/reload-plugins` aplica los cambios",
+            "не использует официальный marketplace Anthropic",
+            "`/reload-plugins` применяет изменения",
             "`/reload-plugins --force`",
         ],
     }
@@ -2760,10 +2774,10 @@ def check_install_update_contracts() -> list[str]:
     missing = []
     for path, needles in requirements.items():
         for needle in needles:
-            if needle not in sources[path]:
-                missing.append(f"{path}: {needle}")
+            if not _contains(sources[path], needle):
+                missing.append(f"{path}: {_needle_label(needle)}")
     if missing:
-        _fail("Contratos install/update incompletos: " + "; ".join(missing))
+        _fail("Install/update contracts incomplete: " + "; ".join(missing))
 
     stateful_plugin_command = re.compile(
         r"\bclaude plugin "
@@ -2793,22 +2807,22 @@ def check_install_update_contracts() -> list[str]:
                 )
             )
             if not is_cleanup:
-                bad_scope.append(f"{path}:{line_number}: scope {scope} prohibido")
+                bad_scope.append(f"{path}:{line_number}: scope {scope} forbidden")
     if bad_scope:
         _fail(
-            "CLI plugin sin scope explicito user o limpieza local/project permitida: "
+            "CLI plugin without explicit user scope or allowed local/project cleanup: "
             + "; ".join(bad_scope)
         )
 
     if "instalación local que limpiar" in uninstall_sh:
-        _fail("uninstall.sh no debe describir Alfred Dev como instalacion local")
+        _fail("uninstall.sh must not describe Alfred Dev as a local install")
 
     return [
-        "instaladores usan scope user explicito",
-        "instaladores verifican scope user despues de instalar",
-        "instaladores limpian scopes local/project heredados antes de instalar user",
-        "instaladores no pisan ~/.claude/skills ni instalan alias global /alfred",
-        "update conserva semver y menu humano, normaliza a scope user y documenta reload/reinicio",
+        "installers use explicit user scope",
+        "installers verify user scope after install",
+        "installers clean inherited local/project scopes before the user install",
+        "installers do not touch ~/.claude/skills or install a global /alfred alias",
+        "update keeps semver and human menu, normalizes to user scope and documents reload/restart",
     ]
 
 
@@ -2831,53 +2845,53 @@ def check_audit_docs() -> list[str]:
         "docs/README.md": [
             "release.md",
             "11 skills",
-            "18 comandos",
+            "18 команд",
         ],
         "docs/installation.md": [
             "plugin:alfred-dev:alfred-memory",
             "Pending approval",
-            "No hay que aprobar esa entrada de proyecto",
+            "Одобрять эту проектную запись для проверки плагина не нужно",
             'claude plugin marketplace add "$PWD" --scope user',
-            "Claude Code actual sí ofrece diagnósticos útiles",
+            "Текущий Claude Code даёт полезную диагностику",
             "claude plugin details alfred-dev@alfred-dev",
             "claude plugin validate . --strict",
             "claude --debug",
             "/plugin validate",
         ],
         "docs/architecture.md": [
-            "`matcher` es opcional",
-            "solo se declara en eventos donde Claude Code lo soporta",
-            "Claude Code lo ignora",
+            "`matcher` необязателен",
+            "объявляется только в событиях, где Claude Code его поддерживает",
+            "Claude Code его игнорирует",
             "PreCompact",
-            "manuales como automáticas",
+            "и ручную, и автоматическую",
         ],
         "docs/release.md": [
-            "18 comandos",
-            "10 agentes",
+            "18 команд",
+            "10 агентов",
             "11 skills",
-            "10 hooks",
+            "10 хуков",
             "displayName: \"Alfred Dev\"",
-            "namespace técnico es `alfred-dev`",
-            "no pisa `~/.claude/skills`",
+            "технический namespace: `alfred-dev`",
+            "не трогает `~/.claude/skills`",
             "`_composicion.md`",
             "`_docs_vivas.md`",
-            "commands/ como skills planas soportadas",
-            "UX pública",
+            "commands/ как поддерживаемые плоские skills",
+            "публичного UX",
             "`/alfred-dev:*`",
             "argument-hint",
             "$ARGUMENTS",
-            "1.536 caracteres",
+            "1536 символов",
             "disable-model-invocation: true",
             "npm run release:audit",
             "npm run release:audit:manual",
             "npm run release:audit:manual:evidence",
             "npm run release:audit:prepublish",
-            "18 rutas publicas",
-            "40 opciones publicas",
-            "4 contratos runtime",
+            "18 публичных маршрутов",
+            "40 публичных опций",
+            "4 runtime-контракта",
             "--auth-preflight",
             "core/secrets.py",
-            "permisos `0600`",
+            "правами `0600`",
             "evidence_file",
             "evidence_sha256",
             "plugin_surface.sha256",
@@ -2887,13 +2901,13 @@ def check_audit_docs() -> list[str]:
             "auth_preflight.status=ok",
             "scripts/manual_smoke.py",
             "scripts/external_live_smoke.py",
-            "no crea issues, no arranca contenedores",
-            "quality gates son verificables por contrato local",
+            "не создаёт issues, не запускает контейнеры",
+            "quality gates проверяемы по локальному контракту",
             "questions[]",
             "multiSelect",
             "hookSpecificOutput.additionalContext",
-            "No aprueba la release por sí mismo",
-            "Pendientes que no cubre el contrato local",
+            "Сам по себе не одобряет релиз",
+            "Что не покрывает локальный контракт",
             "claude auth login",
             "scripts/claude_auth_recovery.py",
         ],
@@ -2910,34 +2924,34 @@ def check_audit_docs() -> list[str]:
         for needle in needles:
             if needle not in sources[path]:
                 missing.append(f"{path}: {needle}")
-    if re.search(r"PreCompact[^.\n]*(?:ignora|ignorado)", architecture):
-        _fail("docs/architecture.md afirma incorrectamente que PreCompact ignora matcher")
+    if re.search(r"PreCompact[^.\n]*(?:ignora|ignorado|игнорир)", architecture):
+        _fail("docs/architecture.md wrongly claims that PreCompact ignores matcher")
     if 'displayName: "Alfred Dev"' not in release_doc:
-        _fail("docs/release.md debe documentar displayName humano")
+        _fail("docs/release.md must document the human displayName")
     if re.search(r"plugin_surface\.sha256=[0-9a-f]{64}", release_doc):
-        _fail("docs/release.md no debe congelar plugin_surface.sha256")
+        _fail("docs/release.md must not freeze plugin_surface.sha256")
     if "docs/manual-smoke*.json" not in gitignore:
-        _fail(".gitignore debe excluir evidencias/reviews manuales docs/manual-smoke*.json")
+        _fail(".gitignore must exclude manual evidence/reviews docs/manual-smoke*.json")
     if "docs/manual-smoke*.json" not in npmignore:
-        _fail(".npmignore debe excluir evidencias/reviews manuales docs/manual-smoke*.json")
+        _fail(".npmignore must exclude manual evidence/reviews docs/manual-smoke*.json")
     if "docs/manual-smoke*.md" not in gitignore:
-        _fail(".gitignore debe excluir reportes manuales docs/manual-smoke*.md")
+        _fail(".gitignore must exclude manual reports docs/manual-smoke*.md")
     if "docs/manual-smoke*.md" not in npmignore:
-        _fail(".npmignore debe excluir reportes manuales docs/manual-smoke*.md")
+        _fail(".npmignore must exclude manual reports docs/manual-smoke*.md")
     if "docs/project/" not in gitignore:
-        _fail(".gitignore debe excluir estado operativo local docs/project/")
+        _fail(".gitignore must exclude local operating state docs/project/")
     if "docs/project/" not in npmignore:
-        _fail(".npmignore debe excluir estado operativo local docs/project/")
+        _fail(".npmignore must exclude local operating state docs/project/")
     if "docs/external-live-smoke*.json" not in gitignore:
-        _fail(".gitignore debe excluir evidencias externas docs/external-live-smoke*.json")
+        _fail(".gitignore must exclude external evidence docs/external-live-smoke*.json")
     if "docs/external-live-smoke*.json" not in npmignore:
-        _fail(".npmignore debe excluir evidencias externas docs/external-live-smoke*.json")
+        _fail(".npmignore must exclude external evidence docs/external-live-smoke*.json")
     if "docs/claude-auth-recovery*.json" not in gitignore:
-        _fail(".gitignore debe excluir diagnosticos de auth docs/claude-auth-recovery*.json")
+        _fail(".gitignore must exclude auth diagnostics docs/claude-auth-recovery*.json")
     if "docs/claude-auth-recovery*.json" not in npmignore:
-        _fail(".npmignore debe excluir diagnosticos de auth docs/claude-auth-recovery*.json")
+        _fail(".npmignore must exclude auth diagnostics docs/claude-auth-recovery*.json")
     if missing:
-        _fail(f"Documentacion de auditoria incompleta: {missing}")
+        _fail(f"Audit documentation incomplete: {missing}")
     scripts = package.get("scripts", {})
     expected_scripts = {
         "release:audit:external:preflight": (
@@ -2993,17 +3007,17 @@ def check_audit_docs() -> list[str]:
         if scripts.get(name) != expected
     }
     if bad_scripts:
-        _fail(f"Scripts npm de smoke manual desalineados: {bad_scripts}")
+        _fail(f"Manual smoke npm scripts out of sync: {bad_scripts}")
     if not (ROOT / "scripts" / "manual_smoke.py").is_file():
-        _fail("Falta scripts/manual_smoke.py para reproducir la matriz manual")
+        _fail("scripts/manual_smoke.py is missing; it reproduces the manual matrix")
     if not (ROOT / "scripts" / "manual_review_gate.py").is_file():
-        _fail("Falta scripts/manual_review_gate.py para validar la revision humana")
+        _fail("scripts/manual_review_gate.py is missing; it validates the human review")
     if not (ROOT / "scripts" / "external_live_smoke.py").is_file():
-        _fail("Falta scripts/external_live_smoke.py para capturar preflight externo")
+        _fail("scripts/external_live_smoke.py is missing; it captures the external preflight")
     if not (ROOT / "scripts" / "claude_command_discovery.py").is_file():
-        _fail("Falta scripts/claude_command_discovery.py para probar /alfred-dev:alfred interactivo")
+        _fail("scripts/claude_command_discovery.py is missing; it tests interactive /alfred-dev:alfred")
     if not (ROOT / "docs" / "release.md").is_file():
-        _fail("Falta docs/release.md para auditar claims y readiness de salida")
+        _fail("docs/release.md is missing; it audits claims and release readiness")
     prepare = scripts.get("release:audit:prepublish:prepare", "")
     required_prepare_parts = (
         "npm run release:audit:full",
@@ -3014,7 +3028,7 @@ def check_audit_docs() -> list[str]:
         part for part in required_prepare_parts if part not in prepare
     ]
     if missing_prepare:
-        _fail(f"release:audit:prepublish:prepare incompleto: {missing_prepare}")
+        _fail(f"release:audit:prepublish:prepare incomplete: {missing_prepare}")
 
     prepublish = scripts.get("release:audit:prepublish", "")
     required_prepublish_parts = (
@@ -3027,7 +3041,7 @@ def check_audit_docs() -> list[str]:
         part for part in required_prepublish_parts if part not in prepublish
     ]
     if missing_prepublish:
-        _fail(f"release:audit:prepublish incompleto: {missing_prepublish}")
+        _fail(f"release:audit:prepublish incomplete: {missing_prepublish}")
     prepublish_parts = {part.strip() for part in prepublish.split("&&")}
     forbidden_prepublish_parts = {
         "npm run release:audit:manual:evidence",
@@ -3036,7 +3050,7 @@ def check_audit_docs() -> list[str]:
     forbidden_present = sorted(prepublish_parts & forbidden_prepublish_parts)
     if forbidden_present:
         _fail(
-            "release:audit:prepublish no debe regenerar evidencias ya revisadas: "
+            "release:audit:prepublish must not regenerate already reviewed evidence: "
             f"{forbidden_present}"
         )
 
@@ -3045,11 +3059,11 @@ def check_audit_docs() -> list[str]:
         ROOT / "scripts" / "manual_smoke.py",
     )
     if spec is None or spec.loader is None:
-        _fail("No se pudo cargar scripts/manual_smoke.py para auditar cobertura")
+        _fail("Could not load scripts/manual_smoke.py to audit coverage")
     manual_smoke = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(manual_smoke)
     if "plugin_surface.sha256" not in release_doc:
-        _fail("docs/release.md debe exigir plugin_surface.sha256 de la run, no un hash congelado")
+        _fail("docs/release.md must require plugin_surface.sha256 from the run, not a frozen hash")
     manual_smoke_text = _read("scripts/manual_smoke.py")
     manual_review_gate_text = _read("scripts/manual_review_gate.py")
     manual_review_report_text = _read("scripts/manual_review_report.py")
@@ -3066,7 +3080,7 @@ def check_audit_docs() -> list[str]:
     ]
     if missing_manual_smoke_runtime:
         _fail(
-            "El smoke manual debe reproducir claude -p real sin permisos interactivos ni presupuesto bajo: "
+            "The manual smoke must reproduce a real claude -p without interactive permissions or a low budget: "
             f"{missing_manual_smoke_runtime}"
         )
     preview_sanitizer_needles = (
@@ -3084,7 +3098,7 @@ def check_audit_docs() -> list[str]:
     ]
     if missing_preview_sanitizer:
         _fail(
-            "La evidencia manual debe sanear previews con core/secrets.py: "
+            "Manual evidence must sanitize previews with core/secrets.py: "
             f"{missing_preview_sanitizer}"
         )
     review_secret_gate_needles = (
@@ -3092,74 +3106,97 @@ def check_audit_docs() -> list[str]:
         "def _iter_secret_findings(",
         "evidence_secret_findings = _iter_secret_findings(evidence, \"evidence\")",
         "review_secret_findings = _iter_secret_findings(review, \"review\")",
-        "evidence contiene posibles secretos reales",
-        "review contiene posibles secretos reales",
-        "No se crea plantilla de revisión con evidencia que contiene",
+        ("evidence contiene posibles secretos reales", "evidence contains possible real secrets"),
+        ("review contiene posibles secretos reales", "review contains possible real secrets"),
+        (
+            "No se crea plantilla de revisión con evidencia que contiene",
+            "Review template not created: evidence contains",
+        ),
         "review_path.chmod(0o600)",
         "GENERIC_REVIEW_NOTES",
         "MIN_REVIEW_NOTE_CHARS",
         "MIN_REVIEW_NOTE_WORDS",
         "def _is_low_quality_review_note(",
-        "review.cases con notes humanas demasiado genericas o cortas",
-        "review.cases contiene notes humanas repetidas",
+        (
+            "review.cases con notes humanas demasiado genericas o cortas",
+            "review.cases has human notes that are too generic or short",
+        ),
+        ("review.cases contiene notes humanas repetidas", "review.cases contains repeated human notes"),
         "--require-current-auth-preflight",
-        "preflight actual de Claude CLI no esta ok",
+        ("preflight actual de Claude CLI no esta ok", "current Claude CLI preflight is not ok"),
     )
     missing_review_secret_gate = [
-        needle for needle in review_secret_gate_needles if needle not in manual_review_gate_text
+        _needle_label(needle)
+        for needle in review_secret_gate_needles
+        if not _contains(manual_review_gate_text, needle)
     ]
     if missing_review_secret_gate:
         _fail(
-            "El gate de revision manual debe rechazar secretos con core/secrets.py: "
+            "The manual review gate must reject secrets with core/secrets.py: "
             f"{missing_review_secret_gate}"
         )
     review_report_note_needles = (
         "def _plugin_surface_flags(",
-        "## Superficie Del Plugin",
-        "evidence.plugin_surface.roots no coincide con el plugin actual",
-        "evidence.plugin_surface.file_count no coincide con el plugin actual",
-        "evidence.plugin_surface.sha256 no coincide con el plugin actual",
+        ("## Superficie Del Plugin", "## Plugin Surface"),
+        (
+            "evidence.plugin_surface.roots no coincide con el plugin actual",
+            "evidence.plugin_surface.roots does not match the current plugin",
+        ),
+        (
+            "evidence.plugin_surface.file_count no coincide con el plugin actual",
+            "evidence.plugin_surface.file_count does not match the current plugin",
+        ),
+        (
+            "evidence.plugin_surface.sha256 no coincide con el plugin actual",
+            "evidence.plugin_surface.sha256 does not match the current plugin",
+        ),
         "def _review_quality_flags(",
         "_manual_review_gate_module()",
-        "## Calidad De Review Humana",
+        ("## Calidad De Review Humana", "## Human Review Quality"),
         "notes_missing",
         "notes_low_quality",
         "notes_repeated",
         "review_secret_findings",
-        "Sin flags automaticos de notas humanas",
+        ("Sin flags automaticos de notas humanas", "No automatic human note flags"),
     )
     missing_review_report_notes = [
-        needle
+        _needle_label(needle)
         for needle in review_report_note_needles
-        if needle not in manual_review_report_text
+        if not _contains(manual_review_report_text, needle)
     ]
     if missing_review_report_notes:
         _fail(
-            "El reporte de revision manual debe mostrar notas humanas debiles o repetidas: "
+            "The manual review report must show weak or repeated human notes: "
             f"{missing_review_report_notes}"
         )
     review_traceability_needles = (
-        "review.evidence_file es obligatorio",
-        "review.evidence_file no coincide con el evidence pasado al gate",
-        "review.evidence_file coincide",
-        "review.cases desalineados con matriz actual",
-        "review.cases coincide con la matriz manual actual",
+        ("review.evidence_file es obligatorio", "review.evidence_file is required"),
+        (
+            "review.evidence_file no coincide con el evidence pasado al gate",
+            "review.evidence_file does not match the evidence passed to the gate",
+        ),
+        ("review.evidence_file coincide", "review.evidence_file matches"),
+        ("review.cases desalineados con matriz actual", "review.cases out of sync with the current matrix"),
+        (
+            "review.cases coincide con la matriz manual actual",
+            "review.cases matches the current manual matrix",
+        ),
     )
     missing_review_traceability = [
-        needle
+        _needle_label(needle)
         for needle in review_traceability_needles
-        if needle not in manual_review_gate_text
+        if not _contains(manual_review_gate_text, needle)
     ]
     if missing_review_traceability:
         _fail(
-            "El gate de revision manual debe atar evidence_file a la evidencia validada: "
+            "The manual review gate must bind evidence_file to the validated evidence: "
             f"{missing_review_traceability}"
         )
     _validate_manual_case_contract_links(manual_smoke)
     coverage = manual_smoke._case_command_coverage()
     missing = [name for name, case_ids in coverage.items() if not case_ids]
     if len(coverage) != 18 or missing:
-        _fail(f"La matriz manual no cubre las 18 rutas publicas: missing={missing}")
+        _fail(f"The manual matrix does not cover the 18 public routes: missing={missing}")
     option_coverage = manual_smoke._case_option_coverage()
     missing_options = [
         name for name, case_ids in option_coverage.items()
@@ -3168,7 +3205,7 @@ def check_audit_docs() -> list[str]:
     expected_option_contracts = len(manual_smoke.OPTION_CONTRACTS)
     if len(option_coverage) != expected_option_contracts or missing_options:
         _fail(
-            "La matriz manual no cubre las opciones publicas: "
+            "The manual matrix does not cover the public options: "
             f"total={len(option_coverage)} missing={missing_options}"
         )
     _validate_manual_option_contract_shape(manual_smoke, option_coverage)
@@ -3186,7 +3223,7 @@ def check_audit_docs() -> list[str]:
     missing_argument_commands = sorted(argument_commands - covered_option_commands)
     if missing_argument_commands:
         _fail(
-            "Comandos con argument-hint/$ARGUMENTS sin contrato de opcion manual: "
+            "Commands with argument-hint/$ARGUMENTS without a manual option contract: "
             f"{missing_argument_commands}"
         )
     runtime_coverage = manual_smoke._case_runtime_coverage()
@@ -3197,52 +3234,52 @@ def check_audit_docs() -> list[str]:
     _validate_manual_runtime_contract_shape(manual_smoke, runtime_coverage)
     if len(runtime_coverage) != 4 or missing_runtime:
         _fail(
-            "La matriz manual no cubre los contratos runtime: "
+            "The manual matrix does not cover the runtime contracts: "
             f"total={len(runtime_coverage)} missing={missing_runtime}"
         )
 
     return [
-        "docs/release.md es la pagina viva de auditoria",
-        "nota project-scope MCP documentada",
-        "commands/ documentado como skills planas soportadas",
-        "matriz manual cubre 18 rutas publicas",
-        f"matriz manual cubre {expected_option_contracts} opciones publicas",
-        "matriz manual valida IDs de opcion contra comandos publicos",
-        "matriz manual enlaza contratos al comando correcto",
-        "matriz manual valida prompts contra comandos declarados",
-        "matriz manual ata cada argument-hint a una opcion cubierta",
-        "matriz manual valida contratos runtime de update",
-        "matriz manual cubre 4 contratos runtime",
-        "manual smoke usa worktree por defecto y --installed explicito",
-        "manual smoke tiene preflight de autenticacion real y evidencia fail-fast",
-        "evidencia manual y plantillas se escriben con permisos 0600",
-        "evidencias manuales ignoradas por git y npm",
-        "estado operativo docs/project ignorado por git y npm",
-        "evidencia manual sanea previews con core/secrets.py",
-        "manual review gate exige aprobacion humana explicita",
-        "manual review gate rechaza evidencia/review con secretos",
-        "manual review gate no crea plantillas desde evidencia con secretos",
-        "manual review gate exige preflight actual antes de aprobar",
-        "manual review report muestra notas humanas debiles o repetidas",
-        "manual review gate exige origen worktree/installed correcto",
-        "manual review gate ata evidence_file al JSON validado",
-        "plugin_surface.sha256 se exige en revision humana, no se congela en docs",
-        "manual review gate valida metadatos de casos contra matriz actual",
-        "manual review gate valida metadatos de review contra matriz actual",
-        "manual review gate valida mapas de cobertura contra matriz actual",
-        "scripts npm manual/preflight alineados",
-        "prepublish:prepare genera evidencias manuales antes de la revision humana",
-        "prepublish valida evidencias manuales ya revisadas sin regenerarlas",
-        "matriz documenta empaquetado seco",
-        "plugin details documenta displayName humano",
-        "docs oficiales revalidadas 2026-08-15",
-        "readiness de salida mantiene pendientes humanos y externos",
-        "runbook de revision humana documenta criterios y bloqueos",
+        "docs/release.md is the living audit page",
+        "project-scope MCP note documented",
+        "commands/ documented as supported flat skills",
+        "manual matrix covers 18 public routes",
+        f"manual matrix covers {expected_option_contracts} public options",
+        "manual matrix validates option IDs against public commands",
+        "manual matrix links contracts to the correct command",
+        "manual matrix validates prompts against declared commands",
+        "manual matrix binds each argument-hint to a covered option",
+        "manual matrix validates update runtime contracts",
+        "manual matrix covers 4 runtime contracts",
+        "manual smoke uses worktree by default and explicit --installed",
+        "manual smoke has a real auth preflight and fail-fast evidence",
+        "manual evidence and templates are written with 0600 permissions",
+        "manual evidence ignored by git and npm",
+        "docs/project operating state ignored by git and npm",
+        "manual evidence sanitizes previews with core/secrets.py",
+        "manual review gate requires explicit human approval",
+        "manual review gate rejects evidence/review with secrets",
+        "manual review gate does not create templates from evidence with secrets",
+        "manual review gate requires a current preflight before approval",
+        "manual review report shows weak or repeated human notes",
+        "manual review gate requires the correct worktree/installed source",
+        "manual review gate binds evidence_file to the validated JSON",
+        "plugin_surface.sha256 is required in human review, not frozen in docs",
+        "manual review gate validates case metadata against the current matrix",
+        "manual review gate validates review metadata against the current matrix",
+        "manual review gate validates coverage maps against the current matrix",
+        "manual/preflight npm scripts aligned",
+        "prepublish:prepare generates manual evidence before the human review",
+        "prepublish validates already reviewed manual evidence without regenerating it",
+        "matrix documents dry packaging",
+        "plugin details documents the human displayName",
+        "official docs revalidated 2026-08-15",
+        "release readiness keeps human and external pending items",
+        "human review runbook documents criteria and blockers",
     ]
 
 
 def check_human_contracts() -> list[str]:
-    """Verifica contratos prompt-level de trato humano y honestidad operativa."""
+    """Check prompt-level contracts for human treatment and operational honesty."""
     command_names = [
         "_composicion",
         "alfred",
@@ -3289,7 +3326,7 @@ def check_human_contracts() -> list[str]:
             ("Gate развёртывания ВСЕГДА интерактивный", commands["ship"]),
             ("НИКОГДА не утверждай автоматически развёртывание", commands["ship"]),
             ("НЕ помечай UAT как одобренную без явного указания пользователя", commands["uat"]),
-            ("`/alfred-dev:verify aprobado`", commands["uat"]),
+            ("`/alfred-dev:uat aprobado`", commands["uat"]),
         ],
         "operational honesty": [
             ("Операционная честность и запрет имитации", commands["_composicion"]),
@@ -3340,23 +3377,23 @@ def check_human_contracts() -> list[str]:
     for name in helper_wrappers:
         text_norm = commands_norm[name]
         if "helper" not in text_norm and "alfred-continuity.py" not in commands[name]:
-            missing.append(f"helper-first {name}: falta helper")
+            missing.append(f"helper-first {name}: helper is missing")
         if not any(marker in text_norm for marker in final_markers):
-            missing.append(f"helper-first {name}: falta regla de salida final sin reenvolver")
+            missing.append(f"helper-first {name}: final output rule without rewrapping is missing")
 
     if "Не говори" not in commands["_composicion"] or "проверяемый следующий шаг" not in commands["alfred"]:
-        missing.append("humanidad: falta contrato antifingimiento central")
+        missing.append("humanity: central anti-pretending contract is missing")
     if "Не имитируй подтвержден" not in alfred_agent:
-        missing.append("humanidad: falta contrato antifingimiento en agente Alfred")
+        missing.append("humanity: anti-pretending contract is missing in the Alfred agent")
 
     if missing:
-        _fail("Contratos de humanidad incompletos: " + "; ".join(missing))
+        _fail("Humanity contracts incomplete: " + "; ".join(missing))
 
     return [
-        "AskUserQuestion limitado a ambigüedad real y gates humanas",
-        "helpers operativos no duplican ni reenvuelven salida",
-        "UAT exige indicación humana explícita",
-        "antifingimiento centralizado en comandos y agente Alfred",
+        "AskUserQuestion limited to real ambiguity and human gates",
+        "operating helpers do not duplicate or rewrap output",
+        "UAT requires explicit human instruction",
+        "anti-pretending centralized in commands and the Alfred agent",
     ]
 
 
@@ -3427,13 +3464,13 @@ def check_external_contracts() -> list[str]:
             if needle not in haystack:
                 missing.append(f"{group}: {needle}")
     if missing:
-        _fail("Contratos externos incompletos: " + "; ".join(missing))
+        _fail("External contracts incomplete: " + "; ".join(missing))
 
     return [
-        "Docker/SonarQube pide permiso y documenta omisiones",
-        "sync-github mantiene GitHub como espejo seguro",
-        "CTO confirma coste y no modifica ficheros",
-        "ship mantiene deploy con gate humana",
+        "Docker/SonarQube asks for permission and documents skips",
+        "sync-github keeps GitHub as a safe mirror",
+        "CTO confirms cost and does not modify files",
+        "ship keeps deploy behind a human gate",
     ]
 
 
@@ -3449,7 +3486,7 @@ def run_command(name: str, command: list[str], timeout: int = 120) -> str:
     )
     if result.returncode != 0:
         raise AuditError(
-            f"{name} fallo con codigo {result.returncode}\n{result.stdout}"
+            f"{name} failed with code {result.returncode}\n{result.stdout}"
         )
     return result.stdout
 
@@ -3473,7 +3510,7 @@ def _materialized_alfred_alias_bytes(*, invocable: bool = True) -> bytes:
 def check_installed_cache_freshness() -> list[str]:
     if not INSTALLED_PLUGIN_DIR.is_dir():
         _fail(
-            "No existe la cache instalada 0.7.0 de Claude. Refrescala con:\n"
+            "The installed Claude 0.7.0 cache does not exist. Refresh it with:\n"
             "claude plugin marketplace remove alfred-dev --scope user\n"
             "claude plugin marketplace add \"$PWD\" --scope user\n"
             "claude plugin uninstall alfred-dev@alfred-dev --scope user\n"
@@ -3498,8 +3535,8 @@ def check_installed_cache_freshness() -> list[str]:
         if drifted:
             details.append("drifted=" + ", ".join(drifted[:12]))
         _fail(
-            "La cache instalada de Claude no coincide con el worktree auditado "
-            f"({'; '.join(details)}). Refrescala con:\n"
+            "The installed Claude cache does not match the audited worktree "
+            f"({'; '.join(details)}). Refresh it with:\n"
             "claude plugin marketplace remove alfred-dev --scope user\n"
             "claude plugin marketplace add \"$PWD\" --scope user\n"
             "claude plugin uninstall alfred-dev@alfred-dev --scope user\n"
@@ -3507,7 +3544,7 @@ def check_installed_cache_freshness() -> list[str]:
         )
 
     return [
-        "cache instalada 0.7.0 completa y coincide con el worktree"
+        "installed 0.7.0 cache is complete and matches the worktree"
     ]
 
 
@@ -3534,7 +3571,7 @@ def _run_continuity_raw(project_dir: Path, *args: str, timeout: int = 60) -> sub
 def _complete_quick_session(project_dir: Path) -> None:
     from core.orchestrator import advance_phase, create_session, save_state
 
-    session = create_session("quick", "Ajustar copy login")
+    session = create_session("quick", "Adjust login copy")
     while session["fase_actual"] != "completado":
         session = advance_phase(session, resultado="aprobado", artefactos=[])
     save_state(session, str(project_dir / ".claude" / "alfred-dev-state.json"))
@@ -3554,25 +3591,25 @@ def check_continuity_smoke() -> list[str]:
         sync_empty.mkdir()
         sync_fail = _run_continuity_raw(sync_empty, "sync-github", str(sync_empty), "--raw", "owner/repo")
         if sync_fail.returncode == 0:
-            _fail("sync-github deberia fallar sin tareas sincronizables preparadas para GitHub")
+            _fail("sync-github should fail without syncable tasks prepared for GitHub")
         sync_error = sync_fail.stderr + sync_fail.stdout
         if (
             "Нет задач с идентификатором [T-XXX]" not in sync_error
             and "В docs/project/kanban/ нет задач" not in sync_error
         ):
-            _fail(f"sync-github no fallo de forma explicita sin tareas: {sync_error}")
+            _fail(f"sync-github did not fail explicitly without tasks: {sync_error}")
 
         next_initial = json.loads(_run_continuity(project, "next", str(project), "--json"))
         if next_initial.get("command") != "map-codebase":
-            _fail(f"next inicial esperaba map-codebase, obtuvo {next_initial}")
+            _fail(f"initial next expected map-codebase, got {next_initial}")
 
         mapped = json.loads(
             _run_continuity(project, "map-codebase", str(project), "--raw", "login", "--json")
         )
         if mapped.get("recommended_command") != "discuss":
-            _fail(f"map-codebase esperaba recommend discuss, obtuvo {mapped}")
+            _fail(f"map-codebase expected to recommend discuss, got {mapped}")
         if not (project / "docs" / "project" / "codebase-map.md").exists():
-            _fail("map-codebase no creo docs/project/codebase-map.md")
+            _fail("map-codebase did not create docs/project/codebase-map.md")
 
         from core.continuity import save_prefetch_result
 
@@ -3594,25 +3631,25 @@ def check_continuity_smoke() -> list[str]:
             "map-codebase",
         )
         if "## Карта brownfield составлена" not in consumed:
-            _fail("consume-prefetch no devolvio la respuesta helper-first esperada")
+            _fail("consume-prefetch did not return the expected helper-first response")
         if (project / ".claude" / "alfred-prefetch.json").exists():
-            _fail("consume-prefetch no limpio el prefetch transitorio")
+            _fail("consume-prefetch did not clean the transient prefetch")
 
         discussed = json.loads(
             _run_continuity(project, "discuss", str(project), "--raw", "ajustar login", "--json")
         )
         if discussed.get("recommended_command") not in {"feature", "quick", "fix", "spike"}:
-            _fail(f"discuss devolvio recomendacion inesperada: {discussed}")
+            _fail(f"discuss returned an unexpected recommendation: {discussed}")
 
         quick = _run_continuity(project, "quick", str(project), "--raw", "cambiar CTA")
-        if "## Quick подготовлен" not in quick or "/alfred-dev:verify" not in quick:
-            _fail("quick no devolvio resumen humano con siguiente verify")
+        if "## Quick подготовлен" not in quick or "/alfred-dev:uat" not in quick:
+            _fail("quick did not return a human summary with the next verify")
 
         handoff = json.loads(_run_continuity(project, "write-handoff", str(project)))
         handoff_path = project / ".claude" / "alfred-handoff.json"
         handoff_payload = json.loads(handoff_path.read_text(encoding="utf-8")) if handoff_path.exists() else {}
         if handoff_payload.get("command") != "quick" or not Path(handoff.get("json_path", "")).exists():
-            _fail(f"write-handoff no persistio handoff de quick: {handoff}")
+            _fail(f"write-handoff did not persist the quick handoff: {handoff}")
 
         bypass = json.loads(
             _run_continuity(
@@ -3624,19 +3661,19 @@ def check_continuity_smoke() -> list[str]:
             )
         )
         if bypass.get("command") != "/alfred-dev:status" or not Path(bypass.get("bypass_path", "")).exists():
-            _fail(f"allow-stop-once no armo bypass valido: {bypass}")
+            _fail(f"allow-stop-once did not arm a valid bypass: {bypass}")
 
         status = _run_continuity(project, "status", str(project))
         if "## Рабочее состояние Alfred Dev" not in status:
-            _fail("status no devolvio resumen operativo")
+            _fail("status did not return an operating summary")
 
         pause = _run_continuity(project, "pause", str(project))
         if "## Сессия на паузе" not in pause:
-            _fail("pause no dejo salida humana de pausa")
+            _fail("pause did not leave a human pause output")
 
         resume = _run_continuity(project, "resume", str(project))
         if "## Сессия возобновлена" not in resume:
-            _fail("resume no dejo salida humana de reanudacion")
+            _fail("resume did not leave a human resume output")
 
         for command, expected in [
             ("progress", "## Рабочая сводка проекта"),
@@ -3647,17 +3684,17 @@ def check_continuity_smoke() -> list[str]:
         ]:
             output = _run_continuity(project, command, str(project))
             if expected not in output:
-                _fail(f"{command} no contiene {expected!r}")
+                _fail(f"{command} does not contain {expected!r}")
 
         search = _run_continuity(project, "search", str(project), "--raw", "login")
         if "## Результаты для `login`" not in search:
-            _fail("search no devolvio resultados humanos")
+            _fail("search did not return human results")
 
         kanban = project / "docs" / "project" / "kanban"
         kanban.mkdir(parents=True, exist_ok=True)
         (kanban / "backlog.md").write_text(
             "# Backlog\n\n"
-            "### [T-010] Validar login con /alfred-dev:verify\n\n"
+            "### [T-010] Validar login con /alfred-dev:uat\n\n"
             "- **Agente:** alfred:verify\n",
             encoding="utf-8",
         )
@@ -3665,7 +3702,7 @@ def check_continuity_smoke() -> list[str]:
             (kanban / f"{lane}.md").write_text(f"# {lane.title()}\n", encoding="utf-8")
         normalize = _run_continuity(project, "normalize-kanban", str(project))
         if "## Нормализация kanban" not in normalize or "Исправлено задач" not in normalize:
-            _fail("normalize-kanban no devolvio resumen de normalizacion")
+            _fail("normalize-kanban did not return a normalization summary")
 
         memory_started = False
         try:
@@ -3681,9 +3718,9 @@ def check_continuity_smoke() -> list[str]:
             )
             memory_started = True
             if not str(memory_ui.get("url", "")).startswith("http://127.0.0.1:"):
-                _fail(f"memory-ui no devolvio URL local valida: {memory_ui}")
+                _fail(f"memory-ui did not return a valid local URL: {memory_ui}")
             if not (project / ".claude" / "alfred-memory-ui.json").exists():
-                _fail("memory-ui no persistio .claude/alfred-memory-ui.json")
+                _fail("memory-ui did not persist .claude/alfred-memory-ui.json")
         finally:
             if memory_started:
                 _run_continuity(project, "memory-ui", str(project), "--stop", "--json", timeout=90)
@@ -3692,12 +3729,12 @@ def check_continuity_smoke() -> list[str]:
         verify = _run_continuity(project, "verify", str(project), "--raw", "aprobado")
         uat_path = project / ".claude" / "alfred-uat.json"
         uat = json.loads(uat_path.read_text(encoding="utf-8")) if uat_path.exists() else {}
-        if (
-            "Verificación manual / UAT" not in verify
-            or "aprobada" not in verify.lower()
-            or uat.get("status") != "approved"
-        ):
-            _fail("verify aprobado no registro UAT humana")
+        verify_lower = verify.lower()
+        # core/continuity.py may still render the Spanish heading or the Russian one.
+        has_uat_heading = "Verificación manual / UAT" in verify or "Ручная проверка / UAT" in verify
+        is_approved = "aprobada" in verify_lower or "одобрен" in verify_lower
+        if not has_uat_heading or not is_approved or uat.get("status") != "approved":
+            _fail("verify aprobado did not record a human UAT")
 
     return [
         "next/map-codebase/discuss/quick",
@@ -3735,7 +3772,7 @@ class _MCPJsonlClient:
             self._proc.wait(timeout=5)
         if self._proc.returncode not in {0, None}:
             stderr = self._proc.stderr.read() if self._proc.stderr else ""
-            _fail(f"Servidor MCP termino con codigo {self._proc.returncode}: {stderr}")
+            _fail(f"MCP server exited with code {self._proc.returncode}: {stderr}")
 
     def notify(self, method: str, params: dict | None = None) -> None:
         assert self._proc.stdin is not None
@@ -3758,16 +3795,16 @@ class _MCPJsonlClient:
         events = self._selector.select(timeout=10)
         if not events:
             stderr = self._proc.stderr.read() if self._proc.stderr else ""
-            _fail(f"Timeout esperando respuesta MCP para {method}: {stderr}")
+            _fail(f"Timeout waiting for MCP response to {method}: {stderr}")
         line = self._proc.stdout.readline()  # type: ignore[union-attr]
         if not line:
             stderr = self._proc.stderr.read() if self._proc.stderr else ""
-            _fail(f"Servidor MCP cerro stdout durante {method}: {stderr}")
+            _fail(f"MCP server closed stdout during {method}: {stderr}")
         response = json.loads(line)
         if response.get("id") != request_id:
-            _fail(f"Respuesta MCP con id inesperado: {response}")
+            _fail(f"MCP response with unexpected id: {response}")
         if "error" in response:
-            _fail(f"Error MCP en {method}: {response['error']}")
+            _fail(f"MCP error in {method}: {response['error']}")
         return response["result"]
 
     def call_tool(self, name: str, arguments: dict | None = None) -> dict:
@@ -3776,10 +3813,10 @@ class _MCPJsonlClient:
             {"name": name, "arguments": arguments or {}},
         )
         if result.get("isError"):
-            _fail(f"{name} devolvio isError: {result}")
+            _fail(f"{name} returned isError: {result}")
         content = result.get("content") or []
         if not content or content[0].get("type") != "text":
-            _fail(f"{name} no devolvio contenido text: {result}")
+            _fail(f"{name} did not return text content: {result}")
         return json.loads(content[0]["text"])
 
 
@@ -3807,13 +3844,13 @@ def check_mcp_tools_smoke() -> list[str]:
                 },
             )
             if init.get("serverInfo", {}).get("name") != "alfred-memory":
-                _fail(f"initialize inesperado: {init}")
+                _fail(f"unexpected initialize: {init}")
             client.notify("notifications/initialized")
 
             tools = client.request("tools/list")["tools"]
             tool_names = [tool["name"] for tool in tools]
             if len(tool_names) != 15:
-                _fail(f"tools/list esperaba 15 herramientas, obtuvo {tool_names}")
+                _fail(f"tools/list expected 15 tools, got {tool_names}")
             tool_by_name = {tool["name"]: tool for tool in tools}
             expected_limits = {
                 "memory_search": 100,
@@ -3824,7 +3861,7 @@ def check_mcp_tools_smoke() -> list[str]:
                 schema = tool_by_name[tool_name]["inputSchema"]["properties"]["limit"]
                 if schema.get("minimum") != 1 or schema.get("maximum") != maximum:
                     _fail(
-                        f"{tool_name} no declara limites MCP defensivos: {schema}"
+                        f"{tool_name} does not declare defensive MCP limits: {schema}"
                     )
             event_schema = tool_by_name["memory_log_event"]["inputSchema"]["properties"]
             expected_event_bounds = {
@@ -3835,9 +3872,9 @@ def check_mcp_tools_smoke() -> list[str]:
             }
             for field, maximum in expected_event_bounds.items():
                 if event_schema[field].get("maxLength") != maximum:
-                    _fail(f"memory_log_event no declara maxLength para {field}: {event_schema[field]}")
+                    _fail(f"memory_log_event does not declare maxLength for {field}: {event_schema[field]}")
             if "preview" not in event_schema["payload"].get("description", ""):
-                _fail("memory_log_event no documenta preview para payload enorme")
+                _fail("memory_log_event does not document preview for a huge payload")
 
             started = client.call_tool(
                 "memory_manage_iteration",
@@ -3845,22 +3882,22 @@ def check_mcp_tools_smoke() -> list[str]:
             )
             iteration_id = started.get("iteration_id")
             if not iteration_id:
-                _fail(f"memory_manage_iteration no devolvio iteration_id: {started}")
+                _fail(f"memory_manage_iteration did not return iteration_id: {started}")
 
             dec1 = client.call_tool(
                 "memory_log_decision",
                 {
-                    "title": "Cache de login",
+                    "title": "Login cache",
                     "chosen": "Redis",
-                    "context": "Login con lecturas frecuentes",
+                    "context": "Login with frequent reads",
                     "tags": ["release-audit"],
                 },
             )["decision_id"]
             dec2 = client.call_tool(
                 "memory_log_decision",
                 {
-                    "title": "Sesion de usuario",
-                    "chosen": "Cookie segura",
+                    "title": "User session",
+                    "chosen": "Secure cookie",
                     "tags": ["release-audit"],
                 },
             )["decision_id"]
@@ -3887,8 +3924,8 @@ def check_mcp_tools_smoke() -> list[str]:
                 {
                     "event_type": "gate_passed",
                     "phase": "calidad",
-                    "summary": "Redis cache validada",
-                    "payload": {"note": "redis cache validada"},
+                    "summary": "Redis cache validated",
+                    "payload": {"note": "redis cache validated"},
                 },
             )
             large_event = client.call_tool(
@@ -3896,38 +3933,38 @@ def check_mcp_tools_smoke() -> list[str]:
                 {
                     "event_type": "custom",
                     "phase": "calidad",
-                    "summary": "evento MCP grande",
+                    "summary": "large MCP event",
                     "content": "x" * 9000,
                     "payload": {"blob": "y" * 9000},
                 },
             )
             if not large_event.get("content_truncated") or not large_event.get("payload_truncated"):
-                _fail(f"memory_log_event no recorto content/payload enormes: {large_event}")
+                _fail(f"memory_log_event did not truncate huge content/payload: {large_event}")
 
             search = client.call_tool("memory_search", {"query": "Redis", "limit": 10})
             if search.get("total", 0) < 1:
-                _fail(f"memory_search no encontro datos sembrados: {search}")
+                _fail(f"memory_search did not find seeded data: {search}")
             capped_search = client.call_tool(
                 "memory_search",
                 {"query": "Redis", "limit": 999999},
             )
             if capped_search.get("applied_limit") != 100:
-                _fail(f"memory_search no recorto limit abusivo: {capped_search}")
+                _fail(f"memory_search did not cap an abusive limit: {capped_search}")
             if client.call_tool("memory_get_iteration", {"id": iteration_id}).get("iteration") is None:
-                _fail("memory_get_iteration no devolvio la iteracion creada")
+                _fail("memory_get_iteration did not return the created iteration")
             if client.call_tool("memory_get_timeline", {"iteration_id": iteration_id}).get("total", 0) < 1:
-                _fail("memory_get_timeline no devolvio eventos")
+                _fail("memory_get_timeline did not return events")
             if client.call_tool("memory_get_decisions", {"tags": ["release-audit"]}).get("total", 0) < 2:
-                _fail("memory_get_decisions no devolvio decisiones sembradas")
+                _fail("memory_get_decisions did not return seeded decisions")
             if client.call_tool("memory_stats").get("total_decisions", 0) < 2:
-                _fail("memory_stats no conto decisiones")
+                _fail("memory_stats did not count decisions")
             if client.call_tool("memory_health").get("status") != "healthy":
-                _fail("memory_health no devolvio healthy")
+                _fail("memory_health did not return healthy")
             export_path = str(project / "DECISIONS.md")
             if client.call_tool("memory_export", {"format": "markdown", "path": export_path}).get("exported", 0) < 2:
-                _fail("memory_export no exporto decisiones")
+                _fail("memory_export did not export decisions")
             if not Path(export_path).exists():
-                _fail("memory_export no creo DECISIONS.md")
+                _fail("memory_export did not create DECISIONS.md")
             blocked_export = client.request(
                 "tools/call",
                 {
@@ -3939,23 +3976,23 @@ def check_mcp_tools_smoke() -> list[str]:
                 },
             )
             if not blocked_export.get("isError"):
-                _fail(f"memory_export permitio escribir fuera del proyecto: {blocked_export}")
+                _fail(f"memory_export allowed writing outside the project: {blocked_export}")
             if client.call_tool("memory_import", {"source": "adr", "path": str(adr_dir)}).get("imported") != 1:
-                _fail("memory_import adr no importo el ADR fixture")
+                _fail("memory_import adr did not import the ADR fixture")
             purge = client.call_tool("memory_purge", {"retention_days": 1})
             if "purged_events" not in purge:
-                _fail("memory_purge no devolvio purged_events")
+                _fail("memory_purge did not return purged_events")
             client.call_tool("memory_manage_iteration", {"action": "complete", "iteration_id": iteration_id})
         finally:
             client.close()
 
     return [
-        "15 tools listadas",
-        "15 tools invocadas con datos reales",
-        "limites MCP defensivos en schemas y handlers",
-        "memory_log_event recorta payload/content MCP enormes",
-        "rutas MCP acotadas al proyecto",
-        "SQLite temporal saludable",
+        "15 tools listed",
+        "15 tools invoked with real data",
+        "defensive MCP limits in schemas and handlers",
+        "memory_log_event truncates huge MCP payload/content",
+        "MCP paths bounded to the project",
+        "temporary SQLite healthy",
     ]
 
 
@@ -3988,28 +4025,28 @@ def check_external(args: argparse.Namespace) -> list[str]:
             ],
             timeout=90,
         )
-        for needle in ("Alfred Dev (alfred-dev) 0.7.0", "Skills (11)", "Agents (10)", "MCP servers (1)", "Status: ✔ Connected"):
+        for needle in (f"Alfred Dev (alfred-dev) {VERSION}", "Skills (11)", "Agents (10)", "MCP servers (1)", "Status: ✔ Connected"):
             if needle not in details:
-                _fail(f"Smoke Claude no contiene {needle!r}")
-        ok.append("Claude CLI valida inventario y MCP")
+                _fail(f"Claude smoke does not contain {needle!r}")
+        ok.append("Claude CLI validates inventory and MCP")
         discovery = run_command(
             "claude interactive /alfred discovery",
             [sys.executable, str(ROOT / "scripts" / "claude_command_discovery.py")],
             timeout=35,
         )
         if "ok claude interactive command discovery" not in discovery:
-            _fail("Smoke Claude no confirmo descubrimiento interactivo de /alfred")
+            _fail("Claude smoke did not confirm interactive discovery of /alfred")
         if "FAIL claude-command-discovery" in discovery:
-            _fail("Smoke Claude sigue mostrando fallo de descubrimiento interactivo de /alfred")
-        ok.append("Claude CLI descubre /alfred en selector interactivo")
+            _fail("Claude smoke still shows an interactive /alfred discovery failure")
+        ok.append("Claude CLI discovers /alfred in the interactive picker")
 
     if args.with_site:
         run_command("npm site check/build", ["sh", "-c", "npm --prefix site run check && npm --prefix site run build"], timeout=180)
         ok.append("site check/build")
 
     if args.with_tests:
-        run_command("pytest completo", ["python3", "-m", "pytest", "tests/", "-q"], timeout=300)
-        ok.append("pytest completo")
+        run_command("full pytest", ["python3", "-m", "pytest", "tests/", "-q"], timeout=300)
+        ok.append("full pytest")
 
     if args.with_syntax:
         run_command(
@@ -4032,15 +4069,15 @@ def check_external(args: argparse.Namespace) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--with-claude", action="store_true", help="Ejecuta smokes con claude plugin/mcp.")
-    parser.add_argument("--with-site", action="store_true", help="Ejecuta npm --prefix site run check/build.")
-    parser.add_argument("--with-tests", action="store_true", help="Ejecuta python3 -m pytest tests/ -q.")
-    parser.add_argument("--with-syntax", action="store_true", help="Ejecuta bash -n, json.tool y git diff --check.")
-    parser.add_argument("--with-continuity", action="store_true", help="Ejecuta smoke operativo de helpers en fixture temporal.")
-    parser.add_argument("--with-mcp-tools", action="store_true", help="Invoca las 15 herramientas MCP en una SQLite temporal.")
-    parser.add_argument("--with-external-contracts", action="store_true", help="Verifica prompts seguros para Docker, GitHub, CTO y deploy.")
-    parser.add_argument("--with-human-contracts", action="store_true", help="Verifica trato humano, AskUserQuestion, UAT y antifingimiento.")
-    parser.add_argument("--full", action="store_true", help="Activa todos los smokes externos.")
+    parser.add_argument("--with-claude", action="store_true", help="Run smokes with claude plugin/mcp.")
+    parser.add_argument("--with-site", action="store_true", help="Run npm --prefix site run check/build.")
+    parser.add_argument("--with-tests", action="store_true", help="Run python3 -m pytest tests/ -q.")
+    parser.add_argument("--with-syntax", action="store_true", help="Run bash -n, json.tool and git diff --check.")
+    parser.add_argument("--with-continuity", action="store_true", help="Run the operating helper smoke in a temporary fixture.")
+    parser.add_argument("--with-mcp-tools", action="store_true", help="Invoke the 15 MCP tools on a temporary SQLite.")
+    parser.add_argument("--with-external-contracts", action="store_true", help="Check safe prompts for Docker, GitHub, CTO and deploy.")
+    parser.add_argument("--with-human-contracts", action="store_true", help="Check human treatment, AskUserQuestion, UAT and anti-pretending.")
+    parser.add_argument("--full", action="store_true", help="Enable all external smokes.")
     args = parser.parse_args(argv)
 
     if args.full:
@@ -4050,10 +4087,10 @@ def main(argv: list[str] | None = None) -> int:
         args.with_human_contracts = True
 
     checks = [
-        ("versionado", check_versions),
-        ("inventario", check_inventory),
-        ("catalogo", check_command_catalog),
-        ("comandos", check_command_execution_contracts),
+        ("versions", check_versions),
+        ("inventory", check_inventory),
+        ("catalog", check_command_catalog),
+        ("commands", check_command_execution_contracts),
         ("claims", check_public_claims),
         ("config", check_config_contracts),
         ("flows", check_flow_gate_claims),

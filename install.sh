@@ -1,30 +1,30 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# Alfred Dev -- script de instalacion para Claude Code
+# Alfred Dev -- install script for Claude Code
 #
-# Uso:
+# Usage:
 #   curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash
 #   bash ./install.sh
 #
-# Que hace:
-#   1. Verifica que Claude Code esta instalado
-#   2. Registra globalmente en Claude Code la fuente GitHub del plugin
-#   3. Instala el plugin con claude plugin install
-#   4. No pisa ~/.claude/skills ni instala alias global /alfred
-#   5. Listo para usar: /alfred-dev:alfred
+# What it does:
+#   1. Checks that Claude Code is installed
+#   2. Registers the plugin GitHub source globally in Claude Code
+#   3. Installs the plugin with claude plugin install
+#   4. Does not touch ~/.claude/skills and does not install a global /alfred alias
+#   5. Ready to use: /alfred-dev:alfred
 #
-# El script delega toda la gestion en la CLI nativa de Claude Code
-# (claude plugin marketplace / claude plugin install) para registrar una
-# fuente GitHub personalizada, no oficial, y mantener compatibilidad futura.
+# The script delegates all management to the native Claude Code CLI
+# (claude plugin marketplace / claude plugin install). It registers a
+# custom, unofficial GitHub source and stays compatible with future versions.
 # ---------------------------------------------------------------------------
 
 set -euo pipefail
 
 REPO="grigoriev/alfred-dev"
 PLUGIN_NAME="alfred-dev"
-VERSION="0.7.0"
+VERSION="0.7.1"
 
-# -- Colores ----------------------------------------------------------------
+# -- Colors -----------------------------------------------------------------
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -114,14 +114,14 @@ PYEOF
 }
 
 normalize_to_user_scope_installation() {
-    # Alfred Dev solo soporta instalacion global de usuario. Si alguien lo
-    # instalo antes en local/project, limpiamos ese rastro en el contexto actual
-    # antes de reinstalar con --scope user.
+    # Alfred Dev supports only a global user install. If someone installed it
+    # before in local/project scope, clean up that trace in the current context
+    # before reinstalling with --scope user.
     claude plugin uninstall "${PLUGIN_NAME}@${PLUGIN_NAME}" --scope local >/dev/null 2>&1 || true
     claude plugin uninstall "${PLUGIN_NAME}@${PLUGIN_NAME}" --scope project >/dev/null 2>&1 || true
     claude plugin marketplace remove "${PLUGIN_NAME}" --scope local >/dev/null 2>&1 || true
     claude plugin marketplace remove "${PLUGIN_NAME}" --scope project >/dev/null 2>&1 || true
-    ok "Scopes local/project normalizados; Alfred se instalara como usuario global"
+    ok "Scopes local/project нормализованы; Alfred будет установлен глобально для пользователя"
 }
 
 remove_stale_user_marketplace_checkout() {
@@ -129,18 +129,18 @@ remove_stale_user_marketplace_checkout() {
 
     if [[ -d "${marketplace_dir}" ]]; then
         rm -rf "${marketplace_dir}"
-        ok "Checkout local del marketplace limpiado para evitar cache obsoleta"
+        ok "Локальный checkout marketplace очищен, чтобы не было устаревшего cache"
     fi
 }
 
 refresh_user_marketplace() {
-    # Claude Code puede conservar un clon local obsoleto del marketplace aunque
-    # 'plugin install' termine correctamente. Forzamos refresh antes de instalar
-    # para que cache/alfred-dev materialice la version publicada actual.
+    # Claude Code can keep a stale local clone of the marketplace even when
+    # 'plugin install' succeeds. Force a refresh before install so that
+    # cache/alfred-dev gets the current published version.
     if claude plugin marketplace update "${PLUGIN_NAME}" 2>&1; then
-        ok "Marketplace local actualizado"
+        ok "Локальный marketplace обновлён"
     else
-        info "No se pudo ejecutar 'claude plugin marketplace update'; continuo con el checkout recien registrado"
+        info "Не удалось выполнить 'claude plugin marketplace update'; продолжаю с только что зарегистрированным checkout"
     fi
 }
 
@@ -150,8 +150,8 @@ verify_user_scope_installation() {
     local verify_output
 
     if ! list_json=$(claude plugin list --json 2>/dev/null); then
-        error "No se pudo confirmar el scope global con 'claude plugin list --json'"
-        error "Alfred Dev debe quedar instalado como scope user."
+        error "Не удалось подтвердить глобальный scope через 'claude plugin list --json'"
+        error "Alfred Dev должен быть установлен со scope user."
         return 1
     fi
 
@@ -166,16 +166,16 @@ plugin_key = sys.argv[1]
 try:
     entries = json.loads(os.environ.get("CLAUDE_PLUGIN_LIST_JSON", ""))
 except json.JSONDecodeError as exc:
-    print(f"JSON invalido en claude plugin list --json: {exc}", file=sys.stderr)
+    print(f"Некорректный JSON в claude plugin list --json: {exc}", file=sys.stderr)
     sys.exit(1)
 
 if not isinstance(entries, list):
-    print("claude plugin list --json no devolvio una lista", file=sys.stderr)
+    print("claude plugin list --json вернул не список", file=sys.stderr)
     sys.exit(1)
 
 matches = [entry for entry in entries if isinstance(entry, dict) and entry.get("id") == plugin_key]
 if not matches:
-    print(f"No aparece {plugin_key} en claude plugin list --json", file=sys.stderr)
+    print(f"{plugin_key} нет в claude plugin list --json", file=sys.stderr)
     sys.exit(1)
 
 active_non_user = [
@@ -187,7 +187,7 @@ if active_non_user:
         f"scope={entry.get('scope', 'desconocido')} projectPath={entry.get('projectPath', '')}"
         for entry in active_non_user
     )
-    print(f"Hay instalaciones activas no globales de {plugin_key}: {details}", file=sys.stderr)
+    print(f"Есть активные неглобальные установки {plugin_key}: {details}", file=sys.stderr)
     sys.exit(1)
 
 enabled_user = [
@@ -196,7 +196,7 @@ enabled_user = [
 ]
 if not enabled_user:
     scopes = ", ".join(str(entry.get("scope", "desconocido")) for entry in matches)
-    print(f"{plugin_key} existe, pero no hay entrada enabled con scope user. Scopes vistos: {scopes}", file=sys.stderr)
+    print(f"{plugin_key} есть, но нет записи enabled со scope user. Найденные scopes: {scopes}", file=sys.stderr)
     sys.exit(1)
 
 stale_non_user = [
@@ -208,13 +208,13 @@ if stale_non_user:
         f"scope={entry.get('scope', 'desconocido')} projectPath={entry.get('projectPath', '')}"
         for entry in stale_non_user
     )
-    print(f"AVISO: quedan entradas antiguas no activas de {plugin_key}: {details}")
+    print(f"ВНИМАНИЕ: остались старые неактивные записи {plugin_key}: {details}")
 PYEOF
     ); then
         if [[ -n "${verify_output}" ]]; then
             info "${verify_output}"
         fi
-        ok "Instalacion global de usuario confirmada (--scope user)"
+        ok "Глобальная установка для пользователя подтверждена (--scope user)"
         return 0
     fi
 
@@ -222,17 +222,17 @@ PYEOF
     return 1
 }
 
-# -- Verificaciones ---------------------------------------------------------
+# -- Checks ----------------------------------------------------------------
 
-# Python 3.10+ es necesario para los hooks y el core del plugin.
-# En macOS, /usr/bin/python3 suele ser 3.9 (Apple). Los usuarios pueden
-# tener 3.10+ via Homebrew, pyenv o instalador oficial como python3.13,
-# python3.12, etc. Buscamos la mejor version disponible.
+# The plugin hooks and core need Python 3.10+.
+# On macOS, /usr/bin/python3 is often 3.9 (Apple). Users can have
+# 3.10+ via Homebrew, pyenv or the official installer as python3.13,
+# python3.12, etc. Find the best available version.
 
 PYTHON_CMD=""
 PYTHON_VERSION=""
 
-# Buscar entre los candidatos mas comunes en orden descendente
+# Search the most common candidates in descending order
 for candidate in python3 python3.13 python3.12 python3.11 python3.10; do
     if command -v "$candidate" &>/dev/null; then
         ver=$("$candidate" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "0.0")
@@ -247,7 +247,7 @@ for candidate in python3 python3.13 python3.12 python3.11 python3.10; do
 done
 
 if [[ -z "$PYTHON_CMD" ]]; then
-    # Ultimo intento: Homebrew en las rutas habituales de macOS
+    # Last attempt: Homebrew in the usual macOS paths
     for brew_path in /opt/homebrew/bin /usr/local/bin; do
         for candidate in python3.13 python3.12 python3.11 python3.10 python3; do
             full="${brew_path}/${candidate}"
@@ -266,56 +266,56 @@ if [[ -z "$PYTHON_CMD" ]]; then
 fi
 
 if [[ -z "$PYTHON_CMD" ]]; then
-    error "No se encontro Python 3.10 o superior"
-    error "Se buscaron: python3, python3.13, python3.12, python3.11, python3.10"
-    error "Tambien en /opt/homebrew/bin y /usr/local/bin"
+    error "Python 3.10 или новее не найден"
+    error "Искали: python3, python3.13, python3.12, python3.11, python3.10"
+    error "Также в /opt/homebrew/bin и /usr/local/bin"
     error ""
-    error "Instala Python desde https://www.python.org/downloads/"
-    error "o con Homebrew: brew install python@3.12"
+    error "Установи Python с https://www.python.org/downloads/"
+    error "или через Homebrew: brew install python@3.12"
     exit 1
 fi
 
-ok "Python $PYTHON_VERSION detectado ($PYTHON_CMD)"
+ok "Найден Python $PYTHON_VERSION ($PYTHON_CMD)"
 
-# Si python3 del PATH no es el que encontramos, avisar al usuario
+# If python3 in PATH is not the one we found, warn the user
 DEFAULT_PY_VER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "0.0")
 if [[ "$PYTHON_CMD" != "python3" ]] && [[ "$DEFAULT_PY_VER" != "$PYTHON_VERSION" ]]; then
-    info "Nota: 'python3' en tu PATH es $DEFAULT_PY_VER (demasiado antiguo)"
-    info "Los hooks del plugin usaran '$PYTHON_CMD' en su lugar"
+    info "Примечание: 'python3' в твоём PATH это $DEFAULT_PY_VER (слишком старая версия)"
+    info "Hooks плагина будут использовать '$PYTHON_CMD' вместо него"
 fi
 
 if [[ -z "${HOME:-}" ]] || [[ ! -d "${HOME}" ]]; then
-    error "La variable HOME no esta definida o no apunta a un directorio valido"
+    error "Переменная HOME не задана или не указывает на существующий каталог"
     exit 1
 fi
 
 if [ ! -d "${HOME}/.claude" ]; then
-    error "No se encontro el directorio ~/.claude"
-    error "Asegurate de tener Claude Code instalado: https://code.claude.com/docs/en/setup"
+    error "Каталог ~/.claude не найден"
+    error "Убедись, что Claude Code установлен: https://code.claude.com/docs/en/setup"
     exit 1
 fi
 
 if ! command -v claude &>/dev/null; then
-    error "El comando 'claude' no esta disponible en el PATH"
-    error "Asegurate de tener Claude Code instalado y accesible desde la terminal"
+    error "Команды 'claude' нет в PATH"
+    error "Убедись, что Claude Code установлен и доступен из терминала"
     exit 1
 fi
 
-# -- Instalacion ------------------------------------------------------------
+# -- Install ----------------------------------------------------------------
 
 printf "\n${BOLD}Alfred Dev${NC} ${DIM}v${VERSION}${NC}\n"
-printf "${DIM}Plugin de ingenieria de software automatizada${NC}\n\n"
+printf "${DIM}Плагин автоматизированной разработки ПО${NC}\n\n"
 
-# -- 1. Registrar fuente global en Claude Code ------------------------------
-# Si ya existe, la actualizamos eliminandola primero para forzar un refresh
-# del registro global y del cache con los ficheros mas recientes del repo.
+# -- 1. Register the global source in Claude Code ---------------------------
+# If it exists, remove it first to force a refresh of the global registry
+# and the cache with the latest repo files.
 
-info "Registrando fuente GitHub global en Claude Code..."
+info "Регистрирую глобальный GitHub-источник в Claude Code..."
 normalize_to_user_scope_installation
 
-# Si existe una instalacion previa, la quitamos antes de refrescar el
-# marketplace. Esto evita estados intermedios donde el plugin sigue apuntando
-# a un marketplace ya corrupto o incompleto en disco.
+# If a previous install exists, remove it before the marketplace refresh.
+# This prevents intermediate states where the plugin still points to a
+# corrupt or incomplete marketplace on disk.
 if claude plugin list 2>/dev/null | grep -q "${PLUGIN_NAME}@${PLUGIN_NAME}"; then
     claude plugin uninstall "${PLUGIN_NAME}@${PLUGIN_NAME}" --scope user >/dev/null 2>&1 || true
 fi
@@ -326,27 +326,27 @@ fi
 remove_stale_user_marketplace_checkout
 
 if claude plugin marketplace add "${REPO}" --scope user 2>&1; then
-    ok "Fuente GitHub declarada"
+    ok "GitHub-источник объявлен"
 else
-    error "No se pudo registrar la fuente GitHub"
-    error "Verifica tu conexion a internet y que el repositorio sea accesible:"
+    error "Не удалось зарегистрировать GitHub-источник"
+    error "Проверь подключение к интернету и доступность репозитория:"
     error "  https://github.com/${REPO}"
     exit 1
 fi
 
-# Lo que vuelve global la instalacion no es una carpeta concreta, sino que
-# Claude Code deje registrada la fuente en known_marketplaces.json.
+# The install is global not because of a specific folder, but because
+# Claude Code records the source in known_marketplaces.json.
 if is_global_source_registered; then
-    ok "Fuente GitHub registrada globalmente"
+    ok "GitHub-источник зарегистрирован глобально"
 else
-    info "La CLI respondio OK, pero la fuente no quedo registrada; reintentando..."
+    info "CLI ответил OK, но источник не зарегистрирован; пробую снова..."
     claude plugin marketplace remove "${PLUGIN_NAME}" --scope user >/dev/null 2>&1 || true
     if claude plugin marketplace add "${REPO}" --scope user 2>&1 && is_global_source_registered; then
-        ok "Fuente GitHub registrada globalmente tras reintento"
+        ok "GitHub-источник зарегистрирован глобально со второй попытки"
     else
-        error "Claude Code no dejo registrada la fuente global del plugin"
-        error "Fichero esperado: ${HOME}/.claude/plugins/known_marketplaces.json"
-        error "Prueba a ejecutar manualmente:"
+        error "Claude Code не зарегистрировал глобальный источник плагина"
+        error "Ожидаемый файл: ${HOME}/.claude/plugins/known_marketplaces.json"
+        error "Попробуй выполнить вручную:"
         error "  claude plugin marketplace remove ${PLUGIN_NAME} --scope user"
         error "  claude plugin marketplace add ${REPO} --scope user"
         exit 1
@@ -355,27 +355,27 @@ fi
 
 refresh_user_marketplace
 
-# -- 2. Instalar plugin -----------------------------------------------------
+# -- 2. Install the plugin --------------------------------------------------
 
-info "Instalando plugin..."
+info "Устанавливаю плагин..."
 
 if claude plugin install "${PLUGIN_NAME}@${PLUGIN_NAME}" --scope user 2>&1; then
-    ok "Plugin instalado y habilitado"
+    ok "Плагин установлен и включён"
 else
-    error "No se pudo instalar el plugin"
-    error "Puedes intentar instalarlo manualmente:"
+    error "Не удалось установить плагин"
+    error "Можно установить его вручную:"
     error "  claude plugin marketplace add ${REPO} --scope user"
     error "  claude plugin install ${PLUGIN_NAME}@${PLUGIN_NAME} --scope user"
     exit 1
 fi
 
-info "Usa /alfred-dev:alfred o /alfred-dev:feature. No se pisa ~/.claude/skills."
+info "Используй /alfred-dev:alfred или /alfred-dev:feature. ~/.claude/skills не затрагивается."
 verify_user_scope_installation
 
-# -- 3. Parchear hooks y MCP si python3 no es 3.10+ ------------------------
-# Si el python3 por defecto del sistema es demasiado antiguo pero encontramos
-# una version compatible (python3.12, python3.11, etc.), actualizamos la
-# configuracion instalada para que hooks y el MCP usen esa version concreta.
+# -- 3. Patch hooks and MCP if python3 is not 3.10+ ------------------------
+# If the default system python3 is too old but we found a compatible
+# version (python3.12, python3.11, etc.), update the installed config
+# so that the hooks and the MCP server use that exact version.
 
 if [[ "$PYTHON_CMD" != "python3" ]]; then
     _patch_in_place() {
@@ -387,17 +387,17 @@ if [[ "$PYTHON_CMD" != "python3" ]]; then
             return 0
         fi
 
-        # macOS sed tiene sintaxis diferente para -i
+        # macOS sed has a different -i syntax
         sed -i '' "$expression" "$file" 2>/dev/null
     }
 
-    # Obtener la ruta absoluta del Python compatible
+    # Get the absolute path of the compatible Python
     PYTHON_ABS=$(command -v "$PYTHON_CMD" 2>/dev/null || echo "$PYTHON_CMD")
 
-    # Resolver de forma determinista la raiz del plugin recien instalado.
-    # Si coexisten varias versiones en cache, preferimos la ruta exacta de
-    # la version que acaba de instalarse y, en ultimo termino, la mas reciente
-    # cuyo plugin.json declare esa version.
+    # Resolve the root of the freshly installed plugin deterministically.
+    # If several versions are in the cache, prefer the exact path of the
+    # version that was just installed and, as a last resort, the newest
+    # one whose plugin.json declares that version.
     PLUGIN_ROOT=$(resolve_installed_plugin_root 2>/dev/null || true)
     HOOKS_JSON=""
     MCP_JSON=""
@@ -440,7 +440,7 @@ for event_group in data.get("hooks", {}).values():
                 patched = True
 
 if not patched:
-    raise SystemExit("hooks.json no contiene hooks Python parcheables")
+    raise SystemExit("в hooks.json нет Python hooks для патча")
 
 directory = os.path.dirname(path)
 fd, tmp_path = tempfile.mkstemp(prefix=".tmp-plugin-", dir=directory)
@@ -457,12 +457,12 @@ except Exception:
     raise
 PYEOF
         then
-            ok "hooks.json parcheado para usar $PYTHON_ABS"
+            ok "hooks.json пропатчен на $PYTHON_ABS"
         else
-            info "Aviso: no se pudo parchear hooks.json, los hooks usaran 'python3'"
+            info "Внимание: не удалось пропатчить hooks.json, hooks будут использовать 'python3'"
         fi
     else
-        info "Aviso: no se encontro hooks.json en la instalacion activa para parchear Python"
+        info "Внимание: в активной установке нет hooks.json для патча Python"
     fi
 
     if [[ -f "$MCP_JSON" ]]; then
@@ -479,11 +479,11 @@ with open(path, "r", encoding="utf-8") as fh:
 
 mcp_servers = data.get("mcpServers") if isinstance(data.get("mcpServers"), dict) else data
 if not isinstance(mcp_servers, dict):
-    raise SystemExit(".mcp.json no declara servidores MCP")
+    raise SystemExit("в .mcp.json не объявлены MCP-серверы")
 
 alfred_memory = mcp_servers.get("alfred-memory")
 if not isinstance(alfred_memory, dict):
-    raise SystemExit(".mcp.json no declara alfred-memory")
+    raise SystemExit("в .mcp.json не объявлен alfred-memory")
 
 alfred_memory["command"] = python_abs
 
@@ -502,21 +502,21 @@ except Exception:
     raise
 PYEOF
         then
-            ok ".mcp.json parcheado para usar $PYTHON_ABS"
+            ok ".mcp.json пропатчен на $PYTHON_ABS"
         else
-            info "Aviso: no se pudo parchear .mcp.json, el MCP usara 'python3'"
+            info "Внимание: не удалось пропатчить .mcp.json, MCP будет использовать 'python3'"
         fi
     else
-        info "Aviso: no se encontro .mcp.json en la instalacion activa para parchear Python"
+        info "Внимание: в активной установке нет .mcp.json для патча Python"
     fi
 fi
 
-# -- Resultado --------------------------------------------------------------
+# -- Result ----------------------------------------------------------------
 
-printf "\n${GREEN}${BOLD}Instalacion completada${NC}\n\n"
-printf "  En Claude Code, ejecuta ${BOLD}/reload-plugins${NC} y despues:\n"
+printf "\n${GREEN}${BOLD}Установка завершена${NC}\n\n"
+printf "  В Claude Code выполни ${BOLD}/reload-plugins${NC}, а затем:\n"
 printf "  ${BOLD}/alfred-dev:alfred${NC}\n"
-printf "  ${DIM}Estado: /alfred-dev:progress · retomar: /alfred-dev:retomar${NC}\n\n"
-printf "  ${DIM}Si /reload-plugins avisa por MCP/coste de cache o no aparece el plugin, reinicia Claude Code.${NC}\n"
-printf "  ${DIM}Repositorio: https://github.com/${REPO}${NC}\n"
-printf "  ${DIM}Documentacion: https://alfred-dev.com${NC}\n\n"
+printf "  ${DIM}Статус: /alfred-dev:progress · продолжить: /alfred-dev:retomar${NC}\n\n"
+printf "  ${DIM}Если /reload-plugins предупреждает о MCP/стоимости cache или плагин не появился, перезапусти Claude Code.${NC}\n"
+printf "  ${DIM}Репозиторий: https://github.com/${REPO}${NC}\n"
+printf "  ${DIM}Документация: https://alfred-dev.com${NC}\n\n"

@@ -95,16 +95,16 @@ color: purple
 
 Прежде чем показывать три финальных варианта, мысленно пройди свой каталог базовых дизайн-систем. Текущий каталог включает:
 
-- Libre / Contextual
-- Maximalismo & Neo-retro
-- Tipografía cinética
-- 3D interactivo & WebGL
+- Свободный / Контекстный
+- Максимализм и неоретро
+- Кинетическая типографика
+- Интерактивное 3D и WebGL
 - Glassmorphism 2.0
-- Colores dopamina
-- Nature distilled / Orgánico
-- Anti-diseño / Neo-brutalismo
-- AI Hyperminimalismo
-- Scroll narrativo & Gamificación
+- Дофаминовые цвета
+- Nature distilled / Органика
+- Антидизайн / Необрутализм
+- AI-гиперминимализм
+- Нарративный скролл и геймификация
 
 Необязательно всегда показывать пользователю все десять, но использовать их как явную рамку для построения трёх финальных вариантов, которые взялись не из ниоткуда, нужно.
 

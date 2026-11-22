@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
-"""Motor de personalidad para los agentes del plugin Alfred Dev.
+"""Personality engine for the Alfred Dev plugin agents.
 
-Este módulo define la identidad, voz y comportamiento de cada agente del equipo.
-Cada agente tiene un perfil único con frases características cuyo tono se adapta
-al nivel de sarcasmo configurado por el usuario (1 = profesional, 5 = ácido).
+This module defines the identity, voice and behavior of each team agent.
+Each agent has a unique profile with signature phrases. Their tone adapts
+to the sarcasm level that the user sets (1 = professional, 5 = acid).
 
-El diccionario AGENTS actúa como fuente de verdad para la personalidad de todos
-los agentes. Las funciones públicas permiten obtener introducciones y frases
-adaptadas al contexto de sarcasmo sin que el consumidor tenga que conocer la
-estructura interna del diccionario.
+The AGENTS dict is the source of truth for the personality of all agents.
+The public functions return intros and phrases for a sarcasm level, so the
+caller does not need to know the internal structure of the dict.
 """
 
 from typing import Dict, List, Any
 
 
-# -- Definición de agentes ---------------------------------------------------
-# Cada entrada contiene la identidad completa de un agente: nombre visible,
-# rol dentro del equipo, color para la terminal, modelo de IA asignado,
-# descripción de personalidad, frases habituales y variantes para sarcasmo alto.
+# -- Agent definitions -------------------------------------------------------
+# Each entry holds the full identity of an agent: display name, team role,
+# terminal color, assigned AI model, personality description, usual phrases
+# and high-sarcasm variants.
 
 AGENTS: Dict[str, Dict[str, Any]] = {
     "alfred": {
@@ -213,9 +212,9 @@ AGENTS: Dict[str, Dict[str, Any]] = {
         ],
     },
     # -----------------------------------------------------------------------
-    # Agentes opcionales: predefinidos que el usuario activa según su proyecto.
-    # No participan en los flujos a menos que estén habilitados en la
-    # configuración del usuario (alfred-dev.local.md).
+    # Optional agents: presets that the user enables per project.
+    # They do not take part in flows unless they are enabled in the
+    # user configuration (alfred-dev.local.md).
     # -----------------------------------------------------------------------
     "designer": {
         "nombre_display": "Designer",
@@ -272,20 +271,20 @@ AGENTS: Dict[str, Dict[str, Any]] = {
 
 
 def _validate_agent(agent_name: str) -> Dict[str, Any]:
-    """Valida que el agente existe y devuelve su configuración.
+    """Check that the agent exists and return its configuration.
 
-    Función auxiliar interna que centraliza la validación de nombres de agente.
-    Lanza ValueError con un mensaje descriptivo si el agente no se encuentra
-    en el diccionario AGENTS.
+    Internal helper that centralizes agent name validation.
+    Raises ValueError with a clear message if the agent is not
+    in the AGENTS dict.
 
     Args:
-        agent_name: Identificador del agente (clave en AGENTS).
+        agent_name: Agent identifier (key in AGENTS).
 
     Returns:
-        Diccionario con la configuración completa del agente.
+        Dict with the full agent configuration.
 
     Raises:
-        ValueError: Si el agente no existe en AGENTS.
+        ValueError: If the agent is not in AGENTS.
     """
     if agent_name not in AGENTS:
         agentes_disponibles = ", ".join(sorted(AGENTS.keys()))
@@ -297,38 +296,38 @@ def _validate_agent(agent_name: str) -> Dict[str, Any]:
 
 
 def get_agent_intro(agent_name: str, nivel_sarcasmo: int = 3) -> str:
-    """Genera la introducción de un agente adaptada al nivel de sarcasmo.
+    """Build an agent intro for the given sarcasm level.
 
-    La introducción combina el nombre visible, el rol y la personalidad del
-    agente. Cuando el nivel de sarcasmo es alto (>= 4), se añade una coletilla
-    extraída de las frases de sarcasmo alto para dar un tono más ácido.
+    The intro combines the display name, role and personality of the
+    agent. When the sarcasm level is high (>= 4), it appends a tag line
+    from the high-sarcasm phrases for a sharper tone.
 
     Args:
-        agent_name: Identificador del agente (clave en AGENTS).
-        nivel_sarcasmo: Entero de 1 (profesional) a 5 (ácido). Por defecto 3.
+        agent_name: Agent identifier (key in AGENTS).
+        nivel_sarcasmo: Integer from 1 (professional) to 5 (acid). Default 3.
 
     Returns:
-        Cadena con la presentación del agente.
+        String with the agent intro.
 
     Raises:
-        ValueError: Si el agente no existe en AGENTS.
+        ValueError: If the agent is not in AGENTS.
 
-    Ejemplo:
+    Example:
         >>> intro = get_agent_intro("alfred", nivel_sarcasmo=1)
         >>> print(intro)
-        Soy Alfred, tu Jefe de operaciones / Orquestador. ...
+        Я Alfred, твой Руководитель операций / оркестратор. ...
     """
     agent = _validate_agent(agent_name)
 
-    # Construir la base de la introducción
+    # Build the base intro
     intro = (
         f"Я {agent['nombre_display']}, твой {agent['rol']}. "
         f"{agent['personalidad']}"
     )
 
-    # Con sarcasmo alto, añadir coletilla ácida si hay frases disponibles
+    # With high sarcasm, append an acid tag line if phrases exist
     if nivel_sarcasmo >= 4 and agent.get("frases_sarcasmo_alto"):
-        # Seleccionar frase según el nivel para que sea determinista
+        # Pick the phrase by level so the result is deterministic
         frases_acidas = agent["frases_sarcasmo_alto"]
         indice = (nivel_sarcasmo - 4) % len(frases_acidas)
         intro += f" {frases_acidas[indice]}"
@@ -337,33 +336,33 @@ def get_agent_intro(agent_name: str, nivel_sarcasmo: int = 3) -> str:
 
 
 def get_agent_voice(agent_name: str, nivel_sarcasmo: int = 3) -> List[str]:
-    """Devuelve las frases características de un agente según el sarcasmo.
+    """Return the signature phrases of an agent for the sarcasm level.
 
-    Con niveles bajos de sarcasmo (< 4) se devuelven solo las frases base.
-    Con niveles altos (>= 4) se añaden las frases de sarcasmo alto al
-    conjunto, dando al agente un tono más mordaz.
+    With low sarcasm levels (< 4) only the base phrases are returned.
+    With high levels (>= 4) the high-sarcasm phrases are added,
+    which gives the agent a sharper tone.
 
     Args:
-        agent_name: Identificador del agente (clave en AGENTS).
-        nivel_sarcasmo: Entero de 1 (profesional) a 5 (ácido). Por defecto 3.
+        agent_name: Agent identifier (key in AGENTS).
+        nivel_sarcasmo: Integer from 1 (professional) to 5 (acid). Default 3.
 
     Returns:
-        Lista de cadenas con las frases del agente.
+        List of agent phrases.
 
     Raises:
-        ValueError: Si el agente no existe en AGENTS.
+        ValueError: If the agent is not in AGENTS.
 
-    Ejemplo:
+    Example:
         >>> frases = get_agent_voice("qa-engineer", nivel_sarcasmo=5)
         >>> len(frases) >= 4
         True
     """
     agent = _validate_agent(agent_name)
 
-    # Las frases base siempre se incluyen
+    # Base phrases are always included
     frases = list(agent["frases"])
 
-    # Con sarcasmo alto, añadir las frases ácidas
+    # With high sarcasm, add the acid phrases
     if nivel_sarcasmo >= 4 and agent.get("frases_sarcasmo_alto"):
         frases.extend(agent["frases_sarcasmo_alto"])
 

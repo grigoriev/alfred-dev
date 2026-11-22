@@ -2,7 +2,7 @@
   "name": "alfred-dev",
   "displayName": "Alfred Dev",
   "description": "Плагин программной инженерии: 8 базовых агентов, Designer при наличии фронтенда и CTO по запросу. Постоянная память по проекту, quality gates и процессы от идеи до поставки. Русский форк Alfred Dev.",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "author": {
     "name": "686f6c61"
   },

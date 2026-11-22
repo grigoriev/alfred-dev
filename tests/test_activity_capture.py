@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-Tests para hooks/activity-capture.py.
+Tests for hooks/activity-capture.py.
 
-Verifica la logica del hook centralizado de captura de actividad:
-    - Deteccion de ficheros excluidos (_is_excluded_path).
-    - Deteccion de comandos triviales (_is_trivial_command).
-    - Deteccion de git commit (is_git_commit_command).
+Check the logic of the central activity capture hook:
+    - Detection of excluded files (_is_excluded_path).
+    - Detection of trivial commands (_is_trivial_command).
+    - Detection of git commit (is_git_commit_command).
     - Dispatchers: Write, Edit, Bash, Read, Glob, Grep, Agent, WebFetch,
       WebSearch, NotebookEdit, Prompt, Compact, Stop.
-    - Procesamiento de estado: iteraciones y fases (_process_state).
+    - State processing: iterations and phases (_process_state).
 
-Cada test que interactua con la DB crea una instancia temporal de MemoryDB,
-inicia una iteracion para poder consultar la timeline y limpia los ficheros
-temporales en tearDown.
+Each test that uses the DB creates a temporary MemoryDB instance, starts an
+iteration so it can query the timeline, and removes the temporary files in
+tearDown.
 """
 
 import importlib.util
@@ -27,7 +27,7 @@ from unittest.mock import patch
 
 
 def _load_module():
-    """Carga el modulo activity-capture.py por ruta (tiene guion en el nombre)."""
+    """Load the activity-capture.py module by path (its name has a hyphen)."""
     module_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "hooks",
@@ -41,7 +41,7 @@ def _load_module():
 
 _capture = _load_module()
 
-# Asegurar que core.memory esta disponible
+# Make sure core.memory is available
 _plugin_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _plugin_root not in sys.path:
     sys.path.insert(0, _plugin_root)
@@ -58,7 +58,7 @@ from core.orchestrator import advance_phase, create_session, save_state
 
 
 # ---------------------------------------------------------------------------
-# Helpers de test
+# Test helpers
 # ---------------------------------------------------------------------------
 
 def _complete_session(command: str, description: str):
@@ -68,13 +68,13 @@ def _complete_session(command: str, description: str):
     return session
 
 class _DBTestCase(unittest.TestCase):
-    """Clase base para tests que necesitan una DB temporal."""
+    """Base class for tests that need a temporary DB."""
 
     def setUp(self):
         self._tmpdir = tempfile.mkdtemp()
         self._db_path = os.path.join(self._tmpdir, "test.db")
         self._db = MemoryDB(self._db_path)
-        # Crear una iteracion para poder consultar la timeline
+        # Create an iteration so the timeline can be queried
         self._it_id = self._db.start_iteration(command="test", description="test")
 
     def tearDown(self):
@@ -83,14 +83,14 @@ class _DBTestCase(unittest.TestCase):
         shutil.rmtree(self._tmpdir, ignore_errors=True)
 
     def _get_events(self, event_type=None):
-        """Devuelve los eventos de la timeline, opcionalmente filtrados."""
+        """Return the timeline events, with an optional filter."""
         events = self._db.get_timeline(self._it_id)
         if event_type:
             return [e for e in events if e.get("event_type") == event_type]
         return events
 
     def _parse_payload(self, event):
-        """Parsea el payload JSON de un evento."""
+        """Parse the JSON payload of an event."""
         raw = event.get("payload")
         if isinstance(raw, str):
             return json.loads(raw)
@@ -102,7 +102,7 @@ class _DBTestCase(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestIsExcludedPath(unittest.TestCase):
-    """Verifica la exclusion de ficheros internos."""
+    """Check the exclusion of internal files."""
 
     def setUp(self):
         self._tmpdir = tempfile.mkdtemp()
@@ -159,7 +159,7 @@ class TestIsExcludedPath(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestIsTrivialCommand(unittest.TestCase):
-    """Verifica la deteccion de comandos triviales."""
+    """Check the detection of trivial commands."""
 
     def test_ls_is_trivial(self):
         self.assertTrue(_capture._is_trivial_command("ls"))
@@ -201,19 +201,19 @@ class TestIsTrivialCommand(unittest.TestCase):
         self.assertFalse(_capture._is_trivial_command("docker build ."))
 
     def test_env_var_prefix_stripped(self):
-        """Variables de entorno al inicio no deben afectar la deteccion."""
+        """Leading environment variables must not affect the detection."""
         self.assertFalse(_capture._is_trivial_command("NODE_ENV=prod npm start"))
 
     def test_absolute_path_stripped(self):
-        """Rutas absolutas se reducen al nombre base."""
+        """Absolute paths reduce to the base name."""
         self.assertTrue(_capture._is_trivial_command("/usr/bin/cat file.txt"))
 
     def test_chained_command_is_not_trivial_if_any_segment_is_relevant(self):
-        """Un prefijo trivial no debe ocultar un comando relevante posterior."""
+        """A trivial prefix must not hide a relevant command after it."""
         self.assertFalse(_capture._is_trivial_command("cd repo && pytest -q"))
 
     def test_chained_trivial_segments_remain_trivial(self):
-        """Una cadena solo de navegacion/lectura sigue siendo trivial."""
+        """A chain of only navigation/read commands stays trivial."""
         self.assertTrue(_capture._is_trivial_command("cd repo && ls -la"))
 
 
@@ -222,7 +222,7 @@ class TestIsTrivialCommand(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestIsGitCommitCommand(unittest.TestCase):
-    """Verifica la deteccion de git commit en comandos de shell."""
+    """Check the detection of git commit in shell commands."""
 
     def test_simple_git_commit(self):
         self.assertTrue(_capture.is_git_commit_command("git commit -m 'msg'"))
@@ -240,7 +240,7 @@ class TestIsGitCommitCommand(unittest.TestCase):
         self.assertTrue(_capture.is_git_commit_command("false || git commit -m 'fallback'"))
 
     def test_not_in_echo(self):
-        """git commit dentro de un echo no es un commit real."""
+        """git commit inside an echo is not a real commit."""
         self.assertFalse(_capture.is_git_commit_command("echo 'run git commit'"))
 
     def test_not_in_grep(self):
@@ -258,11 +258,11 @@ class TestIsGitCommitCommand(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestDispatchWrite(_DBTestCase):
-    """Verifica el dispatcher de Write."""
+    """Check the Write dispatcher."""
 
     def test_normal_file_creates_event(self):
-        """Un Write en un fichero normal crea un evento file_written."""
-        # Crear un fichero temporal para que _read_file_safe lo pueda leer
+        """A Write to a normal file creates a file_written event."""
+        # Create a temporary file so _read_file_safe can read it
         test_file = os.path.join(self._tmpdir, "src", "main.py")
         os.makedirs(os.path.dirname(test_file), exist_ok=True)
         with open(test_file, "w") as f:
@@ -276,7 +276,7 @@ class TestDispatchWrite(_DBTestCase):
         self.assertEqual(len(events), 1)
 
     def test_summary_contains_path_and_lines(self):
-        """El summary incluye la ruta relativa y el conteo de lineas."""
+        """The summary includes the relative path and the line count."""
         test_file = os.path.join(self._tmpdir, "app.js")
         with open(test_file, "w") as f:
             f.write("const x = 1;\nconst y = 2;\nconst z = 3;\n")
@@ -287,12 +287,12 @@ class TestDispatchWrite(_DBTestCase):
 
         events = self._get_events("file_written")
         self.assertIn("app.js", events[0].get("summary", ""))
-        self.assertIn("3 lineas", events[0].get("summary", ""))
+        self.assertIn("строк: 3", events[0].get("summary", ""))
 
     def test_content_contains_file_content(self):
-        """El campo content almacena el contenido completo del fichero."""
+        """The content field stores the full file content."""
         test_file = os.path.join(self._tmpdir, "data.txt")
-        file_text = "linea uno\nlinea dos\n"
+        file_text = "line one\nline two\n"
         with open(test_file, "w") as f:
             f.write(file_text)
 
@@ -304,7 +304,7 @@ class TestDispatchWrite(_DBTestCase):
         self.assertEqual(events[0].get("content"), file_text)
 
     def test_excluded_file_creates_no_event(self):
-        """Un Write en un fichero excluido no crea ningun evento."""
+        """A Write to an excluded file creates no event."""
         original_cwd = os.getcwd()
         os.chdir(self._tmpdir)
         try:
@@ -316,15 +316,15 @@ class TestDispatchWrite(_DBTestCase):
             os.chdir(original_cwd)
 
     def test_empty_path_creates_no_event(self):
-        """Una ruta vacia no crea ningun evento."""
+        """An empty path creates no event."""
         data = {"tool_input": {"file_path": ""}}
         _capture._dispatch_write(self._db, data)
         events = self._get_events("file_written")
         self.assertEqual(len(events), 0)
 
     def test_state_json_triggers_process_state(self):
-        """Si el fichero es alfred-dev-state.json, dispara _process_state."""
-        # Cerrar la iteracion del setUp para que _process_state cree una nueva
+        """If the file is alfred-dev-state.json, it triggers _process_state."""
+        # Close the setUp iteration so _process_state creates a new one
         self._db.complete_iteration(self._it_id)
 
         state_file = os.path.join(self._tmpdir, "alfred-dev-state.json")
@@ -341,18 +341,18 @@ class TestDispatchWrite(_DBTestCase):
 
         _capture._dispatch_write(self._db, data)
 
-        # _process_state debe haber creado una nueva iteracion
+        # _process_state must have created a new iteration
         active = self._db.get_active_iteration()
         self.assertIsNotNone(active)
         self.assertEqual(active["command"], "feature")
 
-        # Verificar que iteration_started se registro en la nueva iteracion
+        # Check that iteration_started was recorded in the new iteration
         new_timeline = self._db.get_timeline(active["id"])
         started = [e for e in new_timeline if e.get("event_type") == "iteration_started"]
         self.assertGreaterEqual(len(started), 1)
 
     def test_claude_state_json_triggers_process_state_even_if_path_is_excluded(self):
-        """El estado real vive en .claude/ y no debe quedar fuera por exclusión genérica."""
+        """The real state lives in .claude/ and the generic exclusion must not skip it."""
         self._db.complete_iteration(self._it_id)
 
         state_dir = os.path.join(self._tmpdir, ".claude")
@@ -376,21 +376,21 @@ class TestDispatchWrite(_DBTestCase):
         self.assertEqual(len(self._get_events("file_written")), 0)
 
     def test_summary_counts_single_line_without_trailing_newline(self):
-        """Una sola línea sin salto final sigue contando como 1."""
+        """A single line without a trailing newline still counts as 1."""
         test_file = os.path.join(self._tmpdir, "README.md")
         with open(test_file, "w", encoding="utf-8") as f:
-            f.write("solo una linea")
+            f.write("only one line")
 
         data = {"tool_input": {"file_path": test_file}}
         _capture._dispatch_write(self._db, data)
 
         events = self._get_events("file_written")
-        self.assertIn("1 lineas", events[0].get("summary", ""))
+        self.assertIn("строк: 1", events[0].get("summary", ""))
         payload = self._parse_payload(events[0])
         self.assertEqual(payload["lines"], 1)
 
     def test_payload_contains_extension(self):
-        """El payload incluye la extension del fichero."""
+        """The payload includes the file extension."""
         test_file = os.path.join(self._tmpdir, "style.css")
         with open(test_file, "w") as f:
             f.write("body { color: red; }\n")
@@ -409,10 +409,10 @@ class TestDispatchWrite(_DBTestCase):
 # ---------------------------------------------------------------------------
 
 class TestDispatchEdit(_DBTestCase):
-    """Verifica el dispatcher de Edit."""
+    """Check the Edit dispatcher."""
 
     def test_creates_file_edited_event(self):
-        """Un Edit crea un evento file_edited."""
+        """An Edit creates a file_edited event."""
         test_file = os.path.join(self._tmpdir, "main.py")
         with open(test_file, "w") as f:
             f.write("pass")
@@ -420,8 +420,8 @@ class TestDispatchEdit(_DBTestCase):
         data = {
             "tool_input": {
                 "file_path": test_file,
-                "old_string": "viejo\notra linea",
-                "new_string": "nuevo\nsegunda\ntercera",
+                "old_string": "old\nanother line",
+                "new_string": "new\nsecond\nthird",
             }
         }
 
@@ -431,7 +431,7 @@ class TestDispatchEdit(_DBTestCase):
         self.assertEqual(len(events), 1)
 
     def test_summary_has_line_counts(self):
-        """El summary indica las lineas reemplazadas y las nuevas."""
+        """The summary shows the replaced and the new lines."""
         test_file = os.path.join(self._tmpdir, "app.py")
         with open(test_file, "w") as f:
             f.write("pass")
@@ -448,10 +448,10 @@ class TestDispatchEdit(_DBTestCase):
 
         events = self._get_events("file_edited")
         summary = events[0].get("summary", "")
-        self.assertIn("2 lineas reemplazadas por 3", summary)
+        self.assertIn("строк заменено: 2, новых: 3", summary)
 
     def test_content_contains_diff(self):
-        """El campo content almacena el diff old/new."""
+        """The content field stores the old/new diff."""
         test_file = os.path.join(self._tmpdir, "util.py")
         with open(test_file, "w") as f:
             f.write("pass")
@@ -459,8 +459,8 @@ class TestDispatchEdit(_DBTestCase):
         data = {
             "tool_input": {
                 "file_path": test_file,
-                "old_string": "funcion_vieja()",
-                "new_string": "funcion_nueva(x, y)",
+                "old_string": "old_function()",
+                "new_string": "new_function(x, y)",
             }
         }
 
@@ -469,12 +469,12 @@ class TestDispatchEdit(_DBTestCase):
         events = self._get_events("file_edited")
         content = events[0].get("content", "")
         self.assertIn("--- old ---", content)
-        self.assertIn("funcion_vieja()", content)
+        self.assertIn("old_function()", content)
         self.assertIn("--- new ---", content)
-        self.assertIn("funcion_nueva(x, y)", content)
+        self.assertIn("new_function(x, y)", content)
 
     def test_excluded_file_creates_no_event(self):
-        """Un Edit en un fichero excluido no crea ningun evento."""
+        """An Edit to an excluded file creates no event."""
         original_cwd = os.getcwd()
         os.chdir(self._tmpdir)
         try:
@@ -492,7 +492,7 @@ class TestDispatchEdit(_DBTestCase):
             os.chdir(original_cwd)
 
     def test_payload_has_file_and_extension(self):
-        """El payload incluye la ruta relativa y la extension."""
+        """The payload includes the relative path and the extension."""
         test_file = os.path.join(self._tmpdir, "index.ts")
         with open(test_file, "w") as f:
             f.write("pass")
@@ -518,10 +518,10 @@ class TestDispatchEdit(_DBTestCase):
 # ---------------------------------------------------------------------------
 
 class TestDispatchBash(_DBTestCase):
-    """Verifica el dispatcher de Bash."""
+    """Check the Bash dispatcher."""
 
     def test_nontrivial_command_creates_event(self):
-        """Un comando relevante crea un evento command_executed."""
+        """A relevant command creates a command_executed event."""
         data = {
             "tool_input": {"command": "npm install"},
             "tool_result": {"exit_code": 0, "stdout": "added 123 packages"},
@@ -533,7 +533,7 @@ class TestDispatchBash(_DBTestCase):
         self.assertEqual(len(events), 1)
 
     def test_trivial_command_creates_no_event(self):
-        """Un comando trivial no crea ningun evento."""
+        """A trivial command creates no event."""
         data = {
             "tool_input": {"command": "ls -la"},
             "tool_result": {"exit_code": 0, "stdout": "total 42"},
@@ -545,7 +545,7 @@ class TestDispatchBash(_DBTestCase):
         self.assertEqual(len(events), 0)
 
     def test_chained_command_with_trivial_prefix_still_creates_event(self):
-        """`cd repo && pytest` no debe perderse por el prefijo cd."""
+        """`cd repo && pytest` must not get lost because of the cd prefix."""
         data = {
             "tool_input": {"command": "cd repo && pytest -q"},
             "tool_result": {"exit_code": 0, "stdout": "10 passed"},
@@ -558,7 +558,7 @@ class TestDispatchBash(_DBTestCase):
         self.assertIn("pytest -q", events[0].get("summary", ""))
 
     def test_summary_contains_command_and_exit(self):
-        """El summary incluye el comando (truncado) y el exit code."""
+        """The summary includes the command (truncated) and the exit code."""
         data = {
             "tool_input": {"command": "python3 -m pytest tests/"},
             "tool_result": {"exit_code": 0, "stdout": "5 passed"},
@@ -572,8 +572,8 @@ class TestDispatchBash(_DBTestCase):
         self.assertIn("exit 0", summary)
 
     def test_content_contains_full_stdout(self):
-        """El campo content almacena el stdout completo sin truncar."""
-        long_output = "linea " * 500
+        """The content field stores the full stdout without truncation."""
+        long_output = "line " * 500
         data = {
             "tool_input": {"command": "npm build"},
             "tool_result": {"exit_code": 0, "stdout": long_output},
@@ -584,11 +584,11 @@ class TestDispatchBash(_DBTestCase):
         events = self._get_events("command_executed")
         content = events[0].get("content", "")
         self.assertIn("--- stdout ---", content)
-        # El contenido NO debe estar truncado
+        # The content must NOT be truncated
         self.assertIn(long_output, content)
 
     def test_content_contains_stderr_on_failure(self):
-        """El campo content incluye stderr cuando hay error."""
+        """The content field includes stderr when an error occurs."""
         data = {
             "tool_input": {"command": "npm test"},
             "tool_result": {"exit_code": 1, "stdout": "", "stderr": "Error: test failed"},
@@ -602,7 +602,7 @@ class TestDispatchBash(_DBTestCase):
         self.assertIn("Error: test failed", content)
 
     def test_payload_contains_command_and_exit_code(self):
-        """El payload tiene command y exit_code sin truncar."""
+        """The payload has command and exit_code without truncation."""
         data = {
             "tool_input": {"command": "git status"},
             "tool_result": {"exit_code": 0, "stdout": "clean"},
@@ -616,22 +616,22 @@ class TestDispatchBash(_DBTestCase):
         self.assertEqual(payload["exit_code"], 0)
 
     def test_git_commit_triggers_log_commit(self):
-        """Un git commit exitoso dispara _capture_git_commit."""
-        # No podemos testear el subprocess.run aqui, pero verificamos que
-        # no falle si no hay repositorio git
+        """A successful git commit triggers _capture_git_commit."""
+        # We cannot test subprocess.run here, but we check that it
+        # does not fail when there is no git repository
         data = {
             "tool_input": {"command": "git commit -m 'test'"},
             "tool_result": {"exit_code": 0, "stdout": "[main abc1234] test"},
         }
 
-        # No debe lanzar excepcion aunque no haya repo git
+        # Must not raise an exception even without a git repo
         _capture._dispatch_bash(self._db, data)
 
         events = self._get_events("command_executed")
         self.assertEqual(len(events), 1)
 
     def test_git_commit_respects_capture_commits_flag(self):
-        """Si capture_commits es false, no debe registrar el commit."""
+        """If capture_commits is false, the commit must not be recorded."""
         data = {
             "tool_input": {"command": "git commit -m 'test'"},
             "tool_result": {"exit_code": 0, "stdout": "[main abc1234] test"},
@@ -649,7 +649,7 @@ class TestDispatchBash(_DBTestCase):
         self.assertEqual(self._db.get_commits(), [])
 
     def test_empty_command_creates_no_event(self):
-        """Un comando vacio no crea ningun evento."""
+        """An empty command creates no event."""
         data = {
             "tool_input": {"command": ""},
             "tool_result": {"exit_code": 0},
@@ -666,7 +666,7 @@ class TestDispatchBash(_DBTestCase):
 # ---------------------------------------------------------------------------
 
 class TestDispatchPrompt(_DBTestCase):
-    """Verifica el dispatcher de UserPromptSubmit/UserPromptExpansion."""
+    """Check the UserPromptSubmit/UserPromptExpansion dispatcher."""
 
     def setUp(self):
         super().setUp()
@@ -678,8 +678,8 @@ class TestDispatchPrompt(_DBTestCase):
         super().tearDown()
 
     def test_prompt_saved_with_full_text(self):
-        """El prompt se guarda con el texto completo en content."""
-        full_text = "Implementa el sistema de autenticacion con OAuth2 y JWT tokens"
+        """The prompt is stored with the full text in content."""
+        full_text = "Implement the authentication system with OAuth2 and JWT tokens"
         data = {"prompt": full_text}
 
         _capture._dispatch_prompt(self._db, data)
@@ -689,8 +689,8 @@ class TestDispatchPrompt(_DBTestCase):
         self.assertEqual(events[0].get("content"), full_text)
 
     def test_summary_truncated(self):
-        """El summary contiene solo la primera linea, truncada."""
-        long_prompt = "Primera linea del prompt\nSegunda linea con mas detalles\nTercera"
+        """The summary contains only the first line, truncated."""
+        long_prompt = "First line of the prompt\nSecond line with more details\nThird"
         data = {"prompt": long_prompt}
 
         _capture._dispatch_prompt(self._db, data)
@@ -698,12 +698,12 @@ class TestDispatchPrompt(_DBTestCase):
         events = self._get_events("user_prompt")
         summary = events[0].get("summary", "")
         self.assertIn("Prompt:", summary)
-        self.assertIn("Primera linea del prompt", summary)
+        self.assertIn("First line of the prompt", summary)
         self.assertIn("...", summary)
 
     def test_payload_has_length(self):
-        """El payload incluye la longitud del prompt."""
-        text = "Haz esto"
+        """The payload includes the prompt length."""
+        text = "Do this"
         data = {"prompt": text}
 
         _capture._dispatch_prompt(self._db, data)
@@ -714,7 +714,7 @@ class TestDispatchPrompt(_DBTestCase):
         self.assertEqual(payload["source"], "UserPromptSubmit")
 
     def test_prompt_expansion_payload_keeps_command_metadata(self):
-        """UserPromptExpansion debe registrar metadata del slash command."""
+        """UserPromptExpansion must record the slash command metadata."""
         text = "/alfred-dev:quick ajustar CTA"
         data = {
             "hook_event_name": "UserPromptExpansion",
@@ -734,13 +734,13 @@ class TestDispatchPrompt(_DBTestCase):
         self.assertEqual(payload["command_source"], "plugin")
 
     def test_dispatcher_table_supports_user_prompt_expansion(self):
-        """El evento moderno de expansion de slash commands usa el dispatcher de prompt."""
+        """The modern slash command expansion event uses the prompt dispatcher."""
         dispatchers = _capture._build_dispatcher_table()
 
         self.assertIs(dispatchers["UserPromptExpansion"], _capture._dispatch_prompt)
 
     def test_empty_prompt_creates_no_event(self):
-        """Un prompt vacio no crea ningun evento."""
+        """An empty prompt creates no event."""
         data = {"prompt": ""}
 
         _capture._dispatch_prompt(self._db, data)
@@ -749,7 +749,7 @@ class TestDispatchPrompt(_DBTestCase):
         self.assertEqual(len(events), 0)
 
     def test_content_field_fallback(self):
-        """Si no hay 'prompt', usa 'content' como fallback."""
+        """If 'prompt' is missing, it uses 'content' as a fallback."""
         text = "Texto via content"
         data = {"content": text}
 
@@ -760,7 +760,7 @@ class TestDispatchPrompt(_DBTestCase):
         self.assertEqual(events[0].get("content"), text)
 
     def test_prefetches_explicit_map_codebase_prompt(self):
-        """Un slash command helper-first debe dejar el mapa brownfield listo."""
+        """A helper-first slash command must leave the brownfield map ready."""
         data = {"prompt": "/alfred-dev:map-codebase login y usuarios"}
 
         _capture._dispatch_prompt(self._db, data)
@@ -776,10 +776,10 @@ class TestDispatchPrompt(_DBTestCase):
         self.assertIn("docs/project/codebase-map.md", payload["artifacts"])
 
     def test_prefetches_brownfield_map_for_contextual_alfred_prompt(self):
-        """`/alfred` debe preparar el mapa si el repo ya existe."""
+        """`/alfred` must prepare the map if the repo already exists."""
         os.makedirs(os.path.join(self._tmpdir, "src"), exist_ok=True)
         with open(os.path.join(self._tmpdir, "src", "index.js"), "w", encoding="utf-8") as fh:
-            fh.write("console.log('hola');\n")
+            fh.write("console.log('hello');\n")
 
         data = {"prompt": "/alfred añade login y usuarios"}
 
@@ -793,12 +793,12 @@ class TestDispatchPrompt(_DBTestCase):
         self.assertEqual(payload["prefetched_command"], "map-codebase")
 
     def test_contextual_alfred_prefetch_skips_map_when_verify_is_pending(self):
-        """`/alfred` no debe adelantar map-codebase si toca verify."""
+        """`/alfred` must not run map-codebase early when verify is next."""
         os.makedirs(os.path.join(self._tmpdir, ".claude"), exist_ok=True)
         os.makedirs(os.path.join(self._tmpdir, "src"), exist_ok=True)
         with open(os.path.join(self._tmpdir, "src", "index.js"), "w", encoding="utf-8") as fh:
-            fh.write("console.log('hola');\n")
-        session = _complete_session("feature", "Login y usuarios")
+            fh.write("console.log('hello');\n")
+        session = _complete_session("feature", "Login and users")
         save_state(session, os.path.join(self._tmpdir, STATE_RELATIVE_PATH))
 
         data = {"prompt": "/alfred añade login y usuarios"}
@@ -812,12 +812,12 @@ class TestDispatchPrompt(_DBTestCase):
         self.assertEqual(len(prefetched), 0)
 
     def test_prefetches_quick_session_from_prompt(self):
-        """El primer `/alfred-dev:quick` debe dejar sesión y bypass preparados."""
+        """The first `/alfred-dev:quick` must leave the session and the bypass ready."""
         data = {
             "prompt": (
                 "/alfred-dev:quick ajustar copy del login\n"
                 "import subprocess\n"
-                "print('wrapper de test')\n"
+                "print('test wrapper')\n"
             )
         }
 
@@ -838,7 +838,7 @@ class TestDispatchPrompt(_DBTestCase):
         self.assertEqual(payload["prefetched_command"], "quick")
 
     def test_prefetches_memory_ui_from_prompt(self):
-        """`/alfred-dev:memory-ui` debe dejar la UI lista antes del razonamiento."""
+        """`/alfred-dev:memory-ui` must leave the UI ready before the reasoning starts."""
         data = {"prompt": "/alfred-dev:memory-ui"}
 
         _capture._dispatch_prompt(self._db, data)
@@ -856,7 +856,7 @@ class TestDispatchPrompt(_DBTestCase):
         self.assertEqual(payload["prefetched_command"], "memory-ui")
 
     def test_new_prompt_clears_consumed_prefetch_marker(self):
-        """Un prompt nuevo debe limpiar barreras transitorias del prompt anterior."""
+        """A new prompt must clear the transient barriers of the previous prompt."""
         payload = {
             "source_command": "map-codebase",
             "prefetched_command": "map-codebase",
@@ -877,7 +877,7 @@ class TestDispatchPrompt(_DBTestCase):
         )
 
     def test_new_prompt_clears_pending_prefetch_from_previous_prompt(self):
-        """Un prompt nuevo debe limpiar prefetch pendiente viejo antes de recalcular."""
+        """A new prompt must clear an old pending prefetch before it recalculates."""
         payload = {
             "source_command": "map-codebase",
             "prefetched_command": "map-codebase",
@@ -898,7 +898,7 @@ class TestDispatchPrompt(_DBTestCase):
 
 
 class TestHookScriptRuntime(unittest.TestCase):
-    """Verifica el hook como proceso real, sin depender de PYTHONPATH externo."""
+    """Check the hook as a real process, without an external PYTHONPATH."""
 
     def setUp(self):
         self._tmpdir = tempfile.mkdtemp()
@@ -931,7 +931,7 @@ class TestHookScriptRuntime(unittest.TestCase):
         shutil.rmtree(self._tmpdir, ignore_errors=True)
 
     def test_script_logs_user_prompt_without_pythonpath(self):
-        """El script debe resolver core/* por si mismo en runtime real."""
+        """The script must resolve core/* by itself at real runtime."""
         payload = {
             "session_id": "runtime-test",
             "transcript_path": os.path.join(self._tmpdir, "runtime-test.jsonl"),
@@ -965,7 +965,7 @@ class TestHookScriptRuntime(unittest.TestCase):
         self.assertEqual(prompt_events[0].get("content"), "Prompt runtime real")
 
     def test_script_logs_user_prompt_expansion_without_pythonpath(self):
-        """El hook real soporta el payload moderno UserPromptExpansion."""
+        """The real hook supports the modern UserPromptExpansion payload."""
         payload = {
             "hook_event_name": "UserPromptExpansion",
             "expansion_type": "slash_command",
@@ -999,7 +999,7 @@ class TestHookScriptRuntime(unittest.TestCase):
         self.assertEqual(prompt_payload["command_name"], "alfred-dev:quick")
 
     def test_script_prefetches_map_codebase_on_first_prompt(self):
-        """El hook debe preparar map-codebase antes del razonamiento principal."""
+        """The hook must prepare map-codebase before the main reasoning."""
         payload = {
             "session_id": "runtime-prefetch-map",
             "transcript_path": os.path.join(self._tmpdir, "runtime-prefetch-map.jsonl"),
@@ -1034,10 +1034,10 @@ class TestHookScriptRuntime(unittest.TestCase):
         self.assertEqual(len(prefetch_events), 1)
 
     def test_script_prefetches_brownfield_map_for_contextual_alfred(self):
-        """El primer `/alfred` en brownfield debe dejar el mapa listo."""
+        """The first `/alfred` in brownfield must leave the map ready."""
         os.makedirs(os.path.join(self._tmpdir, "src"), exist_ok=True)
         with open(os.path.join(self._tmpdir, "src", "index.js"), "w", encoding="utf-8") as fh:
-            fh.write("console.log('hola');\n")
+            fh.write("console.log('hello');\n")
 
         payload = {
             "session_id": "runtime-prefetch-alfred",
@@ -1061,7 +1061,7 @@ class TestHookScriptRuntime(unittest.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(self._tmpdir, "docs", "project", "codebase-map.md")))
 
     def test_script_prefetches_memory_ui(self):
-        """El hook runtime debe poder arrancar memory-ui antes del razonamiento."""
+        """The runtime hook must be able to start memory-ui before the reasoning."""
         payload = {
             "session_id": "runtime-prefetch-memory-ui",
             "transcript_path": os.path.join(self._tmpdir, "runtime-prefetch-memory-ui.jsonl"),
@@ -1084,7 +1084,7 @@ class TestHookScriptRuntime(unittest.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(self._tmpdir, ".claude", "alfred-memory-ui.json")))
 
     def test_script_prefetches_memory_ui_stop(self):
-        """`/alfred-dev:memory-ui stop` no debe arrancar la UI, sino cerrarla."""
+        """`/alfred-dev:memory-ui stop` must close the UI, not start it."""
         from core.continuity import launch_memory_ui, stop_memory_ui
 
         launched = launch_memory_ui(
@@ -1123,18 +1123,18 @@ class TestHookScriptRuntime(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestDispatchCompact(_DBTestCase):
-    """Verifica el dispatcher de PreCompact."""
+    """Check the PreCompact dispatcher."""
 
     def test_creates_context_compacted_event(self):
-        """Crea un evento context_compacted con summary descriptivo."""
+        """Create a context_compacted event with a descriptive summary."""
         _capture._dispatch_compact(self._db, {})
 
         events = self._get_events("context_compacted")
         self.assertEqual(len(events), 1)
-        self.assertIn("compactado", events[0].get("summary", ""))
+        self.assertIn("сжат", events[0].get("summary", ""))
 
     def test_payload_has_source(self):
-        """El payload incluye la fuente del evento."""
+        """The payload includes the event source."""
         _capture._dispatch_compact(self._db, {})
 
         events = self._get_events("context_compacted")
@@ -1147,7 +1147,7 @@ class TestDispatchCompact(_DBTestCase):
 # ---------------------------------------------------------------------------
 
 class TestDispatchStop(_DBTestCase):
-    """Verifica el dispatcher de Stop."""
+    """Check the Stop dispatcher."""
 
     def setUp(self):
         super().setUp()
@@ -1159,16 +1159,16 @@ class TestDispatchStop(_DBTestCase):
         super().tearDown()
 
     def test_creates_session_ended_event(self):
-        """Crea un evento session_ended."""
+        """Create a session_ended event."""
         _capture._dispatch_stop(self._db, {})
 
         events = self._get_events("session_ended")
         self.assertEqual(len(events), 1)
-        self.assertIn("finalizada", events[0].get("summary", ""))
+        self.assertIn("завершена", events[0].get("summary", ""))
 
     def test_closes_active_iteration(self):
-        """Si hay iteracion activa, la cierra."""
-        # Ya hay una iteracion activa del setUp
+        """If an iteration is active, close it."""
+        # The setUp already has an active iteration
         active_before = self._db.get_active_iteration()
         self.assertIsNotNone(active_before)
 
@@ -1178,15 +1178,15 @@ class TestDispatchStop(_DBTestCase):
         self.assertIsNone(active_after)
 
     def test_no_error_without_active_iteration(self):
-        """No falla si no hay iteracion activa."""
-        # Cerrar la iteracion del setUp
+        """Do not fail when no iteration is active."""
+        # Close the setUp iteration
         self._db.complete_iteration(self._it_id)
 
-        # No debe lanzar excepcion
+        # Must not raise an exception
         _capture._dispatch_stop(self._db, {})
 
-        # El evento session_ended se registra sin iteration_id, asi que
-        # buscamos directamente en la tabla de eventos
+        # The session_ended event is recorded without iteration_id, so
+        # we search the events table directly
         cursor = self._db._conn.execute(
             "SELECT * FROM events WHERE event_type = 'session_ended'"
         )
@@ -1219,18 +1219,18 @@ class TestDispatchStop(_DBTestCase):
 # ---------------------------------------------------------------------------
 
 class TestProcessState(_DBTestCase):
-    """Verifica el procesamiento de estado (iteraciones y fases)."""
+    """Check the state processing (iterations and phases)."""
 
     def _write_state(self, state: dict) -> str:
-        """Escribe un fichero de estado temporal y devuelve la ruta."""
+        """Write a temporary state file and return its path."""
         state_file = os.path.join(self._tmpdir, "alfred-dev-state.json")
         with open(state_file, "w", encoding="utf-8") as f:
             json.dump(state, f)
         return state_file
 
     def test_creates_iteration_if_none_active(self):
-        """Sin iteracion activa distinta de la del setUp, crea una nueva al procesar estado."""
-        # Cerrar la iteracion del setUp para simular "sin iteracion activa"
+        """Without an active iteration other than the setUp one, state processing creates a new one."""
+        # Close the setUp iteration to simulate "no active iteration"
         self._db.complete_iteration(self._it_id)
 
         state_file = self._write_state({
@@ -1247,7 +1247,7 @@ class TestProcessState(_DBTestCase):
         self.assertEqual(active["command"], "feature")
 
     def test_registers_phase_completed(self):
-        """Las fases completadas se registran como eventos."""
+        """Completed phases are recorded as events."""
         state_file = self._write_state({
             "comando": "feature",
             "fase_actual": "arquitectura",
@@ -1261,7 +1261,7 @@ class TestProcessState(_DBTestCase):
         self.assertGreaterEqual(len(events), 1)
 
     def test_does_not_duplicate_phases(self):
-        """Ejecutar dos veces con las mismas fases no duplica eventos."""
+        """Two runs with the same phases do not duplicate events."""
         state_file = self._write_state({
             "comando": "feature",
             "fase_actual": "desarrollo",
@@ -1276,11 +1276,11 @@ class TestProcessState(_DBTestCase):
         _capture._process_state(self._db, state_file)
 
         events = self._get_events("phase_completed")
-        # Debe haber exactamente 2, no 4
+        # There must be exactly 2, not 4
         self.assertEqual(len(events), 2)
 
     def test_does_not_duplicate_old_phases_beyond_timeline_default_limit(self):
-        """La deduplicacion no debe depender del limite de 100 eventos generales."""
+        """Deduplication must not depend on the limit of 100 general events."""
         self._db.log_event(
             event_type="phase_completed",
             phase="producto",
@@ -1307,7 +1307,7 @@ class TestProcessState(_DBTestCase):
         self.assertEqual(len(events), 1)
 
     def test_session_iteration_is_upgraded_to_real_flow_iteration(self):
-        """Una iteracion generica de sesion debe ceder el control al flujo real."""
+        """A generic session iteration must hand control to the real flow."""
         self._db.complete_iteration(self._it_id)
         session_id = self._db.start_iteration("session", "Sesion general")
 
@@ -1336,7 +1336,7 @@ class TestProcessState(_DBTestCase):
         self.assertEqual(len(started_events), 1)
 
     def test_completes_iteration(self):
-        """Fase 'completado' cierra la iteracion."""
+        """Phase 'completado' closes the iteration."""
         state_file = self._write_state({
             "comando": "feature",
             "fase_actual": "completado",
@@ -1346,14 +1346,14 @@ class TestProcessState(_DBTestCase):
 
         _capture._process_state(self._db, state_file)
 
-        # La iteracion original del setUp deberia seguir o estar cerrada
-        # dependiendo de si _process_state uso la existente
-        # Verificamos que hay un iteration_completed
+        # The original setUp iteration may stay open or be closed,
+        # depending on whether _process_state used the existing one
+        # We check that an iteration_completed exists
         events = self._get_events("iteration_completed")
         self.assertGreaterEqual(len(events), 1)
 
     def test_string_phases(self):
-        """Las fases como strings (no dicts) se procesan correctamente."""
+        """Phases given as strings (not dicts) are processed correctly."""
         state_file = self._write_state({
             "comando": "fix",
             "fase_actual": "validacion",
@@ -1367,10 +1367,10 @@ class TestProcessState(_DBTestCase):
         self.assertEqual(len(events), 2)
 
     def test_invalid_state_file_does_nothing(self):
-        """Un fichero de estado invalido no genera eventos."""
+        """An invalid state file generates no events."""
         state_file = os.path.join(self._tmpdir, "alfred-dev-state.json")
         with open(state_file, "w") as f:
-            f.write("esto no es json {{{")
+            f.write("this is not json {{{")
 
         initial_count = len(self._get_events())
 
@@ -1380,7 +1380,7 @@ class TestProcessState(_DBTestCase):
         self.assertEqual(initial_count, final_count)
 
     def test_auto_pins_completed_phase(self):
-        """Las fases completadas se auto-pinean."""
+        """Completed phases are pinned automatically."""
         state_file = self._write_state({
             "comando": "feature",
             "fase_actual": "arquitectura",
@@ -1390,7 +1390,7 @@ class TestProcessState(_DBTestCase):
 
         _capture._process_state(self._db, state_file)
 
-        # Verificar que hay un pin (no falla si la tabla no existe)
+        # Check that a pin exists (does not fail if the table does not exist)
         try:
             cursor = self._db._conn.execute(
                 "SELECT * FROM pinned_items WHERE item_ref = ?",
@@ -1399,7 +1399,7 @@ class TestProcessState(_DBTestCase):
             pins = cursor.fetchall()
             self.assertGreaterEqual(len(pins), 1)
         except Exception:
-            pass  # Si la tabla no existe, el test no aplica
+            pass  # If the table does not exist, the test does not apply
 
 
 # ---------------------------------------------------------------------------
@@ -1407,7 +1407,7 @@ class TestProcessState(_DBTestCase):
 # ---------------------------------------------------------------------------
 
 class TestDispatchRead(_DBTestCase):
-    """Verifica el dispatcher de Read."""
+    """Check the Read dispatcher."""
 
     def setUp(self):
         super().setUp()
@@ -1419,7 +1419,7 @@ class TestDispatchRead(_DBTestCase):
         super().tearDown()
 
     def test_creates_file_read_event(self):
-        """Un Read crea un evento file_read."""
+        """A Read creates a file_read event."""
         data = {"tool_input": {"file_path": os.path.join(self._tmpdir, "src", "main.py")}}
         _capture._dispatch_read(self._db, data)
 
@@ -1427,7 +1427,7 @@ class TestDispatchRead(_DBTestCase):
         self.assertEqual(len(events), 1)
 
     def test_summary_contains_path(self):
-        """El summary incluye la ruta relativa."""
+        """The summary includes the relative path."""
         data = {"tool_input": {"file_path": os.path.join(self._tmpdir, "core", "memory.py")}}
         _capture._dispatch_read(self._db, data)
 
@@ -1435,32 +1435,32 @@ class TestDispatchRead(_DBTestCase):
         self.assertIn("memory.py", events[0].get("summary", ""))
 
     def test_summary_with_offset_and_limit(self):
-        """El summary incluye el rango de lineas cuando se especifica."""
+        """The summary includes the line range when it is given."""
         data = {"tool_input": {"file_path": os.path.join(self._tmpdir, "f.py"), "offset": 10, "limit": 50}}
         _capture._dispatch_read(self._db, data)
 
         events = self._get_events("file_read")
         summary = events[0].get("summary", "")
-        self.assertIn("lineas 10-60", summary)
+        self.assertIn("строки 10-60", summary)
 
     def test_summary_with_only_offset(self):
-        """El summary indica la linea de inicio cuando solo hay offset."""
+        """The summary shows the start line when only offset is given."""
         data = {"tool_input": {"file_path": os.path.join(self._tmpdir, "f.py"), "offset": 100}}
         _capture._dispatch_read(self._db, data)
 
         events = self._get_events("file_read")
-        self.assertIn("desde linea 100", events[0].get("summary", ""))
+        self.assertIn("со строки 100", events[0].get("summary", ""))
 
     def test_summary_with_only_limit(self):
-        """El summary indica el limite cuando solo hay limit."""
+        """The summary shows the limit when only limit is given."""
         data = {"tool_input": {"file_path": os.path.join(self._tmpdir, "f.py"), "limit": 20}}
         _capture._dispatch_read(self._db, data)
 
         events = self._get_events("file_read")
-        self.assertIn("primeras 20 lineas", events[0].get("summary", ""))
+        self.assertIn("первые строки: 20", events[0].get("summary", ""))
 
     def test_offset_zero_is_preserved_in_summary_and_payload(self):
-        """offset=0 es valido y no debe perderse por una comprobacion truthy."""
+        """offset=0 is valid and a truthy check must not drop it."""
         data = {
             "tool_input": {
                 "file_path": os.path.join(self._tmpdir, "f.py"),
@@ -1473,12 +1473,12 @@ class TestDispatchRead(_DBTestCase):
         events = self._get_events("file_read")
         summary = events[0].get("summary", "")
         payload = self._parse_payload(events[0])
-        self.assertIn("lineas 0-20", summary)
+        self.assertIn("строки 0-20", summary)
         self.assertEqual(payload["offset"], 0)
         self.assertEqual(payload["limit"], 20)
 
     def test_excluded_file_creates_no_event(self):
-        """Un Read de fichero excluido no crea evento."""
+        """A Read of an excluded file creates no event."""
         data = {"tool_input": {"file_path": os.path.join(self._tmpdir, ".git", "HEAD")}}
         _capture._dispatch_read(self._db, data)
 
@@ -1486,7 +1486,7 @@ class TestDispatchRead(_DBTestCase):
         self.assertEqual(len(events), 0)
 
     def test_empty_path_creates_no_event(self):
-        """Una ruta vacia no crea evento."""
+        """An empty path creates no event."""
         data = {"tool_input": {"file_path": ""}}
         _capture._dispatch_read(self._db, data)
 
@@ -1494,7 +1494,7 @@ class TestDispatchRead(_DBTestCase):
         self.assertEqual(len(events), 0)
 
     def test_no_content_stored(self):
-        """No almacena contenido para evitar duplicacion."""
+        """It stores no content to avoid duplication."""
         data = {"tool_input": {"file_path": os.path.join(self._tmpdir, "f.py")}}
         _capture._dispatch_read(self._db, data)
 
@@ -1507,10 +1507,10 @@ class TestDispatchRead(_DBTestCase):
 # ---------------------------------------------------------------------------
 
 class TestDispatchGlob(_DBTestCase):
-    """Verifica el dispatcher de Glob."""
+    """Check the Glob dispatcher."""
 
     def test_creates_glob_search_event(self):
-        """Un Glob crea un evento glob_search."""
+        """A Glob creates a glob_search event."""
         data = {
             "tool_input": {"pattern": "**/*.py", "path": "."},
             "tool_result": {"output": "src/main.py\nsrc/util.py\n"},
@@ -1521,7 +1521,7 @@ class TestDispatchGlob(_DBTestCase):
         self.assertEqual(len(events), 1)
 
     def test_summary_contains_pattern_and_count(self):
-        """El summary incluye el patron y el numero de resultados."""
+        """The summary includes the pattern and the number of results."""
         data = {
             "tool_input": {"pattern": "*.ts"},
             "tool_result": {"output": "index.ts\napp.ts\nutil.ts\n"},
@@ -1531,10 +1531,10 @@ class TestDispatchGlob(_DBTestCase):
         events = self._get_events("glob_search")
         summary = events[0].get("summary", "")
         self.assertIn("*.ts", summary)
-        self.assertIn("3 resultados", summary)
+        self.assertIn("результатов: 3", summary)
 
     def test_content_stores_file_list(self):
-        """El content almacena la lista de ficheros encontrados."""
+        """The content stores the list of found files."""
         file_list = "a.py\nb.py\n"
         data = {
             "tool_input": {"pattern": "*.py"},
@@ -1546,7 +1546,7 @@ class TestDispatchGlob(_DBTestCase):
         self.assertEqual(events[0].get("content"), file_list)
 
     def test_large_content_is_truncated_with_metadata(self):
-        """Salidas enormes se recortan para no inflar memoria sin control."""
+        """Huge outputs are trimmed so memory does not grow without control."""
         long_list = "".join(f"src/file_{i}.py\n" for i in range(200))
         data = {
             "tool_input": {"pattern": "*.py"},
@@ -1560,11 +1560,11 @@ class TestDispatchGlob(_DBTestCase):
         content = events[0].get("content", "")
         self.assertTrue(payload["content_truncated"])
         self.assertGreater(payload["content_lines"], 80)
-        self.assertIn("contenido recortado", content)
+        self.assertIn("содержимое обрезано", content)
         self.assertNotEqual(content, long_list)
 
     def test_empty_pattern_creates_no_event(self):
-        """Un patron vacio no crea evento."""
+        """An empty pattern creates no event."""
         data = {"tool_input": {"pattern": ""}, "tool_result": {}}
         _capture._dispatch_glob(self._db, data)
 
@@ -1572,7 +1572,7 @@ class TestDispatchGlob(_DBTestCase):
         self.assertEqual(len(events), 0)
 
     def test_zero_results(self):
-        """Un glob sin resultados se registra con 0 resultados."""
+        """A glob with no results is recorded with 0 results."""
         data = {
             "tool_input": {"pattern": "*.xyz"},
             "tool_result": {"output": ""},
@@ -1589,10 +1589,10 @@ class TestDispatchGlob(_DBTestCase):
 # ---------------------------------------------------------------------------
 
 class TestDispatchGrep(_DBTestCase):
-    """Verifica el dispatcher de Grep."""
+    """Check the Grep dispatcher."""
 
     def test_creates_grep_search_event(self):
-        """Un Grep crea un evento grep_search."""
+        """A Grep creates a grep_search event."""
         data = {
             "tool_input": {"pattern": "TODO", "path": "."},
             "tool_result": {"output": "file.py:10:# TODO fix\n"},
@@ -1603,7 +1603,7 @@ class TestDispatchGrep(_DBTestCase):
         self.assertEqual(len(events), 1)
 
     def test_summary_contains_pattern_and_count(self):
-        """El summary incluye el patron regex y el conteo."""
+        """The summary includes the regex pattern and the count."""
         data = {
             "tool_input": {"pattern": "import\\s+os"},
             "tool_result": {"output": "a.py\nb.py\nc.py\n"},
@@ -1613,10 +1613,10 @@ class TestDispatchGrep(_DBTestCase):
         events = self._get_events("grep_search")
         summary = events[0].get("summary", "")
         self.assertIn("import\\s+os", summary)
-        self.assertIn("3 coincidencias", summary)
+        self.assertIn("совпадений: 3", summary)
 
     def test_payload_includes_filters(self):
-        """El payload incluye filtros de tipo y glob cuando se usan."""
+        """The payload includes the type and glob filters when they are used."""
         data = {
             "tool_input": {"pattern": "def ", "type": "py", "output_mode": "content"},
             "tool_result": {"output": "result\n"},
@@ -1629,7 +1629,7 @@ class TestDispatchGrep(_DBTestCase):
         self.assertEqual(payload["mode"], "content")
 
     def test_glob_filter_in_summary(self):
-        """El summary muestra el filtro glob cuando se usa."""
+        """The summary shows the glob filter when it is used."""
         data = {
             "tool_input": {"pattern": "class", "glob": "*.tsx"},
             "tool_result": {"output": "Component.tsx\n"},
@@ -1638,10 +1638,10 @@ class TestDispatchGrep(_DBTestCase):
 
         events = self._get_events("grep_search")
         summary = events[0].get("summary", "")
-        self.assertIn("filtro=*.tsx", summary)
+        self.assertIn("фильтр=*.tsx", summary)
 
     def test_empty_pattern_creates_no_event(self):
-        """Un patron vacio no crea evento."""
+        """An empty pattern creates no event."""
         data = {"tool_input": {"pattern": ""}, "tool_result": {}}
         _capture._dispatch_grep(self._db, data)
 
@@ -1649,7 +1649,7 @@ class TestDispatchGrep(_DBTestCase):
         self.assertEqual(len(events), 0)
 
     def test_large_grep_output_is_truncated_with_metadata(self):
-        """El grep masivo se guarda como preview con metadatos de recorte."""
+        """A massive grep is stored as a preview with trim metadata."""
         output = "".join(f"file_{i}.py:{i}: match\n" for i in range(160))
         data = {
             "tool_input": {"pattern": "match"},
@@ -1662,7 +1662,7 @@ class TestDispatchGrep(_DBTestCase):
         payload = self._parse_payload(events[0])
         content = events[0].get("content", "")
         self.assertTrue(payload["content_truncated"])
-        self.assertIn("contenido recortado", content)
+        self.assertIn("содержимое обрезано", content)
         self.assertNotEqual(content, output)
 
 
@@ -1671,15 +1671,15 @@ class TestDispatchGrep(_DBTestCase):
 # ---------------------------------------------------------------------------
 
 class TestDispatchAgent(_DBTestCase):
-    """Verifica el dispatcher de Agent."""
+    """Check the Agent dispatcher."""
 
     def test_creates_agent_launched_event(self):
-        """Un Agent crea un evento agent_launched."""
+        """An Agent creates an agent_launched event."""
         data = {
             "tool_input": {
-                "description": "buscar patron",
+                "description": "search pattern",
                 "subagent_type": "Explore",
-                "prompt": "Busca la clase AuthMiddleware",
+                "prompt": "Find the AuthMiddleware class",
             },
             "tool_result": {"output": "Encontrado en src/auth.py"},
         }
@@ -1689,12 +1689,12 @@ class TestDispatchAgent(_DBTestCase):
         self.assertEqual(len(events), 1)
 
     def test_summary_contains_type_and_description(self):
-        """El summary incluye el tipo y la descripcion."""
+        """The summary includes the type and the description."""
         data = {
             "tool_input": {
-                "description": "revisar codigo",
+                "description": "review code",
                 "subagent_type": "code-reviewer",
-                "prompt": "Revisa el modulo auth",
+                "prompt": "Review the auth module",
             },
             "tool_result": {},
         }
@@ -1703,27 +1703,27 @@ class TestDispatchAgent(_DBTestCase):
         events = self._get_events("agent_launched")
         summary = events[0].get("summary", "")
         self.assertIn("code-reviewer", summary)
-        self.assertIn("revisar codigo", summary)
+        self.assertIn("review code", summary)
 
     def test_content_contains_prompt_and_result(self):
-        """El content almacena el prompt enviado y el resultado."""
+        """The content stores the sent prompt and the result."""
         data = {
-            "tool_input": {"prompt": "Analiza esto", "description": "test"},
-            "tool_result": {"output": "Resultado del analisis"},
+            "tool_input": {"prompt": "Analyze this", "description": "test"},
+            "tool_result": {"output": "Analysis result"},
         }
         _capture._dispatch_agent(self._db, data)
 
         events = self._get_events("agent_launched")
         content = events[0].get("content", "")
         self.assertIn("--- prompt ---", content)
-        self.assertIn("Analiza esto", content)
-        self.assertIn("--- resultado ---", content)
-        self.assertIn("Resultado del analisis", content)
+        self.assertIn("Analyze this", content)
+        self.assertIn("--- результат ---", content)
+        self.assertIn("Analysis result", content)
 
     def test_default_subagent_type(self):
-        """Sin subagent_type, usa general-purpose por defecto."""
+        """Without subagent_type, it uses general-purpose by default."""
         data = {
-            "tool_input": {"description": "tarea generica", "prompt": "haz algo"},
+            "tool_input": {"description": "generic task", "prompt": "haz algo"},
             "tool_result": {},
         }
         _capture._dispatch_agent(self._db, data)
@@ -1738,10 +1738,10 @@ class TestDispatchAgent(_DBTestCase):
 # ---------------------------------------------------------------------------
 
 class TestDispatchWebFetch(_DBTestCase):
-    """Verifica el dispatcher de WebFetch."""
+    """Check the WebFetch dispatcher."""
 
     def test_creates_web_fetched_event(self):
-        """Un WebFetch crea un evento web_fetched."""
+        """A WebFetch creates a web_fetched event."""
         data = {
             "tool_input": {"url": "https://example.com/api"},
             "tool_result": {"content": "<html>OK</html>"},
@@ -1752,7 +1752,7 @@ class TestDispatchWebFetch(_DBTestCase):
         self.assertEqual(len(events), 1)
 
     def test_summary_contains_url(self):
-        """El summary incluye la URL (truncada si es larga)."""
+        """The summary includes the URL (truncated if it is long)."""
         data = {
             "tool_input": {"url": "https://docs.python.org/3/library/sqlite3.html"},
             "tool_result": {"content": "docs"},
@@ -1763,7 +1763,7 @@ class TestDispatchWebFetch(_DBTestCase):
         self.assertIn("docs.python.org", events[0].get("summary", ""))
 
     def test_content_stores_response(self):
-        """El content almacena la respuesta completa."""
+        """The content stores the full response."""
         response = "<html><body>Contenido completo</body></html>"
         data = {
             "tool_input": {"url": "https://example.com"},
@@ -1775,7 +1775,7 @@ class TestDispatchWebFetch(_DBTestCase):
         self.assertEqual(events[0].get("content"), response)
 
     def test_empty_url_creates_no_event(self):
-        """Una URL vacia no crea evento."""
+        """An empty URL creates no event."""
         data = {"tool_input": {"url": ""}, "tool_result": {}}
         _capture._dispatch_web_fetch(self._db, data)
 
@@ -1783,8 +1783,8 @@ class TestDispatchWebFetch(_DBTestCase):
         self.assertEqual(len(events), 0)
 
     def test_large_response_is_truncated_with_metadata(self):
-        """Una respuesta HTTP enorme no debe llenar memoria por si sola."""
-        response = "<html>" + ("contenido " * 800) + "</html>"
+        """A huge HTTP response must not fill memory by itself."""
+        response = "<html>" + ("content " * 800) + "</html>"
         data = {
             "tool_input": {"url": "https://example.com"},
             "tool_result": {"content": response},
@@ -1796,7 +1796,7 @@ class TestDispatchWebFetch(_DBTestCase):
         payload = self._parse_payload(events[0])
         content = events[0].get("content", "")
         self.assertTrue(payload["content_truncated"])
-        self.assertIn("contenido recortado", content)
+        self.assertIn("содержимое обрезано", content)
         self.assertNotEqual(content, response)
 
 
@@ -1805,13 +1805,13 @@ class TestDispatchWebFetch(_DBTestCase):
 # ---------------------------------------------------------------------------
 
 class TestDispatchWebSearch(_DBTestCase):
-    """Verifica el dispatcher de WebSearch."""
+    """Check the WebSearch dispatcher."""
 
     def test_creates_web_searched_event(self):
-        """Un WebSearch crea un evento web_searched."""
+        """A WebSearch creates a web_searched event."""
         data = {
             "tool_input": {"query": "python sqlite3 fts5"},
-            "tool_result": {"content": "resultado 1\nresultado 2"},
+            "tool_result": {"content": "result 1\nresult 2"},
         }
         _capture._dispatch_web_search(self._db, data)
 
@@ -1819,7 +1819,7 @@ class TestDispatchWebSearch(_DBTestCase):
         self.assertEqual(len(events), 1)
 
     def test_summary_contains_query(self):
-        """El summary incluye la consulta de busqueda."""
+        """The summary includes the search query."""
         data = {
             "tool_input": {"query": "claude code hooks api"},
             "tool_result": {"content": "results"},
@@ -1830,7 +1830,7 @@ class TestDispatchWebSearch(_DBTestCase):
         self.assertIn("claude code hooks api", events[0].get("summary", ""))
 
     def test_content_stores_results(self):
-        """El content almacena los resultados de la busqueda."""
+        """The content stores the search results."""
         results = "1. Resultado uno\n2. Resultado dos\n3. Resultado tres"
         data = {
             "tool_input": {"query": "test"},
@@ -1842,7 +1842,7 @@ class TestDispatchWebSearch(_DBTestCase):
         self.assertEqual(events[0].get("content"), results)
 
     def test_empty_query_creates_no_event(self):
-        """Una query vacia no crea evento."""
+        """An empty query creates no event."""
         data = {"tool_input": {"query": ""}, "tool_result": {}}
         _capture._dispatch_web_search(self._db, data)
 
@@ -1850,8 +1850,8 @@ class TestDispatchWebSearch(_DBTestCase):
         self.assertEqual(len(events), 0)
 
     def test_large_results_are_truncated_with_metadata(self):
-        """Resultados de busqueda enormes se guardan como preview."""
-        results = "".join(f"{i}. resultado largo\n" for i in range(180))
+        """Huge search results are stored as a preview."""
+        results = "".join(f"{i}. long result\n" for i in range(180))
         data = {
             "tool_input": {"query": "test"},
             "tool_result": {"content": results},
@@ -1863,7 +1863,7 @@ class TestDispatchWebSearch(_DBTestCase):
         payload = self._parse_payload(events[0])
         content = events[0].get("content", "")
         self.assertTrue(payload["content_truncated"])
-        self.assertIn("contenido recortado", content)
+        self.assertIn("содержимое обрезано", content)
         self.assertNotEqual(content, results)
 
 
@@ -1872,7 +1872,7 @@ class TestDispatchWebSearch(_DBTestCase):
 # ---------------------------------------------------------------------------
 
 class TestDispatchNotebook(_DBTestCase):
-    """Verifica el dispatcher de NotebookEdit."""
+    """Check the NotebookEdit dispatcher."""
 
     def setUp(self):
         super().setUp()
@@ -1884,7 +1884,7 @@ class TestDispatchNotebook(_DBTestCase):
         super().tearDown()
 
     def test_creates_notebook_edited_event(self):
-        """Un NotebookEdit crea un evento notebook_edited."""
+        """A NotebookEdit creates a notebook_edited event."""
         data = {"tool_input": {"notebook_path": os.path.join(self._tmpdir, "analysis.ipynb"), "command": "edit"}}
         _capture._dispatch_notebook(self._db, data)
 
@@ -1892,7 +1892,7 @@ class TestDispatchNotebook(_DBTestCase):
         self.assertEqual(len(events), 1)
 
     def test_summary_contains_path_and_command(self):
-        """El summary incluye la ruta y el tipo de operacion."""
+        """The summary includes the path and the operation type."""
         data = {"tool_input": {"notebook_path": os.path.join(self._tmpdir, "model.ipynb"), "command": "add_cell"}}
         _capture._dispatch_notebook(self._db, data)
 
@@ -1902,7 +1902,7 @@ class TestDispatchNotebook(_DBTestCase):
         self.assertIn("add_cell", summary)
 
     def test_payload_has_file_and_command(self):
-        """El payload incluye la ruta relativa y el comando."""
+        """The payload includes the relative path and the command."""
         data = {"tool_input": {"notebook_path": os.path.join(self._tmpdir, "nb.ipynb"), "command": "delete_cell"}}
         _capture._dispatch_notebook(self._db, data)
 
@@ -1912,7 +1912,7 @@ class TestDispatchNotebook(_DBTestCase):
         self.assertEqual(payload["command"], "delete_cell")
 
     def test_excluded_path_creates_no_event(self):
-        """Un notebook en directorio excluido no crea evento."""
+        """A notebook in an excluded directory creates no event."""
         data = {"tool_input": {"notebook_path": os.path.join(self._tmpdir, ".venv", "nb.ipynb")}}
         _capture._dispatch_notebook(self._db, data)
 
@@ -1920,7 +1920,7 @@ class TestDispatchNotebook(_DBTestCase):
         self.assertEqual(len(events), 0)
 
     def test_empty_path_creates_no_event(self):
-        """Una ruta vacia no crea evento."""
+        """An empty path creates no event."""
         data = {"tool_input": {"notebook_path": ""}}
         _capture._dispatch_notebook(self._db, data)
 
@@ -1933,15 +1933,15 @@ class TestDispatchNotebook(_DBTestCase):
 # ---------------------------------------------------------------------------
 
 class TestFirstMeaningfulLine(unittest.TestCase):
-    """Verifica la extraccion de la primera linea significativa."""
+    """Check the extraction of the first meaningful line."""
 
     def test_normal_text(self):
-        result = _capture._first_meaningful_line("primera linea\nsegunda")
-        self.assertEqual(result, "primera linea")
+        result = _capture._first_meaningful_line("first line\nsecond")
+        self.assertEqual(result, "first line")
 
     def test_empty_lines_skipped(self):
-        result = _capture._first_meaningful_line("\n\n  \ntercera linea\n")
-        self.assertEqual(result, "tercera linea")
+        result = _capture._first_meaningful_line("\n\n  \nthird line\n")
+        self.assertEqual(result, "third line")
 
     def test_empty_string(self):
         result = _capture._first_meaningful_line("")
@@ -1958,7 +1958,7 @@ class TestFirstMeaningfulLine(unittest.TestCase):
 
 
 class TestPrepareHighVolumeContent(unittest.TestCase):
-    """Verifica el helper de recorte para eventos de alto volumen."""
+    """Check the trim helper for high-volume events."""
 
     def test_small_text_kept_intact(self):
         text = "uno\ndos\n"
@@ -1967,15 +1967,15 @@ class TestPrepareHighVolumeContent(unittest.TestCase):
         self.assertFalse(meta["content_truncated"])
 
     def test_large_text_is_marked_and_trimmed(self):
-        text = "".join(f"linea {i}\n" for i in range(200))
+        text = "".join(f"line {i}\n" for i in range(200))
         content, meta = _capture._prepare_high_volume_content(text)
         self.assertTrue(meta["content_truncated"])
-        self.assertIn("contenido recortado", content)
+        self.assertIn("содержимое обрезано", content)
         self.assertLess(len(content), len(text))
 
 
 class TestRelativePath(unittest.TestCase):
-    """Verifica la conversion a ruta relativa."""
+    """Check the conversion to a relative path."""
 
     def test_normal_conversion(self):
         result = _capture._relative_path("/project/src/main.py", "/project")
@@ -1991,7 +1991,7 @@ class TestRelativePath(unittest.TestCase):
 
     def test_normalizes_symlinked_paths_before_relativizing(self):
         if not hasattr(os, "symlink"):
-            self.skipTest("El sistema no soporta symlinks.")
+            self.skipTest("The system does not support symlinks.")
 
         real_project = tempfile.mkdtemp()
         alias_root = tempfile.mkdtemp()
@@ -2000,7 +2000,7 @@ class TestRelativePath(unittest.TestCase):
             try:
                 os.symlink(real_project, alias_project)
             except (OSError, NotImplementedError) as exc:
-                self.skipTest(f"No se pudo crear el symlink de prueba: {exc}")
+                self.skipTest(f"Could not create the test symlink: {exc}")
 
             target = os.path.join(alias_project, "src", "main.py")
             os.makedirs(os.path.dirname(os.path.realpath(target)), exist_ok=True)
@@ -2015,25 +2015,25 @@ class TestRelativePath(unittest.TestCase):
 
 
 class TestReadFileSafe(unittest.TestCase):
-    """Verifica la lectura segura de ficheros."""
+    """Check the safe file read."""
 
     def test_reads_existing_file(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
-            f.write("contenido de prueba")
+            f.write("test content")
             path = f.name
         try:
             result = _capture._read_file_safe(path)
-            self.assertEqual(result, "contenido de prueba")
+            self.assertEqual(result, "test content")
         finally:
             os.unlink(path)
 
     def test_returns_none_for_missing_file(self):
-        result = _capture._read_file_safe("/tmp/no_existe_para_nada_12345.txt")
+        result = _capture._read_file_safe("/tmp/does_not_exist_at_all_12345.txt")
         self.assertIsNone(result)
 
 
 class TestLoadStateFile(unittest.TestCase):
-    """Verifica la carga y validacion del fichero de estado."""
+    """Check the loading and validation of the state file."""
 
     def setUp(self):
         self._tmpfile = tempfile.NamedTemporaryFile(
@@ -2053,7 +2053,7 @@ class TestLoadStateFile(unittest.TestCase):
         self._write_state({
             "comando": "feature",
             "fase_actual": "producto",
-            "descripcion": "login con OAuth2",
+            "descripcion": "login with OAuth2",
         })
         result = _capture._load_state_file(self._tmpfile.name)
         self.assertIsNotNone(result)
@@ -2076,7 +2076,7 @@ class TestLoadStateFile(unittest.TestCase):
 
     def test_invalid_json(self):
         with open(self._tmpfile.name, "w") as f:
-            f.write("esto no es json {{{")
+            f.write("this is not json {{{")
         result = _capture._load_state_file(self._tmpfile.name)
         self.assertIsNone(result)
 

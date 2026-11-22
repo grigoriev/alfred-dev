@@ -1,147 +1,159 @@
 # Changelog
 
-Todos los cambios relevantes del proyecto se documentan en este fichero.
+Все значимые изменения проекта документируются в этом файле.
 
-El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
-y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
+Формат следует [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/),
+а проект использует [семантическое версионирование](https://semver.org/lang/ru/).
 
 ---
 
+## [0.7.1] - 2026-11-22
+
+Релиз русского форка (`v0.7.1-ru`).
+
+### Fixed
+
+- **Полный перевод:** весь текст для пользователя теперь на русском: карта кодовой базы, `current.md`, kanban, handoff, отчёты сессий, Memory UI, хуки, Designer, MCP-сервер памяти, установщики, `docs/` и этот CHANGELOG. Комментарии, docstring, логи и скрипты релиза теперь на английском. Сохранённые значения и испанские фразы для маршрутизации не менялись.
+- **Определение стека:** `pom.xml`, `go.mod`, `pyproject.toml` и другие манифесты важнее `package.json`, который только собирает assets фронтенда. Имя проекта берётся из `package.json` только для Node.
+- **Команды:** подсказки больше не ссылаются на удалённые `/alfred-dev:resume` и `/alfred-dev:verify`. Вместо них `retomar` и `uat`. Старые значения в сохранённых handoff и сессиях читаются как новые.
+- **Меню:** подписи опционального агента и выхода из настроек переведены.
+- **ADR:** имя файла сохраняет кириллицу из названия.
+
 ## [0.7.0] - 2026-08-15
 
-Corte alineado con el SDK de Claude Code. Rompe superficie publica.
+Срез, согласованный с SDK Claude Code. Ломает публичную поверхность.
 
-- 10 agentes (`model: inherit`): 8 de nucleo, Selina si hay frontend, Lucius opcional.
-- 11 skills planas en `skills/<nombre>/SKILL.md`.
-- Documentación viva en `docs/project/`: índice, arquitectura, compliance, threat-model y dependencias. El Escriba sincroniza por fase. ADRs en `docs/adr/`.
-- SessionStart inyecta briefing real y el protocolo de hablar sin slash. `retomar` trae la última decisión. `hygiene` bloquea ship si la UAT está abierta o los docs vivos siguen en esqueleto. `cierre` deja un bloque pegable tras quick/fix.
-- UserPromptSubmit (`prompt-route.py`) sugiere la ruta si el texto no trae slash. SessionEnd escribe `.claude/alfred-last-cierre.md` al salir.
-- 18 comandos publicados, incluido `/alfred-dev:alfred`. Continuidad pública: `alfred`, `progress` y `retomar`. `next` y `search` quedan internos. `resume` pasa a `retomar`, `verify` a `uat`, `config` a `ajustes`.
-- Sin stop-hook Ralph. SessionStart no reescribe `settings.json` ni `Bash(python3 *)`.
-- Secret-guard cubre Write, Edit, Bash y tools MCP de escritura.
-- MCP arranca `mcp/memory_server.py` con FastMCP si el paquete `mcp` esta instalado.
-- Agent Teams solo si el usuario ya lo tiene activo. El plugin no escribe esa variable.
-- Memory UI 0.0.4: no importa el historial de Git al abrir; si no hay sesiones ni decisiones, no mezcla consejos operativos. `/alfred-dev:memory-ui stop` cierra el servidor y `SessionEnd` lo detiene al salir.
+- 10 агентов (`model: inherit`): 8 базовых, Selina при наличии фронтенда, Lucius опционально.
+- 11 плоских skills в `skills/<nombre>/SKILL.md`.
+- Живая документация в `docs/project/`: индекс, архитектура, compliance, threat-model и зависимости. El Escriba синхронизирует её по фазам. ADR лежат в `docs/adr/`.
+- SessionStart внедряет реальный брифинг и протокол общения без слэша. `retomar` приносит последнее решение. `hygiene` блокирует ship, если UAT открыта или живые документы остаются заготовками. `cierre` оставляет готовый к вставке блок после quick/fix.
+- UserPromptSubmit (`prompt-route.py`) предлагает маршрут, если в тексте нет слэша. SessionEnd при выходе пишет `.claude/alfred-last-cierre.md`.
+- 18 опубликованных команд, включая `/alfred-dev:alfred`. Публичная непрерывность: `alfred`, `progress` и `retomar`. `next` и `search` остаются внутренними. `resume` становится `retomar`, `verify` становится `uat`, `config` становится `ajustes`.
+- Без stop-hook Ralph. SessionStart не переписывает `settings.json` и `Bash(python3 *)`.
+- Secret-guard покрывает Write, Edit, Bash и записывающие MCP tools.
+- MCP запускает `mcp/memory_server.py` через FastMCP, если установлен пакет `mcp`.
+- Agent Teams только если у пользователя они уже включены. Плагин не пишет эту переменную.
+- Memory UI 0.0.4: не импортирует историю Git при открытии; если нет ни сессий, ни решений, не подмешивает операционные советы. `/alfred-dev:memory-ui stop` закрывает сервер, а `SessionEnd` останавливает его при выходе.
 
 ## [0.6.1] - 2026-06-22
 
 ### Fixed
 
-- **Actualización resistente a marketplace stale**: los instaladores Bash y PowerShell limpian el checkout local `~/.claude/plugins/marketplaces/alfred-dev`, vuelven a registrar la fuente GitHub, ejecutan `claude plugin marketplace update alfred-dev` cuando la CLI lo permite y solo después instalan el plugin. Esto evita el caso donde Claude Code imprime `Successfully installed plugin: alfred-dev@alfred-dev` pero materializa otra vez una caché antigua como `0.5.2`.
-- **Alias `/alfred` tras update**: al forzar que la cache instalada corresponda a la version publicada actual, el instalador puede resolver de forma determinista `skills/alfred/alfred/SKILL.md` y recrear el alias personal global.
+- **Обновление, устойчивое к устаревшему marketplace**: установщики Bash и PowerShell очищают локальный checkout `~/.claude/plugins/marketplaces/alfred-dev`, заново регистрируют источник GitHub, выполняют `claude plugin marketplace update alfred-dev`, если CLI это позволяет, и только после этого устанавливают плагин. Это предотвращает случай, когда Claude Code печатает `Successfully installed plugin: alfred-dev@alfred-dev`, но снова материализует старый кэш, например `0.5.2`.
+- **Алиас `/alfred` после update**: поскольку установщик теперь требует, чтобы установленный кэш соответствовал текущей опубликованной версии, он может детерминированно найти `skills/alfred/alfred/SKILL.md` и пересоздать глобальный личный алиас.
 
 ## [0.6.0] - 2026-06-19
 
 ### Changed
 
-- **Agentes cargados desde la raíz**: los 9 agentes opcionales pasan de `agents/optional/` a `agents/` para que Claude Code los descubra junto a los 10 agentes de núcleo.
-- **MCP compatible con la CLI actual**: `alfred-memory` vuelve al `.mcp.json` raíz autodetectado por Claude Code, con un lanzador portable que usa `CLAUDE_PLUGIN_ROOT` cuando existe y cae al directorio de trabajo en desarrollo local.
-- **Nomenclatura actual de Claude Code**: comandos, agentes y documentación operativa usan `Agent` donde antes quedaban referencias obsoletas a `Task`.
-- **Nombre humano en UI de Claude Code**: `plugin.json` y `marketplace.json` declaran `displayName: "Alfred Dev"` para que el inventario muestre `Alfred Dev (alfred-dev)` sin cambiar el namespace técnico.
-- **Release de estabilización 0.6.0**: `plugin.json` queda como fuente canónica de version; instaladores, paquetes, sitio, memoria MCP y session report se alinean con ese valor, y el marketplace no duplica `version`.
-- **Contrato de transporte MCP actualizado**: el servidor de memoria habla JSONL MCP moderno por stdio y mantiene lectura compatible con el framing `Content-Length` heredado.
-- **Matriz de auditoría 0.6.0**: se abre un checklist verificable para contrastar lo que promete el plugin con pruebas de terminal, inventario real de Claude Code y comportamiento humano-operativo.
-- **Auditor de release reproducible**: `npm run release:audit:*` agrupa contratos locales, smokes de continuidad, las 15 tools MCP, contratos externos y full audit antes de publicar.
-- **Contratos externos explícitos**: Docker/SonarQube, GitHub Sync, Lucius y deploy mantienen límites humanos verificables: pedir permiso, no tocar sistemas externos a ciegas y no fingir ejecución.
-- **Contratos humanos y antifingimiento**: `npm run release:audit:human` protege el uso correcto de `AskUserQuestion`, UAT explícita, helpers sin doble resumen y reglas centrales para no inventar evidencia.
-- **Catálogo público verificado**: el audit base comprueba que `plugin.json`, `/alfred-dev:help` y `docs/architecture.md` enumeran los mismos 26 comandos sin duplicados ni entradas fantasma.
-- **Contratos de ejecución de comandos**: el audit base comprueba argumentos, helpers deterministas, cierres canónicos de los seis flujos principales y contratos interactivos de `config`, `lucius` y `update`.
-- **Matriz promesa-evidencia**: `docs/promise-evidence-0.6.0.md` cruza claims públicos contra pruebas, smokes y bloqueos externos para distinguir lo cubierto de lo pendiente.
-- **Claims públicos vigilados**: el audit base bloquea contadores obsoletos, comandos legacy `/alfred ...` en prompts runtime y pins de modelo antiguos en Lucius.
-- **Smokes sin cache stale accidental**: el runner manual usa el worktree por defecto, exige `--installed` para probar la cache instalada y el full audit compara la instalacion global de usuario con las superficies criticas del worktree.
-- **Smoke de continuidad ampliado**: `npm run release:audit:continuity` recorre también prefetch, handoff explícito, bypass del stop hook, normalización de kanban, Memory UI sin abrir navegador y cierre seguro de sync-github sin tablero.
-- **Hooks en formato exec**: `hooks.json` usa `command` + `args` para resolver `${CLAUDE_PLUGIN_ROOT}` sin tokenizacion shell y con rutas que contienen espacios.
-- **Wrapper helper-first resiliente**: `.claude/alfred-continuity.py` ya no queda atado solo a una ruta de cache embebida; resuelve `CLAUDE_PLUGIN_ROOT` y puede localizar la cache activa del plugin.
-- **Runner de matriz manual humana**: `npm run release:audit:manual` ejecuta prompts con `claude -p`, fixtures temporales y salida JSON para revisar humanidad, honestidad y promesas reales antes de publicar; la matriz cubre los 20 comandos públicos, 42 opciones públicas y 4 contratos runtime de `/update`, y falla en el audit si queda alguna fuera.
-- **Config interactiva cerrada como contrato**: las 7 secciones de `/alfred-dev:config` quedan cubiertas por preview antes/después y round-trip de persistencia en tests y auditoría de release.
-- **Empaquetado publicable auditado**: `npm run release:audit` ejecuta `npm pack --dry-run --json` y verifica que el paquete contiene la superficie real del plugin sin caches, sesiones locales, tests ni builds generados.
-- **Autopilot sin opciones fantasma**: README, web y prompts aclaran que autopilot se activa por configuración/estado, no con un flag público inexistente, y que deploy sigue exigiendo confirmación humana.
+- **Агенты загружаются из корня**: 9 опциональных агентов переезжают из `agents/optional/` в `agents/`, чтобы Claude Code находил их вместе с 10 базовыми агентами.
+- **MCP, совместимый с текущей CLI**: `alfred-memory` возвращается в корневой `.mcp.json`, который Claude Code находит автоматически, с переносимым лаунчером: он использует `CLAUDE_PLUGIN_ROOT`, если переменная есть, и откатывается на рабочий каталог при локальной разработке.
+- **Актуальная терминология Claude Code**: команды, агенты и операционная документация используют `Agent` там, где раньше оставались устаревшие ссылки на `Task`.
+- **Человеческое имя в UI Claude Code**: `plugin.json` и `marketplace.json` объявляют `displayName: "Alfred Dev"`, чтобы инвентарь показывал `Alfred Dev (alfred-dev)` без изменения технического namespace.
+- **Стабилизационный релиз 0.6.0**: `plugin.json` становится каноническим источником версии; установщики, пакеты, сайт, память MCP и session report выравниваются по этому значению, а marketplace не дублирует `version`.
+- **Обновлённый транспортный контракт MCP**: сервер памяти говорит на современном JSONL MCP через stdio и сохраняет совместимое чтение унаследованного framing `Content-Length`.
+- **Матрица аудита 0.6.0**: открыт проверяемый checklist, чтобы сверять обещания плагина с проверками в терминале, реальным инвентарём Claude Code и человеко-операционным поведением.
+- **Воспроизводимый аудитор релиза**: `npm run release:audit:*` объединяет локальные контракты, smokes непрерывности, 15 MCP tools, внешние контракты и full audit перед публикацией.
+- **Явные внешние контракты**: Docker/SonarQube, GitHub Sync, Lucius и deploy сохраняют проверяемые человеческие границы: просить разрешение, не трогать внешние системы вслепую и не изображать выполнение.
+- **Человеческие контракты и защита от имитации**: `npm run release:audit:human` защищает корректное использование `AskUserQuestion`, явную UAT, helpers без двойного резюме и центральные правила против выдуманных доказательств.
+- **Проверенный публичный каталог**: базовый audit проверяет, что `plugin.json`, `/alfred-dev:help` и `docs/architecture.md` перечисляют одни и те же 26 команд без дублей и фантомных записей.
+- **Контракты выполнения команд**: базовый audit проверяет аргументы, детерминированные helpers, канонические завершения шести основных процессов и интерактивные контракты `config`, `lucius` и `update`.
+- **Матрица обещание-доказательство**: `docs/promise-evidence-0.6.0.md` сопоставляет публичные claims с тестами, smokes и внешними блокерами, чтобы отличать покрытое от ожидающего.
+- **Отслеживаемые публичные claims**: базовый audit блокирует устаревшие счётчики, legacy-команды `/alfred ...` в runtime-промптах и старые пины моделей в Lucius.
+- **Smokes без случайного устаревшего кэша**: ручной раннер по умолчанию использует worktree, требует `--installed` для проверки установленного кэша, а full audit сравнивает глобальную пользовательскую установку с критичными поверхностями worktree.
+- **Расширенный smoke непрерывности**: `npm run release:audit:continuity` также проходит prefetch, явный handoff, обход stop hook, нормализацию kanban, Memory UI без открытия браузера и безопасное завершение sync-github без доски.
+- **Hooks в формате exec**: `hooks.json` использует `command` + `args`, чтобы разрешать `${CLAUDE_PLUGIN_ROOT}` без shell-токенизации и с путями, содержащими пробелы.
+- **Устойчивая обёртка helper-first**: `.claude/alfred-continuity.py` больше не привязан только к встроенному пути кэша; он разрешает `CLAUDE_PLUGIN_ROOT` и может найти активный кэш плагина.
+- **Раннер ручной человеческой матрицы**: `npm run release:audit:manual` выполняет промпты через `claude -p`, временные fixtures и вывод JSON, чтобы перед публикацией проверить человечность, честность и реальные обещания; матрица покрывает 20 публичных команд, 42 публичные опции и 4 runtime-контракта `/update`, и audit падает, если что-то осталось вне её.
+- **Интерактивная настройка закреплена как контракт**: все 7 разделов `/alfred-dev:config` покрыты превью до/после и round-trip сохранения в тестах и аудите релиза.
+- **Аудит публикуемого пакета**: `npm run release:audit` выполняет `npm pack --dry-run --json` и проверяет, что пакет содержит реальную поверхность плагина без кэшей, локальных сессий, тестов и сгенерированных сборок.
+- **Autopilot без фантомных опций**: README, сайт и промпты уточняют, что autopilot включается через настройки/состояние, а не несуществующим публичным флагом, и что deploy по-прежнему требует подтверждения человека.
 
 ### Fixed
 
-- **Inventario de plugin incompleto**: Claude Code ya puede mostrar los 19 agentes del plugin en `claude plugin details`.
-- **Inventario MCP restaurado**: Claude Code vuelve a contar `alfred-memory` dentro del inventario del plugin.
-- **Health-check MCP rojo**: `claude mcp get plugin:alfred-dev:alfred-memory` pasa a conectar correctamente contra el servidor real.
-- **MCP que listaba pero no ejecutaba**: `tools/call` enlaza correctamente los handlers de `alfred-memory`; las 15 tools se invocan ahora en el smoke de release contra SQLite temporal.
-- **`/alfred-dev:quick` demasiado maquinal**: el helper CLI devuelve Markdown humano por defecto y reserva JSON para `--json`, igual que el resto de helpers operativos.
-- **Ayuda duplicada**: `/alfred-dev:help` deja de repetir el bloque de orientación contextual y la lista de prioridades.
-- **Guards de seguridad neutralizados**: `secret-guard.sh`, `dangerous-command-guard.py` y `prefetch-finish-guard.py` ya no quedan envueltos en `|| true`, por lo que sus bloqueos `exit 2` llegan a Claude Code.
-- **`/alfred-dev:lucius` no recibía argumentos explícitos**: el comando ahora declara `argument-hint` e inserta `$ARGUMENTS`, por lo que rutas y `--scope` llegan al agente externo.
-- **`/alfred-dev:spike` sin cierre operativo**: el flujo de investigación queda obligado a cerrar con ADR/recomendación, gate humana si aplica y una única salida accionable sin implementar producción.
-- **Smoke instalado vulnerable a marketplace stale**: la guía de release ahora fuerza `marketplace remove --scope user` + `marketplace add "$PWD" --scope user` + reinstalación global de usuario para que `claude plugin details` lea el worktree 0.6.0 y no una copia GitHub antigua.
+- **Неполный инвентарь плагина**: Claude Code теперь может показать 19 агентов плагина в `claude plugin details`.
+- **Восстановлен инвентарь MCP**: Claude Code снова учитывает `alfred-memory` в инвентаре плагина.
+- **Красный health-check MCP**: `claude mcp get plugin:alfred-dev:alfred-memory` теперь корректно подключается к реальному серверу.
+- **MCP, который показывал, но не выполнял**: `tools/call` корректно связывает обработчики `alfred-memory`; все 15 tools теперь вызываются в smoke релиза на временной SQLite.
+- **Слишком механический `/alfred-dev:quick`**: CLI helper по умолчанию возвращает человеческий Markdown и оставляет JSON для `--json`, как и остальные операционные helpers.
+- **Дублированная справка**: `/alfred-dev:help` больше не повторяет блок контекстной ориентации и список приоритетов.
+- **Нейтрализованные защитные guards**: `secret-guard.sh`, `dangerous-command-guard.py` и `prefetch-finish-guard.py` больше не обёрнуты в `|| true`, поэтому их блокировки `exit 2` доходят до Claude Code.
+- **`/alfred-dev:lucius` не получал явные аргументы**: команда теперь объявляет `argument-hint` и вставляет `$ARGUMENTS`, поэтому пути и `--scope` доходят до внешнего агента.
+- **`/alfred-dev:spike` без операционного завершения**: исследовательский процесс обязан завершаться ADR/рекомендацией, человеческой gate, если она применима, и единственным действенным выходом без реализации production-кода.
+- **Установленный smoke уязвим к устаревшему marketplace**: руководство по релизу теперь требует `marketplace remove --scope user` + `marketplace add "$PWD" --scope user` + глобальную пользовательскую переустановку, чтобы `claude plugin details` читал worktree 0.6.0, а не старую копию с GitHub.
 
 ## [0.5.2] - 2026-04-11
 
 ### Added
 
-- **Catalogo completo de skills publicado en Claude Code**: `plugin.json` deja de enumerar solo 5 skills y pasa a exponer los 15 dominios completos de `skills/`, alineando la superficie pública con las 62 capacidades reales del repositorio.
-- **Contratos de superficie para skills publicadas**: la suite valida ahora que el manifiesto publique exactamente las 62 skills esperadas, que cada skill publicada tenga `name` y `description`, y que la unica colision permitida con slash commands sea el alias auditado `/alfred`.
-- **Flujo guiado real para Selina**: la fase visual puede arrancar ahora por sistema de diseño base, fijar pairing tipográfico + gama cromática y solo después generar tres propuestas finales comparables dentro de esa misma familia.
+- **Полный каталог skills опубликован в Claude Code**: `plugin.json` больше не перечисляет только 5 skills и открывает все 15 доменов `skills/`, выравнивая публичную поверхность с 62 реальными возможностями репозитория.
+- **Контракты поверхности для опубликованных skills**: набор тестов теперь проверяет, что манифест публикует ровно 62 ожидаемых skills, что у каждого опубликованного skill есть `name` и `description`, и что единственная допустимая коллизия со slash-командами это проверенный алиас `/alfred`.
+- **Реальный пошаговый процесс для Selina**: визуальная фаза теперь может стартовать с базовой дизайн-системы, зафиксировать типографическую пару + цветовую гамму и только после этого сгенерировать три сопоставимых финальных предложения внутри этого же семейства.
 
 ### Changed
 
-- **Skills delicados siguen siendo manuales**: `style-direction`, `incident-response`, `sonarqube`, `release-planning`, `pr-workflow`, `release` y `repo-setup` quedan expuestos pero marcados con `disable-model-invocation: true` para evitar activaciones automáticas inesperadas.
-- **Ayuda y README concentrados por valor**: la superficie de comandos se reagrupa en core, operativos avanzados y vistas/aliases para reducir ruido sin romper compatibilidad ni eliminar entrypoints.
-- **Selina deja de mezclar sistemas visuales**: las tres propuestas finales conservan la familia elegida por el usuario y arrastran principios, gramática, superficies, motion, elementos firma y guardrails del sistema base.
-- **Companion visual más fiel al sistema elegido**: `neo-brutalism`, `glassmorphism-2`, `interactive-3d-webgl`, `ai-hyperminimalism` y `kinetic-typography` ya no caen en la misma card genérica; usan renderers y composición propios.
-- **Versionado coherente a 0.5.2**: plugin, marketplace, instaladores, paquetes, changelog, docs y landing quedan alineados.
+- **Деликатные skills остаются ручными**: `style-direction`, `incident-response`, `sonarqube`, `release-planning`, `pr-workflow`, `release` и `repo-setup` открыты, но помечены `disable-model-invocation: true`, чтобы избежать неожиданных автоматических активаций.
+- **Справка и README сгруппированы по ценности**: поверхность команд перегруппирована на core, продвинутые операционные и представления/алиасы, чтобы снизить шум без потери совместимости и без удаления точек входа.
+- **Selina больше не смешивает визуальные системы**: три финальных предложения сохраняют выбранное пользователем семейство и переносят принципы, грамматику, поверхности, motion, фирменные элементы и guardrails базовой системы.
+- **Визуальный companion точнее следует выбранной системе**: `neo-brutalism`, `glassmorphism-2`, `interactive-3d-webgl`, `ai-hyperminimalism` и `kinetic-typography` больше не сводятся к одной общей карточке; у них свои renderers и композиция.
+- **Согласованное версионирование 0.5.2**: плагин, marketplace, установщики, пакеты, changelog, документация и лендинг выровнены.
 
 ### Fixed
 
-- **`style-direction` deja de ser una excepción silenciosa**: el skill de Selina ya incluye frontmatter canónico y puede convivir dentro del catálogo publicado sin depender de tratamiento especial fuera del manifiesto.
-- **La ronda final deja de colapsar estilos distintos**: color, tipografía y composición ya se corresponden con el sistema visual elegido en lugar de recolorear el mismo layout una y otra vez.
-- **Captura de elección humana más robusta**: el companion visual registra clics por WebSocket y también por fallback HTTP cuando el navegador no completa el handshake local.
+- **`style-direction` больше не молчаливое исключение**: skill Selina теперь содержит канонический frontmatter и может находиться в опубликованном каталоге без особой обработки вне манифеста.
+- **Финальный раунд больше не схлопывает разные стили**: цвет, типографика и композиция теперь соответствуют выбранной визуальной системе, а не перекрашивают один и тот же layout снова и снова.
+- **Более надёжная фиксация выбора человека**: визуальный companion регистрирует клики через WebSocket, а также через резервный HTTP, если браузер не завершает локальный handshake.
 
 ## [0.5.1] - 2026-04-10
 
 ### Added
 
-- **Catálogo canónico de Selina con 10 sistemas de diseño base**: `core/selina_style_catalog.py` reúne el modo libre/contextual y nueve familias visuales guiadas por tendencia para que la fase visual parta de un vocabulario explícito, no de intuiciones sueltas.
-- **Galería de demos para comparar sistemas de diseño**: `core/selina_style_demo.py` y `visual/scripts/write-style-demo-gallery.py` generan una muestra navegable de los 10 sistemas con referencias, paletas, tipografías y tono antes de cerrar las 3 propuestas comparables.
-- **Paletas y tipografías por familia**: cada sistema de diseño declara modos cromáticos, pairing tipográfico y enlaces a Google Fonts o referencias visuales para que Selina pueda justificar la dirección elegida con señales verificables.
+- **Канонический каталог Selina с 10 базовыми дизайн-системами**: `core/selina_style_catalog.py` объединяет свободный/контекстный режим и девять визуальных семейств, ориентированных на тренды, чтобы визуальная фаза опиралась на явный словарь, а не на разрозненную интуицию.
+- **Галерея демо для сравнения дизайн-систем**: `core/selina_style_demo.py` и `visual/scripts/write-style-demo-gallery.py` генерируют навигируемую выборку из 10 систем с референсами, палитрами, шрифтами и тоном до того, как будут сформированы 3 сопоставимых предложения.
+- **Палитры и шрифты по семействам**: каждая дизайн-система объявляет цветовые режимы, типографическую пару и ссылки на Google Fonts или визуальные референсы, чтобы Selina могла обосновать выбранное направление проверяемыми сигналами.
 
 ### Changed
 
-- **Selina deja de presentarse como “tres estilos” aislados**: ahora se explica como una capa de dirección visual basada en 10 sistemas de diseño base que se reducen a 3 propuestas finales comparables según PRD, audiencia y stack.
-- **Versionado coherente a 0.5.1**: plugin, marketplace, instaladores, paquetes, memoria MCP, session report, README, changelog, docs y landing quedan alineados.
-- **Landing y docs públicas más fieles al runtime**: la home pasa a contar el catálogo de Selina, el estado real de la release y cómo encaja la fase visual dentro del flujo orquestado.
+- **Selina больше не подаётся как «три стиля» по отдельности**: теперь она описана как слой визуального направления на основе 10 базовых дизайн-систем, которые сводятся к 3 сопоставимым финальным предложениям по PRD, аудитории и stack.
+- **Согласованное версионирование 0.5.1**: плагин, marketplace, установщики, пакеты, память MCP, session report, README, changelog, документация и лендинг выровнены.
+- **Лендинг и публичная документация точнее отражают runtime**: главная страница теперь рассказывает о каталоге Selina, реальном состоянии релиза и о том, как визуальная фаза встраивается в оркестрируемый процесс.
 
 ### Fixed
 
-- **Superficie de actualización sin drift**: los puntos de versión internos que todavía caían por defecto a una release anterior pasan a reflejar la versión actual para no mezclar metadata vieja al instalar o consultar estado.
-- **Tests de release menos frágiles**: la suite deja de depender de wrappers finos de Astro o rutas hardcodeadas por versión cuando lo correcto es leer la fuente de verdad del manifiesto.
+- **Поверхность обновления без drift**: внутренние точки версии, которые по умолчанию всё ещё указывали на предыдущий релиз, теперь отражают текущую версию, чтобы не смешивать старые метаданные при установке или запросе состояния.
+- **Менее хрупкие тесты релиза**: набор тестов больше не зависит от тонких обёрток Astro или путей, захардкоженных под версию, там, где правильно читать источник истины из манифеста.
 
 ## [0.5.0] - 2026-03-31
 
 ### Added
 
-- **Lucius — El Director Técnico**: nuevo agente opcional que actúa como segunda opinión técnica externa. Invoca Codex CLI en modo no interactivo con sandbox de solo lectura y el modelo configurado por el usuario para auditar el código del proyecto desde una perspectiva externa, sin modificar ningún fichero. Requiere Codex CLI instalado y acceso activo a Codex.
-- **Comando `/alfred-dev:lucius`**: punto de entrada para invocar la auditoría. Acepta directorio objetivo y scope opcionales (`all`, `security`, `tests`, `architecture`, `performance`).
-- **Informe estructurado por ítem**: Lucius devuelve diagnóstico + prescripción + esfuerzo (S/M/L) + sugerencia de con quién implementar (Alfred o Codex) en cuatro secciones: Crítico, Relevante, Oportunidades y Lo que está bien.
-- **Preflight de prerequisitos**: verifica que `codex` está en el PATH y autenticado. Si falta algún requisito, para con instrucciones claras de instalación.
-- **HARD-GATE sin modificaciones**: Lucius compara el estado Git antes y después de ejecutar Codex CLI en `--sandbox read-only`; si detecta diferencias, lo reporta y no oculta el problema.
-- **Selina — La Estilista**: nuevo agente de núcleo (10.º) que ocupa la fase 1b del flujo `feature`. Presenta tres direcciones de estilo visual en el navegador antes de que el architect diseñe componentes. Solo se activa si el proyecto tiene interfaz de usuario.
-- **Servidor visual local**: servidor HTTP + WebSocket de dependencias cero (`visual/scripts/server.cjs`) para renderizar opciones de estilo en tres columnas. Gestiona sesiones por proyecto, hot-reload vía `fs.watch`, registro de clics en `state/events` y cierre limpio ante `SIGTERM`.
-- **Skill de estilo visual** (`skills/estilo/style-direction/SKILL.md`): guía completa para que Selina arranque el servidor, escriba el HTML de opciones con `.style-grid`, lea la elección del usuario y genere `docs/style-direction.md`.
-- **Fase condicional `estilo_visual`**: nueva condición `"tiene_frontend"` en el orquestador. La función `config_loader.has_frontend(stack)` evalúa el stack del proyecto y permite que `advance_phase()` salte la fase automáticamente en proyectos sin UI.
-- **Helper `_advance_skipping_phases`**: función extraída del orquestador para gestionar el salto de fases con condición no cumplida, reduciendo la complejidad cognitiva de `advance_phase`.
+- **Lucius: технический директор**: новый опциональный агент, который даёт внешнее техническое второе мнение. Он вызывает Codex CLI в неинтерактивном режиме с read-only sandbox и моделью, настроенной пользователем, чтобы проаудировать код проекта со стороны, не изменяя ни одного файла. Требует установленный Codex CLI и активный доступ к Codex.
+- **Команда `/alfred-dev:lucius`**: точка входа для запуска аудита. Принимает необязательные целевой каталог и scope (`all`, `security`, `tests`, `architecture`, `performance`).
+- **Структурированный отчёт по пунктам**: Lucius возвращает диагноз + предписание + трудоёмкость (S/M/L) + совет, с кем реализовывать (Alfred или Codex), в четырёх разделах: Критично, Важно, Возможности и Что сделано хорошо.
+- **Preflight предварительных условий**: проверяет, что `codex` есть в PATH и аутентифицирован. Если какого-то условия не хватает, останавливается с понятными инструкциями по установке.
+- **HARD-GATE без изменений**: Lucius сравнивает состояние Git до и после запуска Codex CLI в `--sandbox read-only`; если находит различия, сообщает о них и не скрывает проблему.
+- **Selina: стилист**: новый базовый агент (10-й), который занимает фазу 1b процесса `feature`. Показывает в браузере три направления визуального стиля до того, как architect спроектирует компоненты. Активируется, только если у проекта есть пользовательский интерфейс.
+- **Локальный визуальный сервер**: HTTP + WebSocket сервер без зависимостей (`visual/scripts/server.cjs`) для отрисовки вариантов стиля в три колонки. Управляет сессиями по проекту, hot-reload через `fs.watch`, регистрацией кликов в `state/events` и чистым завершением по `SIGTERM`.
+- **Skill визуального стиля** (`skills/estilo/style-direction/SKILL.md`): полное руководство, по которому Selina запускает сервер, пишет HTML вариантов с `.style-grid`, читает выбор пользователя и генерирует `docs/style-direction.md`.
+- **Условная фаза `estilo_visual`**: новое условие `"tiene_frontend"` в оркестраторе. Функция `config_loader.has_frontend(stack)` оценивает stack проекта и позволяет `advance_phase()` автоматически пропустить фазу в проектах без UI.
+- **Helper `_advance_skipping_phases`**: функция, вынесенная из оркестратора, чтобы управлять пропуском фаз с невыполненным условием и снизить когнитивную сложность `advance_phase`.
 
 ### Changed
 
-- **19 agentes totales**: el plugin pasa de 18 a 19 agentes (10 de núcleo + 9 opcionales) con la incorporación de Lucius.
-- **26 comandos**: se añade `/alfred-dev:lucius` al manifiesto del plugin.
-- **Versionado coherente a 0.5.0**: plugin, marketplace, instaladores, paquetes, README, changelog, docs y landing quedan alineados.
-- **Landing actualizada**: tarjeta de Lucius antes de Selina con badge «Nuevo», agente opcional con use cases, counts actualizados a 19 agentes y 26 comandos.
+- **Всего 19 агентов**: с появлением Lucius плагин переходит с 18 на 19 агентов (10 базовых + 9 опциональных).
+- **26 команд**: в манифест плагина добавлена `/alfred-dev:lucius`.
+- **Согласованное версионирование 0.5.0**: плагин, marketplace, установщики, пакеты, README, changelog, документация и лендинг выровнены.
+- **Обновлённый лендинг**: карточка Lucius перед Selina с бейджем «Новое», опциональный агент с use cases, счётчики обновлены до 19 агентов и 26 команд.
 
 ### Fixed
 
-- **Imports de módulos nativos**: `server.cjs` usa ahora el prefijo `node:` (`node:http`, `node:crypto`, `node:fs`, `node:path`) según la convención canónica de Node.js ≥18.
-- **`Number.parseInt` en lugar de `parseInt`** en `server.cjs` para cumplir con las reglas de linting de SonarQube.
-- **Complejidad cognitiva de `handleRequest` reducida**: el bloque `/files/*` se extrae a `serveStaticFile()`.
-- **`catch` sin variable no usada**: el bloque `catch (e)` en `serveStaticFile` pasa a `catch {}` eliminando la variable no referenciada.
-- **Complejidad cognitiva en `config_loader.py`**: `_count_source_files` (38 → ~6) y `suggest_optional_agents` (18 → ~3) resueltas extrayendo `_scan_dir_for_sources` (recursivo, reemplaza el triple bucle manual) y `_build_suggestion_checks` (lista de checks, elimina las 8 ramas if/elif).
-- **Skill de SonarQube registrado en `plugin.json`**: el fichero `skills/calidad/sonarqube/SKILL.md` existía en disco pero no estaba en el array `skills` del manifiesto del plugin, por lo que Claude Code no lo cargaba.
-- **Ejecución de Docker en subagentes**: los comandos Docker añadidos a `~/.claude/settings.json` como entradas `Bash(docker ...)` permiten que el `security-officer` ejecute SonarQube después del preflight de `/alfred-dev:audit`, cuando Docker ya está operativo o el usuario autoriza prepararlo.
+- **Импорты встроенных модулей**: `server.cjs` теперь использует префикс `node:` (`node:http`, `node:crypto`, `node:fs`, `node:path`) по канонической конвенции Node.js ≥18.
+- **`Number.parseInt` вместо `parseInt`** в `server.cjs` для соответствия правилам линтинга SonarQube.
+- **Снижена когнитивная сложность `handleRequest`**: блок `/files/*` вынесен в `serveStaticFile()`.
+- **`catch` без неиспользуемой переменной**: блок `catch (e)` в `serveStaticFile` стал `catch {}`, неиспользуемая переменная удалена.
+- **Когнитивная сложность в `config_loader.py`**: `_count_source_files` (38 → ~6) и `suggest_optional_agents` (18 → ~3) исправлены выносом `_scan_dir_for_sources` (рекурсивная, заменяет ручной тройной цикл) и `_build_suggestion_checks` (список проверок, убирает 8 ветвей if/elif).
+- **Skill SonarQube зарегистрирован в `plugin.json`**: файл `skills/calidad/sonarqube/SKILL.md` существовал на диске, но отсутствовал в массиве `skills` манифеста плагина, поэтому Claude Code его не загружал.
+- **Запуск Docker в субагентах**: команды Docker, добавленные в `~/.claude/settings.json` как записи `Bash(docker ...)`, позволяют `security-officer` запускать SonarQube после preflight `/alfred-dev:audit`, когда Docker уже работает или пользователь разрешает его подготовить.
 
 ---
 
@@ -149,69 +161,69 @@ Corte alineado con el SDK de Claude Code. Rompe superficie publica.
 
 ### Fixed
 
-- **Hook SessionStart robusto**: la emisión JSON del contexto de sesión ya no se trunca cuando el contenido supera `ARG_MAX` del kernel o contiene caracteres especiales (tildes, backticks, comillas, barras invertidas). La causa raíz era que `escape_for_json()` pasaba el contexto como `sys.argv[1]`, sujeto al límite de tamaño de argumentos del sistema operativo.
+- **Надёжный hook SessionStart**: JSON-вывод контекста сессии больше не обрезается, когда содержимое превышает `ARG_MAX` ядра или содержит спецсимволы (диакритику, обратные кавычки, кавычки, обратные слэши). Первопричина: `escape_for_json()` передавала контекст как `sys.argv[1]`, а это подпадает под лимит размера аргументов операционной системы.
 
 ### Changed
 
-- **Emisión JSON por stdin**: la generación del JSON del hook pasa de interpolación en heredoc bash con `escape_for_json()` a emisión directa por stdin con `json.dumps()` en una nueva función `emit_hook_json()`, eliminando la clase de error por completo.
-- **Versionado coherente a 0.4.7**: plugin, marketplace, instaladores, paquetes, metadata estructurada, README, changelog, docs y landing quedan alineados.
+- **Вывод JSON через stdin**: генерация JSON для hook переходит с интерполяции в bash heredoc с `escape_for_json()` на прямой вывод через stdin с `json.dumps()` в новой функции `emit_hook_json()`. Этот класс ошибок устранён полностью.
+- **Согласованное версионирование 0.4.7**: плагин, marketplace, установщики, пакеты, структурированные метаданные, README, changelog, документация и лендинг выровнены.
 
 ## [0.4.6] - 2026-03-23
 
 ### Added
 
-- **Memory UI local**: nuevo `/alfred-dev:memory-ui` para abrir una vista viva en navegador sobre la SQLite del proyecto con overview, timeline, decisiones, grafo, commits, búsqueda, salud y señales operativas de SonIA.
-- **Memory UI reforzada para produccion**: los flujos helper-first (`map-codebase`, `discuss`, `quick`) ya siembran progreso, trazabilidad y kanban de forma natural, la UI importa commits Git si faltan en memoria y muestra mejor los estados vacios.
-- **Cobertura E2E de Memory UI**: nuevos tests para servidor local, contratos del comando y siembra helper-first que valida timeline, decisiones, commits y señales operativas sin rellenar SQLite a mano.
+- **Локальный Memory UI**: новый `/alfred-dev:memory-ui` открывает живое представление в браузере поверх SQLite проекта: overview, timeline, решения, граф, коммиты, поиск, здоровье и операционные сигналы SonIA.
+- **Memory UI, усиленный для production**: процессы helper-first (`map-codebase`, `discuss`, `quick`) теперь естественно заполняют прогресс, трассируемость и kanban, UI импортирует коммиты Git, если их нет в памяти, и лучше показывает пустые состояния.
+- **E2E-покрытие Memory UI**: новые тесты для локального сервера, контрактов команды и заполнения helper-first, которые проверяют timeline, решения, коммиты и операционные сигналы без ручного наполнения SQLite.
 
 ### Changed
 
-- **Versionado coherente a 0.4.6**: plugin, marketplace, instaladores, paquetes, metadata estructurada, README, changelog, docs y landing quedan alineados.
-- **Superficie pública actualizada**: Alfred refleja ahora `25` comandos y `13` hooks visibles, con `memory-ui` integrada en help, session-start, documentación y web.
-- **Publicación más limpia**: se retiran del repositorio los documentos internos de planificación `docs/superpowers/` y se ignoran para no incluirlos en futuras releases.
+- **Согласованное версионирование 0.4.6**: плагин, marketplace, установщики, пакеты, структурированные метаданные, README, changelog, документация и лендинг выровнены.
+- **Обновлённая публичная поверхность**: Alfred теперь показывает `25` команд и `13` видимых hooks, а `memory-ui` встроен в help, session-start, документацию и сайт.
+- **Более чистая публикация**: внутренние документы планирования `docs/superpowers/` удалены из репозитория и игнорируются, чтобы не попасть в будущие релизы.
 
 ## [0.4.5] - 2026-03-22
 
 ### Added
 
-- **PM operativo determinista para SonIA**: nuevos comandos `/alfred-dev:standup`, `/alfred-dev:blocked`, `/alfred-dev:in-progress`, `/alfred-dev:validate` y `/alfred-dev:search` para explotar el kanban local, la trazabilidad y la memoria del proyecto desde CLI sin abrir siempre un flujo multiagente.
-- **SonIA Sync para GitHub**: nuevo `/alfred-dev:sync-github [owner/repo]` para sincronizar backlog, trabajo en curso, bloqueos y tablero de SonIA usando `gh`, manteniendo `docs/project/` y `.claude/` como fuente de verdad local.
-- **Busqueda unificada proyecto + memoria**: `search` cruza artefactos operativos (`docs/project/`) con la SQLite del proyecto y devuelve resultados accionables en una sola vista.
-- **Validacion operativa del tablero**: `validate` detecta IDs de tarea duplicados, huecos de trazabilidad, falta de evidencia en `done`, bloqueos mal descritos, UAT pendiente y drift del sync local con GitHub.
-- **Cobertura PM y GitHub ampliada**: nuevos tests para wrappers helper-first, parser del kanban de SonIA, renderizados operativos, sincronizacion a GitHub y smokes directos del helper CLI.
+- **Детерминированный операционный PM для SonIA**: новые команды `/alfred-dev:standup`, `/alfred-dev:blocked`, `/alfred-dev:in-progress`, `/alfred-dev:validate` и `/alfred-dev:search`, чтобы работать с локальным kanban, трассируемостью и памятью проекта из CLI, не открывая каждый раз мультиагентный процесс.
+- **SonIA Sync для GitHub**: новая `/alfred-dev:sync-github [owner/repo]` синхронизирует backlog, текущую работу, блокировки и доску SonIA через `gh`, оставляя `docs/project/` и `.claude/` локальным источником истины.
+- **Единый поиск по проекту и памяти**: `search` объединяет операционные артефакты (`docs/project/`) с SQLite проекта и возвращает действенные результаты в одном представлении.
+- **Операционная валидация доски**: `validate` находит дублирующиеся ID задач, пробелы в трассируемости, отсутствие доказательств в `done`, плохо описанные блокировки, ожидающую UAT и drift локального sync с GitHub.
+- **Расширенное покрытие PM и GitHub**: новые тесты для обёрток helper-first, парсера kanban SonIA, операционного рендеринга, синхронизации с GitHub и прямых smokes CLI helper.
 
 ### Changed
 
-- **SonIA pasa de agente interno a capa operativa visible**: `progress`, `standup`, `blocked`, `in-progress`, `validate` y `search` convierten el backlog local en una interfaz diaria real para Claude Code CLI.
-- **Continuity.py se amplía a PM colaborativo**: la capa determinista ya no cubre solo continuidad y UAT, sino tambien vistas PM, validacion de artefactos y sync opcional con GitHub Issues.
-- **Versionado coherente a 0.4.5**: plugin, marketplace, instaladores, paquetes, metadata estructurada, README, changelog, docs y landing quedan alineados.
-- **Superficie pública actualizada**: Alfred refleja ahora `24` comandos y `13` hooks visibles, con la capa PM/GitHub integrada en help, session-start, documentación y web.
+- **SonIA из внутреннего агента становится видимым операционным слоем**: `progress`, `standup`, `blocked`, `in-progress`, `validate` и `search` превращают локальный backlog в реальный ежедневный интерфейс для Claude Code CLI.
+- **Continuity.py расширяется до совместного PM**: детерминированный слой теперь покрывает не только непрерывность и UAT, но и PM-представления, валидацию артефактов и опциональный sync с GitHub Issues.
+- **Согласованное версионирование 0.4.5**: плагин, marketplace, установщики, пакеты, структурированные метаданные, README, changelog, документация и лендинг выровнены.
+- **Обновлённая публичная поверхность**: Alfred теперь показывает `24` команды и `13` видимых hooks, а слой PM/GitHub встроен в help, session-start, документацию и сайт.
 
 ## [0.4.4] - 2026-03-22
 
 ### Fixed
 
-- **FTS de eventos consistente**: los eventos con `content` ya son buscables en `memory_search` y `check_health()` deja de marcar la memoria como corrupta tras el primer evento indexado.
-- **Purga limpia el indice FTS**: `purge_old_events()` elimina tambien las filas de `memory_fts`, evitando huerfanos y falsos errores despues de aplicar la retencion.
-- **Tamano real de la DB en modo WAL**: `memory_health` suma ahora `.db`, `-wal` y `-shm`, de modo que el tamano reportado refleja el consumo real.
-- **Importacion Git robusta**: `import_git_history()` y la captura de `git commit` ya no rompen mensajes o autores cuando el subject contiene el caracter `|`.
-- **Sin techos silenciosos en sync/export**: la proyeccion a memoria nativa y la exportacion de decisiones dejan de truncarse en los primeros 1000 registros.
+- **Согласованный FTS событий**: события с `content` теперь находятся через `memory_search`, а `check_health()` больше не помечает память как повреждённую после первого проиндексированного события.
+- **Очистка чистит индекс FTS**: `purge_old_events()` также удаляет строки `memory_fts`, что исключает сирот и ложные ошибки после применения срока хранения.
+- **Реальный размер БД в режиме WAL**: `memory_health` теперь суммирует `.db`, `-wal` и `-shm`, поэтому показанный размер отражает реальное потребление.
+- **Надёжный импорт Git**: `import_git_history()` и захват `git commit` больше не ломают сообщения или авторов, когда subject содержит символ `|`.
+- **Без скрытых потолков в sync/export**: проекция в нативную память и экспорт решений больше не обрезаются на первых 1000 записях.
 
 ### Added
 
-- **Capa operativa de continuidad**: nuevos comandos `/alfred-dev:map-codebase`, `/alfred-dev:discuss`, `/alfred-dev:next`, `/alfred-dev:pause`, `/alfred-dev:resume`, `/alfred-dev:progress`, `/alfred-dev:verify` y `/alfred-dev:quick` para orientar, pausar, retomar, mapear brownfield y cerrar UAT sin abrir siempre un flujo multiagente completo.
-- **Helper determinista `core/continuity.py`**: nueva base común para continuidad CLI, artefactos `codebase-map.md`, `current.md`, `handoff.md`, `uat.md` y sesiones ligeras reproducibles.
-- **Parser compartido de configuracion de memoria**: nuevo modulo `core/memory_config.py` para resolver defaults y leer `memoria.enabled`, `sync_to_native`, `sync_commits_limit`, `capture_decisions`, `capture_commits` y `retention_days` de forma uniforme.
-- **Hardening helper-first en Claude CLI**: bootstrap de sesión, wrapper local `.claude/alfred-continuity.py`, autoallow de helpers seguros y barreras de prefetch para que `map-codebase` y el brownfield de `/alfred-dev:alfred` funcionen de forma natural en `claude -p`.
-- **Cobertura de regresion ampliada**: tests nuevos para FTS de eventos, purga + salud, tamaño con WAL, importacion Git con `|`, config efectiva del servidor MCP, parser de memoria y sync mas alla de 1000 decisiones.
+- **Операционный слой непрерывности**: новые команды `/alfred-dev:map-codebase`, `/alfred-dev:discuss`, `/alfred-dev:next`, `/alfred-dev:pause`, `/alfred-dev:resume`, `/alfred-dev:progress`, `/alfred-dev:verify` и `/alfred-dev:quick`, чтобы ориентироваться, ставить на паузу, продолжать, картировать brownfield и закрывать UAT, не открывая каждый раз полный мультиагентный процесс.
+- **Детерминированный helper `core/continuity.py`**: новая общая основа для непрерывности в CLI, артефактов `codebase-map.md`, `current.md`, `handoff.md`, `uat.md` и воспроизводимых лёгких сессий.
+- **Общий парсер настроек памяти**: новый модуль `core/memory_config.py` единообразно разрешает значения по умолчанию и читает `memoria.enabled`, `sync_to_native`, `sync_commits_limit`, `capture_decisions`, `capture_commits` и `retention_days`.
+- **Hardening helper-first в Claude CLI**: bootstrap сессии, локальная обёртка `.claude/alfred-continuity.py`, автоматическое разрешение безопасных helpers и барьеры prefetch, чтобы `map-codebase` и brownfield в `/alfred-dev:alfred` естественно работали в `claude -p`.
+- **Расширенное регрессионное покрытие**: новые тесты для FTS событий, очистки + здоровья, размера с WAL, импорта Git с `|`, эффективной конфигурации сервера MCP, парсера памяти и sync более 1000 решений.
 
 ### Changed
 
-- **Alfred decide mejor el siguiente paso**: el asistente contextual ya no solo clasifica `feature/fix/spike/audit`, sino también continuidad, brownfield, UAT y progreso operativo antes de abrir agentes.
-- **La configuracion de memoria ya se aplica de verdad**: `capture_decisions`, `capture_commits`, `retention_days` y `sync_commits_limit` pasan a estar cableados en hooks, servidor MCP y sincronizacion nativa.
-- **Versionado coherente a 0.4.4**: plugin, marketplace, instaladores, paquetes, servidor MCP, informes y metadata de la web quedan alineados.
-- **Web, README y documentacion alineados**: la landing, el README y los docs reflejan ya el modelo actual de Alfred (`18` comandos, `6` flujos, `12` hooks, continuidad operativa y memoria persistente real).
-- **Documentacion de memoria actualizada**: README, `docs/memory.md`, `docs/configuration.md` y `commands/config.md` reflejan el comportamiento real del sistema y el esquema actual.
+- **Alfred лучше выбирает следующий шаг**: контекстный ассистент теперь классифицирует не только `feature/fix/spike/audit`, но и непрерывность, brownfield, UAT и операционный прогресс до запуска агентов.
+- **Настройки памяти теперь действительно применяются**: `capture_decisions`, `capture_commits`, `retention_days` и `sync_commits_limit` подключены к hooks, серверу MCP и нативной синхронизации.
+- **Согласованное версионирование 0.4.4**: плагин, marketplace, установщики, пакеты, сервер MCP, отчёты и метаданные сайта выровнены.
+- **Сайт, README и документация выровнены**: лендинг, README и документация отражают текущую модель Alfred (`18` команд, `6` процессов, `12` hooks, операционная непрерывность и реальная постоянная память).
+- **Обновлённая документация памяти**: README, `docs/memory.md`, `docs/configuration.md` и `commands/config.md` отражают реальное поведение системы и текущую схему.
 
 ---
 
@@ -219,18 +231,18 @@ Corte alineado con el SDK de Claude Code. Rompe superficie publica.
 
 ### Fixed
 
-- **Preflight obligatorio de SonarQube en `/alfred audit`**: la auditoria ahora comprueba Docker antes de lanzar agentes y no deja que SonarQube se omita silenciosamente cuando falta el daemon o hacen falta permisos.
-- **Pregunta interactiva incluso en autopilot**: si hay que instalar Docker, arrancarlo o abrir Docker Desktop, Alfred pide confirmacion explicita al usuario antes de tocar el sistema.
-- **Skill de SonarQube endurecido**: el skill ya no asume permisos, contempla contenedor previo, puerto `9000` ocupado y limpieza final aunque el analisis falle.
-- **Ayuda alineada con el equipo real**: `/alfred help` vuelve a listar los 9 agentes de nucleo incluyendo `project-manager (SonIA)`.
+- **Обязательный preflight SonarQube в `/alfred audit`**: аудит теперь проверяет Docker до запуска агентов и не даёт SonarQube молча пропуститься, когда нет демона или нужны права.
+- **Интерактивный вопрос даже в autopilot**: если нужно установить Docker, запустить его или открыть Docker Desktop, Alfred просит у пользователя явное подтверждение до того, как трогать систему.
+- **Усиленный skill SonarQube**: skill больше не предполагает наличие прав, учитывает уже существующий контейнер, занятый порт `9000` и финальную очистку даже при сбое анализа.
+- **Справка соответствует реальной команде**: `/alfred help` снова перечисляет 9 базовых агентов, включая `project-manager (SonIA)`.
 
 ### Added
 
-- **Tests de contrato para prompts operativos**: nueva cobertura de regresion para asegurar que `audit.md` y `skills/calidad/sonarqube/SKILL.md` siguen pidiendo permisos y documentando la omision de SonarQube cuando corresponde.
+- **Контрактные тесты для операционных промптов**: новое регрессионное покрытие гарантирует, что `audit.md` и `skills/calidad/sonarqube/SKILL.md` по-прежнему запрашивают права и документируют пропуск SonarQube, когда это уместно.
 
 ### Changed
 
-- **Versionado coherente a 0.4.3**: plugin, marketplace, instaladores, paquetes y referencias visibles de la web quedan alineados en una sola version.
+- **Согласованное версионирование 0.4.3**: плагин, marketplace, установщики, пакеты и видимые упоминания на сайте выровнены по одной версии.
 
 ---
 
@@ -238,29 +250,29 @@ Corte alineado con el SDK de Claude Code. Rompe superficie publica.
 
 ### Fixed
 
-- **Falso positivo en evidence guard**: el patron `\d+ failures` detectaba "0 failures" como fallo. Corregido para excluir el cero.
-- **Gate de arquitectura mal tipada**: la fase de arquitectura del flujo feature tenia gate `usuario` en lugar de `usuario+seguridad`, haciendo inoperante la validacion de seguridad.
-- **Patrones divergentes**: `quality-gate.py` tenia patrones de deteccion propios que divergian de `evidence_guard_lib.py`. Unificado para usar una sola fuente de verdad.
-- **Clave de autopilot inconsistente**: los comandos markdown buscaban `"modo": "autopilot"` pero el codigo escribia `"autopilot": true`. Corregido.
+- **Ложное срабатывание в evidence guard**: шаблон `\d+ failures` считал "0 failures" сбоем. Исправлено: ноль исключён.
+- **Неверно типизированная gate архитектуры**: у фазы архитектуры процесса feature была gate `usuario` вместо `usuario+seguridad`, из-за чего проверка безопасности не работала.
+- **Расходящиеся шаблоны**: у `quality-gate.py` были собственные шаблоны обнаружения, расходившиеся с `evidence_guard_lib.py`. Унифицировано на один источник истины.
+- **Несогласованный ключ autopilot**: markdown-команды искали `"modo": "autopilot"`, а код писал `"autopilot": true`. Исправлено.
 
 ### Added
 
-- **Soporte para go test**: la salida de `go test` se detecta correctamente como exito en evidence guard.
-- **Informe de sesiones parciales**: el stop-hook genera informe cuando una sesion se interrumpe, no solo cuando se completa.
-- **Modo autopilot en informes**: los informes de sesion indican si se ejecutaron en modo autopilot o interactivo.
-- **Iteraciones por fase en informes**: los informes muestran cuantos reintentos tuvo cada fase.
-- **Verificacion de evidencia en markdown**: instruccion explicita para que Claude lea `alfred-evidence.json` antes de avanzar gates automaticas.
-- **Loop iterativo documentado**: los comandos feature, fix y ship incluyen instrucciones de loop iterativo (max 5 reintentos por fase).
-- **Persistencia de iteraciones**: instruccion para que Claude persista el estado despues de cada intento de gate.
-- **Gate de deploy siempre interactiva**: refuerzo explicito de que el deploy nunca se auto-aprueba.
+- **Поддержка go test**: вывод `go test` корректно распознаётся как успех в evidence guard.
+- **Отчёт о частичных сессиях**: stop-hook генерирует отчёт, когда сессия прерывается, а не только когда она завершается.
+- **Режим autopilot в отчётах**: отчёты о сессиях указывают, выполнялись ли они в режиме autopilot или интерактивно.
+- **Итерации по фазам в отчётах**: отчёты показывают, сколько повторов было у каждой фазы.
+- **Проверка доказательств в markdown**: явная инструкция, чтобы Claude читал `alfred-evidence.json` перед прохождением автоматических gates.
+- **Документированный итеративный цикл**: команды feature, fix и ship содержат инструкции итеративного цикла (максимум 5 повторов на фазу).
+- **Сохранение итераций**: инструкция, чтобы Claude сохранял состояние после каждой попытки gate.
+- **Gate deploy всегда интерактивна**: явное усиление правила, что deploy никогда не одобряется автоматически.
 
 ### Changed
 
-- **stop-hook refactorizado**: extraidas funciones `should_block`, `build_block_message` y `handle_session_report` para testabilidad.
-- **Mensaje de bloqueo adaptado a autopilot**: en modo autopilot, el stop-hook no pide confirmacion del usuario sino que indica investigar el error.
-- **Evidencia sin ventana temporal para informes**: `get_evidence(max_age_seconds=None)` devuelve todos los registros sin filtrar por antiguedad.
-- **Version dinamica en informes**: el template lee la version de `plugin.json` en lugar de tenerla hardcoded.
-- **Limpieza de evidencia entre sesiones**: al completar una sesion, se limpia el fichero de evidencia para evitar contaminacion cruzada.
+- **Рефакторинг stop-hook**: вынесены функции `should_block`, `build_block_message` и `handle_session_report` для тестируемости.
+- **Сообщение о блокировке адаптировано к autopilot**: в режиме autopilot stop-hook не просит подтверждения пользователя, а предлагает исследовать ошибку.
+- **Доказательства без временного окна для отчётов**: `get_evidence(max_age_seconds=None)` возвращает все записи без фильтра по возрасту.
+- **Динамическая версия в отчётах**: шаблон читает версию из `plugin.json`, а не держит её захардкоженной.
+- **Очистка доказательств между сессиями**: по завершении сессии файл доказательств очищается, чтобы избежать перекрёстного загрязнения.
 
 ---
 
@@ -268,11 +280,11 @@ Corte alineado con el SDK de Claude Code. Rompe superficie publica.
 
 ### Added
 
-- **Configuracion inicial automatica (onboarding)**: cuando Alfred se usa por primera vez en un proyecto (no hay configuracion de autonomia en `alfred-dev.local.md`), pregunta automaticamente si el usuario quiere modo interactivo o autopilot. La respuesta se guarda en el fichero de configuracion local y el flujo continua sin necesidad de reiniciar ni ejecutar comandos adicionales. Implementado en `_composicion.md` (Paso 0) para que aplique a todos los flujos (feature, fix, ship, spike, audit).
+- **Автоматическая начальная настройка (onboarding)**: когда Alfred впервые используется в проекте (в `alfred-dev.local.md` нет настройки автономности), он автоматически спрашивает, нужен ли пользователю интерактивный режим или autopilot. Ответ сохраняется в локальный файл настроек, и процесс продолжается без перезапуска и дополнительных команд. Реализовано в `_composicion.md` (Шаг 0), чтобы применяться ко всем процессам (feature, fix, ship, spike, audit).
 
 ### Fixed
 
-- **Modo autopilot desconectado de los comandos**: las instrucciones de los comandos (`feature.md`, `fix.md`, `ship.md`) no mencionaban el modo autopilot, por lo que Claude nunca lo activaba aunque el backend (`orchestrator.py`) lo soportase. Añadida seccion "Modo autopilot" a los tres comandos y "Paso 2b" a `_composicion.md` para que Claude compruebe el estado de autopilot y salte las gates de usuario cuando proceda.
+- **Режим autopilot не был связан с командами**: инструкции команд (`feature.md`, `fix.md`, `ship.md`) не упоминали режим autopilot, поэтому Claude никогда его не включал, хотя backend (`orchestrator.py`) его поддерживал. Добавлен раздел "Modo autopilot" в три команды и "Paso 2b" в `_composicion.md`, чтобы Claude проверял состояние autopilot и пропускал пользовательские gates, когда это уместно.
 
 ---
 
@@ -280,17 +292,17 @@ Corte alineado con el SDK de Claude Code. Rompe superficie publica.
 
 ### Added
 
-- **Verificacion de evidencia (evidence guard)**: nuevo hook PostToolUse que registra cada ejecucion de tests como evidencia verificable. Cuando un agente afirma que los tests pasan, el sistema puede comprobar que efectivamente se ejecutaron en los ultimos 10 minutos. Fichero de evidencia en `.claude/alfred-evidence.json` con rotacion a 50 registros.
-- **Informe de sesion al cierre**: al finalizar una sesion de trabajo completada, se genera automaticamente un informe en `docs/alfred-reports/` con resumen de fases completadas, evidencia de tests, equipo de sesion y artefactos generados. Integrado en el stop-hook existente.
-- **Loop iterativo dentro de fases**: los agentes pueden iterar dentro de una fase (hasta 5 intentos por defecto) hasta superar la gate correspondiente. Esto habilita ciclos TDD naturales, pasadas de QA repetidas y correccion iterativa sin intervencion manual. Al agotar las iteraciones, se escala al usuario.
-- **Modo autopilot**: `run_flow_autopilot()` ejecuta un flujo completo sin interrupcion humana. Las gates de tipo «usuario» se aprueban automaticamente; las gates automaticas y de seguridad se evaluan normalmente. Solo se detiene si una gate automatica o de seguridad falla.
-- **Tests nuevos**: cobertura de evidence guard (deteccion de runners, resultados, almacenamiento), informe de sesion (secciones, duracion, generacion), loop iterativo (retry, escalado, reset) y autopilot (gates automaticas, seguridad, usuario).
+- **Проверка доказательств (evidence guard)**: новый hook PostToolUse регистрирует каждый запуск тестов как проверяемое доказательство. Когда агент утверждает, что тесты проходят, система может проверить, что они действительно запускались за последние 10 минут. Файл доказательств `.claude/alfred-evidence.json` с ротацией до 50 записей.
+- **Отчёт о сессии при закрытии**: по завершении рабочей сессии в `docs/alfred-reports/` автоматически генерируется отчёт с резюме завершённых фаз, доказательствами тестов, командой сессии и созданными артефактами. Встроено в существующий stop-hook.
+- **Итеративный цикл внутри фаз**: агенты могут итерировать внутри фазы (по умолчанию до 5 попыток), пока не пройдут соответствующую gate. Это даёт естественные циклы TDD, повторные проходы QA и итеративное исправление без ручного вмешательства. Когда итерации исчерпаны, вопрос эскалируется пользователю.
+- **Режим autopilot**: `run_flow_autopilot()` выполняет полный процесс без участия человека. Gates типа «usuario» одобряются автоматически; автоматические gates и gates безопасности оцениваются как обычно. Процесс останавливается, только если падает автоматическая gate или gate безопасности.
+- **Новые тесты**: покрытие evidence guard (обнаружение раннеров, результаты, хранение), отчёта о сессии (разделы, длительность, генерация), итеративного цикла (retry, эскалация, сброс) и autopilot (автоматические gates, безопасность, пользователь).
 
 ### Changed
 
-- **Personalidades reescritas**: las 17 personalidades de agentes adoptan el tono Alfred Pennyworth: servicio impecable, ironia sutil, precision tecnica. Eliminadas expresiones coloquiales («bro», «señor», «que pasa»). Añadidos los agentes project-manager (SonIA) e i18n-specialist (La Interprete).
-- **Orquestador ampliado**: `advance_phase()` reinicia automaticamente el contador de iteraciones internas al avanzar. Nuevas funciones publicas: `should_retry_phase()`, `reset_phase_iterations()`, `is_autopilot_gate_passable()`, `run_flow_autopilot()`.
-- **Stop-hook con informe**: al cerrar una sesion completada, el stop-hook genera un informe de sesion automaticamente antes de permitir la salida.
+- **Переписанные личности**: 17 личностей агентов переходят на тон Alfred Pennyworth: безупречный сервис, тонкая ирония, техническая точность. Убраны разговорные выражения («bro», «señor», «que pasa»). Добавлены агенты project-manager (SonIA) и i18n-specialist (La Interprete).
+- **Расширенный оркестратор**: `advance_phase()` автоматически сбрасывает счётчик внутренних итераций при переходе. Новые публичные функции: `should_retry_phase()`, `reset_phase_iterations()`, `is_autopilot_gate_passable()`, `run_flow_autopilot()`.
+- **Stop-hook с отчётом**: при закрытии завершённой сессии stop-hook автоматически генерирует отчёт о сессии до того, как разрешить выход.
 
 ---
 
@@ -298,14 +310,14 @@ Corte alineado con el SDK de Claude Code. Rompe superficie publica.
 
 ### Added
 
-- **Agente opcional i18n-specialist**: nuevo agente para proyectos multiidioma con deteccion automatica de señales i18n (directorios `i18n/`, `locales/`, `translations/`, ficheros de configuracion i18n). Se integra en las fases de desarrollo y calidad en paralelo con los agentes de nucleo.
-- **Deteccion automatica de i18n**: nueva funcion `_has_i18n_signals()` en `config_loader.py` que analiza el proyecto y sugiere `i18n-specialist` cuando detecta estructura de internacionalizacion.
+- **Опциональный агент i18n-specialist**: новый агент для многоязычных проектов с автоматическим обнаружением сигналов i18n (каталоги `i18n/`, `locales/`, `translations/`, файлы настроек i18n). Работает в фазах разработки и качества параллельно с базовыми агентами.
+- **Автоматическое обнаружение i18n**: новая функция `_has_i18n_signals()` в `config_loader.py` анализирует проект и предлагает `i18n-specialist`, когда находит структуру интернационализации.
 
 ### Changed
 
-- **Seleccion de agentes opcionales rediseñada**: los 8 agentes opcionales se presentan en 2 preguntas `multiSelect` agrupadas por tema (técnicos + contenido/UX) usando `AskUserQuestion`, compatible con el limite de 4 opciones por pregunta. Actualizado en `_composicion.md`, `config.md` y documentacion.
-- **Product Owner con preguntas secuenciales**: la fase de producto formula las preguntas **una a una** (una por turno, esperar respuesta) en vez de lanzar el bloque completo, siguiendo el patron de refinamiento progresivo.
-- **8 agentes opcionales**: añadido `i18n-specialist` al catalogo, `DEFAULT_CONFIG`, `_KNOWN_OPTIONAL_AGENTS`, `OPTIONAL_INTEGRATIONS`, tablas de `feature.md`, `help.md`, `config.md` y `docs/configuration.md`. Tests actualizados.
+- **Переработан выбор опциональных агентов**: 8 опциональных агентов предлагаются в 2 вопросах `multiSelect`, сгруппированных по теме (технические + контент/UX), через `AskUserQuestion`, что совместимо с лимитом 4 вариантов на вопрос. Обновлено в `_composicion.md`, `config.md` и документации.
+- **Product Owner с последовательными вопросами**: фаза продукта задаёт вопросы **по одному** (один за ход, с ожиданием ответа), а не выдаёт весь блок сразу, по шаблону постепенного уточнения.
+- **8 опциональных агентов**: `i18n-specialist` добавлен в каталог, `DEFAULT_CONFIG`, `_KNOWN_OPTIONAL_AGENTS`, `OPTIONAL_INTEGRATIONS`, таблицы `feature.md`, `help.md`, `config.md` и `docs/configuration.md`. Тесты обновлены.
 
 ---
 
@@ -313,306 +325,306 @@ Corte alineado con el SDK de Claude Code. Rompe superficie publica.
 
 ### Added
 
-- **Capa de sincronizacion SQLite a memoria nativa**: nuevo modulo `core/memory_sync.py` que proyecta las decisiones, iteraciones, commits y resumen del proyecto desde `alfred-memory.db` a ficheros `.md` en `~/.claude/projects/<hash>/memory/` con el formato nativo de Claude Code (frontmatter YAML con `name`, `description`, `type` y `source: alfred-memory`). SQLite es la fuente de verdad; los `.md` son proyecciones de lectura que Claude carga automaticamente en cada conversacion.
-- **Sincronizacion hibrida (full + incremental)**: `session-start.sh` ejecuta `sync_all` al arrancar la sesion (regeneracion completa); `activity-capture.py` dispara sincronizaciones incrementales tras cada escritura en SQLite (decisiones, iteraciones, commits).
-- **Gestion segura de MEMORY.md**: seccion delimitada con marcadores `<!-- ALFRED-SYNC:START/END -->` que se actualiza sin tocar el contenido manual del usuario. Validacion de posicion de marcadores para evitar corrupcion por marcadores huerfanos o invertidos.
-- **Limpieza de ficheros huerfanos**: `cleanup_stale()` elimina ficheros de decisiones archivadas o iteraciones cerradas, identificando ficheros autogenerados por el campo `source: alfred-memory` en el frontmatter.
-- **Creacion automatica del directorio de memoria**: `resolve_memory_dir()` crea `~/.claude/projects/<hash>/memory/` si no existe al cargar Alfred por primera vez, eliminando la friccion de activacion manual.
-- **Fichero de decisiones archivadas**: las decisiones con estado `superseded` o `rejected` se consolidan en `alfred-decisions-archived.md` en formato compacto (una linea por decision) en lugar de ficheros individuales.
-- **22 tests para memory_sync**: cobertura de resolucion de directorios, proyeccion de decisiones, sincronizacion completa, gestion de MEMORY.md, limpieza de huerfanos, commits, casos de borde (DB vacia, marcadores corruptos, campos None) y flujo end-to-end.
-- **Skill de testing E2E**: nuevo skill `calidad/e2e-testing` para configurar y escribir tests end-to-end con Playwright o Cypress, incluyendo integracion en CI.
+- **Слой синхронизации SQLite с нативной памятью**: новый модуль `core/memory_sync.py` проецирует решения, итерации, коммиты и резюме проекта из `alfred-memory.db` в файлы `.md` в `~/.claude/projects/<hash>/memory/` в нативном формате Claude Code (YAML frontmatter с `name`, `description`, `type` и `source: alfred-memory`). SQLite остаётся источником истины; `.md` это проекции только для чтения, которые Claude автоматически загружает в каждом разговоре.
+- **Гибридная синхронизация (full + incremental)**: `session-start.sh` выполняет `sync_all` при старте сессии (полная регенерация); `activity-capture.py` запускает инкрементальные синхронизации после каждой записи в SQLite (решения, итерации, коммиты).
+- **Безопасное управление MEMORY.md**: раздел, ограниченный маркерами `<!-- ALFRED-SYNC:START/END -->`, обновляется без изменения ручного содержимого пользователя. Позиция маркеров проверяется, чтобы избежать порчи из-за осиротевших или перевёрнутых маркеров.
+- **Очистка осиротевших файлов**: `cleanup_stale()` удаляет файлы архивных решений или закрытых итераций и распознаёт автосгенерированные файлы по полю `source: alfred-memory` во frontmatter.
+- **Автоматическое создание каталога памяти**: `resolve_memory_dir()` создаёт `~/.claude/projects/<hash>/memory/`, если его нет, при первой загрузке Alfred. Ручная активация больше не нужна.
+- **Файл архивных решений**: решения со статусом `superseded` или `rejected` собираются в `alfred-decisions-archived.md` в компактном формате (одна строка на решение), а не в отдельных файлах.
+- **22 теста для memory_sync**: покрытие разрешения каталогов, проекции решений, полной синхронизации, управления MEMORY.md, очистки сирот, коммитов, граничных случаев (пустая БД, повреждённые маркеры, поля None) и сквозного процесса end-to-end.
+- **Skill для E2E-тестирования**: новый skill `calidad/e2e-testing` для настройки и написания end-to-end тестов на Playwright или Cypress, включая интеграцию в CI.
 
 ### Changed
 
-- **60 skills revisadas y mejoradas** (antes 56 + 3 protocolos sueltos): revision completa de las 56 skills existentes mas reorganizacion de los 3 protocolos sueltos (`incident-response`, `dependency-strategy`, `release-planning`) en sus categorias logicas (`calidad/`, `seguridad/`, `devops/`).
-- **Descriptions enriquecidas para triggering**: todas las skills incluyen sinonimos y escenarios de activacion en el campo `description` del frontmatter, mejorando la precision con la que los agentes seleccionan la skill adecuada.
-- **Integracion con memoria persistente**: 10 skills que producen decisiones o hallazgos ahora registran automaticamente en `memory_log_decision` para trazabilidad entre sesiones (write-adr, choose-stack, design-system, compliance-check, dependency-audit, threat-model, schema-design, test-plan, competitive-analysis, competitive-analysis).
-- **Seccion "Que NO hacer" en 51 skills**: antipatrones y errores comunes documentados para prevenir malas practicas. Las 9 skills restantes ya cubrian estas restricciones en su estructura interna.
-- **Referencia al stack de Alfred en 9 skills**: las skills que dependen del runtime o lenguaje del proyecto (dockerize, ci-cd-pipeline, deploy-config, profiling, benchmark, dependency-audit, sonarqube, test-plan, monitoring-setup) consultan `detect_stack` en vez de repetir la deteccion.
-- **Clarificacion de solapamientos**: skills que cubren areas adyacentes (dependency-audit vs dependency-strategy vs dependency-update, code-review vs code-review-response, changelog vs release-planning, write-adr vs choose-stack vs design-system) documentan explicitamente su alcance y cuando usar cada una.
-- **Versiones normativas documentadas**: compliance-check (RGPD 2016/679, NIS2 2022/2555, CRA 2024/2847), security-review (OWASP Top 10 edicion 2021), accessibility-audit (WCAG 2.1 AA, nota sobre WCAG 2.2).
+- **60 skills проверены и улучшены** (раньше 56 + 3 отдельных протокола): полная ревизия 56 существующих skills и перенос 3 отдельных протоколов (`incident-response`, `dependency-strategy`, `release-planning`) в их логические категории (`calidad/`, `seguridad/`, `devops/`).
+- **Обогащённые descriptions для срабатывания**: все skills содержат синонимы и сценарии активации в поле `description` во frontmatter, что повышает точность, с которой агенты выбирают нужный skill.
+- **Интеграция с постоянной памятью**: 10 skills, которые порождают решения или находки, теперь автоматически пишут в `memory_log_decision` для трассируемости между сессиями (write-adr, choose-stack, design-system, compliance-check, dependency-audit, threat-model, schema-design, test-plan, competitive-analysis, competitive-analysis).
+- **Раздел "Чего НЕ делать" в 51 skill**: антипаттерны и типичные ошибки задокументированы, чтобы предотвращать плохие практики. Остальные 9 skills уже покрывали эти ограничения в своей внутренней структуре.
+- **Ссылка на stack Alfred в 9 skills**: skills, зависящие от runtime или языка проекта (dockerize, ci-cd-pipeline, deploy-config, profiling, benchmark, dependency-audit, sonarqube, test-plan, monitoring-setup), обращаются к `detect_stack`, а не повторяют обнаружение.
+- **Прояснены пересечения**: skills, покрывающие смежные области (dependency-audit vs dependency-strategy vs dependency-update, code-review vs code-review-response, changelog vs release-planning, write-adr vs choose-stack vs design-system), явно документируют свой охват и когда использовать каждый.
+- **Задокументированы версии нормативов**: compliance-check (GDPR (RGPD) 2016/679, NIS2 2022/2555, CRA 2024/2847), security-review (OWASP Top 10 редакция 2021), accessibility-audit (WCAG 2.1 AA, примечание о WCAG 2.2).
 
-- **Configuracion local ampliada**: `alfred-dev.local.md` incluye las opciones `sync_to_native: true` y `sync_commits_limit: 10` para controlar la sincronizacion.
-- **Politica fail-open en sincronizacion**: todas las operaciones de sync capturan excepciones y continuan sin bloquear el flujo de trabajo. Los errores se registran en stderr con el prefijo `[alfred-dev]`.
+- **Расширенные локальные настройки**: `alfred-dev.local.md` содержит опции `sync_to_native: true` и `sync_commits_limit: 10` для управления синхронизацией.
+- **Политика fail-open в синхронизации**: все операции sync перехватывают исключения и продолжают работу, не блокируя рабочий процесс. Ошибки пишутся в stderr с префиксом `[alfred-dev]`.
 
 ## [0.3.7] - 2026-03-12
 
 ### Added
 
-- **SonIA -- Project Manager**: nuevo agente de nucleo transversal. Descompone el PRD en tareas, gestiona un kanban en `docs/project/kanban/` con 4 ficheros MD (backlog, in-progress, done, blocked), mantiene la matriz de trazabilidad (criterio -- tarea -- test -- doc) y genera informes de progreso por fase. HARD-GATE: completitud de trazabilidad (criterio -- tarea -- test -- doc enlazados).
-- **La Interprete -- i18n Specialist**: nuevo agente opcional para internacionalizacion. Auditoria de claves i18n, deteccion de cadenas hardcodeadas, validacion de formatos por locale, generacion de esqueletos para nuevos idiomas. HARD-GATE: completitud de claves (N en base = N en todos los idiomas).
-- **QA Engineer ampliado**: nueva seccion de testing de integracion y E2E con estrategias para Playwright/Cypress, tabla de decision entre tipos de test (unitario, integracion, E2E, regresion) y criterios de seleccion.
+- **SonIA -- Project Manager**: новый сквозной базовый агент. Декомпозирует PRD на задачи, ведёт kanban в `docs/project/kanban/` из 4 MD-файлов (backlog, in-progress, done, blocked), поддерживает матрицу трассируемости (критерий -- задача -- тест -- документ) и генерирует отчёты о прогрессе по фазам. HARD-GATE: полнота трассируемости (критерий -- задача -- тест -- документ связаны).
+- **La Interprete -- i18n Specialist**: новый опциональный агент для интернационализации. Аудит ключей i18n, обнаружение захардкоженных строк, проверка форматов по локалям, генерация заготовок для новых языков. HARD-GATE: полнота ключей (N в базовом = N во всех языках).
+- **Расширенный QA Engineer**: новый раздел интеграционного и E2E-тестирования со стратегиями для Playwright/Cypress, таблицей выбора между типами тестов (модульные, интеграционные, E2E, регрессионные) и критериями выбора.
 
 ### Changed
 
-- **El Escriba (antes El Traductor)**: tech-writer reescrito como agente de nucleo con doble activacion: fase 3b (documentacion inline: cabeceras, docstrings, comentarios de contexto) y fase 5 (documentacion de proyecto: API, arquitectura con diagramas Mermaid, guias, changelogs). Guia de estilo estricta: castellano sin latinismos, anglicismos permitidos, sin emojis.
-- **HARD-GATEs en 5 agentes opcionales**: data-engineer (integridad de migraciones), ux-reviewer (WCAG 2.1 nivel A), performance-engineer (umbrales de rendimiento), seo-specialist (requisitos minimos de indexacion), github-manager (operaciones destructivas requieren confirmacion).
-- **Equipo ampliado a 17 agentes**: 9 de nucleo (antes 8) + 8 opcionales (antes 7). Todos los conteos actualizados en web, README y manifiesto.
-- **Colores de agentes unificados**: QA Engineer de red a amber (conflicto con security-officer), performance-engineer y copywriter alineados entre frontmatter y cuerpo del agente.
-- Variable CSS `--magenta` anadida al sistema de diseno para el color de SonIA.
-- Landing page actualizada: nueva entrada de changelog, FAQs actualizados, conteos corregidos en hero, meta, footer y secciones de agentes.
-- **Memoria persistente mejorada**: optimizaciones en el modulo SQLite, consultas mas eficientes y mejor gestion de la base de datos entre sesiones.
-- **Todos los agentes revisados**: inconsistencias corregidas en frontmatter (colores, herramientas), descripciones alineadas con las capacidades reales, personalidades refinadas y cadenas de integracion actualizadas.
+- **El Escriba (раньше El Traductor)**: tech-writer переписан как базовый агент с двойной активацией: фаза 3b (inline-документация: заголовки, docstrings, контекстные комментарии) и фаза 5 (документация проекта: API, архитектура с диаграммами Mermaid, руководства, changelogs). Строгое руководство по стилю: испанский без латинизмов, англицизмы допустимы, без эмодзи.
+- **HARD-GATE в 5 опциональных агентах**: data-engineer (целостность миграций), ux-reviewer (WCAG 2.1 уровень A), performance-engineer (пороги производительности), seo-specialist (минимальные требования к индексации), github-manager (разрушительные операции требуют подтверждения).
+- **Команда расширена до 17 агентов**: 9 базовых (раньше 8) + 8 опциональных (раньше 7). Все счётчики обновлены на сайте, в README и в манифесте.
+- **Унифицированы цвета агентов**: QA Engineer сменил red на amber (конфликт с security-officer), цвета performance-engineer и copywriter согласованы между frontmatter и телом агента.
+- В дизайн-систему добавлена CSS-переменная `--magenta` для цвета SonIA.
+- Обновлён лендинг: новая запись changelog, обновлённые FAQ, исправленные счётчики в hero, meta, footer и разделах агентов.
+- **Улучшенная постоянная память**: оптимизации модуля SQLite, более эффективные запросы и лучшее управление базой данных между сессиями.
+- **Проверены все агенты**: исправлены несоответствия во frontmatter (цвета, инструменты), описания приведены к реальным возможностям, личности отшлифованы, цепочки интеграции обновлены.
 
 ### Removed
 
-- **Dashboard GUI eliminado**: la interfaz web del dashboard (introducida en v0.3.0) se retira por no cumplir las expectativas de usabilidad. El servidor HTTP/WebSocket, los ficheros de dashboard, las tablas SQLite de GUI (`gui_actions`, `pinned_items`) y los hooks de arranque/parada automatica dejan de estar activos. La funcionalidad de estado del proyecto se cubre con `/alfred-dev:status`.
+- **Удалён Dashboard GUI**: веб-интерфейс dashboard (появился в v0.3.0) убран, потому что не оправдал ожиданий по удобству. Сервер HTTP/WebSocket, файлы dashboard, таблицы SQLite для GUI (`gui_actions`, `pinned_items`) и hooks автоматического запуска/остановки больше не активны. Состояние проекта покрывает `/alfred-dev:status`.
 
 ## [0.3.6] - 2026-03-10
 
 ### Fixed
 
-- **Agentes de nucleo registrados en plugin.json**: los 7 agentes de nucleo (product-owner, architect, senior-dev, security-officer, qa-engineer, devops-engineer, tech-writer) no estaban registrados en el manifiesto del plugin, por lo que Claude Code no podia cargar sus system prompts como subagentes. Ahora los 14 agentes (7 nucleo + 7 opcionales) estan registrados.
-- **Herramientas MCP fantasma en librarian**: el agente librarian referenciaba 5 herramientas MCP con nombres incorrectos (`memory_record_decision`, `memory_record_iteration`, `memory_record_event`, `memory_record_commit`, `memory_link_commit`). Corregidos a los nombres reales del servidor MCP.
-- **Dashboard vacio en primera sesion**: el pipeline de datos del dashboard fallaba en cascada por 3 causas: (1) la configuracion local no se creaba con memoria activada, (2) sin iteracion activa los commits no se asociaban, (3) `get_full_state()` devolvia arrays vacios sin iteracion. Corregido con auto-creacion de config, iteracion de sesion automatica y fallback a datos globales.
-- **Conflicto de puertos del dashboard**: si otro proyecto ya usaba los puertos 7533/7534, el dashboard no arrancaba. Ahora detecta puertos ocupados y busca alternativas automaticamente.
-- **Comentarios de cabecera del servidor MCP**: los nombres de herramientas en el docstring del modulo no coincidian con los registrados. Alineados.
+- **Базовые агенты зарегистрированы в plugin.json**: 7 базовых агентов (product-owner, architect, senior-dev, security-officer, qa-engineer, devops-engineer, tech-writer) не были зарегистрированы в манифесте плагина, поэтому Claude Code не мог загрузить их system prompts как субагентов. Теперь зарегистрированы все 14 агентов (7 базовых + 7 опциональных).
+- **Фантомные MCP tools в librarian**: агент librarian ссылался на 5 MCP tools с неверными именами (`memory_record_decision`, `memory_record_iteration`, `memory_record_event`, `memory_record_commit`, `memory_link_commit`). Исправлено на реальные имена сервера MCP.
+- **Пустой dashboard в первой сессии**: конвейер данных dashboard падал каскадом по 3 причинам: (1) локальная конфигурация не создавалась с включённой памятью, (2) без активной итерации коммиты не связывались, (3) `get_full_state()` без итерации возвращала пустые массивы. Исправлено автосозданием конфигурации, автоматической итерацией сессии и откатом на глобальные данные.
+- **Конфликт портов dashboard**: если другой проект уже занимал порты 7533/7534, dashboard не запускался. Теперь он обнаруживает занятые порты и автоматически ищет альтернативы.
+- **Заголовочные комментарии сервера MCP**: имена tools в docstring модуля не совпадали с зарегистрированными. Выровнены.
 
 ## [0.3.5] - 2026-03-10
 
 ### Changed
 
-- **SonarQube movido al security-officer**: el análisis de SonarQube lo ejecuta ahora el security-officer en lugar del qa-engineer durante `/alfred-dev:audit`. Si Docker está operativo o autorizado, ejecuta el scanner e integra los hallazgos en su informe de seguridad; si Docker no está disponible, informa al usuario y continúa sin SonarQube.
-- **Instrucciones imperativas para SonarQube**: el subagente recibe pasos explícitos y secuenciales (leer el skill con Read, ejecutar los 7 pasos, integrar resultados) en lugar de una referencia textual que podía ignorarse.
+- **SonarQube перенесён к security-officer**: анализ SonarQube теперь выполняет security-officer вместо qa-engineer во время `/alfred-dev:audit`. Если Docker работает или разрешён, он запускает scanner и включает находки в свой отчёт по безопасности; если Docker недоступен, сообщает пользователю и продолжает без SonarQube.
+- **Императивные инструкции для SonarQube**: субагент получает явные последовательные шаги (прочитать skill через Read, выполнить 7 шагов, интегрировать результаты) вместо текстовой ссылки, которую можно было проигнорировать.
 
 ## [0.3.4] - 2026-03-03
 
 ### Fixed
 
-- **Nomenclatura de comandos en la web**: todos los comandos actualizados de `/alfred X` a `/alfred-dev:X` para reflejar la convencion real de Claude Code.
-- **Stats de la web corregidos**: skills 56 a 59, comandos 10 a 11, hooks 7 a 11.
-- **Comando /alfred-dev:gui visible**: anadido a la lista publica de comandos en la web (ES + EN).
-- **SonarQube integrado en audit**: el security-officer ejecuta el skill de SonarQube como paso por defecto en `/alfred-dev:audit`.
-- **Fichero de puertos del dashboard**: `session-start.sh` crea `.claude/alfred-gui-port` y verifica conexion real al servidor.
-- **Colores de agentes opcionales**: los 5 agentes sin color en el frontmatter ahora tienen colores asignados.
+- **Именование команд на сайте**: все команды обновлены с `/alfred X` на `/alfred-dev:X`, чтобы отражать реальную конвенцию Claude Code.
+- **Исправлена статистика на сайте**: skills с 56 до 59, команды с 10 до 11, hooks с 7 до 11.
+- **Команда /alfred-dev:gui видна**: добавлена в публичный список команд на сайте (ES + EN).
+- **SonarQube встроен в audit**: security-officer по умолчанию выполняет skill SonarQube как шаг `/alfred-dev:audit`.
+- **Файл портов dashboard**: `session-start.sh` создаёт `.claude/alfred-gui-port` и проверяет реальное подключение к серверу.
+- **Цвета опциональных агентов**: 5 агентам без цвета во frontmatter теперь назначены цвета.
 
 ## [0.3.3] - 2026-02-24
 
 ### Fixed
 
-- **Inicializacion de SQLite al arrancar**: la BD de memoria (`alfred-memory.db`) se crea automaticamente en `session-start.sh` si no existe. Antes, la BD solo se creaba cuando los hooks de captura se disparaban, lo que impedia que el servidor GUI arrancara en la primera sesion.
-- **Servidor GUI siempre operativo**: el dashboard arranca desde el minuto 1 en cada sesion. Se elimino la dependencia circular que requeria una BD preexistente para levantar el servidor.
-- **Agentes servidos por WebSocket**: el catalogo de 15 agentes (8 principales + 7 opcionales) se envia desde el servidor en el mensaje `init`, eliminando la lista hardcodeada en `dashboard.html`. El dashboard no muestra datos que no provengan del WebSocket.
-- **Hooks resilientes a actualizaciones**: todos los comandos en `hooks.json` usan guardas `test -f ... || true` para degradacion graceful cuando `CLAUDE_PLUGIN_ROOT` apunta a un directorio eliminado tras una actualizacion de version.
+- **Инициализация SQLite при старте**: БД памяти (`alfred-memory.db`) автоматически создаётся в `session-start.sh`, если её нет. Раньше БД создавалась только при срабатывании hooks захвата, из-за чего сервер GUI не запускался в первой сессии.
+- **Сервер GUI всегда работает**: dashboard запускается с первой минуты каждой сессии. Убрана циклическая зависимость, требовавшая существующей БД для запуска сервера.
+- **Агенты отдаются через WebSocket**: каталог из 15 агентов (8 основных + 7 опциональных) отправляется с сервера в сообщении `init`, что убирает захардкоженный список в `dashboard.html`. Dashboard не показывает данных, пришедших не из WebSocket.
+- **Hooks устойчивы к обновлениям**: все команды в `hooks.json` используют защиту `test -f ... || true` для мягкой деградации, когда `CLAUDE_PLUGIN_ROOT` указывает на каталог, удалённый после обновления версии.
 
 ## [0.3.2] - 2026-02-23
 
 ### Added
 
-- **Composición dinámica de equipo**: sistema de 4 capas (heurística, razonamiento, presentación, ejecución) que sugiere agentes opcionales según la descripción de la tarea. `match_task_keywords()` puntúa 7 agentes con keywords contextuales y combina señales de proyecto, tarea y configuración activa. La selección es efímera (solo para esa sesión) y no modifica la configuración persistente.
-- **Función `run_flow()`**: punto de entrada para flujos con equipo de sesión efímero. Valida la estructura, inyecta el equipo y registra diagnósticos de error en `equipo_sesion_error` para que los consumidores downstream informen al usuario.
-- **Tabla `TASK_KEYWORDS`**: mapa de 7 agentes opcionales con listas de keywords y pesos base para la composición dinámica.
+- **Динамическая композиция команды**: система из 4 слоёв (эвристика, рассуждение, представление, выполнение), которая предлагает опциональных агентов по описанию задачи. `match_task_keywords()` оценивает 7 агентов по контекстным keywords и объединяет сигналы проекта, задачи и активной конфигурации. Выбор эфемерный (только на эту сессию) и не меняет постоянную конфигурацию.
+- **Функция `run_flow()`**: точка входа для процессов с эфемерной командой сессии. Проверяет структуру, внедряет команду и записывает диагностику ошибок в `equipo_sesion_error`, чтобы downstream-потребители сообщали пользователю.
+- **Таблица `TASK_KEYWORDS`**: карта 7 опциональных агентов со списками keywords и базовыми весами для динамической композиции.
 
 ### Fixed
 
-- **Matching por palabra completa**: `match_task_keywords()` usa `\b` word boundary en vez de subcadena, eliminando falsos positivos para keywords cortas ("ui", "ci", "pr", "form", "orm", "bd", "cd", "copy").
-- **Retroalimentación de validación**: `run_flow()` registra el motivo del descarte en `equipo_sesion_error` cuando el equipo no pasa la validación.
-- **Aviso al truncar**: descripciones de tarea mayores de 10 000 caracteres emiten aviso a stderr en vez de truncarse silenciosamente.
-- **Tipos no-str**: `match_task_keywords()` avisa cuando recibe tipos inesperados en vez de convertirlos silenciosamente a cadena vacía.
+- **Сопоставление по целому слову**: `match_task_keywords()` использует границу слова `\b` вместо подстроки, что убирает ложные срабатывания для коротких keywords ("ui", "ci", "pr", "form", "orm", "bd", "cd", "copy").
+- **Обратная связь валидации**: `run_flow()` записывает причину отклонения в `equipo_sesion_error`, когда команда не проходит валидацию.
+- **Предупреждение при обрезке**: описания задач длиннее 10 000 символов выдают предупреждение в stderr, а не обрезаются молча.
+- **Типы не-str**: `match_task_keywords()` предупреждает о неожиданных типах, а не молча превращает их в пустую строку.
 
 ### Changed
 
-- `_KNOWN_OPTIONAL_AGENTS` derivado de `TASK_KEYWORDS` (fuente única de verdad) en vez de duplicar la lista de agentes.
-- Los 6 skills de comandos (alfred, feature, fix, spike, ship, audit) incluyen instrucciones de composición dinámica con checkboxes para el usuario.
-- Documentación actualizada: `docs/configuration.md` con sección completa de composición dinámica, `docs/architecture.md` y `README.md` con referencias.
-- 326 tests (29 nuevos para composición dinámica y validación de equipo).
+- `_KNOWN_OPTIONAL_AGENTS` выводится из `TASK_KEYWORDS` (единый источник истины), а не дублирует список агентов.
+- 6 skills команд (alfred, feature, fix, spike, ship, audit) содержат инструкции динамической композиции с чекбоксами для пользователя.
+- Обновлена документация: `docs/configuration.md` с полным разделом о динамической композиции, `docs/architecture.md` и `README.md` со ссылками.
+- 326 тестов (29 новых для динамической композиции и валидации команды).
 
 
 ## [0.3.1] - 2026-02-23
 
 ### Fixed
 
-- **Lectura robusta de frames WebSocket**: el servidor usaba `reader.read()` que puede devolver frames parciales por fragmentacion TCP. Reescrito con `readexactly()` para leer bytes exactos segun la cabecera del frame RFC 6455. Esto elimina desconexiones aleatorias y corrupcion de mensajes bajo carga.
-- **Conexion SQLite cross-thread**: la conexion de polling se creaba en un hilo y se usaba en el bucle asyncio de otro. Anadido `check_same_thread=False` para evitar `ProgrammingError` en Python 3.12+.
-- **Consistencia en `get_full_state()`**: el metodo mezclaba dos conexiones SQLite (la del modulo `MemoryDB` y la de polling). Reescrito para usar exclusivamente la conexion de polling, eliminando posibles inconsistencias entre vistas.
-- **Polling de elementos marcados**: el watcher solo monitorizaba eventos, decisiones y commits. Anadido `poll_new_pinned()` y checkpoint de marcados para que las acciones de pin/unpin se propaguen en tiempo real.
-- **Formato de timestamps**: `formatTime()` no distinguia entre epoch en segundos y milisegundos, y no gestionaba cadenas ISO sin zona horaria. Corregido con umbral automatico y append de `Z` para UTC.
-- **Validacion de tipos en acciones GUI**: los campos `item_id` y `pin_id` se pasaban sin validar. Anadidos casts a `int()` y `str()` para prevenir inyeccion de tipos inesperados.
-- **Buffer de handshake WebSocket**: ampliado de 4096 a 8192 bytes para soportar navegadores que envian cabeceras extensas (extensiones, cookies).
-- **Limpieza de writers WebSocket**: al cerrar el servidor, los writers de clientes conectados no se cerraban. Anadida limpieza explicita en `close()` para liberar sockets.
+- **Надёжное чтение фреймов WebSocket**: сервер использовал `reader.read()`, который может вернуть частичные фреймы из-за фрагментации TCP. Переписано на `readexactly()`, чтобы читать точное число байт по заголовку фрейма RFC 6455. Это устраняет случайные разрывы и порчу сообщений под нагрузкой.
+- **Соединение SQLite между потоками**: соединение для polling создавалось в одном потоке и использовалось в цикле asyncio другого. Добавлен `check_same_thread=False`, чтобы избежать `ProgrammingError` в Python 3.12+.
+- **Согласованность в `get_full_state()`**: метод смешивал два соединения SQLite (модуля `MemoryDB` и polling). Переписан на использование только соединения polling, что убирает возможные несоответствия между представлениями.
+- **Polling отмеченных элементов**: watcher отслеживал только события, решения и коммиты. Добавлены `poll_new_pinned()` и checkpoint отмеченных, чтобы действия pin/unpin распространялись в реальном времени.
+- **Формат timestamps**: `formatTime()` не различал epoch в секундах и миллисекундах и не обрабатывал строки ISO без часового пояса. Исправлено автоматическим порогом и добавлением `Z` для UTC.
+- **Проверка типов в действиях GUI**: поля `item_id` и `pin_id` передавались без проверки. Добавлены приведения к `int()` и `str()`, чтобы предотвратить внедрение неожиданных типов.
+- **Буфер handshake WebSocket**: увеличен с 4096 до 8192 байт для браузеров, которые отправляют объёмные заголовки (расширения, cookies).
+- **Очистка writers WebSocket**: при закрытии сервера writers подключённых клиентов не закрывались. Добавлена явная очистка в `close()` для освобождения сокетов.
 
 ### Added
 
-- **Soporte movil**: menu hamburguesa con sidebar deslizante y overlay para pantallas estrechas. La navegacion es completamente funcional en movil.
-- **Cabeceras de seguridad HTTP**: `X-Content-Type-Options: nosniff`, `Cache-Control: no-store` y `Content-Security-Policy` restrictiva para prevenir ataques de inyeccion.
-- **Inyeccion dinamica de version**: el servidor lee la version de `package.json` y la inyecta como variable JavaScript en el dashboard. La cabecera y el pie muestran la version real sin hardcodear.
-- **Inyeccion dinamica de puerto WebSocket**: el servidor inyecta el puerto WS real en el HTML, eliminando el puerto 7534 hardcodeado que fallaba cuando el puerto por defecto estaba ocupado.
-- **Icono SVG de marcado**: sustituido el texto `[*]` por un icono SVG de pin en timeline y decisiones para una interfaz mas limpia.
+- **Мобильная поддержка**: меню-гамбургер с выдвижной боковой панелью и overlay для узких экранов. Навигация полностью работает на мобильных.
+- **Заголовки безопасности HTTP**: `X-Content-Type-Options: nosniff`, `Cache-Control: no-store` и строгая `Content-Security-Policy` для защиты от атак внедрения.
+- **Динамическая подстановка версии**: сервер читает версию из `package.json` и внедряет её в dashboard как переменную JavaScript. Шапка и подвал показывают реальную версию без хардкода.
+- **Динамическая подстановка порта WebSocket**: сервер внедряет реальный порт WS в HTML, что убирает захардкоженный порт 7534, который ломался, когда порт по умолчанию был занят.
+- **SVG-иконка отметки**: текст `[*]` заменён SVG-иконкой булавки в timeline и решениях для более чистого интерфейса.
 
 ### Changed
 
-- Version bumpeada de 0.3.0 a 0.3.1 en plugin.json, marketplace.json, package.json, install.sh, install.ps1, memory_server.py, dashboard.html y site/index.html.
-- `docs/gui.md` actualizado con las mejoras de estabilidad y las nuevas funcionalidades.
-- README.md actualizado con referencia a las mejoras de v0.3.1.
-- Landing page actualizada con entrada de changelog v0.3.1 y auditoria SEO completa (canonical, og:image, FAQPage schema, hreflang, CLS).
+- Версия поднята с 0.3.0 до 0.3.1 в plugin.json, marketplace.json, package.json, install.sh, install.ps1, memory_server.py, dashboard.html и site/index.html.
+- `docs/gui.md` обновлён описанием улучшений стабильности и новых возможностей.
+- README.md обновлён ссылкой на улучшения v0.3.1.
+- Обновлён лендинг: запись changelog v0.3.1 и полный SEO-аудит (canonical, og:image, FAQPage schema, hreflang, CLS).
 
 
 ## [0.3.0] - 2026-02-22
 
 ### Added
 
-- **Dashboard GUI** (Fase Alpha): dashboard web en tiempo real que muestra el estado completo del proyecto sin intervenir en el terminal. 7 vistas: estado, timeline, decisiones, agentes, memoria, commits y marcados. Se lanza con `/alfred gui` y se abre automáticamente en el navegador.
-- **Servidor monolítico Python**: HTTP estático (puerto 7533) + WebSocket RFC 6455 manual (puerto 7534) + SQLite watcher (polling 500 ms). Sin dependencias externas.
-- **Protocolo WebSocket bidireccional**: mensajes `init` (estado completo al conectar), `update` (cambios incrementales), `action` (acciones del usuario) y `action_ack` (confirmación). Reconexión automática con backoff exponencial (1s a 30s).
-- **Sistema de marcado** (pinning): elementos marcados manual o automáticamente sobreviven a la compactación del contexto. Se inyectan como `additionalContext` vía `memory-compact.py`.
-- **Tablas SQLite nuevas**: `gui_actions` (cola de acciones del dashboard) y `pinned_items` (elementos marcados). Migración automática a esquema v3.
-- **Comando `/alfred gui`**: abre el dashboard en el navegador por defecto. Si el servidor no está corriendo, lo arranca automáticamente.
-- **Arranque automático**: `session-start.sh` levanta el servidor GUI en background al inicio de cada sesión si existe la base de datos de memoria. `stop-hook.py` lo para al cerrar.
-- **Principio fail-open**: si la GUI falla, Alfred funciona exactamente igual que sin ella. Los hooks siguen escribiendo en SQLite.
-- **Landing page**: sección Dashboard con galería de 7 capturas, etiqueta Fase Alpha, situada entre Agentes y Quality gates.
-- **Documentación completa**: `docs/gui.md` con arquitectura, protocolo WebSocket, esquema de tablas, guía de desarrollo y solución de problemas.
-- 29 tests nuevos para el módulo GUI. Total: 297 tests.
+- **Dashboard GUI** (фаза Alpha): веб-dashboard в реальном времени, который показывает полное состояние проекта без вмешательства в терминал. 7 представлений: состояние, timeline, решения, агенты, память, коммиты и отмеченное. Запускается через `/alfred gui` и автоматически открывается в браузере.
+- **Монолитный сервер на Python**: статический HTTP (порт 7533) + ручной WebSocket RFC 6455 (порт 7534) + SQLite watcher (polling 500 мс). Без внешних зависимостей.
+- **Двунаправленный протокол WebSocket**: сообщения `init` (полное состояние при подключении), `update` (инкрементальные изменения), `action` (действия пользователя) и `action_ack` (подтверждение). Автоматическое переподключение с экспоненциальным backoff (от 1 с до 30 с).
+- **Система отметок** (pinning): элементы, отмеченные вручную или автоматически, переживают компактизацию контекста. Внедряются как `additionalContext` через `memory-compact.py`.
+- **Новые таблицы SQLite**: `gui_actions` (очередь действий dashboard) и `pinned_items` (отмеченные элементы). Автоматическая миграция на схему v3.
+- **Команда `/alfred gui`**: открывает dashboard в браузере по умолчанию. Если сервер не запущен, запускает его автоматически.
+- **Автоматический запуск**: `session-start.sh` поднимает сервер GUI в фоне в начале каждой сессии, если существует база данных памяти. `stop-hook.py` останавливает его при закрытии.
+- **Принцип fail-open**: если GUI падает, Alfred работает точно так же, как без неё. Hooks продолжают писать в SQLite.
+- **Лендинг**: раздел Dashboard с галереей из 7 скриншотов и меткой «фаза Alpha», расположенный между Агентами и Quality gates.
+- **Полная документация**: `docs/gui.md` с архитектурой, протоколом WebSocket, схемой таблиц, руководством по разработке и решением проблем.
+- 29 новых тестов для модуля GUI. Всего: 297 тестов.
 
 ### Changed
 
-- Versión bumpeada de 0.2.3 a 0.3.0 en plugin.json, marketplace.json, package.json, install.sh, install.ps1 y memory_server.py.
-- README.md ampliado con capturas del dashboard y enlace a documentación técnica.
-- `docs/README.md` actualizado con entrada para gui.md en la navegación.
+- Версия поднята с 0.2.3 до 0.3.0 в plugin.json, marketplace.json, package.json, install.sh, install.ps1 и memory_server.py.
+- README.md дополнен скриншотами dashboard и ссылкой на техническую документацию.
+- `docs/README.md` обновлён записью для gui.md в навигации.
 
 
 ## [0.2.3] - 2026-02-21
 
 ### Added
 
-- **Memoria persistente v2**: migración de esquema con backup automático, etiquetas y estado en decisiones, relaciones entre decisiones (`supersedes`, `depends_on`, `contradicts`, `relates`), campo `files` en commits.
-- **5 herramientas MCP nuevas** (total 15): `memory_update_decision`, `memory_link_decisions`, `memory_health`, `memory_export`, `memory_import`.
-- **Filtros de búsqueda**: parámetros `since`, `until`, `tags` y `status` en `memory_search` y `memory_get_decisions`.
-- **Validación de integridad**: `memory_health` comprueba versión de esquema, FTS5, permisos y tamaño de la DB.
-- **Export/Import**: exportar decisiones a Markdown (formato ADR), importar desde historial Git e importar desde ficheros ADR existentes.
-- **Hook commit-capture.py** (PostToolUse Bash): auto-captura de commits en la memoria persistente. Detecta `git commit` con regex y registra SHA, mensaje, autor y ficheros.
-- **Hook memory-compact.py** (PreCompact): protege las decisiones críticas de la sesión durante la compactación de contexto.
-- **Inyección de contexto mejorada**: si hay iteración activa, session-start.sh inyecta las decisiones de esa iteración (no las 5 últimas globales). Muestra etiquetas de las decisiones.
-- ~49 tests nuevos. Total estimado: ~268 tests.
+- **Постоянная память v2**: миграция схемы с автоматическим backup, теги и статус в решениях, связи между решениями (`supersedes`, `depends_on`, `contradicts`, `relates`), поле `files` в коммитах.
+- **5 новых MCP tools** (всего 15): `memory_update_decision`, `memory_link_decisions`, `memory_health`, `memory_export`, `memory_import`.
+- **Фильтры поиска**: параметры `since`, `until`, `tags` и `status` в `memory_search` и `memory_get_decisions`.
+- **Проверка целостности**: `memory_health` проверяет версию схемы, FTS5, права доступа и размер БД.
+- **Export/Import**: экспорт решений в Markdown (формат ADR), импорт из истории Git и импорт из существующих файлов ADR.
+- **Hook commit-capture.py** (PostToolUse Bash): автоматический захват коммитов в постоянную память. Находит `git commit` по regex и записывает SHA, сообщение, автора и файлы.
+- **Hook memory-compact.py** (PreCompact): защищает критичные решения сессии при компактизации контекста.
+- **Улучшенное внедрение контекста**: если есть активная итерация, session-start.sh внедряет решения этой итерации (а не 5 последних глобальных). Показывает теги решений.
+- ~49 новых тестов. Всего примерно ~268 тестов.
 
 ### Changed
 
-- El Bibliotecario amplía sus capacidades: gestión del ciclo de vida de decisiones, validación de integridad, exportación e importación. 15 herramientas MCP documentadas.
-- `memory_log_decision` acepta parámetro `tags`. `memory_log_commit` acepta parámetro `files`.
+- El Bibliotecario расширяет возможности: управление жизненным циклом решений, проверка целостности, экспорт и импорт. Задокументировано 15 MCP tools.
+- `memory_log_decision` принимает параметр `tags`. `memory_log_commit` принимает параметр `files`.
 
 
 ## [0.2.2] - 2026-02-21
 
 ### Added
 
-- **Hook dangerous-command-guard.py** (PreToolUse Bash): bloquea comandos destructivos antes de que se ejecuten. Cubre `rm -rf /`, force push a main/master, `DROP DATABASE/TABLE`, `docker system prune -af`, fork bombs, `mkfs`/`dd` sobre dispositivos y `git reset --hard origin/main`. Política fail-open.
-- **Hook sensitive-read-guard.py** (PreToolUse Read): aviso informativo al leer ficheros sensibles (claves privadas, `.env`, credenciales AWS/SSH/GPG, keystores Java). No bloquea, solo alerta.
-- **4 herramientas MCP nuevas**: `memory_get_stats`, `memory_get_iteration`, `memory_get_latest_iteration`, `memory_abandon_iteration`. Total: 10 herramientas.
-- **3 skills nuevos**: incident-response, release-planning, dependency-strategy.
-- Capacidades ampliadas en arquitecto, security officer y senior dev.
-- `/alfred feature` permite seleccionar la fase de inicio del flujo.
-- Test de consistencia de versión que verifica que los 5 ficheros con versión declaran el mismo valor.
-- 5 ficheros de tests nuevos (219 tests en total).
+- **Hook dangerous-command-guard.py** (PreToolUse Bash): блокирует разрушительные команды до их выполнения. Покрывает `rm -rf /`, force push в main/master, `DROP DATABASE/TABLE`, `docker system prune -af`, fork bombs, `mkfs`/`dd` по устройствам и `git reset --hard origin/main`. Политика fail-open.
+- **Hook sensitive-read-guard.py** (PreToolUse Read): информационное предупреждение при чтении чувствительных файлов (приватные ключи, `.env`, учётные данные AWS/SSH/GPG, Java keystores). Не блокирует, только предупреждает.
+- **4 новых MCP tools**: `memory_get_stats`, `memory_get_iteration`, `memory_get_latest_iteration`, `memory_abandon_iteration`. Всего: 10 tools.
+- **3 новых skills**: incident-response, release-planning, dependency-strategy.
+- Расширены возможности architect, security officer и senior dev.
+- `/alfred feature` позволяет выбрать фазу, с которой начинается процесс.
+- Тест согласованности версий проверяет, что 5 файлов с версией объявляют одно и то же значение.
+- 5 новых файлов тестов (всего 219 тестов).
 
 ### Fixed
 
-- **quality-gate.py**: corregido ancla de posición para runners de una palabra. `cat pytest.ini` ya no activa el hook. Aplicado `re.IGNORECASE` a la detección de fallos para cubrir variantes de case mixto.
-- **Respuestas MCP**: las respuestas de error ahora se marcan con `isError: true` en el protocolo MCP en vez de devolverse como respuestas exitosas.
-- **Encapsulación en MemoryDB**: `get_latest_iteration()` expuesto como método público. El servidor MCP ya no accede al atributo privado `_conn`.
-- Logging en bloques `except` silenciosos en `config_loader.py`, `session-start.sh` y `orchestrator.py`.
-- Instrucciones de recuperación en el mensaje de error de estado de sesión corrupto.
-- `User-Agent: alfred-dev-plugin` en las peticiones a la API de GitHub desde session-start.sh.
+- **quality-gate.py**: исправлен якорь позиции для раннеров из одного слова. `cat pytest.ini` больше не срабатывает на hook. К обнаружению сбоев применён `re.IGNORECASE`, чтобы покрыть варианты со смешанным регистром.
+- **Ответы MCP**: ответы с ошибкой теперь помечаются `isError: true` в протоколе MCP, а не возвращаются как успешные.
+- **Инкапсуляция в MemoryDB**: `get_latest_iteration()` открыт как публичный метод. Сервер MCP больше не обращается к приватному атрибуту `_conn`.
+- Логирование в молчаливых блоках `except` в `config_loader.py`, `session-start.sh` и `orchestrator.py`.
+- Инструкции по восстановлению в сообщении об ошибке повреждённого состояния сессии.
+- `User-Agent: alfred-dev-plugin` в запросах к API GitHub из session-start.sh.
 
 ## [0.2.1] - 2026-02-21
 
 ### Fixed
 
-- **Ruta de caché en scripts de Windows** (install.ps1, uninstall.ps1): alineada con la convención de Claude Code (`cache/<marketplace>/<plugin>/<version>`). Los usuarios de Windows tenían instalaciones rotas.
-- **memory-capture.py**: los 4 bloques `except` que tragaban errores silenciosamente ahora emiten diagnóstico por stderr.
-- **session-start.sh**: el `except Exception` genérico del bloque de memoria reemplazado por catches específicos (`ImportError`, `OperationalError`, `DatabaseError`) con mensajes descriptivos.
+- **Путь кэша в скриптах Windows** (install.ps1, uninstall.ps1): приведён к конвенции Claude Code (`cache/<marketplace>/<plugin>/<version>`). У пользователей Windows установки были сломаны.
+- **memory-capture.py**: 4 блока `except`, которые молча глотали ошибки, теперь выводят диагностику в stderr.
+- **session-start.sh**: общий `except Exception` в блоке памяти заменён конкретными перехватами (`ImportError`, `OperationalError`, `DatabaseError`) с описательными сообщениями.
 
 ### Changed
 
-- Landing page disponible en dominio personalizado [alfred-dev.com](https://alfred-dev.com).
+- Лендинг доступен на собственном домене [alfred-dev.com](https://alfred-dev.com).
 
 ## [0.2.0] - 2026-02-20
 
 ### Added
 
-- **Memoria persistente por proyecto**: base de datos SQLite local (`.claude/alfred-memory.db`) que registra decisiones, commits, iteraciones y eventos entre sesiones. Activación opcional con `/alfred config`.
-- **Servidor MCP integrado**: servidor MCP stdio sin dependencias externas con 6 herramientas: `memory_search`, `memory_log_decision`, `memory_log_commit`, `memory_get_iteration`, `memory_get_timeline`, `memory_stats`.
-- **Agente El Bibliotecario**: agente opcional para consultas históricas sobre el proyecto. Cita fuentes con formato `[D#id]`, `[C#sha]`, `[I#id]`.
-- **Hook memory-capture.py**: captura automática de eventos del flujo de trabajo (inicio/fin de iteraciones, cambios de fase) en la memoria persistente.
-- Inyección de contexto de memoria al inicio de sesión (últimas 5 decisiones, iteración activa).
-- Sección de configuración de memoria en `/alfred config`.
-- Sanitización de secretos en la memoria con los mismos patrones que `secret-guard.sh`.
-- Permisos 0600 en el fichero de base de datos.
-- Búsqueda de texto completo con FTS5 (cuando disponible) o fallback a LIKE.
-- 58 tests nuevos para el módulo de memoria. Total: 114 tests.
+- **Постоянная память по проекту**: локальная база данных SQLite (`.claude/alfred-memory.db`), которая записывает решения, коммиты, итерации и события между сессиями. Включается по желанию через `/alfred config`.
+- **Встроенный сервер MCP**: stdio-сервер MCP без внешних зависимостей с 6 tools: `memory_search`, `memory_log_decision`, `memory_log_commit`, `memory_get_iteration`, `memory_get_timeline`, `memory_stats`.
+- **Агент El Bibliotecario**: опциональный агент для исторических запросов о проекте. Цитирует источники в формате `[D#id]`, `[C#sha]`, `[I#id]`.
+- **Hook memory-capture.py**: автоматический захват событий рабочего процесса (начало/конец итераций, смена фаз) в постоянную память.
+- Внедрение контекста памяти при старте сессии (последние 5 решений, активная итерация).
+- Раздел настроек памяти в `/alfred config`.
+- Санитизация секретов в памяти по тем же шаблонам, что и в `secret-guard.sh`.
+- Права 0600 на файл базы данных.
+- Полнотекстовый поиск через FTS5 (если доступен) или откат на LIKE.
+- 58 новых тестов для модуля памяти. Всего: 114 тестов.
 
 ### Changed
 
-- Agentes opcionales pasan de 6 a 7 (nuevo: librarian / El Bibliotecario).
+- Опциональных агентов стало 7 вместо 6 (новый: librarian / El Bibliotecario).
 
 ## [0.1.5] - 2026-02-20
 
 ### Fixed
 
-- **Secret-guard con política fail-closed**: cuando el hook detecta contenido a escribir pero no puede determinar la ruta del fichero destino, ahora bloquea la operación (exit 2) en lugar de permitirla.
-- **Instalador idempotente en entorno limpio**: `mkdir -p` para crear `~/.claude/plugins/` si no existe. En instalaciones donde Claude Code no había creado ese directorio, el script abortaba.
-- **Detección de versión en `/alfred update`**: el comando anterior concatenaba todos los `plugin.json` de la caché con un glob, rompiendo `json.load`. Ahora selecciona explícitamente el fichero más reciente por fecha de modificación.
+- **Secret-guard с политикой fail-closed**: когда hook видит содержимое для записи, но не может определить путь целевого файла, он теперь блокирует операцию (exit 2), а не разрешает её.
+- **Идемпотентный установщик в чистом окружении**: `mkdir -p` создаёт `~/.claude/plugins/`, если его нет. В установках, где Claude Code не создал этот каталог, скрипт прерывался.
+- **Определение версии в `/alfred update`**: прежняя команда склеивала все `plugin.json` из кэша через glob и ломала `json.load`. Теперь она явно выбирает самый свежий файл по дате изменения.
 
 ### Changed
 
-- README actualizado con cifras reales: 56 skills en 13 dominios y 6 hooks.
+- README обновлён реальными цифрами: 56 skills в 13 доменах и 6 hooks.
 
 ## [0.1.4] - 2026-02-19
 
 ### Added
 
-- **Sistema de agentes opcionales**: 6 nuevos agentes activables con `/alfred config`: data-engineer, ux-reviewer, performance-engineer, github-manager, seo-specialist, copywriter.
-- **Descubrimiento contextual**: Alfred analiza el proyecto y sugiere qué agentes opcionales activar.
-- **27 skills nuevos en 6 dominios**: datos (3), UX (3), rendimiento (3), GitHub (4), SEO (3), marketing (3). Ampliaciones en seguridad (+1), calidad (+2), documentación (+5). Total: 56 skills en 13 dominios.
-- **Soporte Windows**: `install.ps1` y `uninstall.ps1` nativos en PowerShell con `irm | iex`.
-- **Hook spelling-guard.py**: detección de tildes omitidas en castellano al escribir o editar ficheros. Diccionario de 60+ palabras.
-- **Quality gates ampliados**: de 8 a 18 (10 de núcleo + 8 opcionales).
-- Autoinstalación de herramientas: los agentes que dependen de herramientas externas (Docker, gh CLI, Lighthouse) preguntan al usuario antes de instalar.
-- Detección de plataforma en `/alfred update` (bash en macOS/Linux, PowerShell en Windows).
+- **Система опциональных агентов**: 6 новых агентов, включаемых через `/alfred config`: data-engineer, ux-reviewer, performance-engineer, github-manager, seo-specialist, copywriter.
+- **Контекстное обнаружение**: Alfred анализирует проект и предлагает, каких опциональных агентов включить.
+- **27 новых skills в 6 доменах**: данные (3), UX (3), производительность (3), GitHub (4), SEO (3), маркетинг (3). Расширения в безопасности (+1), качестве (+2), документации (+5). Всего: 56 skills в 13 доменах.
+- **Поддержка Windows**: нативные `install.ps1` и `uninstall.ps1` на PowerShell с `irm | iex`.
+- **Hook spelling-guard.py**: обнаружение пропущенных ударений в испанском тексте при записи или редактировании файлов. Словарь из 60+ слов.
+- **Расширенные quality gates**: с 8 до 18 (10 базовых + 8 опциональных).
+- Автоустановка инструментов: агенты, зависящие от внешних инструментов (Docker, gh CLI, Lighthouse), спрашивают пользователя перед установкой.
+- Определение платформы в `/alfred update` (bash на macOS/Linux, PowerShell на Windows).
 
 ### Changed
 
-- Landing page actualizada con secciones de agentes opcionales, nuevos dominios de skills, tabs de instalación multiplataforma.
-- Tests: 56 (antes 23).
+- Обновлён лендинг: разделы опциональных агентов, новые домены skills, вкладки мультиплатформенной установки.
+- Тесты: 56 (раньше 23).
 
 ## [0.1.2] - 2026-02-18
 
 ### Fixed
 
-- **Prefijo correcto en comandos**: `/alfred-dev:feature`, `/alfred-dev:update`, etc.
-- **Comando update robusto**: detecta la versión instalada dinámicamente.
-- **Registro explícito de comandos**: los 10 comandos declarados en `plugin.json` para garantizar su descubrimiento.
+- **Правильный префикс команд**: `/alfred-dev:feature`, `/alfred-dev:update` и т. д.
+- **Надёжная команда update**: динамически определяет установленную версию.
+- **Явная регистрация команд**: 10 команд объявлены в `plugin.json`, чтобы гарантировать их обнаружение.
 
 ### Changed
 
-- **Nueva personalidad de Alfred**: compañero cercano y con humor, en lugar de mayordomo solemne. Los 8 agentes tienen voz propia.
-- Corrección ortográfica completa en los 68 ficheros del plugin (tildes, eñes, diacríticos según RAE).
+- **Новая личность Alfred**: близкий товарищ с юмором вместо торжественного дворецкого. У 8 агентов свой голос.
+- Полная орфографическая вычитка 68 файлов плагина (ударения, eñe, диакритика по нормам RAE).
 
 ## [0.1.1] - 2026-02-18
 
 ### Fixed
 
-- **[Alta] session-start.sh**: corregido error de sintaxis en línea 125 (paréntesis huérfano + redirección `2>&2`) que impedía la ejecución del hook SessionStart.
-- **[Media] secret-guard.sh**: arreglada política fail-closed. Con `set -e`, un fallo de parseo salía con código 1 en vez de 2. Ahora bloquea correctamente ante errores de análisis.
-- **[Media] stop-hook.py + orchestrator.py**: validación de tipos para claves del estado de sesión. Un JSON corrupto con tipos incorrectos ya no provoca TypeError.
+- **[Высокий] session-start.sh**: исправлена синтаксическая ошибка в строке 125 (осиротевшая скобка + перенаправление `2>&2`), которая мешала выполнению hook SessionStart.
+- **[Средний] secret-guard.sh**: исправлена политика fail-closed. С `set -e` сбой парсинга завершался с кодом 1 вместо 2. Теперь ошибки анализа корректно блокируют операцию.
+- **[Средний] stop-hook.py + orchestrator.py**: проверка типов для ключей состояния сессии. Повреждённый JSON с неверными типами больше не вызывает TypeError.
 
 ### Changed
 
-- **install.sh + uninstall.sh**: eliminada interpolación directa de variables bash dentro de `python3 -c`. Ahora usa `sys.argv` con heredocs (`<<'PYEOF'`), inmune a rutas con caracteres especiales.
-- Eliminada constante `HARD_GATES` no usada en orchestrator.py (código muerto).
+- **install.sh + uninstall.sh**: убрана прямая интерполяция переменных bash внутри `python3 -c`. Теперь используется `sys.argv` с heredocs (`<<'PYEOF'`), что защищает от путей со спецсимволами.
+- Удалена неиспользуемая константа `HARD_GATES` в orchestrator.py (мёртвый код).
 
 ## [0.1.0] - 2026-02-18
 
 ### Added
 
-- Primera release pública.
-- 8 agentes especializados con personalidad propia (producto, arquitectura, desarrollo, seguridad, QA, DevOps, documentación, orquestación).
-- 5 flujos de trabajo: feature (6 fases), fix (3 fases), spike (2 fases), ship (4 fases), audit (paralelo).
-- 29 skills organizados en 7 dominios.
-- Quality gates verificables en cada fase.
-- Compliance RGPD/NIS2/CRA integrado.
-- 5 hooks de protección automática (secretos, calidad, dependencias, parada, arranque).
-- Detección automática de stack tecnológico (Node.js, Python, Rust, Go, Ruby, Elixir, Java, PHP, C#, Swift).
-- Sistema de actualizaciones basado en releases de GitHub.
-- Asistente contextual al invocar `/alfred` sin subcomando.
+- Первый публичный релиз.
+- 8 специализированных агентов со своей личностью (продукт, архитектура, разработка, безопасность, QA, DevOps, документация, оркестрация).
+- 5 рабочих процессов: feature (6 фаз), fix (3 фазы), spike (2 фазы), ship (4 фазы), audit (параллельно).
+- 29 skills в 7 доменах.
+- Проверяемые quality gates в каждой фазе.
+- Встроенный compliance GDPR (RGPD)/NIS2/CRA.
+- 5 hooks автоматической защиты (секреты, качество, зависимости, остановка, запуск).
+- Автоматическое определение технологического stack (Node.js, Python, Rust, Go, Ruby, Elixir, Java, PHP, C#, Swift).
+- Система обновлений на основе релизов GitHub.
+- Контекстный ассистент при вызове `/alfred` без подкоманды.
 
 ---
 

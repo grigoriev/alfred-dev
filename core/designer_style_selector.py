@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pantallas guiadas para seleccionar sistema visual en Designer."""
+"""Guided screens to select a visual system in Designer."""
 
 from __future__ import annotations
 
@@ -240,13 +240,13 @@ def _selector_css() -> str:
 
 
 def encode_style_choice(style_id: str) -> str:
-    """Codifica una elección de familia visual."""
+    """Encode a visual family choice."""
     normalized_style_id = str(style_id or "").strip()
     return f"{STYLE_CHOICE_PREFIX}::{normalized_style_id}"
 
 
 def encode_style_brief_choice(style_id: str, font_pairing_id: str, palette_mode: str) -> str:
-    """Codifica una elección completa de familia + pairing + paleta."""
+    """Encode a full family + pairing + palette choice."""
     normalized_style_id = str(style_id or "").strip()
     normalized_pairing_id = str(font_pairing_id or "").strip()
     normalized_palette_mode = str(palette_mode or "").strip()
@@ -259,7 +259,7 @@ def encode_style_brief_choice(style_id: str, font_pairing_id: str, palette_mode:
 
 
 def parse_guided_choice(choice: Any) -> Optional[Dict[str, str]]:
-    """Decodifica una elección del flujo guiado de Designer."""
+    """Decode a choice from the Designer guided flow."""
     text = str(choice or "").strip()
     if not text:
         return None
@@ -293,7 +293,7 @@ def render_style_selector_html(
     title: Optional[str] = None,
     subtitle: Optional[str] = None,
 ) -> str:
-    """Renderiza la primera pantalla: elegir familia visual base."""
+    """Render the first screen: choose the base visual family."""
     cards = []
     for entry in get_style_catalog():
         palette, _ = resolve_palette(entry["id"], entry["recommended_palette_mode"])
@@ -307,7 +307,7 @@ def render_style_selector_html(
             f'<article class="style-option selector-card" data-choice="{_escape(encode_style_choice(entry["id"]))}" '
             f'data-label="{_escape(entry["name"])}" style="{card_style}">'
             '<div class="style-preview">'
-            '<p class="selector-step">Paso 1 · Sistema base</p>'
+            '<p class="selector-step">Шаг 1 · Базовая система</p>'
             f'<h2 class="selector-title">{_escape(entry["name"])}</h2>'
             f'<p class="selector-summary">{_escape(entry["summary"])}</p>'
             f"{_palette_markup(palette)}"
@@ -317,26 +317,26 @@ def render_style_selector_html(
             f"{_palette_mode_list_markup(list(entry['palette_modes']), entry['recommended_palette_mode'])}"
             f"{_pairing_list_markup(list(entry['font_pairings']))}"
             f"{_references_markup(list(entry['references']))}"
-            '<span class="selector-action">Elegir este sistema</span>'
+            '<span class="selector-action">Выбрать эту систему</span>'
             "</div></article>"
         )
 
-    title_text = title or "Elige el sistema de diseño base"
+    title_text = title or "Выбери базовую дизайн-систему"
     subtitle_text = subtitle or (
-        "Aquí no eliges la versión final todavía. Primero decides la familia visual "
-        "que mejor encaja con el producto; después Designer te dejará escoger "
-        "tipografía y gama de color dentro de esa familia."
+        "Здесь ты пока не выбираешь финальную версию. Сначала выбери визуальное семейство, "
+        "которое лучше подходит продукту. Потом Designer даст выбрать "
+        "типографику и цветовую гамму внутри этого семейства."
     )
     return (
         _selector_css()
         + '<section class="style-screen">'
         '<div class="style-screen-header">'
-        '<p class="style-screen-kicker">Designer / paso 1</p>'
+        '<p class="style-screen-kicker">Designer / шаг 1</p>'
         f"<h1>{_escape(title_text)}</h1>"
         f'<p class="style-screen-subtitle">{_escape(subtitle_text)}</p>'
         '</div>'
-        '<p class="selector-screen-rail"><strong>Qué estás viendo:</strong> cada sistema ya enseña sus pairings tipográficos, '
-        'modos de paleta y referencias para que no elijas a ciegas.</p>'
+        '<p class="selector-screen-rail"><strong>Что ты видишь:</strong> каждая система сразу показывает свои шрифтовые пары, '
+        'режимы палитры и референсы, чтобы ты не выбирал вслепую.</p>'
         '<div class="selector-grid">'
         + "".join(cards)
         + "</div></section>"
@@ -349,7 +349,7 @@ def render_style_brief_selector_html(
     title: Optional[str] = None,
     subtitle: Optional[str] = None,
 ) -> str:
-    """Renderiza la segunda pantalla: elegir pairing tipográfico y paleta."""
+    """Render the second screen: choose the font pairing and palette."""
     style = get_style_trend(style_id)
     cards = []
     for pairing in list(style["font_pairings"]):
@@ -364,7 +364,7 @@ def render_style_brief_selector_html(
                 f'style="--option-accent: {_escape(palette["accent"])}; --option-accent-soft: {_escape(palette["accent"])}22; '
                 f'--option-surface: {_escape(palette["surface"])}; --option-surface-alt: {_escape(palette["surface_alt"])}cc;">'
                 '<div class="style-preview">'
-                '<p class="selector-step">Paso 2 · Tipografía + paleta</p>'
+                '<p class="selector-step">Шаг 2 · Типографика + палитра</p>'
                 '<div class="selector-brief-topline">'
                 f'<strong>{_escape(pairing["label"])}</strong>'
                 f'<span>{_escape(palette_meta["label"])}</span>'
@@ -376,25 +376,25 @@ def render_style_brief_selector_html(
                 '<div class="style-meta">'
                 f'<p class="selector-copy">{_escape(pairing["notes"])}</p>'
                 f'<p class="selector-note">{_escape(palette_meta["description"])}</p>'
-                '<span class="selector-action">Usar esta combinación</span>'
+                '<span class="selector-action">Использовать эту комбинацию</span>'
                 "</div></article>"
             )
 
-    title_text = title or f"Elige tipografía y paleta para {style['name']}"
+    title_text = title or f"Выбери типографику и палитру для {style['name']}"
     subtitle_text = subtitle or (
-        "Designer mantendrá esta familia visual y, con esta combinación concreta, "
-        "te devolverá tres versiones finales comparables antes de cerrar la dirección."
+        "Designer сохранит это визуальное семейство и с этой конкретной комбинацией "
+        "вернёт три сопоставимые финальные версии до того, как направление будет зафиксировано."
     )
     return (
         _selector_css()
         + '<section class="style-screen">'
         '<div class="style-screen-header">'
-        '<p class="style-screen-kicker">Designer / paso 2</p>'
+        '<p class="style-screen-kicker">Designer / шаг 2</p>'
         f"<h1>{_escape(title_text)}</h1>"
         f'<p class="style-screen-subtitle">{_escape(subtitle_text)}</p>'
         '</div>'
-        '<p class="selector-screen-rail"><strong>Regla:</strong> aquí ya no cambias de sistema. '
-        'Solo fijas la voz tipográfica y la gama cromática que usará la ronda final.</p>'
+        '<p class="selector-screen-rail"><strong>Правило:</strong> здесь систему уже не меняешь. '
+        'Ты фиксируешь только типографский голос и цветовую гамму для финального раунда.</p>'
         '<div class="selector-brief-grid">'
         + "".join(cards)
         + "</div></section>"
@@ -408,7 +408,7 @@ def write_style_selector_html(
     title: Optional[str] = None,
     subtitle: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Escribe la pantalla guiada correspondiente en la sesión visual."""
+    """Write the matching guided screen into the visual session."""
     session_dir = resolve_visual_session_dir(visual_path)
     content_dir = os.path.join(session_dir, "content")
     os.makedirs(content_dir, exist_ok=True)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contrato del protocolo de composicion dinamica."""
+"""Contract for the dynamic composition protocol."""
 
 import os
 import unittest

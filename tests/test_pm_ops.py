@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para la capa PM determinista y sync GitHub de Alfred 0.4.5."""
+"""Tests for the deterministic PM layer and GitHub sync of Alfred 0.4.5."""
 
 import json
 import os
@@ -103,7 +103,7 @@ class TestPmHelpers(unittest.TestCase):
         )
         _write(
             os.path.join(tmpdir, "docs", "project", "current.md"),
-            "# Current\n\n- Estado: implementación en curso\n- Comando recomendado: /alfred-dev:verify\n",
+            "# Current\n\n- Estado: implementación en curso\n- Comando recomendado: /alfred-dev:uat\n",
         )
 
     def test_load_kanban_board_parses_heading_tasks(self):
@@ -167,7 +167,7 @@ class TestPmHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-### [T-010] Validar 'Login' con /alfred-dev:verify.
+### [T-010] Validar 'Login' con /alfred-dev:uat.
 
 - **Agente:** alfred:verify
 """,
@@ -269,7 +269,7 @@ class TestPmHelpers(unittest.TestCase):
         self.assertIn("## Ежедневный standup", content)
         self.assertIn("[T-002] Implementar endpoint POST /login", content)
         self.assertIn("[T-004] Integrar sesión persistente", content)
-        self.assertIn("/alfred-dev:verify", content)
+        self.assertIn("/alfred-dev:uat", content)
 
     def test_standup_snapshot_lists_latest_done_tasks_first(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -337,7 +337,7 @@ class TestPmHelpers(unittest.TestCase):
                 "target_id": "session:feature:old",
                 "target_source": "completed-session",
                 "target_command": "feature",
-                "target_description": "login antiguo",
+                "target_description": "old login",
                 "target_completed_at": "2026-01-01T00:00:00+00:00",
                 "status": "approved",
                 "checklist": [],
@@ -351,7 +351,7 @@ class TestPmHelpers(unittest.TestCase):
 
             from core.orchestrator import advance_phase, create_session, save_state  # noqa: E402
 
-            session = create_session("feature", "Login y usuarios")
+            session = create_session("feature", "Login and users")
             while session["fase_actual"] != "completado":
                 session = advance_phase(session, resultado="aprobado", artefactos=[])
             save_state(session, os.path.join(tmpdir, ".claude", "alfred-dev-state.json"))
@@ -368,7 +368,7 @@ class TestPmHelpers(unittest.TestCase):
 
             from core.orchestrator import advance_phase, create_session, save_state  # noqa: E402
 
-            session = create_session("feature", "Login sin UI")
+            session = create_session("feature", "Login without UI")
             session["stack"] = {"runtime": "python", "framework": "fastapi"}
             session = advance_phase(session, resultado="aprobado", artefactos=["docs/producto.md"])
             save_state(session, os.path.join(tmpdir, ".claude", "alfred-dev-state.json"))
@@ -386,7 +386,7 @@ class TestPmHelpers(unittest.TestCase):
 
             from core.orchestrator import advance_phase, create_session, save_state  # noqa: E402
 
-            session = create_session("feature", "Login con UI")
+            session = create_session("feature", "Login with UI")
             session = advance_phase(session, resultado="aprobado", artefactos=["docs/producto.md"])
             session = advance_phase(session, resultado="aprobado", artefactos=[])
             save_state(session, os.path.join(tmpdir, ".claude", "alfred-dev-state.json"))
@@ -404,7 +404,7 @@ class TestPmHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-### [T-010] Validar 'Login' con /alfred-dev:verify.
+### [T-010] Validar 'Login' con /alfred-dev:uat.
 
 - **Agente:** alfred:verify
 """,
@@ -481,10 +481,10 @@ class TestPmHelpers(unittest.TestCase):
             try:
                 iteration_id = db.start_iteration("feature", "Login")
                 db.log_decision(
-                    title="Cookies seguras en login",
-                    chosen="Usar cookies HttpOnly",
-                    context="Autenticación web",
-                    rationale="Evita acceso desde JS",
+                    title="Secure cookies for login",
+                    chosen="Use HttpOnly cookies",
+                    context="Web authentication",
+                    rationale="Prevents access from JS",
                     iteration_id=iteration_id,
                 )
             finally:
@@ -525,7 +525,7 @@ class TestPmHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-### [T-010] Validar 'Login' con /alfred-dev:verify.
+### [T-010] Validar 'Login' con /alfred-dev:uat.
 
 - **Agente:** alfred:verify
 """,
@@ -692,7 +692,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-### [T-010] Validar 'Login' con /alfred-dev:verify.
+### [T-010] Validar 'Login' con /alfred-dev:uat.
 
 - **Agente:** alfred:verify
 """,
@@ -821,7 +821,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
         self.assertEqual(sorted(result["retired"][0].keys())[:2], ["id", "number"])
         self.assertIn("retired", payload)
         self.assertEqual(payload["retired"][0]["id"], "T-099")
-        self.assertIn("Issues retiradas por drift local: 1", markdown)
+        self.assertIn("Issues, снятых из-за локального drift: 1", markdown)
         self.assertIn("Tarea vieja", markdown)
 
     def test_sync_project_to_github_persists_remote_drift_repairs(self):
@@ -884,9 +884,9 @@ class TestGitHubSyncHelpers(unittest.TestCase):
 
         self.assertEqual(len(result["remote_drift"]), 2)
         self.assertEqual(len(payload["remote_drift"]), 2)
-        self.assertIn("Drift remoto corregido: 2", markdown)
-        self.assertIn("[T-010] Preparar labels de issues — #41 ya no existía en remoto; recreada como #301.", markdown)
-        self.assertIn("Issue paraguas SonIA Sync", markdown)
+        self.assertIn("Исправлено удалённого drift: 2", markdown)
+        self.assertIn("[T-010] Preparar labels de issues — #41 больше не существовал в remote; создан заново как #301.", markdown)
+        self.assertIn("Зонтичный issue SonIA Sync", markdown)
 
     def test_rendered_sync_markdown_includes_remote_drift_section(self):
         from core.continuity import render_github_sync_markdown  # noqa: E402
@@ -900,16 +900,16 @@ class TestGitHubSyncHelpers(unittest.TestCase):
                 "retired": [],
                 "next_action": {
                     "command": "ship",
-                    "reason": "El tablero remoto ya quedó coherente.",
+                    "reason": "The remote board is consistent now.",
                     "source": "current",
-                    "source_label": "estado operativo actual",
-                    "focus": "Cerrar la entrega",
-                    "directive": "Continúa con el cierre de release y la validación final.",
+                    "source_label": "current operational state",
+                    "focus": "Close the delivery",
+                    "directive": "Continue with the release close and the final validation.",
                 },
                 "remote_drift": [
                     {
                         "scope": "task",
-                        "title": "[T-010] Preparar labels de issues",
+                        "title": "[T-010] Prepare issue labels",
                         "previous_number": 101,
                         "number": 201,
                         "resolution": "relinked",
@@ -925,13 +925,13 @@ class TestGitHubSyncHelpers(unittest.TestCase):
             }
         )
 
-        self.assertIn("### Drift remoto corregido", markdown)
-        self.assertIn("[T-010] Preparar labels de issues — #101 ya no cuadraba; religada a #201.", markdown)
-        self.assertIn("Issue paraguas SonIA Sync — #9 ya no existía en remoto; recreada como #11.", markdown)
-        self.assertIn("Foco operativo actual: Cerrar la entrega", markdown)
-        self.assertIn("Fuente de la recomendación: estado operativo actual (`current`)", markdown)
-        self.assertIn("Siguiente paso recomendado: `/alfred-dev:ship`", markdown)
-        self.assertIn("Qué hacer ahora: Continúa con el cierre de release y la validación final.", markdown)
+        self.assertIn("### Исправленный удалённый drift", markdown)
+        self.assertIn("[T-010] Prepare issue labels — #101 больше не совпадал; перепривязан к #201.", markdown)
+        self.assertIn("Зонтичный issue SonIA Sync — #9 больше не существовал в remote; создан заново как #11.", markdown)
+        self.assertIn("Текущий рабочий фокус: Close the delivery", markdown)
+        self.assertIn("Источник рекомендации: current operational state (`current`)", markdown)
+        self.assertIn("Рекомендуемый следующий шаг: `/alfred-dev:ship`", markdown)
+        self.assertIn("Что делать сейчас: Continue with the release close and the final validation.", markdown)
 
     def test_cli_sync_github_supports_end_to_end_with_fake_gh(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1143,7 +1143,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
             "tasks": [
                 {
                     "id": "T-010",
-                    "title": "[T-010] Preparar labels de issues",
+                    "title": "[T-010] Prepare issue labels",
                     "status": "backlog",
                     "number": 101,
                 }
@@ -1156,7 +1156,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
         markdown = render_github_sync_markdown(result)
 
         self.assertIn("## SonIA Sync", markdown)
-        self.assertIn("[T-010] Preparar labels de issues", markdown)
+        self.assertIn("[T-010] Prepare issue labels", markdown)
         self.assertNotIn("[T-010] [T-010]", markdown)
 
     def test_sync_cli_summary_keeps_issue_detail_in_artifact(self):
@@ -1166,7 +1166,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
             "tasks": [
                 {
                     "id": "T-010",
-                    "title": "Preparar labels de issues",
+                    "title": "Prepare issue labels",
                     "status": "backlog",
                     "number": 101,
                 }
@@ -1177,7 +1177,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
             "remote_drift": [],
             "next_action": {
                 "command": "feature",
-                "directive": "Continua con el flujo persistido.",
+                "directive": "Continue with the stored flow.",
             },
         }
 
@@ -1189,7 +1189,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
         self.assertIn(GITHUB_SYNC_MD_RELATIVE_PATH, summary)
         self.assertIn("/alfred-dev:feature", summary)
         self.assertNotIn("### Issues", summary)
-        self.assertNotIn("Preparar labels de issues", summary)
+        self.assertNotIn("Prepare issue labels", summary)
 
 
 if __name__ == "__main__":

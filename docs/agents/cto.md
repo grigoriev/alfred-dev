@@ -1,48 +1,48 @@
-# CTO -- El Director Técnico Externo
+# CTO -- внешний технический директор
 
-## Quien es
+## Кто это
 
-CTO es la **segunda opinión técnica externa** del equipo. No forma parte del
-loop normal de implementación: entra cuando el usuario o Alfred quieren una
-auditoría con distancia, normalmente en fases de cierre o antes de publicar.
+CTO это **внешнее второе техническое мнение** для команды. Он не входит в
+обычный цикл реализации: его подключают, когда пользователь или Alfred хотят
+аудит со стороны, обычно на завершающих фазах или перед публикацией.
 
-Su valor no está en ejecutar cambios, sino en emitir un diagnóstico independiente
-y una prescripción accionable. Observa como alguien que llega de fuera, sin la
-inercia de quienes ya llevan horas dentro del mismo problema.
+Его ценность не в том, чтобы вносить изменения, а в независимом диагнозе
+и действенном предписании. Он смотрит как человек со стороны, без
+инерции тех, кто уже несколько часов сидит внутри одной и той же проблемы.
 
-No decide la arquitectura del proyecto ni firma la calidad en nombre del equipo.
-Su papel es contrastar el cierre desde fuera y dejar hallazgos priorizados para
-que Alfred y el usuario decidan qué hacer con ellos.
+Он не решает архитектуру проекта и не подписывает качество от имени команды.
+Его роль: сверить завершение работы со стороны и оставить приоритизированные находки,
+чтобы Alfred и пользователь решили, что с ними делать.
 
-## Configuración técnica
+## Техническая конфигурация
 
-| Parámetro | Valor |
+| Параметр | Значение |
 |-----------|-------|
-| **Modelo** | opus |
-| **Color** | amber |
-| **Herramientas** | Glob, Grep, Read, Bash |
-| **Tipo** | Opcional |
+| **Модель** | opus |
+| **Цвет** | amber |
+| **Инструменты** | Glob, Grep, Read, Bash |
+| **Тип** | Опциональный |
 
-## Responsabilidades
+## Обязанности
 
-### Qué hace
+### Что делает
 
-- Ejecuta una auditoría técnica externa acotada por directorio o scope.
-- Sintetiza hallazgos en formato diagnóstico + prescripción.
-- Señala riesgos que el equipo principal puede haber normalizado.
-- Aporta una lectura fresca en seguridad, arquitectura, tests o rendimiento.
+- Проводит внешний технический аудит, ограниченный каталогом или scope.
+- Сводит находки в формат диагноз + предписание.
+- Указывает на риски, которые основная команда могла счесть нормой.
+- Даёт свежий взгляд на безопасность, архитектуру, тесты или производительность.
 
-### Qué NO hace
+### Чего НЕ делает
 
-- No modifica ficheros del proyecto.
-- No sustituye a security-officer, qa-engineer o architect en sus fases.
-- No mueve gates ni reabre una fase por sí solo: su informe se interpreta como contraste externo, no como sign-off canónico.
-- No forma parte del flujo si el usuario no lo activa o no tiene Codex CLI listo.
+- Не изменяет файлы проекта.
+- Не заменяет security-officer, qa-engineer или architect в их фазах.
+- Не двигает gates и не открывает фазу заново сам: его отчёт считается внешней сверкой, а не каноническим sign-off.
+- Не участвует в процессе, если пользователь его не включил или Codex CLI не готов.
 
-## Cuando se activa
+## Когда активируется
 
-CTO puede invocarse directamente con `/alfred-dev:cto`, y Alfred lo integra
-como auditor secuencial de cierre en:
+CTO можно вызвать напрямую через `/alfred-dev:cto`, а Alfred встраивает его
+как последовательного аудитора завершения в:
 
 - `feature:calidad`
 - `quick:validacion_rapida`
@@ -50,24 +50,24 @@ como auditor secuencial de cierre en:
 - `ship:auditoria_final`
 - `audit:auditoria_paralela`
 
-## Colaboraciones
+## Взаимодействие
 
-| Relación | Agente | Contexto |
+| Связь | Агент | Контекст |
 |----------|--------|----------|
-| **Activado por** | Alfred o el usuario | Segunda opinión externa en fases de cierre |
-| **Colabora con** | qa-engineer / security-officer / architect | Contrasta lo ya evaluado desde una perspectiva externa |
-| **Entrega a** | Usuario y Alfred | Informe con diagnóstico y prescripción priorizada |
+| **Активирует** | Alfred или пользователь | Внешнее второе мнение на завершающих фазах |
+| **Работает с** | qa-engineer / security-officer / architect | Сверяет уже оценённое с внешней точки зрения |
+| **Передаёт** | Пользователю и Alfred | Отчёт с диагнозом и приоритизированным предписанием |
 
-## Flujos
+## Процессы
 
-1. **Invocación directa**: audita un scope concreto vía Codex CLI.
-2. **Cierre de fase**: revisa el resultado de calidad/validación antes de darlo
-   por sólido. No sustituye la aprobación de QA, seguridad o arquitectura: la contrasta.
+1. **Прямой вызов**: аудирует конкретный scope через Codex CLI.
+2. **Завершение фазы**: проверяет результат качества/валидации, прежде чем
+   считать его надёжным. Не заменяет одобрение QA, безопасности или архитектуры: сверяет его.
 
-## Artefactos
+## Артефакты
 
-CTO produce:
+CTO создаёт:
 
-- informe estructurado de hallazgos
-- prescripción priorizada por severidad
-- recomendación final de aceptar, reforzar o revisar el cierre
+- структурированный отчёт с находками
+- предписание, приоритизированное по серьёзности
+- итоговую рекомендацию: принять, усилить или пересмотреть завершение

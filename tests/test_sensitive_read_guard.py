@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Tests para hooks/sensitive-read-guard.py.
+Tests for hooks/sensitive-read-guard.py.
 
-Verifica que el hook detecta correctamente ficheros sensibles (claves
-privadas, variables de entorno, credenciales de servicios, directorios
-SSH/GPG) y que permite sin aviso ficheros normales.
+Verify that the hook detects sensitive files correctly (private keys,
+environment variables, service credentials, SSH/GPG directories) and
+allows normal files without a warning.
 
-El hook es informativo (exit 0 siempre), asi que los tests verifican la
-salida por stderr para comprobar si se emitio aviso o no.
+The hook is informational (always exit 0), so the tests check stderr
+to see whether it emitted a warning.
 """
 
 import importlib.util
@@ -19,7 +19,7 @@ import unittest
 
 
 def _load_module():
-    """Carga el modulo sensitive-read-guard.py por ruta (tiene guion)."""
+    """Load the sensitive-read-guard.py module by path (the name has a hyphen)."""
     module_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "hooks",
@@ -35,10 +35,10 @@ _guard = _load_module()
 
 
 class TestSensitivePatterns(unittest.TestCase):
-    """Verifica que _SENSITIVE_PATTERNS detecta los ficheros esperados."""
+    """Verify that _SENSITIVE_PATTERNS detects the expected files."""
 
     def _check(self, base_name: str, expected_match: bool):
-        """Comprueba si un nombre de fichero coincide con algun patron."""
+        """Check if a file name matches any pattern."""
         _, ext = os.path.splitext(base_name)
         matched = False
         for check_fn, _desc in _guard._SENSITIVE_PATTERNS:
@@ -51,10 +51,10 @@ class TestSensitivePatterns(unittest.TestCase):
         self.assertEqual(
             matched,
             expected_match,
-            f"{base_name}: esperado {'match' if expected_match else 'no match'}",
+            f"{base_name}: expected {'match' if expected_match else 'no match'}",
         )
 
-    # --- Ficheros .env ---
+    # --- .env files ---
     def test_dotenv_base(self):
         self._check(".env", True)
 
@@ -65,10 +65,10 @@ class TestSensitivePatterns(unittest.TestCase):
         self._check(".env.production", True)
 
     def test_env_without_dot(self):
-        """Un fichero llamado 'env' sin punto no es sensible."""
+        """A file named 'env' without a dot is not sensitive."""
         self._check("env", False)
 
-    # --- Claves privadas ---
+    # --- Private keys ---
     def test_pem_file(self):
         self._check("server.pem", True)
 
@@ -95,10 +95,10 @@ class TestSensitivePatterns(unittest.TestCase):
         self._check("id_dsa", True)
 
     def test_id_rsa_pub_not_sensitive(self):
-        """Las claves publicas no son sensibles."""
+        """Public keys are not sensitive."""
         self._check("id_rsa.pub", False)
 
-    # --- Credenciales de servicios ---
+    # --- Service credentials ---
     def test_credentials_json(self):
         self._check("credentials.json", True)
 
@@ -123,14 +123,14 @@ class TestSensitivePatterns(unittest.TestCase):
     def test_htpasswd(self):
         self._check(".htpasswd", True)
 
-    # --- Keystore Java ---
+    # --- Java keystore ---
     def test_jks(self):
         self._check("keystore.jks", True)
 
     def test_keystore(self):
         self._check("app.keystore", True)
 
-    # --- Ficheros normales (no sensibles) ---
+    # --- Normal files (not sensitive) ---
     def test_readme(self):
         self._check("README.md", False)
 
@@ -148,10 +148,10 @@ class TestSensitivePatterns(unittest.TestCase):
 
 
 class TestPathPatterns(unittest.TestCase):
-    """Verifica que _PATH_PATTERNS detecta rutas sensibles."""
+    """Verify that _PATH_PATTERNS detects sensitive paths."""
 
     def _check_path(self, file_path: str, expected_match: bool):
-        """Comprueba si una ruta completa coincide con algun patron."""
+        """Check if a full path matches any pattern."""
         matched = False
         for pattern, _desc in _guard._PATH_PATTERNS:
             if pattern in file_path:
@@ -160,7 +160,7 @@ class TestPathPatterns(unittest.TestCase):
         self.assertEqual(
             matched,
             expected_match,
-            f"{file_path}: esperado {'match' if expected_match else 'no match'}",
+            f"{file_path}: expected {'match' if expected_match else 'no match'}",
         )
 
     def test_aws_credentials(self):
@@ -195,10 +195,10 @@ class TestPathPatterns(unittest.TestCase):
 
 
 class TestMainFunction(unittest.TestCase):
-    """Verifica el flujo completo del hook main()."""
+    """Verify the full flow of the hook main()."""
 
     def _run_hook(self, hook_input: dict) -> str:
-        """Ejecuta main() con el input dado y captura stderr."""
+        """Run main() with the given input and capture stderr."""
         old_stdin = sys.stdin
         old_stderr = sys.stderr
         captured_stderr = io.StringIO()
@@ -216,7 +216,7 @@ class TestMainFunction(unittest.TestCase):
         return captured_stderr.getvalue()
 
     def test_sensitive_file_emits_warning(self):
-        """Leer un .env debe generar aviso en stderr."""
+        """Reading a .env file must write a warning to stderr."""
         output = self._run_hook({
             "tool_input": {"file_path": "/project/.env"}
         })
@@ -224,31 +224,31 @@ class TestMainFunction(unittest.TestCase):
         self.assertIn("переменных окружения", output.lower())
 
     def test_normal_file_no_warning(self):
-        """Leer un fichero normal no debe generar aviso."""
+        """Reading a normal file must not emit a warning."""
         output = self._run_hook({
             "tool_input": {"file_path": "/project/src/main.py"}
         })
         self.assertEqual(output, "")
 
     def test_ssh_key_emits_warning(self):
-        """Leer una clave SSH debe generar aviso."""
+        """Reading an SSH key must emit a warning."""
         output = self._run_hook({
             "tool_input": {"file_path": "/home/user/.ssh/id_rsa"}
         })
         self.assertIn("ВНИМАНИЕ", output)
 
     def test_empty_path_no_warning(self):
-        """Ruta vacia no debe generar aviso."""
+        """An empty path must not emit a warning."""
         output = self._run_hook({
             "tool_input": {"file_path": ""}
         })
         self.assertEqual(output, "")
 
     def test_invalid_json_no_crash(self):
-        """JSON invalido no debe hacer crash."""
+        """Invalid JSON must not cause a crash."""
         old_stdin = sys.stdin
         try:
-            sys.stdin = io.StringIO("esto no es json")
+            sys.stdin = io.StringIO("this is not json")
             _guard.main()
         except SystemExit as e:
             self.assertEqual(e.code, 0)
@@ -256,14 +256,14 @@ class TestMainFunction(unittest.TestCase):
             sys.stdin = old_stdin
 
     def test_path_key_fallback(self):
-        """El hook debe probar tanto file_path como path."""
+        """The hook must try both file_path and path."""
         output = self._run_hook({
             "tool_input": {"path": "/project/.env.local"}
         })
         self.assertIn("ВНИМАНИЕ", output)
 
     def test_pem_file_warning(self):
-        """Leer un fichero .pem debe generar aviso."""
+        """Reading a .pem file must emit a warning."""
         output = self._run_hook({
             "tool_input": {"file_path": "/certs/server.pem"}
         })
@@ -271,7 +271,7 @@ class TestMainFunction(unittest.TestCase):
         self.assertIn("Приватный ключ", output)
 
     def test_docker_config_warning(self):
-        """La configuracion Docker debe avisar como credencial sensible."""
+        """Docker configuration must warn as a sensitive credential."""
         output = self._run_hook({
             "tool_input": {"file_path": "/home/user/.docker/config.json"}
         })
@@ -279,7 +279,7 @@ class TestMainFunction(unittest.TestCase):
         self.assertIn("Docker", output)
 
     def test_service_account_variant_warning(self):
-        """Variantes de service-account.json tambien deben avisar."""
+        """Variants of service-account.json must also warn."""
         output = self._run_hook({
             "tool_input": {"file_path": "/secrets/service-account.prod.json"}
         })
@@ -287,7 +287,7 @@ class TestMainFunction(unittest.TestCase):
         self.assertIn("Учётные данные сервиса", output)
 
     def test_kube_config_warning(self):
-        """La configuracion de kubeconfig debe avisar."""
+        """kubeconfig configuration must warn."""
         output = self._run_hook({
             "tool_input": {"file_path": "/home/user/.kube/config"}
         })

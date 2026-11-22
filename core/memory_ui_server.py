@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Servidor local de la UI de memoria de Alfred Dev."""
+"""Local server for the Alfred Dev memory UI."""
 
 from __future__ import annotations
 
@@ -24,20 +24,20 @@ UI_VERSION = "0.0.4"
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 
 _EVENT_TYPE_LABELS = {
-    "session_started": "Sesión",
-    "session_ended": "Sesión",
+    "session_started": "Сессия",
+    "session_ended": "Сессия",
     "user_prompt": "Prompt",
-    "phase_completed": "Fase",
+    "phase_completed": "Фаза",
     "gate_passed": "Gate",
-    "command_executed": "Comando",
+    "command_executed": "Команда",
     "alfred_prefetched": "Prefetch",
     "helper_seeded": "Helper",
-    "file_written": "Archivo",
+    "file_written": "Файл",
     "commit_captured": "Commit",
 }
 
 HTML_TEMPLATE = """<!doctype html>
-<html lang="es">
+<html lang="ru">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -487,8 +487,8 @@ HTML_TEMPLATE = """<!doctype html>
       <div class="hero-copy">
         <h1>Memory UI</h1>
         <p>
-          Vista viva de la memoria SQLite de Alfred: timeline, decisiones, grafo,
-          commits, búsqueda, salud del almacén y estado operativo del proyecto.
+          Живой вид памяти SQLite Alfred: timeline, решения, граф,
+          commits, поиск, здоровье хранилища и рабочее состояние проекта.
         </p>
         <div class="hero-version">
           <span class="chip ok" id="pluginBadge">Alfred Dev</span>
@@ -502,91 +502,91 @@ HTML_TEMPLATE = """<!doctype html>
         </div>
       </div>
       <div class="hero-meta">
-        <div><strong>Proyecto</strong><span class="hero-meta-value" id="projectName">Cargando…</span></div>
+        <div><strong>Проект</strong><span class="hero-meta-value" id="projectName">Загрузка…</span></div>
         <div><strong>SQLite</strong><span class="hero-meta-value" id="dbPath">—</span></div>
-        <div><strong>Refresco</strong><span class="hero-meta-value hero-meta-inline">Automático cada <span id="refreshSeconds">4</span><span>s</span></span></div>
+        <div><strong>Обновление</strong><span class="hero-meta-value hero-meta-inline">Автоматически каждые <span id="refreshSeconds">4</span><span> с</span></span></div>
       </div>
     </section>
 
     <div class="toolbar">
       <form id="searchForm">
-        <input id="searchInput" type="search" placeholder="Buscar en decisiones, commits, eventos y docs/project/" />
+        <input id="searchInput" type="search" placeholder="Поиск по решениям, commits, событиям и docs/project/" />
       </form>
       <select id="iterationSelect"></select>
-      <button type="button" id="refreshButton">Actualizar ahora</button>
-      <span class="status-chip"><span class="status-dot"></span><span id="lastRefresh">Conectando…</span></span>
+      <button type="button" id="refreshButton">Обновить сейчас</button>
+      <span class="status-chip"><span class="status-dot"></span><span id="lastRefresh">Подключение…</span></span>
     </div>
     <div id="workspaceNotice" class="notice-banner is-hidden"></div>
 
     <section class="grid">
       <article class="panel" data-span="12">
-        <h2>Resumen</h2>
-        <p class="subtle">Lo más importante del proyecto y del estado operativo en una sola vista.</p>
+        <h2>Сводка</h2>
+        <p class="subtle">Самое важное о проекте и его рабочем состоянии на одном экране.</p>
         <div class="stats" id="stats"></div>
       </article>
 
       <article class="panel" data-span="5">
-        <h2>Estado actual</h2>
+        <h2>Текущее состояние</h2>
         <ul class="meta-list" id="stateSummary"></ul>
       </article>
 
       <article class="panel" data-span="7">
-        <h2>Cronología</h2>
-        <p class="subtle" id="timelineMeta">Eventos de la iteración seleccionada.</p>
+        <h2>Хронология</h2>
+        <p class="subtle" id="timelineMeta">События выбранной итерации.</p>
         <ul class="timeline" id="timeline"></ul>
       </article>
 
       <article class="panel" data-span="12" id="projectSignalsPanel">
-        <h2>Foco operativo</h2>
-        <p class="subtle">Bloqueos, trabajo en curso, trazabilidad y señales útiles de SonIA sin repetir la cabecera.</p>
+        <h2>Рабочий фокус</h2>
+        <p class="subtle">Блокеры, текущая работа, трассируемость и полезные сигналы SonIA без повтора шапки.</p>
         <div class="lane-grid" id="projectSignals"></div>
       </article>
 
       <article class="panel" data-span="7">
-        <h2>Sesiones recientes</h2>
-        <p class="subtle">Iteraciones reales de Alfred con su contexto y volumen de actividad.</p>
+        <h2>Недавние сессии</h2>
+        <p class="subtle">Реальные итерации Alfred с контекстом и объёмом активности.</p>
         <ul class="session-list" id="sessions"></ul>
       </article>
 
       <article class="panel" data-span="5">
-        <h2>Actividad reciente</h2>
-        <p class="subtle">Eventos y prompts recientes, útiles incluso si todavía no hay ADRs ni commits enlazados.</p>
+        <h2>Недавняя активность</h2>
+        <p class="subtle">Недавние события и prompts. Полезны, даже если пока нет ADR и связанных commits.</p>
         <div class="chip-row" id="activityMix" style="margin-bottom:10px;"></div>
         <ul class="activity-list" id="activity"></ul>
       </article>
 
       <article class="panel" data-span="7" id="decisionsPanel">
-        <h2>Decisiones</h2>
-        <p class="subtle">Diseño, seguridad, cumplimiento y decisiones de implementación con sus relaciones visibles.</p>
+        <h2>Решения</h2>
+        <p class="subtle">Решения по дизайну, безопасности, compliance и реализации с видимыми связями.</p>
         <ul class="decision-list" id="decisions"></ul>
       </article>
 
       <article class="panel" data-span="5" id="graphPanel">
-        <h2>Grafo de decisiones</h2>
+        <h2>Граф решений</h2>
         <div class="legend">
-          <span><i style="background:#54c4ff"></i> activa</span>
-          <span><i style="background:#ffcb6b"></i> reemplazada</span>
-          <span><i style="background:#ff7a90"></i> obsoleta</span>
+          <span><i style="background:#54c4ff"></i> активно</span>
+          <span><i style="background:#ffcb6b"></i> заменено</span>
+          <span><i style="background:#ff7a90"></i> устарело</span>
         </div>
         <div class="graph-shell">
           <svg id="graph" viewBox="0 0 800 420" preserveAspectRatio="xMidYMid meet"></svg>
         </div>
-        <div id="graphDetail" class="empty" style="margin-top:12px;">Haz clic en una decisión del grafo para ver el detalle.</div>
+        <div id="graphDetail" class="empty" style="margin-top:12px;">Нажми на решение в графе, чтобы увидеть детали.</div>
       </article>
 
       <article class="panel" data-span="6" id="commitsPanel">
         <h2>Commits</h2>
-        <p class="subtle">Actividad reciente conectada con la memoria del proyecto.</p>
+        <p class="subtle">Недавняя активность, связанная с памятью проекта.</p>
         <ul class="commit-list" id="commits"></ul>
       </article>
 
       <article class="panel" data-span="6" id="searchPanel">
-        <h2>Búsqueda</h2>
-        <p class="subtle">Cruza memoria SQLite y artefactos operativos de SonIA.</p>
+        <h2>Поиск</h2>
+        <p class="subtle">Ищет по памяти SQLite и рабочим артефактам SonIA.</p>
         <ul class="search-results" id="searchResults">
           <li class="hint-card">
-            <strong>Escribe algo para buscar en memoria y artefactos.</strong><br />
-            Cuando haya memoria, busca por una decisión, un commit o un término de <code>docs/project/</code>.
+            <strong>Введи запрос для поиска по памяти и артефактам.</strong><br />
+            Когда память появится, ищи по решению, commit или термину из <code>docs/project/</code>.
           </li>
         </ul>
       </article>
@@ -614,7 +614,7 @@ HTML_TEMPLATE = """<!doctype html>
       if (!value) return "—";
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return value;
-      return new Intl.DateTimeFormat("es-ES", {
+      return new Intl.DateTimeFormat("ru-RU", {
         dateStyle: "short",
         timeStyle: "medium",
         hour12: false,
@@ -622,27 +622,27 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     const STATUS_LABELS = Object.freeze({
-      accepted: "aceptada",
-      active: "activa",
-      approved: "aprobada",
-      blocked: "bloqueada",
-      danger: "crítica",
-      done: "completada",
-      healthy: "saludable",
-      inactive: "inactiva",
-      pending: "pendiente",
-      proposed: "propuesta",
-      rejected: "rechazada",
-      superseded: "reemplazada",
-      deprecated: "obsoleta",
-      unknown: "sin estado",
-      warning: "aviso",
+      accepted: "принято",
+      active: "активно",
+      approved: "одобрено",
+      blocked: "заблокировано",
+      danger: "критично",
+      done: "завершено",
+      healthy: "в порядке",
+      inactive: "неактивно",
+      pending: "в ожидании",
+      proposed: "предложено",
+      rejected: "отклонено",
+      superseded: "заменено",
+      deprecated: "устарело",
+      unknown: "без статуса",
+      warning: "предупреждение",
     });
 
     const URGENCY_META = Object.freeze({
-      alta: { label: "prioridad alta", className: "danger" },
-      media: { label: "prioridad media", className: "warn" },
-      baja: { label: "prioridad baja", className: "" },
+      alta: { label: "высокий приоритет", className: "danger" },
+      media: { label: "средний приоритет", className: "warn" },
+      baja: { label: "низкий приоритет", className: "" },
     });
 
     function statusLabel(status, { uppercase = false } = {}) {
@@ -698,15 +698,15 @@ HTML_TEMPLATE = """<!doctype html>
       const progress = data.progress || {};
       const kanban = progress.kanban || {};
       const cards = [
-        { label: "Iteraciones", value: stats.total_iterations ?? 0 },
-        { label: "Decisiones", value: stats.total_decisions ?? 0 },
+        { label: "Итерации", value: stats.total_iterations ?? 0 },
+        { label: "Решения", value: stats.total_decisions ?? 0 },
         { label: "Commits", value: stats.total_commits ?? 0 },
-        { label: "Eventos", value: stats.total_events ?? 0 },
-        { label: "Pendientes", value: (kanban.backlog || []).length },
-        { label: "En curso", value: (kanban.in_progress || []).length },
-        { label: "Bloqueadas", value: (kanban.blocked || []).length },
+        { label: "События", value: stats.total_events ?? 0 },
+        { label: "В ожидании", value: (kanban.backlog || []).length },
+        { label: "В работе", value: (kanban.in_progress || []).length },
+        { label: "Заблокировано", value: (kanban.blocked || []).length },
         {
-          label: "Salud",
+          label: "Здоровье",
           value: statusLabel(health.status || "unknown", { uppercase: true }),
           kind: "text",
         },
@@ -734,8 +734,8 @@ HTML_TEMPLATE = """<!doctype html>
       }
 
       element.innerHTML = `
-        <strong>No hay memoria de Alfred en este proyecto.</strong>
-        Aquí solo aparece lo que Alfred ha registrado: sesiones, decisiones, eventos y commits enlazados. El historial de Git no se importa al abrir la UI.
+        <strong>В этом проекте нет памяти Alfred.</strong>
+        Здесь видно только то, что записал Alfred: сессии, решения, события и связанные commits. История Git не импортируется при открытии UI.
       `;
       element.classList.remove("is-hidden");
     }
@@ -744,9 +744,9 @@ HTML_TEMPLATE = """<!doctype html>
       document.getElementById("pluginBadge").textContent = data.plugin_name || "Alfred Dev";
       document.getElementById("pluginVersion").textContent = `Plugin ${data.plugin_version || "—"}`;
       document.getElementById("uiVersion").textContent = `Memory UI ${data.ui_version || "—"}`;
-      document.getElementById("projectName").textContent = data.project_name || "Proyecto";
+      document.getElementById("projectName").textContent = data.project_name || "Проект";
       document.getElementById("dbPath").textContent = data.db_path || "—";
-      document.getElementById("lastRefresh").textContent = `Última actualización: ${formatDate(data.refreshed_at)}`;
+      document.getElementById("lastRefresh").textContent = `Последнее обновление: ${formatDate(data.refreshed_at)}`;
       renderStats(data);
       renderWorkspaceNotice(data);
 
@@ -760,7 +760,7 @@ HTML_TEMPLATE = """<!doctype html>
       const progress = memoryEmpty ? {} : (data.progress || {});
       const nextAction = progress.next_action || {};
       const overviewCards = (progress.overview_cards || []).filter(
-        (card) => card.label !== "Siguiente paso recomendado"
+        (card) => !["Рекомендуемый следующий шаг", "Siguiente paso recomendado"].includes(card.label)
       );
       const health = data.health || {};
       const issues = health.issues || [];
@@ -769,14 +769,14 @@ HTML_TEMPLATE = """<!doctype html>
       if (!memoryEmpty && nextAction.command) {
         lines.push(`
           <li>
-            <small>Acción inmediata</small>
+            <small>Немедленное действие</small>
             <div class="decision-title">/alfred-dev:${esc(nextAction.command || "alfred")}</div>
             <div class="chip-row">
               ${urgencyChip(nextAction.urgency)}
               ${nextAction.source_label ? `<span class="chip">${esc(nextAction.source_label)}</span>` : ""}
             </div>
-            <div class="event-body">${esc(nextAction.focus || "Siguiente paso recomendado")}</div>
-            <div class="event-body" style="margin-top:8px;">${esc(nextAction.directive || nextAction.reason || "Sin detalle adicional.")}</div>
+            <div class="event-body">${esc(nextAction.focus || "Рекомендуемый следующий шаг")}</div>
+            <div class="event-body" style="margin-top:8px;">${esc(nextAction.directive || nextAction.reason || "Без дополнительных деталей.")}</div>
             ${
               nextAction.reason && nextAction.directive && nextAction.reason !== nextAction.directive
                 ? `<div class="subtle" style="margin-top:8px;">${esc(nextAction.reason)}</div>`
@@ -788,8 +788,8 @@ HTML_TEMPLATE = """<!doctype html>
 
       lines.push(...overviewCards.map((card) => `
         <li>
-          <small>${esc(card.label || "Estado")}</small>
-          <div class="decision-title">${esc(card.title || "sin detalle")}</div>
+          <small>${esc(card.label || "Состояние")}</small>
+          <div class="decision-title">${esc(card.title || "без деталей")}</div>
           ${card.chips && card.chips.length ? `<div class="chip-row">${card.chips.map((chip) => statusChip(chip)).join("")}</div>` : ""}
           <div class="event-body">${esc(card.body || "")}</div>
         </li>
@@ -797,9 +797,9 @@ HTML_TEMPLATE = """<!doctype html>
 
       lines.push(`
         <li>
-          <small>Salud de memoria</small>
+          <small>Здоровье памяти</small>
           <div class="chip-row">${statusChip(health.status || "unknown")}</div>
-          <div class="event-body">${issues.length ? issues.map((issue) => esc(issue)).join("\\n") : "Sin incidencias detectadas."}</div>
+          <div class="event-body">${issues.length ? issues.map((issue) => esc(issue)).join("\\n") : "Проблем не найдено."}</div>
         </li>
       `);
 
@@ -809,19 +809,19 @@ HTML_TEMPLATE = """<!doctype html>
     function renderSessions(data) {
       const items = data.items || [];
       if (!items.length) {
-        renderEmpty("sessions", "Todavía no hay sesiones registradas.");
+        renderEmpty("sessions", "Пока нет записанных сессий.");
         return;
       }
       document.getElementById("sessions").innerHTML = items.map((item) => `
         <li>
-          <small>Iteración #${item.id} · ${formatDate(item.started_at)}</small>
-          <div class="decision-title">${esc(item.command || "session")} — ${esc(item.description || "sin descripción")}</div>
+          <small>Итерация #${item.id} · ${formatDate(item.started_at)}</small>
+          <div class="decision-title">${esc(item.command || "session")} — ${esc(item.description || "без описания")}</div>
           <div class="chip-row">
             ${statusChip(item.status || "unknown")}
-            <span class="chip">${esc(item.event_count || 0)} eventos</span>
-            ${item.is_active ? '<span class="chip ok">activa</span>' : ''}
+            <span class="chip">событий: ${esc(item.event_count || 0)}</span>
+            ${item.is_active ? '<span class="chip ok">активна</span>' : ''}
           </div>
-          <div class="event-body">${item.last_title ? esc(item.last_title) : "Sin resumen reciente; la actividad puede venir solo por hooks básicos."}</div>
+          <div class="event-body">${item.last_title ? esc(item.last_title) : "Нет свежей сводки. Активность может приходить только от базовых hooks."}</div>
           ${item.last_body ? `<div class="event-body" style="margin-top:8px;">${esc(item.last_body)}</div>` : ""}
         </li>
       `).join("");
@@ -832,25 +832,25 @@ HTML_TEMPLATE = """<!doctype html>
       const counts = data.event_counts || [];
       const mix = document.getElementById("activityMix");
       mix.innerHTML = counts.length
-        ? counts.map((item) => `<span class="chip">${esc(item.label || item.event_type || "evento")} · ${esc(item.total || 0)}</span>`).join("")
+        ? counts.map((item) => `<span class="chip">${esc(item.label || item.event_type || "событие")} · ${esc(item.total || 0)}</span>`).join("")
         : "";
       if (!items.length) {
-        renderEmpty("activity", "Todavía no hay actividad reciente en la memoria.");
+        renderEmpty("activity", "В памяти пока нет недавней активности.");
         return;
       }
       document.getElementById("activity").innerHTML = items.map((item) => `
         <li>
-          <small>${formatDate(item.created_at)} · iteración #${esc(item.iteration_id || "—")}</small>
-          <div class="decision-title">${esc(item.display_title || item.summary || item.event_type || "Evento")}</div>
+          <small>${formatDate(item.created_at)} · итерация #${esc(item.iteration_id || "—")}</small>
+          <div class="decision-title">${esc(item.display_title || item.summary || item.event_type || "Событие")}</div>
           <div class="chip-row">
             ${statusChip(item.kind_label || item.event_type || "event")}
             ${item.status_label ? statusChip(item.status_label) : ""}
             ${item.phase_label ? statusChip(item.phase_label) : ""}
           </div>
-          <div class="event-body">${esc(item.display_body || "Sin detalle adicional.")}</div>
+          <div class="event-body">${esc(item.display_body || "Без дополнительных деталей.")}</div>
           ${
             item.detail_lines && item.detail_lines.length
-              ? `<details class="event-details"><summary>Ver detalle</summary><ul>${item.detail_lines.map((line) => `<li>${esc(line)}</li>`).join("")}</ul></details>`
+              ? `<details class="event-details"><summary>Показать детали</summary><ul>${item.detail_lines.map((line) => `<li>${esc(line)}</li>`).join("")}</ul></details>`
               : ""
           }
         </li>
@@ -869,32 +869,32 @@ HTML_TEMPLATE = """<!doctype html>
         : [
             {
               title: "Current",
-              subtitle: "Lo último que Alfred ha dejado listo para seguir.",
+              subtitle: "Последнее, что Alfred подготовил для продолжения.",
               items: progress.current_signals || [],
             },
             {
-              title: "Bloqueos",
-              subtitle: "Lo que ahora mismo impide avanzar o cerrar trabajo.",
+              title: "Блокеры",
+              subtitle: "Что сейчас мешает продвинуться или закрыть работу.",
               items: kanban.blocked || [],
             },
             {
-              title: "En curso",
-              subtitle: "Trabajo en marcha ahora mismo.",
+              title: "В работе",
+              subtitle: "Работа, которая идёт прямо сейчас.",
               items: kanban.in_progress || [],
             },
             {
-              title: "Progreso",
-              subtitle: "Señales humanas del avance del proyecto.",
+              title: "Прогресс",
+              subtitle: "Понятные сигналы о продвижении проекта.",
               items: progress.progress_signals || [],
             },
             {
-              title: "Trazabilidad",
-              subtitle: "Huecos o señales de criterios y cobertura.",
+              title: "Трассируемость",
+              subtitle: "Пробелы или сигналы по критериям и покрытию.",
               items: progress.traceability_signals || [],
             },
             {
               title: "Backlog",
-              subtitle: "Pendiente por atacar.",
+              subtitle: "Ждёт своей очереди.",
               items: kanban.backlog || [],
             },
           ].filter((card) => card.items && card.items.length);
@@ -906,13 +906,13 @@ HTML_TEMPLATE = """<!doctype html>
       togglePanel("projectSignalsPanel", true);
       document.getElementById("projectSignals").innerHTML = cards.map((card) => `
         <div class="lane-card">
-          <h3>${esc(card.title || "Señales")}</h3>
+          <h3>${esc(card.title || "Сигналы")}</h3>
           <div class="subtle" style="margin-bottom:10px;">${esc(card.subtitle || "")}</div>
           <ul>
             ${
               (card.items && card.items.length)
                 ? card.items.slice(0, 4).map((item) => `<li>${esc(item)}</li>`).join("")
-                : '<li>Sin datos todavía en este proyecto.</li>'
+                : '<li>В этом проекте пока нет данных.</li>'
             }
           </ul>
         </div>
@@ -923,7 +923,7 @@ HTML_TEMPLATE = """<!doctype html>
       const select = document.getElementById("iterationSelect");
       if (!items.length) {
         state.selectedIterationId = null;
-        select.innerHTML = `<option value="">Sin iteraciones</option>`;
+        select.innerHTML = `<option value="">Нет итераций</option>`;
         return;
       }
       const selectedStillExists = items.some(
@@ -946,28 +946,28 @@ HTML_TEMPLATE = """<!doctype html>
       const totalEvents = Number(data.event_count || items.length || 0);
       const returnedCount = Number(data.returned_count || items.length || 0);
       const timelineCountLabel = data.truncated
-        ? `${returnedCount} de ${totalEvents} eventos`
-        : `${totalEvents} eventos`;
+        ? `${returnedCount} из ${totalEvents} событий`
+        : `событий: ${totalEvents}`;
       document.getElementById("timelineMeta").textContent = iteration.id
-        ? `Iteración #${iteration.id} · ${iteration.command || "session"} · ${statusLabel(iteration.status || "unknown")} · ${timelineCountLabel}`
-        : "No hay iteraciones con eventos todavía.";
+        ? `Итерация #${iteration.id} · ${iteration.command || "session"} · ${statusLabel(iteration.status || "unknown")} · ${timelineCountLabel}`
+        : "Пока нет итераций с событиями.";
       if (!items.length) {
-        renderEmpty("timeline", "Todavía no hay eventos en esta iteración.");
+        renderEmpty("timeline", "В этой итерации пока нет событий.");
         return;
       }
       document.getElementById("timeline").innerHTML = items.map((event) => `
         <li>
           <small>${formatDate(event.created_at)}</small>
-          <div class="decision-title">${esc(event.display_title || event.summary || event.event_type || "Evento")}</div>
+          <div class="decision-title">${esc(event.display_title || event.summary || event.event_type || "Событие")}</div>
           <div class="chip-row">
-            ${statusChip(event.kind_label || event.event_type || "evento")}
+            ${statusChip(event.kind_label || event.event_type || "событие")}
             ${event.status_label ? statusChip(event.status_label) : ""}
             ${event.phase_label ? statusChip(event.phase_label) : ""}
           </div>
-          <div class="event-body">${esc(event.display_body || "Sin detalle adicional.")}</div>
+          <div class="event-body">${esc(event.display_body || "Без дополнительных деталей.")}</div>
           ${
             event.detail_lines && event.detail_lines.length
-              ? `<details class="event-details"><summary>Ver detalle</summary><ul>${event.detail_lines.map((line) => `<li>${esc(line)}</li>`).join("")}</ul></details>`
+              ? `<details class="event-details"><summary>Показать детали</summary><ul>${event.detail_lines.map((line) => `<li>${esc(line)}</li>`).join("")}</ul></details>`
               : ""
           }
         </li>
@@ -983,16 +983,16 @@ HTML_TEMPLATE = """<!doctype html>
       togglePanel("decisionsPanel", true);
       document.getElementById("decisions").innerHTML = items.map((item) => `
         <li>
-          <small>Decisión #${item.id} · ${formatDate(item.decided_at)}</small>
-          <div class="decision-title">${esc(item.title || "Sin título")}</div>
+          <small>Решение #${item.id} · ${formatDate(item.decided_at)}</small>
+          <div class="decision-title">${esc(item.title || "Без названия")}</div>
           <div class="chip-row">
             ${statusChip(item.status || "active")}
             ${(item.tags || []).map((tag) => `<span class="chip">${esc(tag)}</span>`).join("")}
           </div>
           <div class="kv" style="margin-top: 12px;">
-            <div><strong>Elegido</strong><div class="decision-body">${esc(item.chosen || "—")}</div></div>
-            ${item.rationale ? `<div><strong>Justificación</strong><div class="decision-body">${esc(item.rationale)}</div></div>` : ""}
-            ${item.links && item.links.length ? `<div><strong>Relaciones</strong><div class="decision-body">${item.links.map((link) => `${esc(link.direction)} ${esc(link.link_type)} → ${esc(link.title)}`).join("\\n")}</div></div>` : ""}
+            <div><strong>Выбрано</strong><div class="decision-body">${esc(item.chosen || "—")}</div></div>
+            ${item.rationale ? `<div><strong>Обоснование</strong><div class="decision-body">${esc(item.rationale)}</div></div>` : ""}
+            ${item.links && item.links.length ? `<div><strong>Связи</strong><div class="decision-body">${item.links.map((link) => `${esc(link.direction)} ${esc(link.link_type)} → ${esc(link.title)}`).join("\\n")}</div></div>` : ""}
           </div>
         </li>
       `).join("");
@@ -1009,10 +1009,10 @@ HTML_TEMPLATE = """<!doctype html>
       setPanelSpan("searchPanel", 6);
       document.getElementById("commits").innerHTML = items.map((item) => `
         <li>
-          <small>${formatDate(item.committed_at)} · ${esc(item.author || "autor desconocido")}</small>
-          <div class="commit-title">${esc(item.sha_short || item.sha || "commit")} — ${esc(item.message || "sin mensaje")}</div>
+          <small>${formatDate(item.committed_at)} · ${esc(item.author || "автор неизвестен")}</small>
+          <div class="commit-title">${esc(item.sha_short || item.sha || "commit")} — ${esc(item.message || "без сообщения")}</div>
           <div class="chip-row">
-            ${statusChip(item.iteration_label || "sin iteración")}
+            ${statusChip(item.iteration_label || "без итерации")}
             ${(item.files || []).slice(0, 4).map((file) => `<span class="chip">${esc(file)}</span>`).join("")}
           </div>
         </li>
@@ -1023,14 +1023,14 @@ HTML_TEMPLATE = """<!doctype html>
       const docs = data.docs || [];
       const memory = data.memory || [];
       if (!docs.length && !memory.length) {
-        renderEmpty("searchResults", "No hay coincidencias para esa búsqueda.");
+        renderEmpty("searchResults", "По этому запросу ничего не найдено.");
         return;
       }
       const items = [];
       for (const item of docs) {
         items.push(`
           <li>
-            <small>Artefacto</small>
+            <small>Артефакт</small>
             <div class="search-title">${esc(item.path || "docs/project/")}:${esc(item.line || "?")}</div>
             <div class="event-body">${esc(item.snippet || "")}</div>
           </li>
@@ -1039,8 +1039,8 @@ HTML_TEMPLATE = """<!doctype html>
       for (const item of memory) {
         items.push(`
           <li>
-            <small>Memoria SQLite</small>
-            <div class="search-title">${esc(item.label || item.source_type || "resultado")}</div>
+            <small>Память SQLite</small>
+            <div class="search-title">${esc(item.label || item.source_type || "результат")}</div>
           </li>
         `);
       }
@@ -1059,17 +1059,17 @@ HTML_TEMPLATE = """<!doctype html>
       if (!element) return;
       if (!node) {
         element.className = "empty";
-        element.textContent = "Haz clic en una decisión del grafo para ver el detalle.";
+        element.textContent = "Нажми на решение в графе, чтобы увидеть детали.";
         return;
       }
       element.className = "";
       element.innerHTML = `
-        <small>Decisión #${esc(node.decision_id || "")}</small>
-        <div class="decision-title">${esc(node.title || node.label || "Decisión")}</div>
+        <small>Решение #${esc(node.decision_id || "")}</small>
+        <div class="decision-title">${esc(node.title || node.label || "Решение")}</div>
         <div class="chip-row">${statusChip(node.status || "active")}</div>
         <div class="kv" style="margin-top:12px;">
-          <div><strong>Elegido</strong><div class="decision-body">${esc(node.chosen || "—")}</div></div>
-          ${node.rationale ? `<div><strong>Justificación</strong><div class="decision-body">${esc(node.rationale)}</div></div>` : ""}
+          <div><strong>Выбрано</strong><div class="decision-body">${esc(node.chosen || "—")}</div></div>
+          ${node.rationale ? `<div><strong>Обоснование</strong><div class="decision-body">${esc(node.rationale)}</div></div>` : ""}
         </div>
       `;
     }
@@ -1160,8 +1160,8 @@ HTML_TEMPLATE = """<!doctype html>
       if (!trimmed) {
         document.getElementById("searchResults").innerHTML = `
           <li class="hint-card">
-            <strong>Escribe algo para buscar en memoria y artefactos.</strong><br />
-            Cuando haya memoria, busca por una decisión, un commit o un término de <code>docs/project/</code>.
+            <strong>Введи запрос для поиска по памяти и артефактам.</strong><br />
+            Когда память появится, ищи по решению, commit или термину из <code>docs/project/</code>.
           </li>
         `;
         return;
@@ -1174,7 +1174,7 @@ HTML_TEMPLATE = """<!doctype html>
       try {
         await refreshOverview();
       } catch (error) {
-        document.getElementById("lastRefresh").textContent = `Error al refrescar: ${error.message}`;
+        document.getElementById("lastRefresh").textContent = `Ошибка обновления: ${error.message}`;
       }
     }
 
@@ -1218,13 +1218,13 @@ def _load_plugin_metadata() -> Dict[str, str]:
         return {
             "name": "alfred-dev",
             "display_name": "Alfred Dev",
-            "version": "desconocida",
+            "version": "неизвестна",
         }
     name = str(data.get("name") or "alfred-dev")
     return {
         "name": name,
         "display_name": "Alfred Dev" if name == "alfred-dev" else name,
-        "version": str(data.get("version") or "desconocida"),
+        "version": str(data.get("version") or "неизвестна"),
     }
 
 
@@ -1298,9 +1298,9 @@ def _event_status_label(event_type: str, parsed_payload: Dict[str, Any], task_no
     if parsed_payload.get("status"):
         return str(parsed_payload["status"])
     if event_type == "session_started":
-        return "activa"
+        return "активна"
     if event_type == "session_ended":
-        return "cerrada"
+        return "закрыта"
     return ""
 
 
@@ -1319,26 +1319,26 @@ def _humanize_event(event: Dict[str, Any]) -> Dict[str, Any]:
     title = summary or _EVENT_TYPE_LABELS.get(event_type, event_type.replace("_", " "))
     body = ""
     detail_lines: List[str] = []
-    kind_label = _EVENT_TYPE_LABELS.get(event_type, "Evento")
+    kind_label = _EVENT_TYPE_LABELS.get(event_type, "Событие")
 
     if event_type == "session_started":
-        title = "Sesión iniciada"
+        title = "Сессия начата"
         source = payload.get("source")
         body = (
-            f"Alfred abrió una sesión general y dejó la memoria lista para capturar actividad."
+            "Alfred открыл общую сессию и подготовил память к записи активности."
             if not source
-            else f"Sesión abierta automáticamente por `{source}`."
+            else f"Сессию автоматически открыл `{source}`."
         )
     elif event_type == "session_ended":
-        title = summary or "Sesión finalizada"
+        title = summary or "Сессия завершена"
         source = payload.get("source")
-        body = f"Cierre registrado por `{source}`." if source else "La sesión terminó correctamente."
+        body = f"Закрытие записал `{source}`." if source else "Сессия завершилась корректно."
     elif event_type == "user_prompt" and task_notification:
-        kind_label = "Subagente"
-        title = task_notification.get("summary") or "Notificación de subagente"
-        body = task_notification.get("result") or "Un subagente devolvió actividad al hilo principal."
+        kind_label = "Субагент"
+        title = task_notification.get("summary") or "Уведомление субагента"
+        body = task_notification.get("result") or "Субагент вернул активность в основной поток."
         if task_notification.get("status"):
-            detail_lines.append(f"Estado: {task_notification['status']}")
+            detail_lines.append(f"Статус: {task_notification['status']}")
         if task_notification.get("task-id"):
             detail_lines.append(f"Task: {task_notification['task-id']}")
         if task_notification.get("tool-use-id"):
@@ -1348,45 +1348,45 @@ def _humanize_event(event: Dict[str, Any]) -> Dict[str, Any]:
             detail_lines.append(f"Transcript: {os.path.basename(transcript)}")
     elif event_type == "user_prompt":
         if first_line.startswith("/"):
-            kind_label = "Comando"
-            title = f"Comando {first_line}"
-            body = "Prompt enviado a Alfred desde Claude Code."
+            kind_label = "Команда"
+            title = f"Команда {first_line}"
+            body = "Prompt отправлен Alfred из Claude Code."
             if len(content.splitlines()) > 1:
                 detail_lines.extend(_compact_text(line, 180) for line in content.splitlines()[1:4] if line.strip())
         else:
-            title = summary or "Prompt del usuario"
-            body = _compact_text(first_line or content or "Prompt sin contenido legible.", 260)
+            title = summary or "Prompt пользователя"
+            body = _compact_text(first_line or content or "Prompt без читаемого содержимого.", 260)
             extra_lines = [line.strip() for line in content.splitlines()[1:4] if line.strip()]
             detail_lines.extend(_compact_text(line, 180) for line in extra_lines)
     elif event_type == "phase_completed":
-        title = summary or f"Fase {event.get('phase') or 'desconocida'} completada"
-        body = _compact_text(content or "La fase se marcó como completada.", 260)
+        title = summary or f"Фаза {event.get('phase') or 'неизвестна'} завершена"
+        body = _compact_text(content or "Фаза отмечена как завершённая.", 260)
     elif event_type == "helper_seeded":
         kind_label = "Helper"
         helper_name = str(payload.get("helper") or "helper").strip()
-        title = summary or f"{helper_name} preparado"
+        title = summary or f"{helper_name} подготовлен"
         artifacts = payload.get("artifacts") or []
         if isinstance(artifacts, list) and artifacts:
-            detail_lines.append("Artefactos: " + ", ".join(str(item) for item in artifacts[:4]))
+            detail_lines.append("Артефакты: " + ", ".join(str(item) for item in artifacts[:4]))
         recommended = payload.get("recommended_command") or payload.get("next_command")
         if recommended:
             recommended_text = str(recommended).strip()
             if recommended_text.startswith("/alfred-dev:"):
-                detail_lines.append(f"Siguiente paso: {recommended_text}")
+                detail_lines.append(f"Следующий шаг: {recommended_text}")
             else:
-                detail_lines.append(f"Siguiente paso: /alfred-dev:{recommended_text}")
+                detail_lines.append(f"Следующий шаг: /alfred-dev:{recommended_text}")
         body = _compact_text(
-            content or f"Alfred dejó contexto listo para continuar con {helper_name}.",
+            content or f"Alfred подготовил контекст, чтобы продолжить с {helper_name}.",
             260,
         )
     elif event_type == "command_executed":
-        title = summary or "Comando ejecutado"
-        body = _compact_text(content or payload.get("command") or "Alfred registró la ejecución de un comando.", 260)
+        title = summary or "Команда выполнена"
+        body = _compact_text(content or payload.get("command") or "Alfred записал выполнение команды.", 260)
     elif summary:
-        body = _compact_text(content or "Evento registrado en la memoria del proyecto.", 260)
+        body = _compact_text(content or "Событие записано в память проекта.", 260)
     else:
         title = _EVENT_TYPE_LABELS.get(event_type, event_type.replace("_", " ").capitalize())
-        body = _compact_text(content or ", ".join(f"{k}={v}" for k, v in payload.items()) or "Sin detalle adicional.", 260)
+        body = _compact_text(content or ", ".join(f"{k}={v}" for k, v in payload.items()) or "Без дополнительных деталей.", 260)
 
     if not detail_lines and payload:
         for key, value in payload.items():
@@ -1420,7 +1420,7 @@ def _decision_links_payload(db: MemoryDB, decision_id: int) -> List[Dict[str, An
                 "direction": direction,
                 "link_type": link.get("link_type", "relates"),
                 "decision_id": other_id,
-                "title": (other or {}).get("title", f"Decisión #{other_id}"),
+                "title": (other or {}).get("title", f"Решение #{other_id}"),
             }
         )
     return links
@@ -1444,7 +1444,7 @@ def _serialize_commit(item: Dict[str, Any], iteration_lookup: Dict[int, Dict[str
         "iteration_label": (
             f"#{iteration['id']} · {iteration.get('command', 'session')}"
             if iteration
-            else "sin iteración"
+            else "без итерации"
         ),
     }
 
@@ -1454,7 +1454,7 @@ def _recent_iteration_events(
     iteration_id: int,
     limit: int = 3,
 ) -> List[Dict[str, Any]]:
-    """Devuelve los eventos más recientes ya humanizados."""
+    """Return the most recent events in human-readable form."""
     return [
         _humanize_event(event)
         for event in db.get_events(iteration_id=iteration_id, limit=limit)
@@ -1465,7 +1465,7 @@ def _pick_latest_event_value(
     events: List[Dict[str, Any]],
     *field_names: str,
 ) -> str:
-    """Extrae el primer valor útil de una lista de eventos recientes."""
+    """Return the first useful value from a list of recent events."""
     for event in events:
         for field_name in field_names:
             value = event.get(field_name)
@@ -1677,7 +1677,7 @@ def build_graph_payload(
                 "id": f"d{item['id']}",
                 "decision_id": int(item["id"]),
                 "label": (item.get("title", f"D#{item['id']}"))[:28],
-                "title": item.get("title", f"Decisión #{item['id']}"),
+                "title": item.get("title", f"Решение #{item['id']}"),
                 "status": item.get("status") or "active",
                 "chosen": item.get("chosen") or "",
                 "rationale": item.get("rationale") or "",
@@ -1744,7 +1744,7 @@ def build_search_payload(project_dir: str, query: str, limit: int = 12) -> Dict[
 
 
 def _recent_event_counts(events: List[Dict[str, Any]], limit: int = 8) -> List[Dict[str, Any]]:
-    """Resume la mezcla de tipos dentro de la misma ventana reciente."""
+    """Summarize the mix of event types in the same recent window."""
     counts: Dict[str, Dict[str, Any]] = {}
     for event in events:
         event_type = str(event.get("event_type") or "event")
@@ -1967,7 +1967,7 @@ class AlfredMemoryUIHandler(BaseHTTPRequestHandler):
                 self._send_json(build_search_payload(server.project_dir, query, limit=limit))
                 return
             self._send_json({"error": "Not found"}, status=404)
-        except Exception as exc:  # pragma: no cover - fallback defensivo
+        except Exception as exc:  # pragma: no cover - defensive fallback
             self._send_json({"error": str(exc)}, status=500)
 
 
@@ -1975,8 +1975,8 @@ def _assert_loopback_host(host: str) -> str:
     normalized = str(host or "").strip().lower()
     if normalized not in _LOOPBACK_HOSTS:
         raise ValueError(
-            "Memory UI solo acepta host de loopback "
-            f"(127.0.0.1, ::1 o localhost), no {host!r}."
+            "Memory UI принимает только loopback host "
+            f"(127.0.0.1, ::1 или localhost), а не {host!r}."
         )
     return host
 
@@ -1997,7 +1997,7 @@ def run_server(project_dir: str, db_path: str, host: str, port: int) -> int:
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Servidor local de la UI de memoria de Alfred Dev")
+    parser = argparse.ArgumentParser(description="Локальный сервер UI памяти Alfred Dev")
     parser.add_argument("--project-dir", required=True)
     parser.add_argument("--db-path", required=True)
     parser.add_argument("--host", default="127.0.0.1")

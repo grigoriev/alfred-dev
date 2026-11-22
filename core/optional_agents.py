@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Catalogo canonico de agentes opcionales del plugin Alfred Dev."""
+"""Canonical catalog of the optional agents of the Alfred Dev plugin."""
 
 from __future__ import annotations
 
@@ -9,21 +9,21 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 OPTIONAL_AGENT_GROUP_ORDER: Tuple[str, ...] = ("audit",)
 
 OPTIONAL_AGENT_GROUP_LABELS: Dict[str, str] = {
-    "audit": "Auditoria",
+    "audit": "Аудит",
 }
 
 OPTIONAL_AGENT_GROUP_QUESTIONS: Dict[str, str] = {
-    "audit": "¿Quieres activar CTO como segunda opinión externa?",
+    "audit": "Хочешь активировать CTO как внешнее второе мнение?",
 }
 
 OPTIONAL_AGENT_MENU_EXIT = {
-    "label": "Seguir sin activar más",
-    "description": "Pasar al siguiente grupo",
+    "label": "Продолжить без включения",
+    "description": "Перейти к следующей группе",
 }
 
 OPTIONAL_AGENT_MENU_DONE = {
-    "label": "Listo con este grupo",
-    "description": "Mantener la selección actual y pasar al siguiente grupo",
+    "label": "Готово с этой группой",
+    "description": "Сохранить текущий выбор и перейти к следующей группе",
 }
 
 
@@ -31,7 +31,7 @@ OPTIONAL_AGENT_CATALOG: Dict[str, Dict[str, Any]] = {
     "cto": {
         "group": "audit",
         "label": "CTO",
-        "specialty": "Segunda opinión técnica externa y auditoría de cierre",
+        "specialty": "Внешнее техническое второе мнение и финальный аудит",
         "static_suggestion": False,
         "integration": {
             "fases": [
@@ -47,20 +47,20 @@ OPTIONAL_AGENT_CATALOG: Dict[str, Dict[str, Any]] = {
 }
 
 
-# Nombres antiguos aceptados al leer config o estado de proyectos existentes.
+# Legacy names accepted when reading config or state of existing projects.
 LEGACY_OPTIONAL_AGENT_ALIASES: Dict[str, str] = {
     "lucius": "cto",
 }
 
 
 def canonical_optional_agent_name(agent_name: Any) -> str:
-    """Traduce un nombre legacy de agente opcional a su nombre canónico."""
+    """Map a legacy optional agent name to its canonical name."""
     name = str(agent_name).strip()
     return LEGACY_OPTIONAL_AGENT_ALIASES.get(name, name)
 
 
 def normalize_optional_agent_flags(raw_flags: Dict[Any, Any]) -> Dict[str, Any]:
-    """Renombra claves legacy; la clave canónica gana si aparecen ambas."""
+    """Rename legacy keys. The canonical key wins if both are present."""
     normalized: Dict[str, Any] = {}
     for raw_name, value in raw_flags.items():
         name = canonical_optional_agent_name(raw_name)
@@ -71,36 +71,36 @@ def normalize_optional_agent_flags(raw_flags: Dict[Any, Any]) -> Dict[str, Any]:
 
 
 def get_optional_agent_names() -> Tuple[str, ...]:
-    """Devuelve los nombres de agentes opcionales en orden canonico."""
+    """Return the optional agent names in canonical order."""
     return tuple(OPTIONAL_AGENT_CATALOG.keys())
 
 
 def get_optional_agent_display_label(agent_name: str) -> str:
-    """Devuelve el label visible canónico de un agente opcional."""
+    """Return the canonical display label of an optional agent."""
     metadata = OPTIONAL_AGENT_CATALOG.get(agent_name)
     if metadata is None:
-        raise KeyError(f"Agente opcional desconocido: {agent_name}")
+        raise KeyError(f"Unknown optional agent: {agent_name}")
     return metadata["label"]
 
 
 def get_optional_agent_specialty(agent_name: str) -> str:
-    """Devuelve la descripción breve canónica del agente."""
+    """Return the canonical short description of the agent."""
     metadata = OPTIONAL_AGENT_CATALOG.get(agent_name)
     if metadata is None:
-        raise KeyError(f"Agente opcional desconocido: {agent_name}")
+        raise KeyError(f"Unknown optional agent: {agent_name}")
     return metadata["specialty"]
 
 
 def is_optional_agent_on_demand_only(agent_name: str) -> bool:
-    """Indica si el agente no se integra automáticamente en fases."""
+    """Tell if the agent is not added to phases automatically."""
     metadata = OPTIONAL_AGENT_CATALOG.get(agent_name)
     if metadata is None:
-        raise KeyError(f"Agente opcional desconocido: {agent_name}")
+        raise KeyError(f"Unknown optional agent: {agent_name}")
     return metadata.get("runtime_mode") == "on_demand"
 
 
 def order_optional_agent_names(names: Iterable[str]) -> List[str]:
-    """Ordena una colección de agentes siguiendo el catálogo canónico."""
+    """Sort a collection of agents in canonical catalog order."""
     seen = []
     for raw_name in names:
         agent_name = str(raw_name).strip()
@@ -121,7 +121,7 @@ def order_optional_agent_names(names: Iterable[str]) -> List[str]:
 
 
 def build_optional_agent_flags(default: bool = False) -> Dict[str, bool]:
-    """Construye el bloque de flags bool para config/equipo_sesion."""
+    """Build the block of bool flags for config/equipo_sesion."""
     return {
         agent_name: bool(default)
         for agent_name in get_optional_agent_names()
@@ -129,7 +129,7 @@ def build_optional_agent_flags(default: bool = False) -> Dict[str, bool]:
 
 
 def get_optional_agents_by_group() -> Dict[str, List[str]]:
-    """Agrupa los agentes opcionales por grupo manteniendo el orden canonico."""
+    """Group the optional agents by group and keep the canonical order."""
     grouped: Dict[str, List[str]] = {
         group_name: []
         for group_name in OPTIONAL_AGENT_GROUP_ORDER
@@ -145,22 +145,22 @@ def build_optional_agent_menu_option(
     suggested_reason: Optional[str] = None,
     active: bool = False,
 ) -> Dict[str, str]:
-    """Construye una opción navegable canónica para AskUserQuestion."""
+    """Build a canonical navigable option for AskUserQuestion."""
     label = get_optional_agent_display_label(agent_name)
     description = get_optional_agent_specialty(agent_name)
 
     if suggested_reason:
-        label = f"{label} (Recomendado)"
+        label = f"{label} (Рекомендуется)"
         description = suggested_reason.strip()
 
     if is_optional_agent_on_demand_only(agent_name):
         description = (
-            f"{description}. Solo bajo demanda: no entra automáticamente "
-            "en ninguna fase."
+            f"{description}. Только по запросу: автоматически не входит "
+            "ни в одну фазу."
         )
 
     if active:
-        description = f"{description}. Activo actualmente."
+        description = f"{description}. Сейчас активен."
 
     return {"label": label, "description": description}
 
@@ -173,9 +173,9 @@ def build_optional_agent_group_menu(
     excluded_names: Optional[Iterable[str]] = None,
     include_done_option: bool = False,
 ) -> Dict[str, Any]:
-    """Construye el menú navegable canónico de un grupo de opcionales."""
+    """Build the canonical navigable menu for one group of optional agents."""
     if group_name not in OPTIONAL_AGENT_GROUP_LABELS:
-        raise KeyError(f"Grupo desconocido: {group_name}")
+        raise KeyError(f"Unknown group: {group_name}")
 
     suggested_reasons = suggested_reasons or {}
     active_set: Set[str] = set(active_names or ())
@@ -222,7 +222,7 @@ def build_optional_agent_group_menus(
     excluded_names_by_group: Optional[Dict[str, Iterable[str]]] = None,
     include_done_option: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Devuelve los menús navegables canónicos en el orden oficial."""
+    """Return the canonical navigable menus in the official order."""
     menus: List[Dict[str, Any]] = []
     excluded_names_by_group = excluded_names_by_group or {}
 
@@ -240,7 +240,7 @@ def build_optional_agent_group_menus(
 
 
 def get_static_suggestible_agent_names() -> Tuple[str, ...]:
-    """Agentes sugeribles por I/O estatico del proyecto."""
+    """Return the agents that static project I/O can suggest."""
     return tuple(
         agent_name
         for agent_name, metadata in OPTIONAL_AGENT_CATALOG.items()
@@ -249,7 +249,7 @@ def get_static_suggestible_agent_names() -> Tuple[str, ...]:
 
 
 def get_optional_integrations() -> Dict[str, Dict[str, Any]]:
-    """Devuelve una copia ligera de las integraciones por fase."""
+    """Return a shallow copy of the per-phase integrations."""
     return {
         agent_name: {
             "fases": list(metadata["integration"]["fases"]),

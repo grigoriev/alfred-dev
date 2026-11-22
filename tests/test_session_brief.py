@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Briefing de sesión y protocolo de conversación."""
+"""Session briefing and conversation protocol."""
 
 import json
 import os
@@ -37,7 +37,7 @@ class TestSessionBrief(unittest.TestCase):
                 json.dump(
                     {
                         "comando": "feature",
-                        "descripcion": "login con email",
+                        "descripcion": "login with email",
                         "fase_actual": "calidad",
                         "fase_numero": 4,
                     },
@@ -58,11 +58,11 @@ class TestSessionBrief(unittest.TestCase):
                 handle.write("---\nmemoria:\n  enabled: true\n---\n")
             db = MemoryDB(os.path.join(claude, "alfred-memory.db"))
             db.start_iteration("feature", "auth")
-            db.log_decision(title="Auth con JWT", chosen="JWT, no sesiones")
+            db.log_decision(title="Auth with JWT", chosen="JWT, no sessions")
             db.close()
             text = render_session_start_context(tmpdir)
-            self.assertIn("Auth con JWT", text)
-            self.assertIn("JWT, no sesiones", text)
+            self.assertIn("Auth with JWT", text)
+            self.assertIn("JWT, no sessions", text)
 
     def test_session_start_hook_emits_briefing(self):
         root = os.path.join(os.path.dirname(__file__), "..")

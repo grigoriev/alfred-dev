@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Preflight seguro para pendientes externos de release 0.7.0.
+"""Safe preflight for open external checks of release 0.7.0.
 
-Por defecto no escribe en GitHub, no arranca SonarQube y no ejecuta Codex. Solo
-captura si el entorno esta preparado para esas pruebas reales y genera una
-evidencia JSON saneada. Las acciones con efectos externos requieren flags
-explicitos.
+By default it does not write to GitHub, does not start SonarQube and does not
+run Codex. It only records whether the environment is ready for those real
+tests and writes sanitized JSON evidence. Actions with external effects need
+explicit flags.
 """
 
 from __future__ import annotations
@@ -95,7 +95,7 @@ def _github_preflight(repo: str | None) -> dict[str, Any]:
         "checks": [],
     }
     if not gh:
-        payload["reason"] = "gh no esta disponible en PATH."
+        payload["reason"] = "gh is not available in PATH."
         return payload
 
     version = _run([gh, "--version"], timeout=10)
@@ -103,15 +103,15 @@ def _github_preflight(repo: str | None) -> dict[str, Any]:
     payload["checks"].extend([version, auth])
     if version["returncode"] != 0:
         payload["status"] = "unavailable"
-        payload["reason"] = "gh existe pero no responde correctamente."
+        payload["reason"] = "gh exists but does not respond correctly."
         return payload
     if auth["returncode"] != 0:
         payload["status"] = "auth_required"
-        payload["reason"] = "gh no tiene autenticacion activa para GitHub."
+        payload["reason"] = "gh has no active GitHub authentication."
         return payload
 
     payload["status"] = "ready"
-    payload["reason"] = "gh esta instalado y autenticado."
+    payload["reason"] = "gh is installed and authenticated."
     if repo:
         repo_view = _run(
             [gh, "repo", "view", repo, "--json", "nameWithOwner,isPrivate"],
@@ -120,7 +120,7 @@ def _github_preflight(repo: str | None) -> dict[str, Any]:
         payload["checks"].append(repo_view)
         if repo_view["returncode"] != 0:
             payload["status"] = "repo_unavailable"
-            payload["reason"] = "gh no puede leer el repositorio indicado."
+            payload["reason"] = "gh cannot read the given repository."
     return payload
 
 
@@ -133,9 +133,9 @@ def _seed_github_sync_fixture(project: Path) -> None:
     (project / "docs" / "project" / "traceability.md").write_text("# Traceability\n", encoding="utf-8")
     (kanban / "backlog.md").write_text(
         "# Backlog\n\n"
-        "### [T-990] Smoke externo Alfred 0.7.0\n\n"
-        "- **Agente:** project-manager\n"
-        "- **Tipo:** delivery\n",
+        "### [T-990] Alfred 0.7.0 external smoke\n\n"
+        "- **Агент:** project-manager\n"
+        "- **Тип:** delivery\n",
         encoding="utf-8",
     )
     for lane in ("in-progress", "done", "blocked"):
@@ -147,7 +147,7 @@ def _github_live_sync(repo: str | None) -> dict[str, Any]:
         return {
             "status": "skipped",
             "write_attempted": False,
-            "reason": "--allow-github-write requiere --github-repo owner/repo.",
+            "reason": "--allow-github-write requires --github-repo owner/repo.",
         }
 
     with tempfile.TemporaryDirectory(prefix="alfred-external-github-") as tmp:
@@ -195,7 +195,7 @@ def _codex_preflight() -> dict[str, Any]:
         "checks": [],
     }
     if not codex:
-        payload["reason"] = "codex no esta disponible en PATH."
+        payload["reason"] = "codex is not available in PATH."
         return payload
 
     version = _run([codex, "--version"], timeout=10)
@@ -207,23 +207,23 @@ def _codex_preflight() -> dict[str, Any]:
     payload["checks"].extend([version, help_result])
     if version["returncode"] != 0:
         payload["status"] = "unavailable"
-        payload["reason"] = "codex existe pero no informa version correctamente."
+        payload["reason"] = "codex exists but does not report its version correctly."
     elif help_result["returncode"] != 0:
         payload["status"] = "exec_help_failed"
-        payload["reason"] = "codex exec no acepta el preflight read-only/ephemeral."
+        payload["reason"] = "codex exec does not accept the read-only/ephemeral preflight."
     elif missing_flags := [
         flag
         for flag in ("--sandbox", "--ephemeral", "--json", "--output-last-message")
         if flag not in help_result["stdout_preview"]
     ]:
         payload["status"] = "exec_help_missing_flags"
-        payload["reason"] = "codex exec no expone flags requeridos para CTO."
+        payload["reason"] = "codex exec does not expose the flags that CTO needs."
         payload["missing_flags"] = missing_flags
     else:
         payload["status"] = "ready"
         payload["reason"] = (
-            "codex exec acepta --sandbox read-only, --ephemeral, --json "
-            "y --output-last-message."
+            "codex exec accepts --sandbox read-only, --ephemeral, --json "
+            "and --output-last-message."
         )
     return payload
 
@@ -234,7 +234,7 @@ def _codex_live_exec() -> dict[str, Any]:
         return {
             "status": "missing",
             "live_attempted": False,
-            "reason": "codex no esta disponible en PATH.",
+            "reason": "codex is not available in PATH.",
         }
     with tempfile.TemporaryDirectory(prefix="alfred-codex-live-") as tmp:
         final_message = Path(tmp) / "last-message.md"
@@ -249,7 +249,7 @@ def _codex_live_exec() -> dict[str, Any]:
             str(final_message),
             "-c",
             "approval_policy=never",
-            "Responde exactamente OK_ALFRED_CODEX_EXTERNAL_060 y nada mas.",
+            "Reply with exactly OK_ALFRED_CODEX_EXTERNAL_060 and nothing else.",
         ]
         result = _run(command, timeout=120)
         final_preview = _safe_preview(
@@ -312,22 +312,22 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", default=str(DEFAULT_OUTPUT), help="Ruta JSON de evidencia.")
-    parser.add_argument("--github-repo", help="Repositorio owner/repo para preflight o sync vivo.")
+    parser.add_argument("--output", default=str(DEFAULT_OUTPUT), help="Path of the JSON evidence file.")
+    parser.add_argument("--github-repo", help="owner/repo repository for the preflight or live sync.")
     parser.add_argument(
         "--allow-github-write",
         action="store_true",
-        help="Permite crear/actualizar issues de smoke en --github-repo.",
+        help="Allow creating/updating smoke issues in --github-repo.",
     )
     parser.add_argument(
         "--allow-codex-exec",
         action="store_true",
-        help="Permite ejecutar un prompt real de codex exec read-only.",
+        help="Allow running a real read-only codex exec prompt.",
     )
     parser.add_argument(
         "--require-all-ready",
         action="store_true",
-        help="Devuelve 2 si algun preflight no esta listo.",
+        help="Return 2 if any preflight is not ready.",
     )
     args = parser.parse_args(argv)
 

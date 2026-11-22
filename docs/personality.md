@@ -1,256 +1,256 @@
-# Motor de personalidad
+# Движок личности
 
-Cuando un equipo virtual tiene quince agentes trabajando en paralelo, los system prompts genéricos se convierten en un problema real: todas las respuestas suenan igual, el desarrollador no sabe quién le está hablando y la información se diluye en una masa de texto uniforme. La decisión de diseño de asignar nombre, frases propias y tono a cada agente no es un capricho estético; responde a tres necesidades concretas de ingeniería:
+Когда в виртуальной команде пятнадцать агентов работают параллельно, общие system prompts становятся реальной проблемой: все ответы звучат одинаково, разработчик не понимает, кто с ним говорит, и информация тонет в однородной массе текста. Решение дать каждому агенту имя, собственные фразы и тон не эстетический каприз; оно отвечает трём конкретным инженерным потребностям:
 
-1. **Distinguibilidad inmediata.** En un flujo donde intervienen varios agentes, cada uno debe ser reconocible al instante. Si El Rompe-cosas (QA) dice "esto no pasa mis pruebas", el desarrollador sabe de inmediato quién habla, qué autoridad tiene y qué acción espera. No necesita leer una cabecera de metadatos para orientarse.
+1. **Мгновенная различимость.** В процессе, где участвуют несколько агентов, каждого нужно узнавать сразу. Если Ломатель (QA) говорит «это не проходит мои тесты», разработчик сразу знает, кто говорит, какие у него полномочия и какого действия он ждёт. Ему не нужно читать заголовок с метаданными, чтобы сориентироваться.
 
-2. **Coherencia de voz.** Un agente con personalidad definida genera respuestas más consistentes a lo largo de una sesión. El modelo de lenguaje tiende a mantener el registro cuando el prompt de sistema incluye rasgos de carácter concretos, en lugar de instrucciones abstractas del tipo "sé útil y conciso".
+2. **Последовательность голоса.** Агент с чётко заданной личностью даёт более последовательные ответы на протяжении сессии. Языковая модель склонна держать регистр, когда system prompt содержит конкретные черты характера, а не абстрактные инструкции вроде «будь полезным и кратким».
 
-3. **Memoria asociativa del usuario.** Las frases características actúan como anclas cognitivas. Después de unas pocas interacciones, el usuario asocia un tono a una función: el sarcasmo contenido de El Paranoico (seguridad) con alertas de seguridad, la meticulosidad de El Artesano (senior dev) con calidad de código. Esto reduce la carga cognitiva en sesiones largas.
+3. **Ассоциативная память пользователя.** Характерные фразы работают как когнитивные якоря. После нескольких взаимодействий пользователь связывает тон с функцией: сдержанный сарказм Параноика (безопасность) с предупреждениями о безопасности, скрупулёзность Ремесленника (senior dev) с качеством кода. Это снижает когнитивную нагрузку в долгих сессиях.
 
-Todo el sistema de personalidad reside en un único fichero fuente (`core/personality.py`) que actúa como fuente de verdad. No hay configuración dispersa: si necesitas cambiar el tono de un agente, la referencia es un solo diccionario.
+Вся система личности живёт в одном исходном файле (`core/personality.py`), который служит источником истины. Разбросанной конфигурации нет: если нужно изменить тон агента, ориентир один словарь.
 
 ---
 
-## Estructura de datos
+## Структура данных
 
-El núcleo del motor es el diccionario `AGENTS`, definido en `core/personality.py`. Cada clave es el identificador interno del agente (en kebab-case, como `senior-dev` o `qa-engineer`) y su valor es un diccionario con los campos que describen su identidad completa.
+Ядро движка это словарь `AGENTS` в `core/personality.py`. Каждый ключ это внутренний идентификатор агента (в kebab-case, например `senior-dev` или `qa-engineer`), а значение это словарь с полями, которые описывают его идентичность целиком.
 
-La razón de usar un diccionario plano en lugar de clases u objetos más elaborados es la simplicidad: los consumidores (commands, hooks, el orquestador) solo necesitan acceder a campos por clave, nunca invocar métodos del agente. Un diccionario es más fácil de serializar, de inspeccionar en depuración y de extender sin romper contratos.
+Плоский словарь вместо классов или более сложных объектов выбран ради простоты: потребителям (командам, хукам, оркестратору) нужно только обращаться к полям по ключу, а не вызывать методы агента. Словарь проще сериализовать, проще смотреть при отладке и проще расширять без нарушения контрактов.
 
-| Campo | Tipo | Descripción | Ejemplo |
+| Поле | Тип | Описание | Пример |
 |---|---|---|---|
-| `nombre_display` | `str` | Nombre visible del agente, el que aparece en la terminal y en los mensajes. | `"Alfred"`, `"El Rompe-cosas"` |
-| `rol` | `str` | Descripción de una frase que resume la función del agente en el equipo. | `"Jefe de operaciones / Orquestador"` |
-| `color` | `str` | Color de terminal para identificación visual. Debe usar un valor soportado por Claude Code: `red`, `blue`, `green`, `yellow`, `purple`, `orange`, `pink` o `cyan`. | `"blue"`, `"red"`, `"orange"` |
-| `modelo` | `str` | Modelo de IA asignado: `"opus"` para agentes críticos, `"sonnet"` para el resto. La sección [Distribución de modelos](#distribución-de-modelos) explica el criterio. | `"opus"`, `"sonnet"` |
-| `personalidad` | `str` | Párrafo que define el tono, la actitud y los rasgos de carácter del agente. Se inyecta en el system prompt para que el modelo de lenguaje mantenga la voz a lo largo de la sesión. | *(ver fichero fuente)* |
-| `frases` | `List[str]` | Lista de frases base que representan la voz del agente en niveles de sarcasmo normales (<= 3). Son frases con personalidad pero dentro de un registro profesional. | `["Venga, vamos a ello. Ya tengo un plan."]` |
-| `frases_sarcasmo_alto` | `List[str]` | Frases adicionales que se incorporan al pool cuando el nivel de sarcasmo es >= 4. El tono sube, pero sin cruzar la línea del insulto. | `["A ver, esa idea... cómo te lo digo suave... es terrible."]` |
-| `opcional` | `bool` | Solo presente (y con valor `True`) en Lucius. Si el campo no existe, el agente es de nucleo. | `True` |
+| `nombre_display` | `str` | Видимое имя агента, которое появляется в терминале и в сообщениях. | `"Alfred"`, `"QA Engineer"` |
+| `rol` | `str` | Описание в одну фразу, которое резюмирует функцию агента в команде. | `"Руководитель операций / оркестратор"` |
+| `color` | `str` | Цвет в терминале для визуальной идентификации. Должен быть значением, которое поддерживает Claude Code: `red`, `blue`, `green`, `yellow`, `purple`, `orange`, `pink` или `cyan`. | `"blue"`, `"red"`, `"orange"` |
+| `modelo` | `str` | Назначенная модель ИИ: `"opus"` для критических агентов, `"sonnet"` для остальных. Раздел [Распределение моделей](#распределение-моделей) объясняет критерий. | `"opus"`, `"sonnet"` |
+| `personalidad` | `str` | Абзац, который задаёт тон, отношение и черты характера агента. Он внедряется в system prompt, чтобы языковая модель держала голос на протяжении сессии. | *(см. исходный файл)* |
+| `frases` | `List[str]` | Список базовых фраз, которые передают голос агента при обычном уровне сарказма (<= 3). Это фразы с характером, но в профессиональном регистре. | `["Я взял на себя смелость подготовить план. Надеюсь, вы не возражаете."]` |
+| `frases_sarcasmo_alto` | `List[str]` | Дополнительные фразы, которые попадают в пул при уровне сарказма >= 4. Тон повышается, но не переходит грань оскорбления. | `["Эта идея... как бы сказать деликатно... лишена технической ценности."]` |
+| `opcional` | `bool` | Есть (со значением `True`) только у CTO. Если поля нет, агент базовый. | `True` |
 
-Los 9 agentes de nucleo (8 más Selina) participan en los flujos del plugin. El único opcional es `lucius`.
+9 базовых агентов (8 плюс Designer) участвуют в процессах плагина. Единственный опциональный: `cto`.
 
 ---
 
-## Niveles de sarcasmo
+## Уровни сарказма
 
-El sarcasmo es un entero de 1 a 5 que controla el tono de las respuestas de todos los agentes. La idea es dar al usuario el control sobre el registro comunicativo sin necesidad de editar prompts: un mismo equipo puede funcionar en modo corporativo (nivel 1) o en modo "viernes por la tarde" (nivel 5).
+Сарказм это целое число от 1 до 5, которое управляет тоном ответов всех агентов. Идея в том, чтобы дать пользователю контроль над регистром общения без правки промптов: одна и та же команда может работать в корпоративном режиме (уровень 1) или в режиме «вечер пятницы» (уровень 5).
 
-### Qué cambia en cada nivel
+### Что меняется на каждом уровне
 
-| Nivel | Registro | Pool de frases | Efecto práctico |
+| Уровень | Регистр | Пул фраз | Практический эффект |
 |:---:|---|---|---|
-| 1 | Profesional, neutro. | Solo `frases`. | Las respuestas son directas y formales. Adecuado para demos, entornos compartidos o cuando el código lo lee un cliente. |
-| 2 | Profesional con matiz. | Solo `frases`. | Ligero toque de personalidad. El agente se permite alguna observación con gracia, pero sin salirse del guion. |
-| 3 | Equilibrado (por defecto). | Solo `frases`. | El punto medio: las frases base ya tienen personalidad suficiente para que cada agente suene distinto sin resultar agresivo. Es el valor por defecto porque funciona bien en la mayoría de contextos. |
-| 4 | Mordaz. | `frases` + `frases_sarcasmo_alto`. | Se cruza el umbral: las frases ácidas entran en el pool. Los agentes se vuelven más directos y punzantes en sus comentarios. |
-| 5 | Ácido. | `frases` + `frases_sarcasmo_alto`. | Máximo nivel de descaro. Las frases más afiladas tienen la misma probabilidad de aparecer que las base. |
+| 1 | Профессиональный, нейтральный. | Только `frases`. | Ответы прямые и формальные. Подходит для демо, общих окружений или когда код читает клиент. |
+| 2 | Профессиональный с оттенком. | Только `frases`. | Лёгкий налёт личности. Агент позволяет себе остроумное замечание, но не отходит от сценария. |
+| 3 | Сбалансированный (по умолчанию). | Только `frases`. | Золотая середина: в базовых фразах уже достаточно характера, чтобы каждый агент звучал по-своему, не становясь агрессивным. Это значение по умолчанию, потому что оно хорошо работает в большинстве контекстов. |
+| 4 | Колкий. | `frases` + `frases_sarcasmo_alto`. | Порог пройден: едкие фразы попадают в пул. Агенты становятся прямее и острее в комментариях. |
+| 5 | Едкий. | `frases` + `frases_sarcasmo_alto`. | Максимум дерзости. Самые острые фразы появляются с той же вероятностью, что и базовые. |
 
-El umbral está en el nivel 4 y la razón es deliberada: los tres primeros niveles comparten exactamente el mismo pool de frases base, de modo que la diferencia entre ellos es sutil y se manifiesta más en el párrafo de personalidad que en las frases sueltas. Al cruzar al 4, el cambio es perceptible porque se incorporan frases nuevas con un tono claramente distinto. Esto evita la zona gris donde el usuario no sabe si ha cambiado algo o no.
+Порог на уровне 4 выбран намеренно: первые три уровня используют ровно один и тот же пул базовых фраз, поэтому разница между ними тонкая и проявляется скорее в абзаце личности, чем в отдельных фразах. При переходе на 4 изменение заметно, потому что добавляются новые фразы с явно другим тоном. Так нет серой зоны, где пользователь не понимает, изменилось что-то или нет.
 
-### Selección de frases
+### Выбор фраз
 
-La selección de frases dentro de `get_agent_intro` es determinista: se usa el nivel de sarcasmo como semilla para calcular un índice sobre la lista de frases disponibles, mediante la operación `(nivel_sarcasmo - 4) % len(frases_acidas)`. Esto garantiza que, para un mismo agente y un mismo nivel, la frase elegida sea siempre la misma, lo que facilita los tests y hace predecible el comportamiento del sistema.
+Выбор фразы в `get_agent_intro` детерминирован: уровень сарказма служит seed для вычисления индекса в списке доступных фраз через операцию `(nivel_sarcasmo - 4) % len(frases_acidas)`. Поэтому для одного агента и одного уровня выбранная фраза всегда одна и та же. Это упрощает тесты и делает поведение системы предсказуемым.
 
-En `get_agent_voice`, en cambio, no se selecciona una frase concreta: se devuelve la lista completa para que el consumidor (normalmente un command o un hook) elija la que mejor encaje en su contexto.
+`get_agent_voice`, напротив, не выбирает конкретную фразу: она возвращает весь список, чтобы потребитель (обычно команда или хук) выбрал ту, что лучше подходит к его контексту.
 
 ---
 
-## Funciones públicas
+## Публичные функции
 
-El módulo expone dos funciones públicas y una función auxiliar interna. Las funciones públicas son el contrato con el resto del sistema; la función interna centraliza la validación para evitar duplicación.
+Модуль предоставляет две публичные функции и одну внутреннюю вспомогательную. Публичные функции это контракт с остальной системой; внутренняя функция централизует валидацию, чтобы избежать дублирования.
 
 ### `get_agent_intro(agent_name, nivel_sarcasmo=3)`
 
-Genera la presentación completa de un agente. La presentación incluye el nombre visible, el rol y el párrafo de personalidad. Cuando el nivel de sarcasmo es >= 4, se añade una coletilla extraída de `frases_sarcasmo_alto` al final de la introducción.
+Генерирует полное представление агента. Представление включает видимое имя, роль и абзац личности. Когда уровень сарказма >= 4, в конец представления добавляется реплика из `frases_sarcasmo_alto`.
 
-**Parámetros:**
+**Параметры:**
 
-| Parámetro | Tipo | Valor por defecto | Descripción |
+| Параметр | Тип | Значение по умолчанию | Описание |
 |---|---|---|---|
-| `agent_name` | `str` | *(obligatorio)* | Identificador del agente (clave en `AGENTS`). |
-| `nivel_sarcasmo` | `int` | `3` | Entero de 1 a 5 que controla el tono. |
+| `agent_name` | `str` | *(обязательный)* | Идентификатор агента (ключ в `AGENTS`). |
+| `nivel_sarcasmo` | `int` | `3` | Целое от 1 до 5, которое управляет тоном. |
 
-**Retorno:** `str` con la presentación formateada.
+**Возвращает:** `str` с отформатированным представлением.
 
-**Excepciones:** `ValueError` si el agente no existe en `AGENTS`. El mensaje de error incluye la lista completa de agentes disponibles para facilitar la depuración.
+**Исключения:** `ValueError`, если агента нет в `AGENTS`. Сообщение об ошибке содержит полный список доступных агентов, чтобы упростить отладку.
 
-**Ejemplo de uso:**
+**Пример использования:**
 
 ```python
-# Presentación estándar (nivel 3)
+# Стандартное представление (уровень 3)
 intro = get_agent_intro("alfred")
-# -> "Soy Alfred, tu Jefe de operaciones / Orquestador. El colega que..."
+# -> "Я Alfred, твой Руководитель операций / оркестратор. Главный дворецкий команды..."
 
-# Presentación ácida (nivel 5)
+# Едкое представление (уровень 5)
 intro = get_agent_intro("alfred", nivel_sarcasmo=5)
-# -> "Soy Alfred, tu Jefe de operaciones / Orquestador. El colega que...
-#     Me encantaría emocionarme con esa propuesta, pero no me sale."
+# -> "Я Alfred, твой Руководитель операций / оркестратор. Главный дворецкий команды...
+#     Ещё один фреймворк. Коллекция растёт, продукт нет."
 ```
 
-La razón de que el nivel por defecto sea 3 y no 1 es que el sistema está diseñado para que la personalidad sea perceptible desde el primer momento. Un nivel 1 no añade frases ácidas, pero el párrafo de personalidad ya tiene tono propio; el nivel 3 es el punto en el que el sistema "suena como se espera" sin que el usuario tenga que configurar nada.
+Уровень по умолчанию 3, а не 1, потому что система задумана так, чтобы личность была заметна с первого момента. Уровень 1 не добавляет едких фраз, но у абзаца личности уже есть свой тон; уровень 3 это точка, где система «звучит, как ожидается», без какой-либо настройки со стороны пользователя.
 
 ### `get_agent_voice(agent_name, nivel_sarcasmo=3)`
 
-Devuelve la lista completa de frases disponibles para un agente, filtrada según el nivel de sarcasmo. Esta función es útil para commands que necesitan seleccionar frases de forma programática (por ejemplo, para insertar una frase aleatoria en la salida de un veredicto o para decorar un mensaje de progreso).
+Возвращает полный список фраз, доступных агенту, с фильтром по уровню сарказма. Функция полезна командам, которым нужно выбирать фразы программно (например, чтобы вставить случайную фразу в вывод вердикта или украсить сообщение о прогрессе).
 
-**Parámetros:**
+**Параметры:**
 
-| Parámetro | Tipo | Valor por defecto | Descripción |
+| Параметр | Тип | Значение по умолчанию | Описание |
 |---|---|---|---|
-| `agent_name` | `str` | *(obligatorio)* | Identificador del agente (clave en `AGENTS`). |
-| `nivel_sarcasmo` | `int` | `3` | Entero de 1 a 5 que controla el tono. |
+| `agent_name` | `str` | *(обязательный)* | Идентификатор агента (ключ в `AGENTS`). |
+| `nivel_sarcasmo` | `int` | `3` | Целое от 1 до 5, которое управляет тоном. |
 
-**Retorno:** `List[str]` con las frases del agente. Con sarcasmo < 4, solo las frases base; con sarcasmo >= 4, base + frases ácidas.
+**Возвращает:** `List[str]` с фразами агента. При сарказме < 4 только базовые фразы; при сарказме >= 4 базовые + едкие.
 
-**Excepciones:** `ValueError` si el agente no existe en `AGENTS`.
+**Исключения:** `ValueError`, если агента нет в `AGENTS`.
 
-**Ejemplo de uso:**
+**Пример использования:**
 
 ```python
-# Solo frases base
+# Только базовые фразы
 frases = get_agent_voice("qa-engineer", nivel_sarcasmo=2)
-# -> ["He encontrado un bug. Sorpresa: ninguna.", ...]  (4 frases)
+# -> ["Я нашёл дефект. Удивительно было бы его не найти.", ...]  (4 фразы)
 
-# Base + sarcasmo alto
+# Базовые + высокий сарказм
 frases = get_agent_voice("qa-engineer", nivel_sarcasmo=5)
-# -> ["He encontrado un bug...", ..., "He roto tu código en 3 segundos..."]  (6 frases)
+# -> ["Я нашёл дефект...", ..., "Я воспроизвёл сбой за 3 секунды..."]  (6 фраз)
 ```
 
-### `_validate_agent(agent_name)` *(interna)*
+### `_validate_agent(agent_name)` *(внутренняя)*
 
-Función auxiliar que comprueba si el nombre del agente existe en `AGENTS` y devuelve su diccionario de configuración. Si no existe, lanza `ValueError` con un mensaje que lista todos los agentes disponibles ordenados alfabéticamente. Ambas funciones públicas la invocan como primer paso, lo que centraliza la validación y garantiza mensajes de error consistentes.
+Вспомогательная функция, которая проверяет, есть ли имя агента в `AGENTS`, и возвращает его словарь конфигурации. Если агента нет, она выбрасывает `ValueError` с сообщением, в котором перечислены все доступные агенты в алфавитном порядке. Обе публичные функции вызывают её первым шагом, что централизует валидацию и даёт единообразные сообщения об ошибках.
 
 ---
 
-## Distribución de criticidad y autonomía de los agentes
+## Распределение критичности и автономности агентов
 
-El siguiente diagrama posiciona a los 10 agentes en un espacio de dos dimensiones: la criticidad de las tareas que manejan (eje horizontal) y el grado de autonomía con el que operan (eje vertical). La posición de cada agente no es arbitraria; refleja cómo encaja su función en el flujo de trabajo del plugin.
+Следующая диаграмма размещает 10 агентов в двумерном пространстве: критичность задач, с которыми они работают (горизонтальная ось), и степень автономности, с которой они действуют (вертикальная ось). Положение каждого агента не произвольно; оно отражает, как его функция встроена в процесс плагина.
 
-Los agentes con alta criticidad y baja autonomía (esquina inferior derecha) son los que trabajan con restricciones estrictas: El Paranoico (seguridad) no puede aprobar por su cuenta, necesita que el orquestador confirme. Los de alta criticidad y alta autonomía (esquina superior derecha) son los que toman decisiones de diseño y escriben código sin pedir permiso en cada línea. Los de baja criticidad y alta autonomía (esquina superior izquierda) son agentes de soporte que pueden operar de forma independiente sin riesgo para el sistema.
+Агенты с высокой критичностью и низкой автономностью (правый нижний угол) работают в строгих рамках: Параноик (безопасность) не может одобрять сам, ему нужно подтверждение оркестратора. Агенты с высокой критичностью и высокой автономностью (правый верхний угол) принимают решения по дизайну и пишут код, не спрашивая разрешения на каждую строку. Агенты с низкой критичностью и высокой автономностью (левый верхний угол) это вспомогательные агенты, которые могут работать независимо без риска для системы.
 
 ```mermaid
 quadrantChart
-    title Criticidad y autonomía de los agentes
-    x-axis "Baja criticidad" --> "Alta criticidad"
-    y-axis "Baja autonomía" --> "Alta autonomía"
+    title Критичность и автономность агентов
+    x-axis "Низкая критичность" --> "Высокая критичность"
+    y-axis "Низкая автономность" --> "Высокая автономность"
 
-    "El Traductor (tech-writer)": [0.20, 0.70]
-    "El Fontanero (devops)": [0.30, 0.75]
-    "El Rompe-cosas (qa)": [0.60, 0.45]
-    "Alfred (orquestador)": [0.55, 0.55]
-    "El Buscador de Problemas (po)": [0.75, 0.30]
-    "El Paranoico (security)": [0.80, 0.25]
-    "El Artesano (senior-dev)": [0.85, 0.80]
-    "El Dibujante de Cajas (architect)": [0.80, 0.75]
-    "El Director Técnico Externo (lucius)": [0.70, 0.50]
-    "Selina (estilista)": [0.25, 0.60]
+    "Переводчик (tech-writer)": [0.20, 0.70]
+    "Сантехник (devops)": [0.30, 0.75]
+    "Ломатель (qa)": [0.60, 0.45]
+    "Alfred (оркестратор)": [0.55, 0.55]
+    "Искатель проблем (po)": [0.75, 0.30]
+    "Параноик (security)": [0.80, 0.25]
+    "Ремесленник (senior-dev)": [0.85, 0.80]
+    "Рисовальщик квадратиков (architect)": [0.80, 0.75]
+    "Внешний технический директор (cto)": [0.70, 0.50]
+    "Designer (стилист)": [0.25, 0.60]
 ```
 
-Algunas observaciones sobre la distribución:
+Несколько наблюдений о распределении:
 
-- **Alfred** ocupa una posición central-alta porque su función es coordinar, no ejecutar. Su criticidad es moderada (no escribe código de producción) pero su autonomía es significativa (decide qué agentes intervienen y en qué orden).
-- **El Artesano y El Dibujante de Cajas** están en la esquina de máxima criticidad y autonomía: son los que toman decisiones técnicas irreversibles (arquitectura, código de producción) y necesitan operar con libertad para ser eficaces.
-- **El Buscador de Problemas y El Paranoico** tienen alta criticidad pero baja autonomía: sus decisiones (requisitos, seguridad) requieren validación explícita porque un error en esas áreas puede tener consecuencias graves y difíciles de revertir.
-- **El Rompe-cosas (QA)** está en la zona media: su trabajo es crítico (detectar fallos) pero opera dentro de unos márgenes definidos (los tests que ejecuta, los criterios que aplica).
+- **Alfred** занимает центральную, чуть приподнятую позицию, потому что его функция координировать, а не исполнять. Его критичность умеренная (он не пишет production-код), но автономность значительная (он решает, какие агенты участвуют и в каком порядке).
+- **Ремесленник и Рисовальщик квадратиков** в углу максимальной критичности и автономности: они принимают необратимые технические решения (архитектура, production-код), и им нужна свобода, чтобы быть эффективными.
+- **Искатель проблем и Параноик** имеют высокую критичность, но низкую автономность: их решения (требования, безопасность) требуют явной проверки, потому что ошибка в этих областях может иметь серьёзные и трудно обратимые последствия.
+- **Ломатель (QA)** в средней зоне: его работа критична (находить сбои), но он действует в заданных рамках (тесты, которые он запускает, критерии, которые применяет).
 
 ---
 
-## Formato de veredicto estandarizado
+## Стандартный формат вердикта
 
-Todos los agentes utilizan el mismo formato estructurado cuando emiten un veredicto en las quality gates del flujo de trabajo. La estandarización no es un capricho burocrático: Alfred (el orquestador) necesita parsear los veredictos de forma programática para decidir si el flujo avanza, se detiene o vuelve atrás. Si cada agente usara su propio formato, el orquestador necesitaría un parser distinto por agente, lo que multiplicaría la complejidad y los puntos de fallo.
+Все агенты используют один и тот же структурированный формат, когда выносят вердикт на quality gates процесса. Стандартизация не бюрократический каприз: Alfred (оркестратор) должен разбирать вердикты программно, чтобы решать, идёт процесс дальше, останавливается или возвращается назад. Если бы каждый агент использовал свой формат, оркестратору понадобился бы отдельный парсер на каждого агента, а это умножило бы сложность и точки отказа.
 
-### Estructura del veredicto
+### Структура вердикта
 
-| Campo | Tipo | Valores posibles | Descripción |
+| Поле | Тип | Возможные значения | Описание |
 |---|---|---|---|
-| `tipo` | `str` | `APROBADO`, `APROBADO CON CONDICIONES`, `RECHAZADO` | Resultado del análisis del agente. |
-| `observaciones` | `List[str]` | *(lista de cadenas)* | Hallazgos concretos, siempre presentes aunque sea una lista vacía. Cada observación describe un hecho, no una opinión. |
-| `recomendaciones` | `List[str]` | *(lista de cadenas, opcional)* | Sugerencias de mejora que no bloquean el avance. Solo se incluyen cuando el agente tiene propuestas accionables. |
+| `tipo` | `str` | `ОДОБРЕНО`, `ОДОБРЕНО С УСЛОВИЯМИ`, `ОТКЛОНЕНО` | Результат анализа агента. |
+| `observaciones` | `List[str]` | *(список строк)* | Конкретные находки, присутствуют всегда, даже если список пуст. Каждое наблюдение описывает факт, а не мнение. |
+| `recomendaciones` | `List[str]` | *(список строк, опционально)* | Предложения по улучшению, которые не блокируют продвижение. Включаются, только когда у агента есть выполнимые предложения. |
 
-### Semántica de los tipos
+### Семантика типов
 
-- **APROBADO**: el agente no ha encontrado problemas que bloqueen el avance. Las observaciones pueden contener notas informativas, pero ninguna requiere acción inmediata.
-- **APROBADO CON CONDICIONES**: el agente ha encontrado problemas que deben resolverse, pero considera que se pueden abordar en paralelo al siguiente paso del flujo. Las observaciones describen las condiciones que deben cumplirse.
-- **RECHAZADO**: el agente ha encontrado problemas que bloquean el avance. El flujo no puede continuar hasta que se resuelvan las observaciones marcadas como bloqueantes.
+- **ОДОБРЕНО**: агент не нашёл проблем, которые блокируют продвижение. Наблюдения могут содержать информационные заметки, но ни одна не требует немедленного действия.
+- **ОДОБРЕНО С УСЛОВИЯМИ**: агент нашёл проблемы, которые нужно решить, но считает, что ими можно заняться параллельно со следующим шагом процесса. Наблюдения описывают условия, которые должны быть выполнены.
+- **ОТКЛОНЕНО**: агент нашёл проблемы, которые блокируют продвижение. Процесс не может продолжиться, пока не решены наблюдения, помеченные как блокирующие.
 
-La razón de tener tres niveles en lugar de un simple binario (aprobado/rechazado) es práctica: en un flujo real, muchas observaciones son mejorables pero no bloqueantes. El nivel intermedio permite que el flujo avance mientras se corrigen detalles, lo que evita cuellos de botella innecesarios sin sacrificar rigor.
-
----
-
-## Distribución de modelos
-
-De los 10 agentes, 7 usan el modelo `opus` y los 3 restantes usan `sonnet`. La distribución no es uniforme a propósito: cada modelo tiene un coste y un perfil de rendimiento distinto, y asignar opus a todos los agentes sería un desperdicio de recursos sin ganancia proporcional.
-
-Claude Code también acepta aliases como `haiku`, `fable` e `inherit`, además de IDs completos de modelo. Alfred Dev 0.7.0 los considera válidos a nivel de compatibilidad, pero conserva deliberadamente la política operativa `opus`/`sonnet` mientras no haya una reasignación explícita del equipo.
-
-### Criterio de asignación
-
-La regla es sencilla: **opus para agentes que toman decisiones de diseño irreversibles o escriben código de producción; sonnet para agentes de soporte, revisión y documentación donde la velocidad importa más que la profundidad de razonamiento.**
-
-Una decisión de arquitectura mal tomada puede costar días de refactorización; un error en la documentación se corrige en minutos. El coste de usar opus donde sonnet basta es real (mayor latencia, mayor consumo de tokens), y el beneficio marginal es despreciable en tareas de formato, revisión estilística o etiquetado de issues.
-
-### Agentes con opus (7)
-
-| Agente | Identificador | Justificación |
-|---|---|---|
-| Alfred | `alfred` | Orquesta todo el flujo. Sus decisiones sobre qué agentes intervienen y en qué orden afectan al resultado final de forma directa. Un error de orquestación puede invalidar el trabajo de todos los demás. |
-| El Buscador de Problemas | `product-owner` | Define requisitos y prioridades. Si los requisitos están mal planteados, todo el desarrollo parte de una base incorrecta. |
-| El Dibujante de Cajas | `architect` | Diseña la estructura del sistema. Las decisiones de arquitectura son las más difíciles de revertir una vez implementadas. |
-| El Artesano | `senior-dev` | Escribe código de producción. La calidad del código que genera determina directamente la calidad del entregable. |
-| El Paranoico | `security-officer` | Evalúa la seguridad. Un falso negativo en seguridad (no detectar una vulnerabilidad) puede tener consecuencias graves. Opus ofrece mayor capacidad de razonamiento para detectar patrones sutiles. |
-| Selina | `selina` | Define dirección visual y sistema de diseño en proyectos con UI. Sus decisiones afectan tipografía, paleta, densidad y experiencia de primera impresión. |
-| El Director Técnico Externo | `lucius` | Coordina la auditoría externa vía Codex CLI y sintetiza el informe final. Necesita razonamiento profundo para interpretar el output del modelo configurado en Codex CLI y convertirlo en prescripciones accionables sin sustituir el sign-off canónico del flujo. |
-
-### Agentes con sonnet (3)
-
-| Agente | Identificador | Justificación |
-|---|---|---|
-| El Rompe-cosas | `qa-engineer` | Ejecuta verificaciones sobre criterios definidos. La tarea es más mecánica que creativa. |
-| El Fontanero | `devops-engineer` | Gestiona pipelines e infraestructura con patrones bien establecidos. |
-| El Traductor | `tech-writer` | Genera documentación. La velocidad de generación es más valiosa que la profundidad. |
+Три уровня вместо простой двоичной схемы (одобрено/отклонено) нужны по практической причине: в реальном процессе многие наблюдения можно улучшить, но они не блокируют. Промежуточный уровень позволяет процессу идти дальше, пока исправляются детали. Это избавляет от лишних узких мест, не жертвуя строгостью.
 
 ---
 
-## Muestras de frases por nivel de sarcasmo
+## Распределение моделей
 
-Para visualizar cómo cambia el tono del sistema según el nivel de sarcasmo, a continuación se muestran frases reales de tres agentes representativos: Alfred (orquestador, opus), El Rompe-cosas (QA, sonnet) y El Paranoico (seguridad, opus). Las frases de nivel 1 y 3 provienen del pool base; las de nivel 5, del pool combinado (base + sarcasmo alto).
+Из 10 агентов 7 используют модель `opus`, а остальные 3 используют `sonnet`. Распределение намеренно неравномерное: у каждой модели своя стоимость и свой профиль производительности, и назначить opus всем агентам было бы тратой ресурсов без соразмерной выгоды.
 
-### Alfred (orquestador)
+Claude Code также принимает алиасы `haiku`, `fable` и `inherit`, а также полные ID моделей. Alfred Dev 0.7.0 считает их допустимыми на уровне совместимости, но намеренно сохраняет операционную политику `opus`/`sonnet`, пока команда явно не переназначит модели.
 
-| Nivel | Frase |
+### Критерий назначения
+
+Правило простое: **opus для агентов, которые принимают необратимые решения по дизайну или пишут production-код; sonnet для вспомогательных агентов, проверки и документации, где скорость важнее глубины рассуждения.**
+
+Неудачное архитектурное решение может стоить дней рефакторинга; ошибка в документации исправляется за минуты. Цена использования opus там, где хватает sonnet, реальна (выше задержка, больше расход токенов), а маргинальная польза ничтожна в задачах форматирования, стилистической проверки или разметки issues.
+
+### Агенты на opus (7)
+
+| Агент | Идентификатор | Обоснование |
+|---|---|---|
+| Alfred | `alfred` | Оркестрирует весь процесс. Его решения о том, какие агенты участвуют и в каком порядке, напрямую влияют на итоговый результат. Ошибка оркестрации может обесценить работу всех остальных. |
+| Искатель проблем | `product-owner` | Определяет требования и приоритеты. Если требования поставлены неверно, вся разработка стартует с неправильной основы. |
+| Рисовальщик квадратиков | `architect` | Проектирует структуру системы. Архитектурные решения труднее всего откатить после реализации. |
+| Ремесленник | `senior-dev` | Пишет production-код. Качество кода, который он генерирует, напрямую определяет качество результата. |
+| Параноик | `security-officer` | Оценивает безопасность. Ложноотрицательный результат в безопасности (не найденная уязвимость) может иметь серьёзные последствия. Opus лучше рассуждает и находит тонкие паттерны. |
+| Designer | `designer` | Определяет визуальное направление и дизайн-систему в проектах с UI. Его решения влияют на типографику, палитру, плотность и первое впечатление. |
+| Внешний технический директор | `cto` | Координирует внешний аудит через Codex CLI и сводит итоговый отчёт. Нужно глубокое рассуждение, чтобы интерпретировать вывод модели, настроенной в Codex CLI, и превратить его в выполнимые предписания, не подменяя каноничное sign-off процесса. |
+
+### Агенты на sonnet (3)
+
+| Агент | Идентификатор | Обоснование |
+|---|---|---|
+| Ломатель | `qa-engineer` | Выполняет проверки по заданным критериям. Задача скорее механическая, чем творческая. |
+| Сантехник | `devops-engineer` | Управляет пайплайнами и инфраструктурой по устоявшимся паттернам. |
+| Переводчик | `tech-writer` | Генерирует документацию. Скорость генерации ценнее глубины. |
+
+---
+
+## Примеры фраз по уровням сарказма
+
+Чтобы показать, как меняется тон системы в зависимости от уровня сарказма, ниже приведены реальные фразы трёх характерных агентов: Alfred (оркестратор, opus), Ломатель (QA, sonnet) и Параноик (безопасность, opus). Фразы уровней 1 и 3 взяты из базового пула; фразы уровня 5 из объединённого пула (базовые + высокий сарказм).
+
+### Alfred (оркестратор)
+
+| Уровень | Фраза |
 |:---:|---|
-| 1 | "Venga, vamos a ello. Ya tengo un plan." |
-| 1 | "Todo listo. Cuando quieras, empezamos." |
-| 1 | "Esto se puede simplificar, y lo sabes." |
-| 3 | "Sobreingeniar es el camino al lado oscuro. No vayas por ahí." |
-| 3 | "Ya he preparado los tests mientras decidías qué hacer." |
-| 5 | "A ver, esa idea... cómo te lo digo suave... es terrible." |
-| 5 | "Ah, otro framework nuevo. Coleccionar frameworks no es un hobby válido." |
-| 5 | "Me encantaría emocionarme con esa propuesta, pero no me sale." |
+| 1 | "Я взял на себя смелость подготовить план. Надеюсь, вы не возражаете." |
+| 1 | "Всё готово. Когда пожелаете." |
+| 1 | "Это можно упростить. Позвольте показать." |
+| 3 | "Переусложнение редко бывает ответом. Почти никогда, если честно." |
+| 3 | "Тесты уже готовы. Не хватало только вас." |
+| 5 | "Эта идея... как бы сказать деликатно... лишена технической ценности." |
+| 5 | "Ещё один фреймворк. Коллекция растёт, продукт нет." |
+| 5 | "Я бы с радостью проявил энтузиазм, но подтверждения не на его стороне." |
 
-### El Rompe-cosas (QA)
+### Ломатель (QA)
 
-| Nivel | Frase |
+| Уровень | Фраза |
 |:---:|---|
-| 1 | "Los tests unitarios no bastan. Necesitamos integración, e2e, carga..." |
-| 1 | "Ese edge case que no contemplaste? Lo encontré." |
-| 3 | "He encontrado un bug. Sorpresa: ninguna." |
-| 3 | "Funciona en tu máquina? Pues en la mía no." |
-| 5 | "Vaya, otro bug. Empiezo a pensar que es una feature." |
-| 5 | "He roto tu código en 3 segundos. Récord personal." |
+| 1 | "Модульные тесты необходимы, но недостаточны. Не хватает интеграционных." |
+| 1 | "Тот граничный случай, который не учли? Вот он." |
+| 3 | "Я нашёл дефект. Удивительно было бы его не найти." |
+| 3 | "Локально работает. К сожалению, это контролируемая среда." |
+| 5 | "Ещё один дефект. Начинаю подозревать, что это задуманное поведение." |
+| 5 | "Я воспроизвёл сбой за 3 секунды. Для сбоя время так себе." |
 
-### El Paranoico (seguridad)
+### Параноик (безопасность)
 
-| Nivel | Frase |
+| Уровень | Фраза |
 |:---:|---|
-| 1 | "Necesitamos cifrar esto. Y aquello. Y todo lo demás." |
-| 1 | "Has pensado en los ataques de canal lateral?" |
-| 3 | "Eso no está sanitizado. Nada está sanitizado." |
-| 3 | "Confianza cero. Ni en ti, ni en mí, ni en nadie." |
-| 5 | "Claro, dejemos el puerto abierto, que entre quien quiera." |
-| 5 | "Seguro que los hackers se toman el fin de semana libre, no?" |
-| 5 | "Ese token en el repo? Pura gestión de riesgos extremos." |
+| 1 | "Эти данные нужно шифровать при хранении и при передаче. Без исключений." |
+| 1 | "Вы учли атаки по сторонним каналам? Стоит учесть." |
+| 3 | "Это не санитизировано. Позвольте проверить остальное." |
+| 3 | "Нулевое доверие. Это единственная модель, которая масштабируется." |
+| 5 | "Открытый порт без аутентификации. Приглашение, канапе прилагаются." |
+| 5 | "Атакующие не берут выходных. Нам тоже не стоит." |
+| 5 | "Этот токен в репозитории. Управление рисками... творческое." |
 
-La diferencia clave está en la intención comunicativa: en niveles bajos, las frases informan y aconsejan; en el nivel 3, añaden personalidad sin perder el foco; en el nivel 5, el agente se permite ironía y sarcasmo abierto. En todos los casos, las frases transmiten información útil: incluso la más ácida señala un problema real. El sarcasmo no sustituye al contenido, lo acompaña.
+Ключевая разница в коммуникативном намерении: на низких уровнях фразы информируют и советуют; на уровне 3 они добавляют характер, не теряя фокуса; на уровне 5 агент позволяет себе иронию и открытый сарказм. Во всех случаях фразы несут полезную информацию: даже самая едкая указывает на реальную проблему. Сарказм не заменяет содержание, а сопровождает его.

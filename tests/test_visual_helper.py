@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests de unidad ligeros para visual/scripts/helper.js."""
+"""Lightweight unit tests for visual/scripts/helper.js."""
 
 import json
 import os
@@ -143,7 +143,7 @@ class TestVisualHelper(unittest.TestCase):
               }, 0);
             } else if (scenario === 'heading-label') {
               socket.emitOpen();
-              const element = buildChoiceElement('B', 'Editorial cálido', 'h2');
+              const element = buildChoiceElement('B', 'Warm editorial', 'h2');
               window.toggleSelect(element);
               setTimeout(() => {
               console.log(JSON.stringify({
@@ -191,9 +191,9 @@ class TestVisualHelper(unittest.TestCase):
         payload = self._run_helper_script("heading-label")
         self.assertEqual(payload["selectedChoice"], "B")
         self.assertEqual(payload["message"]["choice"], "B")
-        self.assertEqual(payload["message"]["label"], "Editorial cálido")
+        self.assertEqual(payload["message"]["label"], "Warm editorial")
         self.assertEqual(payload["fetchCalls"], [])
-        self.assertIn("Editorial cálido", payload["indicator"])
+        self.assertIn("Warm editorial", payload["indicator"])
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests de contrato para el primer bloque GSD en Alfred."""
+"""Contract tests for the first GSD block in Alfred."""
 
 import os
 import unittest
@@ -72,7 +72,7 @@ class TestPauseResumeContract(unittest.TestCase):
         self.assertIn("resumed_at", command)
         self.assertIn('python3 .claude/alfred-continuity.py resume "$PWD"', command)
         self.assertIn("Не оборачивай его во вторую сводку", command)
-        self.assertIn("НЕ используй `AskUserQuestion` внутри `/alfred-dev:resume`", command)
+        self.assertIn("НЕ используй `AskUserQuestion` внутри `/alfred-dev:retomar`", command)
         self.assertIn("/alfred-dev:alfred", command)
 
 

@@ -1,27 +1,27 @@
 #!/usr/bin/env python3
 """
-Hook PreToolUse para Bash: guardia de comandos peligrosos.
+PreToolUse hook for Bash: dangerous command guard.
 
-Intercepta las ejecuciones de Bash y analiza el comando en busca de patrones
-potencialmente destructivos (borrado catastrofico, force push, destruccion de
-datos, fork bombs, etc.). Si detecta un patron peligroso, bloquea la operacion
-(exit 2) con un aviso explicativo.
+Intercepts Bash calls and scans the command for potentially destructive
+patterns (catastrophic deletion, force push, data destruction, fork bombs,
+etc.). If it finds a dangerous pattern, it blocks the operation (exit 2)
+with an explanatory warning.
 
-Politica de seguridad: fail-closed. Si no se puede parsear la entrada del hook
-o se produce cualquier error inesperado, se bloquea la operacion (exit 2).
-Un hook de seguridad que permite la operacion cuando falla equivale a
-desactivar la proteccion justo cuando mas se necesita. Esta politica es
-coherente con secret-guard.sh, que tambien es fail-closed.
+Security policy: fail-closed. If the hook cannot parse its input or an
+unexpected error occurs, it blocks the operation (exit 2). A security hook
+that allows the operation when it fails disables the protection exactly
+when it is needed most. This policy matches secret-guard.sh, which is also
+fail-closed.
 
-Patrones vigilados:
-    - rm -rf / (o ~, o $HOME): borrado catastrofico del sistema o del home.
-    - git push --force a main/master: perdida de historial en ramas protegidas.
-    - DROP DATABASE / DROP TABLE: destruccion de datos en base de datos.
-    - docker system prune -af: eliminacion de volumenes y datos de contenedores.
-    - chmod -R 777: permisos inseguros en todo un arbol de directorios.
-    - fork bombs: denegacion de servicio local.
-    - mkfs / dd sobre dispositivos: destruccion de disco.
-    - Escritura directa a dispositivos de bloque.
+Watched patterns:
+    - rm -rf / (or ~, or $HOME): catastrophic deletion of the system or home.
+    - git push --force to main/master: history loss on protected branches.
+    - DROP DATABASE / DROP TABLE: database data destruction.
+    - docker system prune -af: removal of container volumes and data.
+    - chmod -R 777: insecure permissions on a whole directory tree.
+    - fork bombs: local denial of service.
+    - mkfs / dd on devices: disk destruction.
+    - Direct writes to block devices.
 """
 
 import json
@@ -31,13 +31,13 @@ import shlex
 import sys
 
 
-# --- Patrones peligrosos ---------------------------------------------------
-# Cada tupla contiene (patron_compilado, descripcion_del_riesgo).
-# Los patrones se evaluan en orden; la primera coincidencia bloquea.
+# --- Dangerous patterns ----------------------------------------------------
+# Each tuple holds (compiled_pattern, risk_description).
+# Patterns are checked in order. The first match blocks.
 
 _DANGEROUS_PATTERNS = [
-    # Borrado catastrofico: rm -rf aplicado a raiz, home o rutas de sistema.
-    # Cubre: flags juntas (-rf, -fr), separadas (-r -f), con sudo, y flags largas.
+    # Catastrophic deletion: rm -rf on root, home or system paths.
+    # Covers combined flags (-rf, -fr), separate flags (-r -f), sudo and long flags.
     (
         re.compile(
             r"(?:sudo\s+)?rm\s+"
@@ -48,7 +48,7 @@ _DANGEROUS_PATTERNS = [
         ),
         "Катастрофическое удаление: rm -rf по корневому или системному каталогу",
     ),
-    # Force push a ramas protegidas
+    # Force push to protected branches
     (
         re.compile(
             r"git\s+push\s+.*"
@@ -57,7 +57,7 @@ _DANGEROUS_PATTERNS = [
         ),
         "Force push в защищённую ветку (main/master): риск потери истории",
     ),
-    # Variante: force push sin rama explicita (se asume rama actual)
+    # Variant: force push without an explicit branch (current branch assumed)
     (
         re.compile(
             r"git\s+push\s+--force-with-lease\s*$"
@@ -66,12 +66,12 @@ _DANGEROUS_PATTERNS = [
         ),
         "Force push без явной ветки: проверь, что ты не на main/master",
     ),
-    # Destruccion de base de datos
+    # Database destruction
     (
         re.compile(r"DROP\s+(DATABASE|TABLE|SCHEMA)\s", re.IGNORECASE),
         "Уничтожение данных: DROP DATABASE/TABLE/SCHEMA",
     ),
-    # Docker prune agresivo (cubre -af, -fa, -a -f, -f -a y combinaciones con otros flags)
+    # Aggressive Docker prune (covers -af, -fa, -a -f, -f -a and combinations with other flags)
     (
         re.compile(
             r"docker\s+system\s+prune\s+.*(-af|-fa)\b"
@@ -80,32 +80,32 @@ _DANGEROUS_PATTERNS = [
         ),
         "Docker system prune с -af: удаляет все данные контейнеров",
     ),
-    # Permisos inseguros
+    # Insecure permissions
     (
         re.compile(r"chmod\s+(-R\s+)?777\s+/"),
         "Небезопасные права: рекурсивный chmod 777 на корневой каталог",
     ),
-    # Fork bomb (variantes comunes en bash)
+    # Fork bomb (common bash variants)
     (
         re.compile(r":\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;?\s*:"),
         "Fork bomb: локальный отказ в обслуживании",
     ),
-    # Formateo de disco
+    # Disk formatting
     (
         re.compile(r"mkfs\.\w+\s+/dev/"),
         "Форматирование диска: mkfs на блочном устройстве",
     ),
-    # dd sobre dispositivo de bloque
+    # dd on a block device
     (
         re.compile(r"dd\s+.*of=/dev/(sd|hd|nvme|vd|xvd)"),
         "Прямая запись на блочное устройство через dd",
     ),
-    # Escritura a dispositivo via redireccion
+    # Write to a device through redirection
     (
         re.compile(r">\s*/dev/(sd|hd|nvme|vd|xvd)"),
         "Перенаправление вывода на блочное устройство",
     ),
-    # git reset --hard a remote (destructivo en combinacion con push)
+    # git reset --hard to remote (destructive when combined with push)
     (
         re.compile(r"git\s+reset\s+--hard\s+origin/(main|master)"),
         "git reset --hard на origin/main: отбрасывает все локальные изменения",
@@ -168,7 +168,7 @@ def _command_basename(token: str) -> str:
 
 
 def _strip_leading_wrappers(tokens):
-    """Elimina wrappers neutros al principio: sudo, env y variables inline."""
+    """Remove neutral leading wrappers: sudo, env and inline variables."""
     idx = 0
     while idx < len(tokens):
         token = tokens[idx]
@@ -198,7 +198,7 @@ def _strip_leading_wrappers(tokens):
 
 
 def _strip_quoted_content(command: str) -> str:
-    """Reemplaza el contenido entre comillas por espacios preservando operadores."""
+    """Replace quoted content with spaces and keep the operators."""
     result = []
     in_single = False
     in_double = False
@@ -231,12 +231,12 @@ def _strip_quoted_content(command: str) -> str:
 
 
 def _has_shell_controls_outside_quotes(command: str) -> bool:
-    """Detecta operadores de shell reales ignorando texto dentro de comillas.
+    """Detect real shell operators and ignore text inside quotes.
 
-    Permitimos helpers con argumentos quoted como:
-    `--raw "login | signup"` o `--raw "funnel A > B"`.
-    Lo que seguimos bloqueando es el uso real de operadores fuera de quotes,
-    como `;`, `&&`, `||`, pipes y redirecciones.
+    Helpers with quoted arguments are allowed, for example:
+    `--raw "login | signup"` or `--raw "funnel A > B"`.
+    Real operators outside quotes stay blocked, such as
+    `;`, `&&`, `||`, pipes and redirections.
     """
     in_single = False
     in_double = False
@@ -281,7 +281,7 @@ def _has_shell_controls_outside_quotes(command: str) -> bool:
 
 
 def _extract_shell_c_command(tokens):
-    """Extrae el comando embebido en shell wrappers tipo sh -c / bash -lc."""
+    """Extract the command embedded in shell wrappers such as sh -c / bash -lc."""
     core_tokens = _strip_leading_wrappers(tokens)
     if not core_tokens:
         return None
@@ -473,7 +473,7 @@ def _detect_git_reset(tokens):
 
 
 def _find_dangerous_reason(command: str):
-    """Devuelve la razon de bloqueo si el comando es realmente peligroso."""
+    """Return the block reason if the command is really dangerous."""
     try:
         tokens = shlex.split(command)
     except ValueError:
@@ -503,14 +503,14 @@ def _find_dangerous_reason(command: str):
 
 
 def _is_safe_alfred_helper_command(command: str) -> bool:
-    """Reconoce helpers deterministas locales que Alfred puede autoaprobar.
+    """Recognize local deterministic helpers that Alfred can auto-approve.
 
-    El objetivo es destrabar la primera ejecución headless de Claude Code para
-    los comandos operativos helper-first. La allowlist es estrecha:
+    The goal is to unblock the first headless Claude Code run for the
+    helper-first operational commands. The allowlist is narrow:
     - `python3`
-    - wrapper local `.claude/alfred-continuity.py`
-    - solo subcomandos deterministas y operativos
-    - sin operadores de control de shell
+    - local wrapper `.claude/alfred-continuity.py`
+    - only deterministic, operational subcommands
+    - no shell control operators
     """
     normalized = command.strip()
     for suffix in _SAFE_CAPTURE_SUFFIXES:
@@ -543,17 +543,17 @@ def _is_safe_alfred_helper_command(command: str) -> bool:
 
 
 def main():
-    """Punto de entrada del hook.
+    """Hook entry point.
 
-    Lee el JSON de stdin proporcionado por PreToolUse, extrae el comando
-    de ``tool_input.command`` y lo compara contra la lista de patrones
-    peligrosos. Si alguno coincide, bloquea la operacion con exit 2.
+    Reads the PreToolUse JSON from stdin, extracts the command from
+    ``tool_input.command`` and checks it against the dangerous pattern
+    list. If one matches, blocks the operation with exit 2.
     """
     try:
         data = json.load(sys.stdin)
     except (ValueError, json.JSONDecodeError) as e:
-        # Fail-closed: si no podemos parsear, bloquear por precaucion.
-        # Un guard de seguridad que falla en abierto equivale a no tenerlo.
+        # Fail-closed: if we cannot parse, block as a precaution.
+        # A security guard that fails open is the same as no guard.
         print(
             f"[Alfred Dev] ЗАБЛОКИРОВАНО: не удалось разобрать вход hook: {e}. "
             f"Защита от опасных команд блокирует из предосторожности.",
@@ -581,7 +581,7 @@ def main():
 
     description = _find_dangerous_reason(command)
     if description:
-        # Bloquear con aviso explicativo
+        # Block with an explanatory warning
         print(
             f"\n[Alfred Dev] ОПАСНАЯ КОМАНДА ЗАБЛОКИРОВАНА\n\n"
             f"  Команда:  {command[:200]}\n"
@@ -592,7 +592,7 @@ def main():
         )
         sys.exit(2)
 
-    # Comando seguro, permitir
+    # Safe command, allow
     sys.exit(0)
 
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Documentación viva del proyecto: esqueleto, índice y comprobación por gate.
+"""Living project docs: skeleton, index and per-gate check.
 
-El helper no rellena prosa. Crea ficheros estructurales, actualiza el índice
-y dice qué falta para cerrar una fase. El contenido lo escriben los agentes.
+The helper does not write prose. It creates structural files, updates the
+index and reports what is missing to close a phase. Agents write the content.
 """
 
 from __future__ import annotations
@@ -29,14 +29,14 @@ DOC_FILES = {
 }
 
 DOC_TITLES = {
-    "index": "Índice de documentación viva",
-    "architecture": "Arquitectura del proyecto",
-    "compliance": "Registro de compliance",
-    "threat_model": "Modelo de amenazas",
-    "dependencies": "Dependencias evaluadas",
+    "index": "Индекс живой документации",
+    "architecture": "Архитектура проекта",
+    "compliance": "Реестр compliance",
+    "threat_model": "Модель угроз",
+    "dependencies": "Оценённые зависимости",
 }
 
-# (documento, "exists" | "filled")
+# (document, "exists" | "filled")
 _Req = Tuple[str, str]
 
 REQUIREMENTS: Dict[Tuple[str, str], Tuple[_Req, ...]] = {
@@ -84,90 +84,90 @@ REQUIREMENTS: Dict[Tuple[str, str], Tuple[_Req, ...]] = {
 }
 
 _SCAFFOLDS: Dict[str, str] = {
-    "architecture": f"""# Arquitectura del proyecto
+    "architecture": f"""# Архитектура проекта
 
 {SCAFFOLD_MARKER}
 
-## Contexto
+## Контекст
 
-_(pendiente)_
+_(заполнить)_
 
-## Diagrama
+## Диаграмма
 
 ```mermaid
 flowchart LR
-    pendiente[Pendiente de dibujar]
+    pending[Ещё не нарисовано]
 ```
 
-## Componentes
+## Компоненты
 
-| Componente | Responsabilidad | Límites |
-|------------|-----------------|--------|
-| _(pendiente)_ |  |  |
+| Компонент | Ответственность | Границы |
+|-----------|-----------------|---------|
+| _(заполнить)_ |  |  |
 
-## Flujos de datos
+## Потоки данных
 
-_(pendiente)_
+_(заполнить)_
 
-## Decisiones abiertas
+## Открытые решения
 
-_(pendiente)_
+_(заполнить)_
 """,
-    "compliance": f"""# Registro de compliance
+    "compliance": f"""# Реестр compliance
 
 {SCAFFOLD_MARKER}
 
-No es un dictamen jurídico. Es un registro técnico con evidencia.
+Это не юридическое заключение. Это технический реестр с подтверждениями.
 
-## Alcance
+## Объём
 
-| Marco | Aplica | Motivo |
-|-------|--------|--------|
-| RGPD | pendiente |  |
-| NIS2 | pendiente |  |
-| CRA | pendiente |  |
+| Рамка | Применимо | Причина |
+|-------|-----------|---------|
+| GDPR (RGPD) | уточнить |  |
+| NIS2 | уточнить |  |
+| CRA | уточнить |  |
 
-## Controles
+## Контроли
 
-| Control | Marco | Estado | Evidencia |
-|---------|-------|--------|-----------|
-| _(pendiente)_ |  | pendiente |  |
+| Контроль | Рамка | Статус | Подтверждение |
+|----------|-------|--------|---------------|
+| _(заполнить)_ |  | pendiente |  |
 
-Estados: `cumple` (con evidencia), `parcial`, `pendiente`, `no aplica`, `riesgo aceptado`.
+Статусы: `cumple` (с подтверждением), `parcial`, `pendiente`, `no aplica`, `riesgo aceptado`.
 
-## Riesgos aceptados
+## Принятые риски
 
-| Hueco | Quién | Cuándo | Motivo |
-|-------|-------|--------|--------|
-| _(ninguno)_ |  |  |  |
+| Пробел | Кто | Когда | Причина |
+|--------|-----|-------|---------|
+| _(нет)_ |  |  |  |
 """,
-    "threat_model": f"""# Modelo de amenazas
+    "threat_model": f"""# Модель угроз
 
 {SCAFFOLD_MARKER}
 
-**Metodología:** STRIDE
+**Методология:** STRIDE
 
-## Superficie
+## Поверхность атаки
 
-_(pendiente: componentes reales, no una lista genérica)_
+_(заполнить: реальные компоненты, а не общий список)_
 
-## Límites de confianza
+## Границы доверия
 
-_(pendiente)_
+_(заполнить)_
 
 ## STRIDE
 
-| Amenaza | Componente | Probabilidad | Impacto | Mitigación o riesgo aceptado |
-|---------|------------|--------------|---------|------------------------------|
-| _(pendiente)_ |  |  |  |  |
+| Угроза | Компонент | Вероятность | Влияние | Мера по снижению или принятый риск |
+|--------|-----------|-------------|---------|------------------------------------|
+| _(заполнить)_ |  |  |  |  |
 """,
-    "dependencies": f"""# Dependencias evaluadas
+    "dependencies": f"""# Оценённые зависимости
 
 {SCAFFOLD_MARKER}
 
-| Paquete | Versión | Veredicto | Licencia | Notas |
-|---------|---------|-----------|----------|-------|
-| _(ninguna evaluada)_ |  |  |  |  |
+| Пакет | Версия | Вердикт | Лицензия | Заметки |
+|-------|--------|---------|----------|---------|
+| _(пока нет оценённых)_ |  |  |  |  |
 """,
 }
 
@@ -194,7 +194,7 @@ def _write(path: str, content: str) -> None:
 
 
 def doc_status(text: str) -> str:
-    """Clasifica un documento: empty, scaffold o filled."""
+    """Classify a document: empty, scaffold or filled."""
     if not text.strip():
         return "empty"
     if FILLED_MARKER in text:
@@ -205,7 +205,7 @@ def doc_status(text: str) -> str:
 
 
 def required_docs(command: str, phase: str = "") -> Tuple[_Req, ...]:
-    """Devuelve los requisitos de documentación para un comando y fase."""
+    """Return the doc requirements for a command and phase."""
     comando = (command or "").strip().lower()
     fase = (phase or "").strip().lower() or "*"
     exact = REQUIREMENTS.get((comando, fase))
@@ -215,7 +215,7 @@ def required_docs(command: str, phase: str = "") -> Tuple[_Req, ...]:
 
 
 def ensure_project_docs(project_dir: str) -> Dict[str, Any]:
-    """Crea el esqueleto que falte y refresca el índice. No rellena prosa."""
+    """Create any missing skeleton and refresh the index. Does not write prose."""
     created: List[str] = []
     for key, relative in DOC_FILES.items():
         if key == "index":
@@ -234,7 +234,7 @@ def ensure_project_docs(project_dir: str) -> Dict[str, Any]:
 
 
 def inspect_docs(project_dir: str) -> List[Dict[str, str]]:
-    """Estado de cada documento vivo."""
+    """Status of each living document."""
     rows: List[Dict[str, str]] = []
     for key, relative in DOC_FILES.items():
         if key == "index":
@@ -260,25 +260,28 @@ def inspect_docs(project_dir: str) -> List[Dict[str, str]]:
 
 
 def refresh_index(project_dir: str) -> str:
-    """Reescribe la tabla del índice. Conserva notas bajo el marcador de corte."""
+    """Rewrite the index table. Keep the notes below the cut heading."""
     relative = DOC_FILES["index"]
     path = _abs(project_dir, relative)
     existing = _read(path)
     notes = ""
-    cut = "## Notas del equipo"
-    if cut in existing:
-        notes = existing.split(cut, 1)[1].strip()
+    cut = "## Заметки команды"
+    # Also accept the legacy Spanish heading so notes in older indexes survive.
+    for marker in (cut, "## Notas del equipo"):
+        if marker in existing:
+            notes = existing.split(marker, 1)[1].strip()
+            break
 
     rows = inspect_docs(project_dir)
     lines = [
-        "# Documentación viva del proyecto",
+        "# Живая документация проекта",
         "",
         INDEX_MARKER,
         "",
-        "Solo se actualiza lo que la fase ha cambiado. El Escriba sincroniza este índice.",
+        "Обновляется только то, что изменила фаза. tech-writer синхронизирует этот индекс.",
         "",
-        "| Documento | Estado | Actualizado |",
-        "|-----------|--------|-------------|",
+        "| Документ | Статус | Обновлён |",
+        "|----------|--------|----------|",
     ]
     for row in rows:
         lines.append(f"| `{row['path']}` | {row['status']} | {row['updated'] or '—'} |")
@@ -288,13 +291,13 @@ def refresh_index(project_dir: str) -> str:
     lines.extend(
         [
             "",
-            f"ADRs en `{ADR_DIR}/`: {adr_count}. Siguiente número: {next_number:03d}.",
+            f"ADR в `{ADR_DIR}/`: {adr_count}. Следующий номер: {next_number:03d}.",
             "",
-            "## Notas del equipo",
+            cut,
             "",
         ]
     )
-    lines.append(notes if notes else "_(sin notas)_")
+    lines.append(notes if notes else "_(заметок нет)_")
     lines.append("")
     _write(path, "\n".join(lines))
     return relative
@@ -323,13 +326,13 @@ def next_adr_number(project_dir: str) -> int:
 
 def _slugify(title: str) -> str:
     normalized = title.strip().lower()
-    normalized = re.sub(r"[^a-z0-9áéíóúüñ]+", "-", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"[^a-z0-9áéíóúüñа-яё]+", "-", normalized, flags=re.IGNORECASE)
     normalized = re.sub(r"-+", "-", normalized).strip("-")
     return normalized or "decision"
 
 
 def scaffold_adr(project_dir: str, title: str) -> Dict[str, Any]:
-    """Crea el esqueleto del siguiente ADR. No escribe la decisión."""
+    """Create the skeleton of the next ADR. Does not write the decision."""
     number = next_adr_number(project_dir)
     slug = _slugify(title)
     relative = os.path.join(ADR_DIR, f"ADR-{number:03d}-{slug}.md")
@@ -337,16 +340,16 @@ def scaffold_adr(project_dir: str, title: str) -> Dict[str, Any]:
     if os.path.isfile(path):
         return {"path": relative, "number": number, "created": False}
     content = (
-        f"# ADR-{number:03d}: {title.strip() or 'Decisión'}\n\n"
+        f"# ADR-{number:03d}: {title.strip() or 'Решение'}\n\n"
         f"{SCAFFOLD_MARKER}\n\n"
-        f"**Fecha:** {_now_date()}\n"
-        "**Estado:** propuesto\n"
-        "**Autor:** architect\n\n"
-        "## Contexto\n\n_(pendiente)_\n\n"
-        "## Opciones evaluadas\n\n### Opción 1\n\n_(pendiente)_\n\n"
-        "### Opción 2\n\n_(pendiente)_\n\n"
-        "## Decisión\n\n_(pendiente)_\n\n"
-        "## Consecuencias\n\n_(pendiente)_\n"
+        f"**Дата:** {_now_date()}\n"
+        "**Статус:** propuesto\n"
+        "**Автор:** architect\n\n"
+        "## Контекст\n\n_(заполнить)_\n\n"
+        "## Рассмотренные варианты\n\n### Вариант 1\n\n_(заполнить)_\n\n"
+        "### Вариант 2\n\n_(заполнить)_\n\n"
+        "## Решение\n\n_(заполнить)_\n\n"
+        "## Последствия\n\n_(заполнить)_\n"
     )
     _write(path, content)
     refresh_index(project_dir)
@@ -358,7 +361,7 @@ def check_project_docs(
     command: str,
     phase: str = "",
 ) -> Dict[str, Any]:
-    """Comprueba los documentos exigidos por la gate. No escribe nada."""
+    """Check the documents that the gate requires. Writes nothing."""
     requirements = required_docs(command, phase)
     missing: List[str] = []
     empty: List[str] = []
@@ -399,53 +402,53 @@ def check_project_docs(
 
 
 def render_sync_markdown(result: Dict[str, Any]) -> str:
-    lines = ["## Docs de proyecto", ""]
+    lines = ["## Документация проекта", ""]
     created = result.get("created") or []
     if created:
-        lines.append("Creados:")
+        lines.append("Созданы:")
         lines.extend(f"- `{path}`" for path in created)
         lines.append("")
     else:
-        lines.append("No faltaba esqueleto.")
+        lines.append("Все скелеты уже были на месте.")
         lines.append("")
-    lines.append("Estado:")
+    lines.append("Статус:")
     for row in result.get("docs") or []:
         lines.append(f"- `{row['path']}`: {row['status']}")
     lines.append("")
-    lines.append(f"Índice: `{result.get('index', DOC_FILES['index'])}`")
+    lines.append(f"Индекс: `{result.get('index', DOC_FILES['index'])}`")
     return "\n".join(lines)
 
 
 def render_check_markdown(result: Dict[str, Any]) -> str:
     lines = [
-        "## Comprobación de docs de proyecto",
+        "## Проверка документации проекта",
         "",
-        f"Comando: `{result['command']}` / fase: `{result['phase']}`",
+        f"Команда: `{result['command']}` / фаза: `{result['phase']}`",
         "",
     ]
     if result["passed"]:
-        lines.append("Resultado: listo para la gate.")
+        lines.append("Результат: готово к gate.")
     else:
-        lines.append("Resultado: no se puede cerrar la gate.")
+        lines.append("Результат: gate закрыть нельзя.")
     if result["missing"]:
         lines.append("")
-        lines.append("Faltan:")
+        lines.append("Отсутствуют:")
         lines.extend(f"- `{path}`" for path in result["missing"])
     if result["empty"]:
         lines.append("")
-        lines.append("Siguen en esqueleto (hace falta contenido real y `<!-- alfred-doc:filled -->`):")
+        lines.append("Всё ещё скелеты (нужно реальное содержимое и `<!-- alfred-doc:filled -->`):")
         lines.extend(f"- `{path}`" for path in result["empty"])
     if result["ok"]:
         lines.append("")
-        lines.append("Cubiertos:")
+        lines.append("Готовы:")
         lines.extend(f"- `{path}`" for path in result["ok"])
     return "\n".join(lines)
 
 
 def render_adr_markdown(result: Dict[str, Any]) -> str:
-    verb = "Creado" if result.get("created") else "Ya existía"
+    verb = "Создан" if result.get("created") else "Уже существовал"
     return (
         f"## ADR\n\n{verb}: `{result['path']}`\n\n"
-        "Rellena contexto, opciones, decisión y consecuencias. "
-        f"Sustituye `{SCAFFOLD_MARKER}` por `{FILLED_MARKER}` al terminar."
+        "Заполни контекст, варианты, решение и последствия. "
+        f"По завершении замени `{SCAFFOLD_MARKER}` на `{FILLED_MARKER}`."
     )

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contrato del asistente contextual de Alfred Dev."""
+"""Contract for the Alfred Dev context assistant."""
 
 import os
 import unittest
