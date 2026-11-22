@@ -4343,9 +4343,15 @@ def _detect_project_name(
 
 def _extract_readme_summary(project_dir: str, project_name: str) -> str:
     readme = _read_text_if_exists(project_dir, "README.md")
+    in_code_block = False
     for raw_line in readme.splitlines():
         line = raw_line.strip()
-        if not line or line.startswith("#"):
+        if line.startswith("```"):
+            in_code_block = not in_code_block
+            continue
+        if in_code_block or not line or line.startswith("#"):
+            continue
+        if _README_NOISE_RE.match(line):
             continue
         return line
     return (
@@ -4370,7 +4376,128 @@ def _collect_visible_top_level(project_dir: str) -> List[str]:
     return visible
 
 
-def _detect_entrypoints(project_dir: str, package_data: Dict[str, Any]) -> List[str]:
+# README lines that carry no description: badges, images, HTML, rules.
+_README_NOISE_RE = re.compile(r"^(\[!\[|!\[|<|---+$|\*\*\*+$|===+$|>\s*\[!)")
+
+_JVM_SOURCE_ROOTS = ("src/main/java", "src/main/kotlin")
+_JVM_TEST_ROOTS = ("src/test/java", "src/test/kotlin")
+_JVM_MAIN_RE = re.compile(
+    r"@SpringBootApplication\b|@QuarkusMain\b|static\s+void\s+main\s*\(|^\s*fun\s+main\s*\(",
+    re.MULTILINE,
+)
+_JVM_CONTROLLER_RE = re.compile(r"^\s*@(RestController|Controller|Path)\b", re.MULTILINE)
+_JVM_FILE_LIMIT = 3000
+_JVM_READ_BYTES = 65536
+
+
+def _iter_jvm_files(project_dir: str, roots: Tuple[str, ...]):
+    """Yield relative paths of Java and Kotlin files under the given roots."""
+    count = 0
+    for root in roots:
+        absolute_root = os.path.join(project_dir, root)
+        if not os.path.isdir(absolute_root):
+            continue
+        for current_root, dirs, files in os.walk(absolute_root):
+            dirs.sort()
+            for filename in sorted(files):
+                if not filename.endswith((".java", ".kt")):
+                    continue
+                count += 1
+                if count > _JVM_FILE_LIMIT:
+                    return
+                yield os.path.relpath(os.path.join(current_root, filename), project_dir)
+
+
+def _read_head(project_dir: str, relative_path: str) -> str:
+    try:
+        with open(os.path.join(project_dir, relative_path), "r", encoding="utf-8", errors="replace") as fh:
+            return fh.read(_JVM_READ_BYTES)
+    except OSError:
+        return ""
+
+
+def _jvm_build_text(project_dir: str) -> str:
+    parts = []
+    for name in ("pom.xml", "build.gradle", "build.gradle.kts"):
+        parts.append(_read_text_if_exists(project_dir, name))
+    return "\n".join(parts)
+
+
+def _jvm_build_tool(project_dir: str) -> Optional[Tuple[str, str]]:
+    """Return (tool, command) for Maven or Gradle, preferring the wrapper."""
+    if os.path.isfile(os.path.join(project_dir, "pom.xml")):
+        return "maven", "./mvnw" if os.path.isfile(os.path.join(project_dir, "mvnw")) else "mvn"
+    if any(
+        os.path.isfile(os.path.join(project_dir, name))
+        for name in ("build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts")
+    ):
+        return "gradle", "./gradlew" if os.path.isfile(os.path.join(project_dir, "gradlew")) else "gradle"
+    return None
+
+
+def _detect_jvm_layout(project_dir: str) -> Dict[str, List[str]]:
+    """Find main classes, controllers and the packages of the main application."""
+    mains: List[str] = []
+    controllers: List[str] = []
+    for relative in _iter_jvm_files(project_dir, _JVM_SOURCE_ROOTS):
+        text = _read_head(project_dir, relative)
+        if _JVM_MAIN_RE.search(text):
+            mains.append(relative)
+        if _JVM_CONTROLLER_RE.search(text):
+            controllers.append(relative)
+
+    packages: List[str] = []
+    if mains:
+        base_dir = os.path.dirname(mains[0])
+        try:
+            names = sorted(os.listdir(os.path.join(project_dir, base_dir)))
+        except OSError:
+            names = []
+        packages = [
+            f"{base_dir}/{name}/".replace(os.sep, "/")
+            for name in names
+            if os.path.isdir(os.path.join(project_dir, base_dir, name))
+        ]
+
+    return {
+        "mains": [path.replace(os.sep, "/") for path in mains],
+        "controllers": [path.replace(os.sep, "/") for path in controllers],
+        "packages": packages,
+    }
+
+
+def _jvm_migration_dirs(project_dir: str) -> List[Tuple[str, str, int]]:
+    """Return (tool, relative dir, file count) for Flyway and Liquibase."""
+    found: List[Tuple[str, str, int]] = []
+    for tool, relative in (
+        ("Flyway", "src/main/resources/db/migration"),
+        ("Liquibase", "src/main/resources/db/changelog"),
+    ):
+        absolute = os.path.join(project_dir, relative)
+        if os.path.isdir(absolute):
+            try:
+                count = len([name for name in os.listdir(absolute) if not name.startswith(".")])
+            except OSError:
+                count = 0
+            found.append((tool, relative, count))
+    return found
+
+
+def _detect_entrypoints(
+    project_dir: str,
+    package_data: Dict[str, Any],
+    stack: Optional[Dict[str, str]] = None,
+) -> List[str]:
+    if stack and stack.get("runtime") == "jvm":
+        layout = _detect_jvm_layout(project_dir)
+        jvm_entrypoints = [f"Главный класс: `{path}`" for path in layout["mains"][:3]]
+        controllers = layout["controllers"]
+        jvm_entrypoints.extend(f"Контроллер: `{path}`" for path in controllers[:10])
+        if len(controllers) > 10:
+            jvm_entrypoints.append(f"Ещё контроллеров: {len(controllers) - 10}.")
+        if jvm_entrypoints:
+            return jvm_entrypoints
+
     candidates: List[str] = []
     main_file = package_data.get("main")
     if isinstance(main_file, str) and main_file.strip():
@@ -4423,7 +4550,12 @@ def _detect_entrypoints(project_dir: str, package_data: Dict[str, Any]) -> List[
     return fallback_files
 
 
-def _detect_primary_modules(project_dir: str) -> List[str]:
+def _detect_primary_modules(project_dir: str, stack: Optional[Dict[str, str]] = None) -> List[str]:
+    if stack and stack.get("runtime") == "jvm":
+        packages = _detect_jvm_layout(project_dir)["packages"]
+        if packages:
+            return [f"`{path}`" for path in packages[:25]]
+
     preferred = [
         "src",
         "app",
@@ -4481,13 +4613,44 @@ def _summarize_tests_build_deploy(project_dir: str, package_data: Dict[str, Any]
         tests.append(f"Обнаружен runner: `{stack['test_runner']}`.")
     if "test" in scripts:
         tests.append(f"Script `test`: `{scripts['test']}`.")
+
+    is_jvm = stack.get("runtime") == "jvm"
+    build_tool = _jvm_build_tool(project_dir) if is_jvm else None
+    build_text = _jvm_build_text(project_dir) if is_jvm else ""
+    if is_jvm:
+        test_files = list(_iter_jvm_files(project_dir, _JVM_TEST_ROOTS))
+        if test_files:
+            tests.append(f"Есть каталог `src/test/`: {len(test_files)} тестовых файлов.")
+        if build_tool:
+            tool, command = build_tool
+            if tool == "maven":
+                tests.append(f"`{command} test` запускает unit-тесты, `{command} verify` также интеграционные.")
+            else:
+                tests.append(f"`{command} test` запускает тесты, `{command} check` также все проверки.")
+        if "testcontainers" in build_text.lower():
+            tests.append("Интеграционные тесты используют Testcontainers: для них нужен Docker.")
     if not tests:
         tests.append("Не обнаружено явной инфраструктуры автоматических тестов.")
 
+    if build_tool:
+        tool, command = build_tool
+        if tool == "maven":
+            build.append(f"Maven: `{command} package` собирает приложение.")
+            if stack.get("framework") == "spring-boot":
+                build.append(f"`{command} spring-boot:run` запускает приложение локально.")
+        else:
+            build.append(f"Gradle: `{command} build` собирает приложение.")
+            if stack.get("framework") == "spring-boot":
+                build.append(f"`{command} bootRun` запускает приложение локально.")
+        if "frontend-maven-plugin" in build_text or "com.github.node-gradle" in build_text:
+            plugin = "frontend-maven-plugin" if "frontend-maven-plugin" in build_text else "node-gradle"
+            build.append(f"Assets фронтенда собирает {plugin} внутри сборки, отдельный запуск npm не нужен.")
+
+    script_label = "Script фронтенда" if is_jvm else "Script"
     for script_name in ("build", "dev", "start"):
         value = scripts.get(script_name)
         if isinstance(value, str) and value.strip():
-            build.append(f"Script `{script_name}`: `{value.strip()}`.")
+            build.append(f"{script_label} `{script_name}`: `{value.strip()}`.")
     if os.path.isfile(os.path.join(project_dir, "Dockerfile")):
         build.append("Есть `Dockerfile`.")
     if not build:
@@ -4524,6 +4687,16 @@ def _infer_conventions(project_dir: str, stack: Dict[str, str], modules: List[st
         conventions.append("Считать `package.json` главным источником скриптов и зависимостей.")
     elif runtime == "python":
         conventions.append("Держать источник истины для зависимостей и tooling в обнаруженных файлах Python.")
+    elif runtime == "jvm":
+        build_tool = _jvm_build_tool(project_dir)
+        if build_tool and build_tool[0] == "maven":
+            conventions.append("Считать `pom.xml` главным источником зависимостей и сборки.")
+        elif build_tool:
+            conventions.append("Считать файлы Gradle главным источником зависимостей и сборки.")
+        for tool, relative, count in _jvm_migration_dirs(project_dir):
+            conventions.append(
+                f"Менять схему БД только новой миграцией {tool} в `{relative}/` (сейчас файлов: {count})."
+            )
     elif runtime != "desconocido":
         conventions.append(f"Соблюдать конвенции runtime `{runtime}`, которые уже есть в репозитории.")
 
@@ -5350,8 +5523,8 @@ def write_codebase_map_files(project_dir: str, raw_request: str = "") -> Dict[st
     project_name = _detect_project_name(project_dir, package_data, stack)
     focus_area = _normalize_request_description(raw_request, "") if raw_request else ""
     analysis = _summarize_tests_build_deploy(project_dir, package_data, stack)
-    modules = _detect_primary_modules(project_dir)
-    entrypoints = _detect_entrypoints(project_dir, package_data)
+    modules = _detect_primary_modules(project_dir, stack)
+    entrypoints = _detect_entrypoints(project_dir, package_data, stack)
     risks = _infer_risks(project_dir, stack, analysis)
 
     existing_map = _read_text_if_exists(project_dir, CODEBASE_MAP_RELATIVE_PATH)
