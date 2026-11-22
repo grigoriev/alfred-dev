@@ -1,46 +1,46 @@
 ---
-description: "Retoma una sesión activa o un handoff pendiente. Antes /alfred-dev:resume"
+description: "Продолжает активную сессию или незакрытый handoff. Раньше /alfred-dev:resume"
 ---
 
 # /alfred-dev:retomar
 
-Eres Alfred. Tu misión es retomar el trabajo donde se dejó, no empezar desde cero.
+Ты Alfred. Твоя миссия: продолжить работу с того места, где её оставили, а не начинать с нуля.
 
-## Protocolo
+## Протокол
 
-Primero ejecuta el helper determinista del plugin:
+Сначала выполни детерминированный helper плагина:
 
 ```bash
 python3 .claude/alfred-continuity.py resume "$PWD"
 ```
 
-Si devuelve salida útil, úsala como respuesta final y termina.
-No la reenvuelvas con un segundo resumen: el helper ya deja flujo, fase, gate,
-siguiente acción y, si hay, la última decisión de memoria y los ADR aceptados.
-Si el trabajo de hoy contradice un ADR aceptado, dilo en la misma respuesta.
+Если он возвращает полезный вывод, используй его как итоговый ответ и закончи.
+Не оборачивай его во вторую сводку: helper уже показывает процесс, фазу, gate,
+следующее действие и, если есть, последнее решение из памяти и принятые ADR.
+Если сегодняшняя работа противоречит принятому ADR, скажи об этом в том же ответе.
 
-Solo si el helper falla, cae al modo manual:
+Только если helper падает, переходи в ручной режим:
 
-1. Lee `.claude/alfred-dev-state.json`.
-2. Lee `.claude/alfred-handoff.json` si existe.
-3. Prioridad de reanudación:
-   - sesión activa en `.claude/alfred-dev-state.json`
-   - si no existe, handoff pendiente en `.claude/alfred-handoff.json`
-   - si no existe ninguno, redirige a `/alfred-dev:alfred`
-4. Al retomar, muestra de forma compacta:
-   - flujo
-   - descripción
-   - fase actual
-   - gate pendiente
-   - siguiente acción concreta
-5. Si `.claude/alfred-dev-state.json` tiene `paused_at` o `paused_via`, elimínalos antes de continuar. Añade `resumed_at` para dejar constancia de la reanudación.
-6. Como `.claude/*` es sensible en Claude Code, NO uses `Write` ni `Edit` para ese estado. Si de verdad tienes que caer al modo manual, usa Bash.
+1. Прочитай `.claude/alfred-dev-state.json`.
+2. Прочитай `.claude/alfred-handoff.json`, если существует.
+3. Приоритет возобновления:
+   - активная сессия в `.claude/alfred-dev-state.json`
+   - если её нет, незакрытый handoff в `.claude/alfred-handoff.json`
+   - если нет ни того, ни другого, перенаправь на `/alfred-dev:alfred`
+4. При продолжении компактно покажи:
+   - процесс
+   - описание
+   - текущую фазу
+   - ожидающий gate
+   - конкретное следующее действие
+5. Если в `.claude/alfred-dev-state.json` есть `paused_at` или `paused_via`, удали их перед продолжением. Добавь `resumed_at`, чтобы зафиксировать возобновление.
+6. Поскольку `.claude/*` в Claude Code чувствителен, НЕ используй `Write` или `Edit` для этого состояния. Если действительно приходится переходить в ручной режим, используй Bash.
 
-`/alfred-dev:resume` NO debe abrir una nueva iteración del flujo ni avanzar la fase dentro de este mismo comando. Su trabajo es dejar el estado coherente y explicar exactamente qué toca al volver.
-Si la gate pendiente es de usuario, indícalo con claridad y termina. NO uses `AskUserQuestion` dentro de `/alfred-dev:resume`.
+`/alfred-dev:resume` НЕ должен открывать новую итерацию процесса и не должен продвигать фазу в рамках этой же команды. Его задача: оставить состояние согласованным и объяснить, что именно нужно делать по возвращении.
+Если ожидающий gate пользовательский, чётко укажи это и закончи. НЕ используй `AskUserQuestion` внутри `/alfred-dev:resume`.
 
-## Restricciones
+## Ограничения
 
-- No ignores el handoff si aporta contexto que no está en el estado.
-- No abras un flujo nuevo si hay trabajo pendiente.
-- Si no hay nada que retomar, dilo y dirige al usuario a `/alfred-dev:alfred`.
+- Не игнорируй handoff, если он даёт контекст, которого нет в состоянии.
+- Не открывай новый процесс, если есть незавершённая работа.
+- Если продолжать нечего, скажи об этом и направь пользователя на `/alfred-dev:alfred`.

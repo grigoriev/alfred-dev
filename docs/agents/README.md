@@ -1,6 +1,6 @@
 # El equipo
 
-Alfred Dev no es un agente monolítico que intenta saberlo todo y hacerlo todo. Es un equipo de **10 especialistas** (8 de nucleo, Selina si hay frontend y Lucius bajo demanda), cada uno con un rol delimitado, herramientas restringidas, personalidad propia y quality gates verificables con evidencia. Esta decisión de diseño responde a un principio fundamental: un modelo de IA generalista rinde mejor cuando se le asigna un rol concreto con instrucciones focalizadas que cuando se le pide que sea todo a la vez.
+Alfred Dev no es un agente monolítico que intenta saberlo todo y hacerlo todo. Es un equipo de **10 especialistas** (8 de nucleo, Designer si hay frontend y CTO bajo demanda), cada uno con un rol delimitado, herramientas restringidas, personalidad propia y quality gates verificables con evidencia. Esta decisión de diseño responde a un principio fundamental: un modelo de IA generalista rinde mejor cuando se le asigna un rol concreto con instrucciones focalizadas que cuando se le pide que sea todo a la vez.
 
 Cada agente se invoca como un subproceso de Claude Code mediante la herramienta **Agent**. Esto garantiza aislamiento de contexto: el agente arranca con su propio system prompt, sin heredar sesgos ni ruido de conversaciones anteriores. El resultado no se promete determinista, pero sí más controlable: el mismo rol, con las mismas instrucciones y artefactos, reduce variabilidad y facilita revisar si el agente cumplió su contrato.
 
@@ -32,7 +32,7 @@ timeline
         : Análisis de requisitos
         : Gate - aprobacion del usuario
     estilo visual
-        : selina
+        : designer
         : Dirección de estilo visual (solo con frontend)
         : Gate - eleccion del usuario
     arquitectura
@@ -63,11 +63,11 @@ El diagrama muestra algo importante: la seguridad no se comprueba al final, sino
 
 ## Tabla resumen de agentes
 
-Los 10 agentes se dividen en nucleo (8), Selina (frontend) y Lucius (opcional). La tabla siguiente ofrece una vision rápida de cada uno con sus caracteristicas principales.
+Los 10 agentes se dividen en nucleo (8), Designer (frontend) y CTO (opcional). La tabla siguiente ofrece una vision rápida de cada uno con sus caracteristicas principales.
 
 ### Agentes de nucleo
 
-Estos agentes de nucleo más Selina están disponibles por defecto y la configuración del proyecto no los desactiva. Alfred no los invoca todos a la vez: cada flujo activa el rol que corresponde a la fase, y Selina solo entra cuando hay interfaz de usuario.
+Estos agentes de nucleo más Designer están disponibles por defecto y la configuración del proyecto no los desactiva. Alfred no los invoca todos a la vez: cada flujo activa el rol que corresponde a la fase, y Designer solo entra cuando hay interfaz de usuario.
 
 | Agente | Alias | Modelo | Tipo | Color | Fase principal |
 |--------|-------|--------|------|-------|----------------|
@@ -79,15 +79,15 @@ Estos agentes de nucleo más Selina están disponibles por defecto y la configur
 | `qa-engineer` | El Rompe-cosas | sonnet | nucleo | magenta | calidad |
 | `devops-engineer` | El Fontanero | sonnet | nucleo | naranja | entrega |
 | `tech-writer` | El Traductor | sonnet | nucleo | blanco | documentación |
-| `selina` | Selina — La Estilista | opus | nucleo | morado | estilo visual (fase 1b) |
+| `designer` | Designer — La Estilista | opus | nucleo | morado | estilo visual (fase 1b) |
 
 ### Agente opcional
 
-Lucius es el único especialista bajo demanda.
+CTO es el único especialista bajo demanda.
 
 | Agente | Alias | Modelo | Tipo | Color | Fase principal |
 |--------|-------|--------|------|-------|----------------|
-| `lucius` | Lucius — El Director Técnico Externo | opus | opcional | ambar | auditoría técnica externa |
+| `cto` | CTO — El Director Técnico Externo | opus | opcional | ambar | auditoría técnica externa |
 
 ---
 
@@ -95,9 +95,9 @@ Lucius es el único especialista bajo demanda.
 
 La distinción entre agentes de nucleo y opcionales no es arbitraria. Responde a una pregunta practica: que necesita *cualquier* proyecto de software, y que solo necesitan *algunos* proyectos.
 
-Los **ocho agentes de nucleo más Selina** existen siempre en el equipo base porque cubren las fases universales del desarrollo: definir que se construye (product-owner), fijar una dirección visual cuando hay frontend (selina), decidir como se construye (architect), construirlo (senior-dev), verificar que funciona (qa-engineer), documentarlo (tech-writer), desplegarlo (devops-engineer), protegerlo (security-officer) y orquestarlo todo (alfred). El kanban lo escribe el runtime. Eso no significa que todos participen en cada respuesta: Alfred los invoca desde los commands del plugin (`feature.md`, `fix.md`, `spike.md`, etc.) segun fase, señales del proyecto y gates. Claude Code los descubre directamente desde `agents/`; el manifiesto `plugin.json` no declara una seccion `agents` manual.
+Los **ocho agentes de nucleo más Designer** existen siempre en el equipo base porque cubren las fases universales del desarrollo: definir que se construye (product-owner), fijar una dirección visual cuando hay frontend (designer), decidir como se construye (architect), construirlo (senior-dev), verificar que funciona (qa-engineer), documentarlo (tech-writer), desplegarlo (devops-engineer), protegerlo (security-officer) y orquestarlo todo (alfred). El kanban lo escribe el runtime. Eso no significa que todos participen en cada respuesta: Alfred los invoca desde los commands del plugin (`feature.md`, `fix.md`, `spike.md`, etc.) segun fase, señales del proyecto y gates. Claude Code los descubre directamente desde `agents/`; el manifiesto `plugin.json` no declara una seccion `agents` manual.
 
-El **único agente opcional** es lucius: segunda opinión técnica externa vía Codex CLI. Claude Code descubre los agentes de plugin directamente desde `agents/`; el manifiesto no mantiene una sección `agents` manual. La configuración local del proyecto (`.local.md`) decide si Lucius entra en la orquestación automática.
+El **único agente opcional** es cto: segunda opinión técnica externa vía Codex CLI. Claude Code descubre los agentes de plugin directamente desde `agents/`; el manifiesto no mantiene una sección `agents` manual. La configuración local del proyecto (`.local.md`) decide si CTO entra en la orquestación automática.
 
 En resumen: los de nucleo siempre estan disponibles porque son imprescindibles; los opcionales se activan bajo demanda porque atienden necesidades específicas.
 
@@ -138,8 +138,8 @@ Los siete agentes que usan **opus** son los que toman decisiones críticas:
 | `architect` | Disena la arquitectura; las decisiones de diseño son dificiles de revertir. |
 | `senior-dev` | Escribe código de produccion; la calidad del código es directamente proporcional a la capacidad del modelo. |
 | `security-officer` | Evalua amenazas y vulnerabilidades; un falso negativo aquí tiene consecuencias graves. |
-| `selina` | Define dirección visual y sistema de diseño en proyectos con UI; sus decisiones afectan la experiencia final del usuario. |
-| `lucius` | Coordina la auditoría técnica externa invocando Codex CLI; necesita razonamiento profundo para sintetizar el informe y decidir qué prescripciones son accionables. |
+| `designer` | Define dirección visual y sistema de diseño en proyectos con UI; sus decisiones afectan la experiencia final del usuario. |
+| `cto` | Coordina la auditoría técnica externa invocando Codex CLI; necesita razonamiento profundo para sintetizar el informe y decidir qué prescripciones son accionables. |
 
 Los trece agentes restantes usan **sonnet**, que es mas rápido y eficiente en coste. Sus tareas, aunque importantes, son de naturaleza mas estructurada: ejecutar tests y reportar resultados (qa-engineer), generar documentación a partir de artefactos existentes (tech-writer), gestionar pipelines (devops-engineer) o realizar revisiones acotadas a un ámbito concreto (ux-reviewer, seo-specialist, etc.). Sonnet resuelve estas tareas con solvencia y permite que los flujos avancen mas rápido sin sacrificar calidad donde no es critica.
 
@@ -171,5 +171,5 @@ Cada agente tiene una ficha individual con su system prompt completo, herramient
 | `qa-engineer` | [qa-engineer.md](qa-engineer.md) | Ejecuta y disena tests; busca edge cases y regresiones. |
 | `devops-engineer` | [devops-engineer.md](devops-engineer.md) | Gestiona CI/CD, pipelines, despliegues y empaquetado de releases. |
 | `tech-writer` | [tech-writer.md](tech-writer.md) | Genera documentación técnica y de usuario comprensible para la comunidad. |
-| `selina` | [selina.md](selina.md) | Define la dirección visual del producto y cierra la fase 1b cuando hay frontend. |
-| `lucius` | [lucius.md](lucius.md) | Auditoría técnica externa vía Codex CLI; diagnóstico y prescripción por ítem. |
+| `designer` | [designer.md](designer.md) | Define la dirección visual del producto y cierra la fase 1b cuando hay frontend. |
+| `cto` | [cto.md](cto.md) | Auditoría técnica externa vía Codex CLI; diagnóstico y prescripción por ítem. |

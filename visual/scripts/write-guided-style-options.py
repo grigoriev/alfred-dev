@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera la ronda final de tres variantes desde la selección guiada de Selina."""
+"""Genera la ronda final de tres variantes desde la selección guiada de Designer."""
 
 from __future__ import annotations
 
@@ -11,12 +11,12 @@ import sys
 if __package__ in {None, ""}:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from core.selina_style_variants import write_guided_style_options
+from core.designer_style_variants import write_guided_style_options
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generar style-options.html/json desde la selección guiada de Selina"
+        description="Generar style-options.html/json desde la selección guiada de Designer"
     )
     parser.add_argument("--visual-path", required=True, help="Ruta a session_dir o state_dir del servidor visual")
     parser.add_argument("--style-id", help="Sobrescribe la familia visual seleccionada.")

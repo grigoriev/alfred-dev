@@ -74,7 +74,7 @@ _ALFRED_PREFETCH_COMMANDS = frozenset({
     "feature",
     "fix",
     "quick",
-    "lucius",
+    "cto",
     "ship",
     "spike",
     "memory-ui",
@@ -338,7 +338,7 @@ def _open_db():
         from core.memory import MemoryDB
     except ImportError as e:
         print(
-            f"{_LOG_PREFIX} Aviso: no se pudo importar core.memory: {e}",
+            f"{_LOG_PREFIX} Предупреждение: не удалось импортировать core.memory: {e}",
             file=sys.stderr,
         )
         return None
@@ -351,7 +351,7 @@ def _open_db():
         return MemoryDB(db_path)
     except Exception as e:
         print(
-            f"{_LOG_PREFIX} Aviso: no se pudo abrir la DB de memoria: {e}",
+            f"{_LOG_PREFIX} Предупреждение: не удалось открыть БД памяти: {e}",
             file=sys.stderr,
         )
         return None
@@ -509,7 +509,7 @@ def _try_sync(db, action: str, **kwargs) -> None:
         sync.update_index()
     except Exception as e:
         print(
-            f"{_LOG_PREFIX} Aviso: sync incremental fallida: {e}",
+            f"{_LOG_PREFIX} Предупреждение: инкрементальная синхронизация не удалась: {e}",
             file=sys.stderr,
         )
 
@@ -590,7 +590,7 @@ def _prefetch_alfred_continuity(prompt_text: str) -> Optional[dict]:
             is_memory_ui_stop_request,
             launch_memory_ui,
             needs_codebase_map,
-            prepare_lucius_review,
+            prepare_cto_review,
             save_prefetch_result,
             start_flow_session,
             start_quick_session,
@@ -600,7 +600,7 @@ def _prefetch_alfred_continuity(prompt_text: str) -> Optional[dict]:
         )
     except ImportError as exc:
         print(
-            f"{_LOG_PREFIX} Aviso: no se pudo importar core.continuity: {exc}",
+            f"{_LOG_PREFIX} Предупреждение: не удалось импортировать core.continuity: {exc}",
             file=sys.stderr,
         )
         return None
@@ -625,8 +625,8 @@ def _prefetch_alfred_continuity(prompt_text: str) -> Optional[dict]:
         action = write_discovery_files
     elif source_command == "quick":
         action = start_quick_session
-    elif source_command == "lucius":
-        action = prepare_lucius_review
+    elif source_command == "cto":
+        action = prepare_cto_review
     elif source_command in {"feature", "fix", "spike", "ship", "audit"}:
         action = lambda project_dir, raw_request: start_flow_session(
             project_dir,
@@ -651,13 +651,13 @@ def _prefetch_alfred_continuity(prompt_text: str) -> Optional[dict]:
         result = action(project_dir, raw_request)
     except RuntimeError as exc:
         print(
-            f"{_LOG_PREFIX} Aviso: prefetch /{source_command if source_command == 'alfred' else 'alfred-dev:' + source_command} omitido: {exc}",
+            f"{_LOG_PREFIX} Предупреждение: prefetch /{source_command if source_command == 'alfred' else 'alfred-dev:' + source_command} пропущен: {exc}",
             file=sys.stderr,
         )
         return None
     except Exception as exc:
         print(
-            f"{_LOG_PREFIX} Aviso: fallo en prefetch /{source_command if source_command == 'alfred' else 'alfred-dev:' + source_command}: {exc}",
+            f"{_LOG_PREFIX} Предупреждение: сбой prefetch /{source_command if source_command == 'alfred' else 'alfred-dev:' + source_command}: {exc}",
             file=sys.stderr,
         )
         return None
@@ -1403,8 +1403,8 @@ def main():
         data = json.load(sys.stdin)
     except (ValueError, json.JSONDecodeError) as e:
         print(
-            f"{_LOG_PREFIX} Aviso: no se pudo leer la entrada del hook: {e}. "
-            f"La captura de actividad esta desactivada para esta operacion.",
+            f"{_LOG_PREFIX} Предупреждение: не удалось прочитать вход hook: {e}. "
+            f"Запись активности для этой операции отключена.",
             file=sys.stderr,
         )
         sys.exit(0)
@@ -1434,7 +1434,7 @@ def main():
         handler(db, data)
     except Exception as e:
         print(
-            f"{_LOG_PREFIX} Aviso: error al procesar evento '{dispatch_key}': {e}",
+            f"{_LOG_PREFIX} Предупреждение: ошибка при обработке события '{dispatch_key}': {e}",
             file=sys.stderr,
         )
     finally:

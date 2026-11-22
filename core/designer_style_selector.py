@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pantallas guiadas para seleccionar sistema visual en Selina."""
+"""Pantallas guiadas para seleccionar sistema visual en Designer."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import html
 import os
 from typing import Any, Dict, List, Optional
 
-from core.selina_style_catalog import (
+from core.designer_style_catalog import (
     get_palette_modes,
     get_style_catalog,
     get_style_trend,
@@ -15,7 +15,7 @@ from core.selina_style_catalog import (
     resolve_palette,
     resolve_palette_mode_meta,
 )
-from core.selina_style_direction import resolve_visual_session_dir
+from core.designer_style_direction import resolve_visual_session_dir
 
 
 STYLE_SELECTOR_HTML_FILENAME = "style-selector.html"
@@ -259,7 +259,7 @@ def encode_style_brief_choice(style_id: str, font_pairing_id: str, palette_mode:
 
 
 def parse_guided_choice(choice: Any) -> Optional[Dict[str, str]]:
-    """Decodifica una elección del flujo guiado de Selina."""
+    """Decodifica una elección del flujo guiado de Designer."""
     text = str(choice or "").strip()
     if not text:
         return None
@@ -324,14 +324,14 @@ def render_style_selector_html(
     title_text = title or "Elige el sistema de diseño base"
     subtitle_text = subtitle or (
         "Aquí no eliges la versión final todavía. Primero decides la familia visual "
-        "que mejor encaja con el producto; después Selina te dejará escoger "
+        "que mejor encaja con el producto; después Designer te dejará escoger "
         "tipografía y gama de color dentro de esa familia."
     )
     return (
         _selector_css()
         + '<section class="style-screen">'
         '<div class="style-screen-header">'
-        '<p class="style-screen-kicker">Selina / paso 1</p>'
+        '<p class="style-screen-kicker">Designer / paso 1</p>'
         f"<h1>{_escape(title_text)}</h1>"
         f'<p class="style-screen-subtitle">{_escape(subtitle_text)}</p>'
         '</div>'
@@ -382,14 +382,14 @@ def render_style_brief_selector_html(
 
     title_text = title or f"Elige tipografía y paleta para {style['name']}"
     subtitle_text = subtitle or (
-        "Selina mantendrá esta familia visual y, con esta combinación concreta, "
+        "Designer mantendrá esta familia visual y, con esta combinación concreta, "
         "te devolverá tres versiones finales comparables antes de cerrar la dirección."
     )
     return (
         _selector_css()
         + '<section class="style-screen">'
         '<div class="style-screen-header">'
-        '<p class="style-screen-kicker">Selina / paso 2</p>'
+        '<p class="style-screen-kicker">Designer / paso 2</p>'
         f"<h1>{_escape(title_text)}</h1>"
         f'<p class="style-screen-subtitle">{_escape(subtitle_text)}</p>'
         '</div>'

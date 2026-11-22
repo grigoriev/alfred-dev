@@ -678,13 +678,13 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("rutas MCP acotadas al proyecto", result)
 
     def test_external_contracts_cover_human_permission_boundaries(self):
-        """Docker, GitHub, Lucius y deploy deben tener límites humanos claros."""
+        """Docker, GitHub, CTO y deploy deben tener límites humanos claros."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_external_contracts()
 
         self.assertIn("Docker/SonarQube pide permiso y documenta omisiones", result)
-        self.assertIn("Lucius confirma coste y no modifica ficheros", result)
+        self.assertIn("CTO confirma coste y no modifica ficheros", result)
         self.assertIn("ship mantiene deploy con gate humana", result)
 
     def test_command_catalog_is_exhaustive_and_deduplicated(self):
@@ -840,8 +840,8 @@ class TestReleaseAuditScript(unittest.TestCase):
         def fake_read(path):
             if path == "commands/ship.md":
                 return original_read(path).replace(
-                    "Puede cerrarse sin aprobación humana, pero no declares la fase superada si faltan artefactos.",
-                    "Se aprueba siempre.",
+                    "Может закрываться без одобрения человека, но не объявляй фазу пройденной, если не хватает артефактов.",
+                    "Всегда одобряется.",
                     1,
                 )
             return original_read(path)
@@ -867,7 +867,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("displayName humano reflejado en README y changelog", result)
         self.assertIn("skills delicados mantienen activacion manual explicita", result)
         self.assertIn("prompts runtime sin /alfred legacy", result)
-        self.assertIn("Lucius no fija modelo obsoleto de Codex CLI", result)
+        self.assertIn("CTO no fija modelo obsoleto de Codex CLI", result)
 
     def test_public_claims_reject_absolute_gate_language(self):
         """La superficie publica no debe prometer gates absolutas sin matiz."""
@@ -888,6 +888,26 @@ class TestReleaseAuditScript(unittest.TestCase):
 
         self.assertIn("README.md", str(context.exception))
         self.assertIn("No hay excepciones", str(context.exception))
+
+    def test_public_claims_reject_russian_absolute_gate_language(self):
+        """El README ruso tampoco debe prometer gates absolutas sin matiz."""
+        release_audit = _load_release_audit_module()
+        original_read = release_audit._read
+
+        def fake_read(path):
+            if path == "README.md":
+                return original_read(path) + "\nQuality gates непреодолимы. Исключений нет.\n"
+            return original_read(path)
+
+        release_audit._read = fake_read
+        try:
+            with self.assertRaises(release_audit.AuditError) as context:
+                release_audit.check_public_claims()
+        finally:
+            release_audit._read = original_read
+
+        self.assertIn("README.md", str(context.exception))
+        self.assertIn("Исключений нет", str(context.exception))
 
     def test_public_claims_reject_llm_determinism_overclaim(self):
         """La docs de agentes no debe prometer determinismo de modelo."""
@@ -949,6 +969,21 @@ class TestReleaseAuditScript(unittest.TestCase):
                 "hooks/session-start.sh",
                 "Las quality gates son infranqueables",
                 "infranqueables",
+            ),
+            (
+                "agents/alfred.md",
+                "HARD-GATES это условия, которые НИКОГДА нельзя пропускать",
+                "НИКОГДА нельзя пропускать",
+            ),
+            (
+                "agents/security-officer.md",
+                "абсолютные блокеры. Без исключений",
+                "Без исключений",
+            ),
+            (
+                "hooks/session-start.sh",
+                "Quality gates непреодолимы",
+                "непреодолим",
             ),
         ]
 
@@ -1170,21 +1205,21 @@ class TestReleaseAuditScript(unittest.TestCase):
                     "AskUserQuestion({\n"
                     "  questions: [\n"
                     "    {\n"
-                    "      question: \"¿Quieres activar Lucius como segunda opinión externa?\",\n"
+                    "      question: \"Хочешь активировать CTO как внешнее второе мнение?\",\n"
                     "      header: \"Auditoria\",\n"
                     "      multiSelect: false,\n"
                     "      options: [\n"
-                    "        { label: \"Seguir sin activar más\", description: \"Pasar al siguiente grupo\" },\n"
-                    "        { label: \"Lucius\", description: \"<razón contextual>\" }\n"
+                    "        { label: \"Seguir sin activar más\", description: \"Перейти к следующей группе\" },\n"
+                    "        { label: \"CTO\", description: \"<контекстная причина>\" }\n"
                     "      ]\n"
                     "    }\n"
                     "  ]\n"
                     "})",
                     "AskUserQuestion({\n"
-                    "  question: \"¿Quieres activar Lucius como segunda opinión externa?\",\n"
+                    "  question: \"Хочешь активировать CTO как внешнее второе мнение?\",\n"
                     "  header: \"Auditoria\",\n"
                     "  options: [\n"
-                    "    { label: \"Seguir sin activar más\", description: \"Pasar al siguiente grupo\" }\n"
+                    "    { label: \"Seguir sin activar más\", description: \"Перейти к следующей группе\" }\n"
                     "  ]\n"
                     "})",
                 )
@@ -1201,13 +1236,13 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("questions: [", str(context.exception))
         self.assertIn("multiSelect: false", str(context.exception))
 
-    def test_flow_gate_claims_cover_selina_and_autopilot_boundaries(self):
-        """Los claims de Selina, gates y autopilot deben ejercitar orquestador real."""
+    def test_flow_gate_claims_cover_designer_and_autopilot_boundaries(self):
+        """Los claims de Designer, gates y autopilot deben ejercitar orquestador real."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_flow_gate_claims()
 
-        self.assertIn("feature mantiene 7 fases con Selina condicional", result)
+        self.assertIn("feature mantiene 7 fases con Designer condicional", result)
         self.assertIn("gates libres documentadas como evidencia sin aprobacion humana", result)
         self.assertIn("gates automaticas bloquean tests rojos y seguridad KO", result)
         self.assertIn("autopilot no salta gates automaticas ni despliegue humano", result)
@@ -1515,7 +1550,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("paquete sin symlinks publicables fuera del plugin", result)
         self.assertIn("paquete contiene 18 comandos namespaced, 10 agentes y 11 skills", result)
         self.assertIn("paquete contiene 8 templates de artefactos", result)
-        self.assertIn("paquete contiene runtime visual de Selina", result)
+        self.assertIn("paquete contiene runtime visual de Designer", result)
 
     def test_packaging_contracts_reject_publishable_symlink_problem(self):
         """El gate de empaquetado debe fallar si el escaneo de symlinks detecta problemas."""
@@ -1616,8 +1651,8 @@ class TestReleaseAuditScript(unittest.TestCase):
 
         self.assertIn("templates/prd.md", str(context.exception))
 
-    def test_packaging_contracts_reject_missing_selina_visual_runtime(self):
-        """El companion visual de Selina debe viajar en el paquete instalable."""
+    def test_packaging_contracts_reject_missing_designer_visual_runtime(self):
+        """El companion visual de Designer debe viajar en el paquete instalable."""
         release_audit = _load_release_audit_module()
         original_pack = release_audit._npm_pack_dry_run_package
         base_package = original_pack()
@@ -1986,7 +2021,7 @@ class TestReleaseAuditScript(unittest.TestCase):
                 "discuss",
                 "feature",
                 "fix",
-                "lucius",
+                "cto",
                 "map-codebase",
                 "quick",
                 "spike",
@@ -2045,14 +2080,14 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("statuz", message)
         self.assertIn("config:fantasma", message)
 
-    def test_option_contract_shape_requires_explicit_lucius_all_scope(self):
-        """Lucius debe probar --scope all explicito, no solo el default all."""
+    def test_option_contract_shape_requires_explicit_cto_all_scope(self):
+        """CTO debe probar --scope all explicito, no solo el default all."""
         release_audit = _load_release_audit_module()
         manual_smoke = _load_manual_smoke_module()
 
         bad_contracts = tuple(
             key for key in manual_smoke.OPTION_CONTRACTS
-            if key != "lucius:scope-all"
+            if key != "cto:scope-all"
         )
         fake_manual_smoke = type("FakeManualSmoke", (), {"OPTION_CONTRACTS": bad_contracts})
         option_coverage = {key: ["case"] for key in bad_contracts}
@@ -2063,7 +2098,7 @@ class TestReleaseAuditScript(unittest.TestCase):
                 option_coverage,
             )
 
-        self.assertIn("lucius:scope-all", str(context.exception))
+        self.assertIn("cto:scope-all", str(context.exception))
 
     def test_option_contract_shape_requires_human_permission_menus(self):
         """Los menus AskUserQuestion de permisos/gates son opciones publicas."""
@@ -2115,9 +2150,9 @@ class TestReleaseAuditScript(unittest.TestCase):
         bad_option_case = manual_smoke.ManualCase(
             "wrong-option",
             "/alfred-dev:help",
-            "No debe cubrir Lucius.",
+            "No debe cubrir CTO.",
             commands=("help",),
-            option_keys=("lucius:scope-tests",),
+            option_keys=("cto:scope-tests",),
         )
         fake_manual_smoke = type("FakeManualSmoke", (), {"CASES": (bad_option_case,)})
 
@@ -2137,7 +2172,7 @@ class TestReleaseAuditScript(unittest.TestCase):
             release_audit._validate_manual_case_contract_links(fake_manual_smoke)
 
         self.assertIn("wrong-option", str(option_context.exception))
-        self.assertIn("lucius:scope-tests", str(option_context.exception))
+        self.assertIn("cto:scope-tests", str(option_context.exception))
         self.assertIn("wrong-runtime", str(runtime_context.exception))
         self.assertIn("update:scope-local-to-user", str(runtime_context.exception))
 
@@ -2149,9 +2184,9 @@ class TestReleaseAuditScript(unittest.TestCase):
         wrong_prompt_case = manual_smoke.ManualCase(
             "wrong-prompt",
             "/alfred-dev:help",
-            "No debe declarar Lucius si el prompt ejecuta help.",
-            commands=("lucius",),
-            option_keys=("lucius:scope-tests",),
+            "No debe declarar CTO si el prompt ejecuta help.",
+            commands=("cto",),
+            option_keys=("cto:scope-tests",),
         )
         fake_manual_smoke = type("FakeManualSmoke", (), {"CASES": (wrong_prompt_case,)})
 
@@ -2216,12 +2251,12 @@ class TestReleaseAuditScript(unittest.TestCase):
                 finally:
                     transient_pyc.unlink(missing_ok=True)
 
-                (cache / "agents" / "lucius.md").write_text("stale lucius\n", encoding="utf-8")
+                (cache / "agents" / "cto.md").write_text("stale cto\n", encoding="utf-8")
                 with self.assertRaises(release_audit.AuditError) as context:
                     release_audit.check_installed_cache_freshness()
 
             self.assertIn("no coincide", str(context.exception))
-            self.assertIn("agents/lucius.md", str(context.exception))
+            self.assertIn("agents/cto.md", str(context.exception))
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 cache = seed_cache(tmpdir)

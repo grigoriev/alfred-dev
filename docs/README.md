@@ -6,7 +6,7 @@ Esta documentación esta pensada para desarrolladores que necesitan entender com
 
 La rama `main` contiene el plugin y su runtime. La landing publica vive en la rama `Alfred-Astro` y se despliega desde Coolify sobre el VPS.
 
-Alfred Dev es un plugin de Claude Code con un equipo de 10 agentes (8 de nucleo, Selina si hay frontend y Lucius bajo demanda). Cada agente tiene un rol definido y quality gates verificables con evidencia, y el plugin se organiza en 4 capas (comandos, agentes, core Python, integracion) que se coordinan a traves de un fichero de estado JSON y una base de datos SQLite para memoria persistente. Publica 11 skills de proceso.
+Alfred Dev es un plugin de Claude Code con un equipo de 10 agentes (8 de nucleo, Designer si hay frontend y CTO bajo demanda). Cada agente tiene un rol definido y quality gates verificables con evidencia, y el plugin se organiza en 4 capas (comandos, agentes, core Python, integracion) que se coordinan a traves de un fichero de estado JSON y una base de datos SQLite para memoria persistente. Publica 11 skills de proceso.
 
 El código fuente es la referencia definitiva, pero esta documentación explica el **por que** detrás de cada decisión: por que Python y no JavaScript, por que SQLite y no JSON, por que 10 agentes y no uno solo, por que quality gates en cada transición. Un junior debe poder leer esta documentación de principio a fin y entender el proyecto sin ayuda externa.
 
@@ -29,8 +29,8 @@ mindmap
       audit -- 1 fase
       quick -- 2 fases
     El equipo
-      8 agentes de nucleo + Selina
-      Lucius opcional
+      8 agentes de nucleo + Designer
+      CTO opcional
       Motor de personalidad
     Capacidades
       Catalogo publicado de 11 skills de proceso
@@ -55,7 +55,7 @@ La documentación se organiza de lo general a lo específico. Se recomienda leer
 | [commands.md](commands.md) | Referencia de los 18 comandos publicados por el plugin, agrupados por uso real |
 | [agents/README.md](agents/README.md) | Vision general del equipo de 10 agentes, modelo de colaboración, distribución de modelos |
 | [skills.md](skills.md) | Catalogo de 11 skills planas y reglas de activación manual de los skills más delicados |
-| [visual.md](visual.md) | Runtime visual local de Selina: servidor, scripts, eventos, hardening y empaquetado |
+| [visual.md](visual.md) | Runtime visual local de Designer: servidor, scripts, eventos, hardening y empaquetado |
 | [hooks.md](hooks.md) | Los 10 scripts de hooks que conectan Alfred con Claude Code |
 | [memory.md](memory.md) | Memoria persistente: esquema SQLite, FTS5, servidor MCP, sanitizacion |
 | [configuration.md](configuration.md) | Detección de stack, fichero .local.md, niveles de autonomía, agentes opcionales, composicion dinámica de equipo |
@@ -82,8 +82,8 @@ Cada agente tiene su propia ficha con personalidad, responsabilidades, quality g
 | [qa-engineer.md](agents/qa-engineer.md) | El Rompe-cosas | Nucleo |
 | [devops-engineer.md](agents/devops-engineer.md) | El Fontanero | Nucleo |
 | [tech-writer.md](agents/tech-writer.md) | El Traductor | Nucleo |
-| [selina.md](agents/selina.md) | Selina — La Estilista | Nucleo (si hay frontend) |
-| [lucius.md](agents/lucius.md) | Lucius — El Director Técnico Externo | Opcional |
+| [designer.md](agents/designer.md) | Designer — La Estilista | Nucleo (si hay frontend) |
+| [cto.md](agents/cto.md) | CTO — El Director Técnico Externo | Opcional |
 
 ---
 

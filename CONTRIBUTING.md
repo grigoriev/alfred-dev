@@ -15,7 +15,7 @@ El runtime Python usa la biblioteca estándar. `requirements.txt` declara FastMC
 ```
 alfred-dev/
   .claude-plugin/         # plugin.json (18 comandos) y marketplace.json
-  agents/                 # 10 agentes (8 de núcleo + Selina + Lucius)
+  agents/                 # 10 agentes (8 de núcleo + Designer + CTO)
   commands/               # 18 slash /alfred-dev:* + helpers internos
   skills/                 # 11 skills planas (SKILL.md)
   hooks/                  # 10 scripts del ciclo de vida + hooks.json

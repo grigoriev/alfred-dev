@@ -47,8 +47,8 @@ def main():
         data = json.load(sys.stdin)
     except (ValueError, json.JSONDecodeError) as e:
         print(
-            f"[quality-gate] Aviso: no se pudo leer la entrada del hook: {e}. "
-            f"La monitorizacion de tests esta desactivada para este comando.",
+            f"[quality-gate] Предупреждение: не удалось прочитать вход hook: {e}. "
+            f"Мониторинг тестов для этой команды отключён.",
             file=sys.stderr,
         )
         sys.exit(0)
@@ -69,13 +69,13 @@ def main():
     if detect_test_result(output, exit_code=exit_code) == "fail":
         print(
             "\n"
-            "[El Rompe-cosas] He pillado tests rotos\n"
+            "[Ломатель] Поймал сломанные тесты\n"
             "\n"
-            "Los tests no pasan. Sorpresa: ninguna.\n"
-            "No se avanza con tests en rojo. Asi funciona esto.\n"
+            "Тесты не проходят. Сюрприз: никакого.\n"
+            "С красными тестами дальше не идём. Так здесь заведено.\n"
             "\n"
-            "Repasa la salida, corrige los fallos y vuelve a ejecutar.\n"
-            "Ese edge case que no contemplaste? Lo encontre.\n",
+            "Просмотри вывод, исправь ошибки и запусти снова.\n"
+            "Тот edge case, который ты не учёл? Я его нашёл.\n",
             file=sys.stderr,
         )
 

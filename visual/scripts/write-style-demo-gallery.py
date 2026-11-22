@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera una galeria de demos visuales del catalogo de Selina."""
+"""Genera una galeria de demos visuales del catalogo de Designer."""
 
 from __future__ import annotations
 
@@ -11,12 +11,12 @@ import sys
 if __package__ in {None, ""}:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from core.selina_style_demo import write_style_demo_gallery
+from core.designer_style_demo import write_style_demo_gallery
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generar galería y landings simples del catálogo de sistemas de diseño de Selina"
+        description="Generar galería y landings simples del catálogo de sistemas de diseño de Designer"
     )
     parser.add_argument(
         "--visual-path",

@@ -22,15 +22,15 @@ class TestMemoryUIContract(unittest.TestCase):
     def test_alfred_context_routes_memory_ui_requests(self):
         command = _read("commands/alfred.md")
         self.assertIn("/alfred-dev:memory-ui", command)
-        self.assertIn("UI de memoria", command)
+        self.assertIn("UI памяти", command)
 
     def test_memory_ui_command_uses_helper_first_protocol(self):
         command = _read("commands/memory-ui.md")
         self.assertIn('consume-prefetch "$PWD" --expected memory-ui', command)
         self.assertNotIn("allow-stop-once", command)
         self.assertIn('python3 .claude/alfred-continuity.py memory-ui "$PWD" --raw "$ARGUMENTS"', command)
-        self.assertIn("úsala tal cual como respuesta final", command)
-        self.assertIn("NO añadas una segunda explicación", command)
+        self.assertIn("используй его как есть в качестве итогового ответа", command)
+        self.assertIn("НЕ добавляй второе объяснение", command)
         self.assertIn(".claude/alfred-memory.db", command)
         self.assertIn("/alfred-dev:memory-ui stop", command)
         self.assertIn("$ARGUMENTS", command)
@@ -39,14 +39,14 @@ class TestMemoryUIContract(unittest.TestCase):
         alfred = _read("agents/alfred.md")
         self.assertIn("/alfred-dev:memory-ui", alfred)
         self.assertIn("alfred-memory", alfred)
-        self.assertIn("ese agente ya no existe", alfred)
+        self.assertIn("этого агента больше нет", alfred)
         self.assertNotIn("invocando al subagente `librarian`", alfred)
 
     def test_memory_skill_points_to_ui_and_mcp(self):
         skill = _read("skills/memory/SKILL.md")
         self.assertIn("/alfred-dev:memory-ui", skill)
         self.assertIn("memory_search", skill)
-        self.assertIn("No existe el agente `librarian`", skill)
+        self.assertIn("Агента `librarian` не существует", skill)
 
     def test_plugin_json_references_memory_ui_command(self):
         plugin = json.loads(_read(".claude-plugin/plugin.json"))
@@ -55,7 +55,7 @@ class TestMemoryUIContract(unittest.TestCase):
     def test_readme_mentions_memory_ui(self):
         readme = _read("README.md")
         self.assertIn("/alfred-dev:memory-ui", readme)
-        self.assertIn("memoria SQLite", readme)
+        self.assertIn("памяти SQLite", readme)
 
     def test_memory_ui_server_declares_ui_version(self):
         server = _read("core/memory_ui_server.py")

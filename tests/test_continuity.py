@@ -48,14 +48,14 @@ from core.continuity import (
     mark_session_paused,
     needs_codebase_map,
     pause_session,
-    prepare_lucius_review,
+    prepare_cto_review,
     project_has_codebase,
     save_prefetch_result,
     load_prefetch_consumed_marker,
     resume_session,
     render_discovery_summary,
     render_flow_start_summary,
-    render_lucius_summary,
+    render_cto_summary,
     render_next_markdown,
     render_quick_setup_summary,
     render_progress_markdown,
@@ -136,7 +136,7 @@ class TestContinuitySuggestions(unittest.TestCase):
                 fh.write(
                     "---\n"
                     "agentes_opcionales:\n"
-                    "  lucius: true\n"
+                    "  cto: true\n"
                     "---\n"
                 )
 
@@ -156,9 +156,9 @@ class TestContinuitySuggestions(unittest.TestCase):
 
         self.assertEqual(result["command"], "quick")
         self.assertEqual(state["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(state["equipo_sesion"]["opcionales_activos"]), {"lucius"})
-        self.assertTrue(state["equipo_sesion"]["opcionales_activos"]["lucius"])
-        self.assertIn("Opcionales secuenciales: `lucius`.", traceability)
+        self.assertEqual(set(state["equipo_sesion"]["opcionales_activos"]), {"cto"})
+        self.assertTrue(state["equipo_sesion"]["opcionales_activos"]["cto"])
+        self.assertIn("Opcionales secuenciales: `cto`.", traceability)
 
     def test_active_state_has_priority_over_brownfield_map(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -183,10 +183,10 @@ class TestContinuitySuggestions(unittest.TestCase):
 
             suggestion = suggest_next_action(tmpdir)
 
-        self.assertEqual(suggestion["focus"], "Retomar el flujo en curso")
-        self.assertEqual(suggestion["source_label"], "sesión activa")
+        self.assertEqual(suggestion["focus"], "Продолжить текущий процесс")
+        self.assertEqual(suggestion["source_label"], "активная сессия")
         self.assertEqual(suggestion["urgency"], "alta")
-        self.assertIn("Reanuda `feature`", suggestion["directive"])
+        self.assertIn("Возобнови `feature`", suggestion["directive"])
 
     def test_unresolved_handoff_suggests_resume(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -290,7 +290,7 @@ class TestContinuitySuggestions(unittest.TestCase):
         self.assertEqual(suggestion["command"], "verify")
         self.assertEqual(suggestion["source"], "discovery")
 
-    def test_discovery_can_recommend_lucius(self):
+    def test_discovery_can_recommend_cto(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, "docs", "project"), exist_ok=True)
             with open(os.path.join(tmpdir, "package.json"), "w", encoding="utf-8") as fh:
@@ -300,11 +300,11 @@ class TestContinuitySuggestions(unittest.TestCase):
             with open(os.path.join(tmpdir, "docs", "project", "current.md"), "w", encoding="utf-8") as fh:
                 fh.write("# current\n")
             with open(os.path.join(tmpdir, DISCOVERY_MD_RELATIVE_PATH), "w", encoding="utf-8") as fh:
-                fh.write("# Discovery\n\nComando recomendado: /alfred-dev:lucius\n")
+                fh.write("# Discovery\n\nComando recomendado: /alfred-dev:cto\n")
 
             suggestion = suggest_next_action(tmpdir)
 
-        self.assertEqual(suggestion["command"], "lucius")
+        self.assertEqual(suggestion["command"], "cto")
         self.assertEqual(suggestion["source"], "discovery")
 
     def test_discovery_prefers_explicit_recommended_command_over_other_mentions(self):
@@ -403,8 +403,8 @@ class TestContinuityHelpers(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 0, msg=result.stderr)
-        self.assertIn("## Estado operativo de Alfred Dev", result.stdout)
-        self.assertIn("Foco: Retomar el flujo en curso", result.stdout)
+        self.assertIn("## Рабочее состояние Alfred Dev", result.stdout)
+        self.assertIn("Фокус: Продолжить текущий процесс", result.stdout)
         self.assertIn("/alfred-dev:resume", result.stdout)
 
     def test_cli_map_codebase_mode_supports_direct_execution(self):
@@ -456,7 +456,7 @@ class TestContinuityHelpers(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 0, msg=result.stderr)
-        self.assertIn("## Mapeo brownfield completado", result.stdout)
+        self.assertIn("## Карта brownfield составлена", result.stdout)
         self.assertIn("/alfred", result.stdout)
 
     def test_cli_consume_prefetch_prints_and_clears_recent_payload(self):
@@ -491,7 +491,7 @@ class TestContinuityHelpers(unittest.TestCase):
             )
 
             self.assertEqual(result.returncode, 0, msg=result.stderr)
-            self.assertIn("## Mapeo brownfield completado", result.stdout)
+            self.assertIn("## Карта brownfield составлена", result.stdout)
             self.assertFalse(os.path.exists(os.path.join(tmpdir, PREFETCH_RELATIVE_PATH)))
 
     def test_cli_verify_approved_resyncs_operational_docs(self):
@@ -610,8 +610,8 @@ class TestContinuityHelpers(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(discuss.returncode, 0, msg=discuss.stderr)
-            self.assertIn("## Refinado preparado", discuss.stdout)
-            self.assertIn("Alcance inicial", discuss.stdout)
+            self.assertIn("## Уточнение подготовлено", discuss.stdout)
+            self.assertIn("Начальный объём", discuss.stdout)
             self.assertIn("/alfred-dev:feature", discuss.stdout)
             self.assertFalse(discuss.stdout.lstrip().startswith("{"))
 
@@ -655,9 +655,9 @@ class TestContinuityHelpers(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(quick.returncode, 0, msg=quick.stderr)
-            self.assertIn("## Quick preparado", quick.stdout)
+            self.assertIn("## Quick подготовлен", quick.stdout)
             self.assertIn("/alfred-dev:verify", quick.stdout)
-            self.assertIn("sin bloques Insight", quick.stdout)
+            self.assertIn("без блоков Insight", quick.stdout)
             self.assertFalse(quick.stdout.lstrip().startswith("{"))
 
             quick_json = subprocess.run(
@@ -718,7 +718,7 @@ class TestContinuityHelpers(unittest.TestCase):
             summary = render_flow_start_summary(result)
             self.assertIn("`FEATURE_HEADLESS_START`", summary)
             self.assertIn("/alfred-dev:resume", summary)
-            self.assertIn("No he marcado fases como completadas", summary)
+            self.assertIn("Я не отмечал фазы как завершённые", summary)
 
     def test_cli_start_flow_outputs_markdown_and_json(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -746,7 +746,7 @@ class TestContinuityHelpers(unittest.TestCase):
             )
             self.assertEqual(markdown.returncode, 0, msg=markdown.stderr)
             self.assertIn("`FIX_HEADLESS_START`", markdown.stdout)
-            self.assertIn("## Flujo preparado", markdown.stdout)
+            self.assertIn("## Процесс подготовлен", markdown.stdout)
 
             json_result = subprocess.run(
                 [
@@ -769,34 +769,34 @@ class TestContinuityHelpers(unittest.TestCase):
             self.assertTrue(payload["already_active"])
             self.assertEqual(payload["headless_marker"], "FIX_HEADLESS_START")
 
-    def test_prepare_lucius_review_is_headless_safe(self):
+    def test_prepare_cto_review_is_headless_safe(self):
         original_path = os.environ.get("PATH", "")
         try:
             os.environ["PATH"] = ""
             with tempfile.TemporaryDirectory() as tmpdir:
-                result = prepare_lucius_review(
+                result = prepare_cto_review(
                     tmpdir,
                     raw_request="src --scope security",
                 )
         finally:
             os.environ["PATH"] = original_path
 
-        self.assertEqual(result["command"], "lucius")
+        self.assertEqual(result["command"], "cto")
         self.assertEqual(result["target"], "src")
         self.assertEqual(result["scope"], "security")
         self.assertEqual(result["codex_status"], "missing")
-        self.assertEqual(result["headless_marker"], "LUCIUS_HEADLESS_START")
+        self.assertEqual(result["headless_marker"], "CTO_HEADLESS_START")
 
-        summary = render_lucius_summary(result)
-        self.assertIn("`LUCIUS_HEADLESS_START`", summary)
+        summary = render_cto_summary(result)
+        self.assertIn("`CTO_HEADLESS_START`", summary)
         self.assertIn("Scope: `security`", summary)
-        self.assertIn("No he lanzado Agent", summary)
-        self.assertIn("no he ejecutado `codex exec`", summary)
-        self.assertIn("sign-off de QA, seguridad o arquitectura", summary)
+        self.assertIn("Я не запускал Agent", summary)
+        self.assertIn("не выполнял `codex exec`", summary)
+        self.assertIn("sign-off QA, безопасности или архитектуры", summary)
 
-    def test_prepare_lucius_review_rejects_invalid_scope_without_codex(self):
+    def test_prepare_cto_review_rejects_invalid_scope_without_codex(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = prepare_lucius_review(
+            result = prepare_cto_review(
                 tmpdir,
                 raw_request="src --scope bananas",
             )
@@ -804,13 +804,13 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertFalse(result["valid"])
         self.assertEqual(result["invalid_scope"], "bananas")
         self.assertEqual(result["codex_status"], "not_checked")
-        self.assertEqual(result["headless_marker"], "LUCIUS_INVALID_SCOPE")
+        self.assertEqual(result["headless_marker"], "CTO_INVALID_SCOPE")
 
-        summary = render_lucius_summary(result)
-        self.assertIn("`LUCIUS_INVALID_SCOPE`", summary)
-        self.assertIn("Scopes válidos", summary)
-        self.assertIn("No lanzo Lucius", summary)
-        self.assertIn("no ejecuto Codex CLI", summary)
+        summary = render_cto_summary(result)
+        self.assertIn("`CTO_INVALID_SCOPE`", summary)
+        self.assertIn("Допустимые scopes", summary)
+        self.assertIn("Я не запускаю CTO", summary)
+        self.assertIn("не выполняю Codex CLI", summary)
 
     def test_start_flow_audit_reports_docker_menu_when_docker_missing(self):
         original_path = os.environ.get("PATH", "")
@@ -825,10 +825,10 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertEqual(result["phase"], "auditoria_paralela")
         self.assertEqual(result["headless_marker"], "AUDIT_DOCKER_INSTALL_MENU_HEADLESS")
         self.assertFalse(result["sonarqube_preflight"]["sonarqube_autorizado"])
-        self.assertIn("Instalar/preparar Docker", result["sonarqube_preflight"]["menu_options"][0])
+        self.assertIn("Установить/подготовить Docker", result["sonarqube_preflight"]["menu_options"][0])
         summary = render_flow_start_summary(result)
         self.assertIn("AUDIT_DOCKER_INSTALL_MENU_HEADLESS", summary)
-        self.assertIn("Seguir sin SonarQube", summary)
+        self.assertIn("Продолжить без SonarQube", summary)
 
     def test_start_flow_audit_treats_fake_command_not_found_as_docker_missing(self):
         original_path = os.environ.get("PATH", "")
@@ -870,7 +870,7 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertEqual(handoff["command"], "feature")
         self.assertEqual(handoff["phase"], "producto")
         self.assertEqual(handoff["resume_command"], "/alfred-dev:resume")
-        self.assertIn("Retomar", handoff["next_step"])
+        self.assertIn("Продолжить", handoff["next_step"])
 
     def test_write_handoff_files_creates_json_and_markdown(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -945,7 +945,7 @@ class TestContinuityHelpers(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(paused.returncode, 0, msg=paused.stderr)
-            self.assertIn("## Sesión pausada", paused.stdout)
+            self.assertIn("## Сессия на паузе", paused.stdout)
             self.assertIn("`/alfred-dev:resume`", paused.stdout)
             self.assertFalse(paused.stdout.lstrip().startswith("{"))
 
@@ -965,8 +965,8 @@ class TestContinuityHelpers(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(resumed.returncode, 0, msg=resumed.stderr)
-            self.assertIn("## Sesión reanudada", resumed.stdout)
-            self.assertIn("Siguiente acción", resumed.stdout)
+            self.assertIn("## Сессия возобновлена", resumed.stdout)
+            self.assertIn("Следующее действие", resumed.stdout)
             self.assertFalse(resumed.stdout.lstrip().startswith("{"))
 
             resumed_json = subprocess.run(
@@ -1042,7 +1042,7 @@ class TestContinuityHelpers(unittest.TestCase):
             target = build_verification_target(tmpdir)
 
         self.assertTrue(target["blocked"])
-        self.assertIn("sigue activa", target["reason"])
+        self.assertIn("всё ещё активна", target["reason"])
 
     def test_write_uat_files_creates_pending_artifacts_for_completed_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1211,11 +1211,11 @@ class TestContinuityHelpers(unittest.TestCase):
             self.assertTrue(os.path.isfile(prefetch_path))
             loaded = load_prefetch_result(tmpdir)
             self.assertIsNotNone(loaded)
-            self.assertIn("Ruta decidida", loaded["response_text"])
+            self.assertIn("Выбранный маршрут", loaded["response_text"])
 
             consumed = consume_prefetch_result(tmpdir, "alfred")
             self.assertIsNotNone(consumed)
-            self.assertIn("Ruta decidida", consumed["response_text"])
+            self.assertIn("Выбранный маршрут", consumed["response_text"])
             self.assertFalse(os.path.exists(os.path.join(tmpdir, PREFETCH_RELATIVE_PATH)))
             marker = load_prefetch_consumed_marker(tmpdir)
             self.assertIsNotNone(marker)
@@ -1375,12 +1375,12 @@ class TestContinuityHelpers(unittest.TestCase):
             }
         )
 
-        self.assertIn("## Refinado preparado", discuss_summary)
-        self.assertIn("Alcance inicial", discuss_summary)
-        self.assertIn("Pregunta abierta clave", discuss_summary)
-        self.assertIn("Riesgo principal", discuss_summary)
+        self.assertIn("## Уточнение подготовлено", discuss_summary)
+        self.assertIn("Начальный объём", discuss_summary)
+        self.assertIn("Ключевой открытый вопрос", discuss_summary)
+        self.assertIn("Главный риск", discuss_summary)
         self.assertIn("/alfred-dev:feature", discuss_summary)
-        self.assertIn("## Quick preparado", quick_summary)
+        self.assertIn("## Quick подготовлен", quick_summary)
         self.assertIn("/alfred-dev:verify", quick_summary)
 
     def test_start_quick_session_blocks_when_uat_is_pending(self):
@@ -1415,7 +1415,7 @@ class TestContinuityHelpers(unittest.TestCase):
             self.assertTrue(os.path.isfile(discovery_path))
             self.assertTrue(os.path.isfile(current_path))
             self.assertEqual(result["recommended_command"], "feature")
-            self.assertEqual(result["actor"], "usuario nuevo")
+            self.assertEqual(result["actor"], "новый пользователь")
 
             with open(discovery_path, "r", encoding="utf-8") as fh:
                 discovery_content = fh.read()
@@ -1771,7 +1771,7 @@ class TestContinuityHelpers(unittest.TestCase):
                         "fases_completadas": [],
                         "equipo_sesion": {
                             "opcionales_activos": {
-                                "lucius": True,
+                                "cto": True,
                             },
                             "infra": {"memoria": False},
                             "fuente": "config_persistida",
@@ -1788,7 +1788,7 @@ class TestContinuityHelpers(unittest.TestCase):
         )
         self.assertIn("Origen runtime: configuración persistida.", team_card["items"])
         self.assertIn(
-            "Opcionales solo bajo demanda en este flujo: `lucius`.",
+            "Opcionales solo bajo demanda en este flujo: `cto`.",
             team_card["items"],
         )
 
@@ -1832,9 +1832,9 @@ class TestContinuityHelpers(unittest.TestCase):
 
         content = render_progress_markdown(snapshot)
 
-        self.assertIn("Resumen operativo del proyecto", content)
-        self.assertIn("Comando: `/alfred-dev:quick`", content)
-        self.assertIn("Foco:", content)
+        self.assertIn("Рабочая сводка проекта", content)
+        self.assertIn("Команда: `/alfred-dev:quick`", content)
+        self.assertIn("Фокус:", content)
         self.assertIn("CA-01 cubierto", content)
 
     def test_render_progress_markdown_prefers_handoff_for_paused_session(self):
@@ -1871,9 +1871,9 @@ class TestContinuityHelpers(unittest.TestCase):
 
         content = render_progress_markdown(snapshot)
 
-        self.assertIn("### Handoff pendiente", content)
-        self.assertNotIn("### Flujo activo", content)
-        self.assertIn("Comando: `/alfred-dev:resume`", content)
+        self.assertIn("### Незакрытый handoff", content)
+        self.assertNotIn("### Активный процесс", content)
+        self.assertIn("Команда: `/alfred-dev:resume`", content)
 
     def test_render_next_markdown_uses_structured_guidance(self):
         content = render_next_markdown(
@@ -1887,11 +1887,11 @@ class TestContinuityHelpers(unittest.TestCase):
             }
         )
 
-        self.assertIn("## Siguiente paso operativo", content)
-        self.assertIn("Foco: Cerrar la verificación pendiente", content)
-        self.assertIn("Fuente: verificación/UAT (`verify`)", content)
-        self.assertIn("Comando: `/alfred-dev:verify`", content)
-        self.assertIn("Qué hacer ahora: Registra la UAT antes de seguir.", content)
+        self.assertIn("## Следующий рабочий шаг", content)
+        self.assertIn("Фокус: Cerrar la verificación pendiente", content)
+        self.assertIn("Источник: verificación/UAT (`verify`)", content)
+        self.assertIn("Команда: `/alfred-dev:verify`", content)
+        self.assertIn("Что делать сейчас: Registra la UAT antes de seguir.", content)
 
     def test_render_status_markdown_includes_structured_next_action_and_runtime_summary(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1902,12 +1902,25 @@ class TestContinuityHelpers(unittest.TestCase):
             snapshot = build_status_snapshot(tmpdir)
             content = render_status_markdown(snapshot)
 
-        self.assertIn("## Estado operativo de Alfred Dev", content)
-        self.assertIn("### Sesión", content)
-        self.assertIn("### Proyecto", content)
-        self.assertIn("### Fases registradas", content)
-        self.assertIn("Foco: Retomar el flujo en curso", content)
-        self.assertIn("Comando: `/alfred-dev:resume`", content)
+        self.assertIn("## Рабочее состояние Alfred Dev", content)
+        self.assertIn("### Сессия", content)
+        self.assertIn("### Проект", content)
+        self.assertIn("### Записанные фазы", content)
+        self.assertIn("Фокус: Продолжить текущий процесс", content)
+        self.assertIn("Команда: `/alfred-dev:resume`", content)
+
+
+class TestLegacyDesignerPhaseResult(unittest.TestCase):
+    """Estados antiguos guardan la elección visual como `selina_*`."""
+
+    def test_legacy_selina_keys_are_read(self):
+        from core.continuity import _designer_field, _phase_task_evidence
+
+        legacy = {"resultado": "aprobado", "selina_choice": "b", "selina_label": "Brutal", "selina_timestamp": "t1"}
+        self.assertEqual(_designer_field(legacy, "label"), "Brutal")
+        self.assertIn("Brutal", _phase_task_evidence(legacy))
+        current = {"designer_choice": "a", "selina_choice": "b"}
+        self.assertEqual(_designer_field(current, "choice"), "a")
 
 
 if __name__ == "__main__":

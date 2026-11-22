@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera las pantallas guiadas de selección de Selina."""
+"""Genera las pantallas guiadas de selección de Designer."""
 
 from __future__ import annotations
 
@@ -11,12 +11,12 @@ import sys
 if __package__ in {None, ""}:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from core.selina_style_selector import write_style_selector_html
+from core.designer_style_selector import write_style_selector_html
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generar la pantalla de sistema base o la de tipografía/paleta de Selina"
+        description="Generar la pantalla de sistema base o la de tipografía/paleta de Designer"
     )
     parser.add_argument("--visual-path", required=True, help="Ruta a session_dir o state_dir del servidor visual")
     parser.add_argument(

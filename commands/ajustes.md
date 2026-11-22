@@ -1,144 +1,144 @@
 ---
-description: "Configura Alfred Dev: autonomía, proyecto, Lucius, memoria y personalidad. Antes /alfred-dev:config"
+description: "Настраивает Alfred Dev: автономность, проект, CTO, память и личность. Раньше /alfred-dev:config"
 ---
 
 # /alfred-dev:ajustes
 
-Lee el fichero `.claude/alfred-dev.local.md` si existe. Si no existe, créalo con la configuración canónica actual del plugin.
+Прочитай файл `.claude/alfred-dev.local.md`, если он существует. Если нет, создай его с текущей каноничной конфигурацией плагина.
 
-Escribe siempre la clave canónica `autonomia` en el frontmatter, aunque encuentres variantes legacy como `autonomía`. El runtime las entiende por retrocompatibilidad, pero la escritura nueva debe quedar normalizada.
+Всегда записывай каноничный ключ `autonomia` во frontmatter, даже если встретишь legacy-варианты вроде `autonomía`. Runtime понимает их для обратной совместимости, но новая запись должна быть нормализована.
 
-## Paso 0: helper determinista
+## Шаг 0: детерминированный helper
 
-Antes de razonar o preguntar, ejecuta este Bash inmediatamente para cargar o
-crear la configuración, detectar stack, construir las 7 secciones y generar el
-menú canónico:
+Прежде чем рассуждать или спрашивать, немедленно выполни этот Bash, чтобы загрузить или
+создать конфигурацию, определить стек, собрать 7 секций и сгенерировать
+каноничное меню:
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/core/config_cli.py" "$PWD" --headless
 ```
 
-Conserva ese stdout como `CONFIG_SUMMARY`. Si el comando falla porque
-`CLAUDE_PLUGIN_ROOT` no existe en desarrollo local, reintenta una sola vez con
-`python3 core/config_cli.py "$PWD" --headless` solo si estás en el repo del
-plugin. En modo headless, `CONFIG_SUMMARY` debe contener el marcador literal
+Сохрани этот stdout как `CONFIG_SUMMARY`. Если команда падает, потому что
+`CLAUDE_PLUGIN_ROOT` не существует в локальной разработке, повтори один раз с
+`python3 core/config_cli.py "$PWD" --headless`, только если ты находишься в репозитории
+плагина. В режиме headless `CONFIG_SUMMARY` должен содержать буквальный маркер
 `CONFIG_HEADLESS_MENU`.
 
-## Modo no interactivo / `claude -p`
+## Неинтерактивный режим / `claude -p`
 
-Si esta invocación se está ejecutando en modo no interactivo/headless
-(`claude -p`, SDK sin callback `canUseTool`, auditoría automatizada o cualquier
-contexto donde no puedas recibir una selección del usuario en esta misma
-llamada), **no llames `AskUserQuestion`**. En ese modo:
+Если этот вызов выполняется в неинтерактивном/headless режиме
+(`claude -p`, SDK без callback `canUseTool`, автоматизированный аудит или любой
+контекст, где ты не можешь получить выбор пользователя в этом же
+вызове), **не вызывай `AskUserQuestion`**. В этом режиме:
 
-1. devuelve `CONFIG_SUMMARY` tal cual, sin reescribirlo con otra tabla;
-2. no abras submenús;
-3. no termines con una pregunta abierta.
+1. верни `CONFIG_SUMMARY` как есть, не переписывая его другой таблицей;
+2. не открывай подменю;
+3. не заканчивай открытым вопросом.
 
-No esperes indefinidamente una respuesta humana en modo headless y no abras los
-submenús de agentes opcionales ni memoria sin una selección real del usuario.
-Si llamas a `AskUserQuestion` y la herramienta vuelve cancelada, sin selección,
-sin respuesta utilizable o con cualquier señal de que el usuario no pudo elegir,
-trátalo igual que modo headless: devuelve `CONFIG_SUMMARY` tal cual. No
-conviertas esa cancelación en una pregunta abierta tipo "¿sobre qué sección
-actúo?".
+Не жди бесконечно ответа человека в режиме headless и не открывай подменю
+опциональных агентов или памяти без реального выбора пользователя.
+Если ты вызываешь `AskUserQuestion`, а инструмент возвращается отменённым, без выбора,
+без пригодного ответа или с любым признаком того, что пользователь не смог выбрать,
+считай это режимом headless: верни `CONFIG_SUMMARY` как есть. Не
+превращай эту отмену в открытый вопрос вроде «над какой секцией
+работать?».
 
-Presenta al usuario la configuración actual organizada en secciones:
+Покажи пользователю текущую конфигурацию, организованную по секциям:
 
-1. **Autonomía por fase** (`interactivo` / `semi-autonomo` / `autonomo`): producto, arquitectura, desarrollo, calidad, documentacion, entrega
-2. **Proyecto** (detectado o manual): runtime, lenguaje, framework, ORM, test runner, bundler
-3. **Agentes opcionales**: solo Lucius
-4. **Memoria persistente**: enabled, sync_to_native, sync_commits_limit, capture_decisions, capture_commits, retention_days
+1. **Автономность по фазам** (`interactivo` / `semi-autonomo` / `autonomo`): producto, arquitectura, desarrollo, calidad, documentacion, entrega
+2. **Проект** (определён или задан вручную): runtime, язык, framework, ORM, test runner, bundler
+3. **Опциональные агенты**: только CTO
+4. **Постоянная память**: enabled, sync_to_native, sync_commits_limit, capture_decisions, capture_commits, retention_days
 5. **Compliance**: estilo, lint, format_on_save
-6. **Integraciones**: git, ci, deploy
-7. **Personalidad**: nivel_sarcasmo (1-5), verbosidad, idioma, celebrar_victorias, insultar_malas_practicas
+6. **Интеграции**: git, ci, deploy
+7. **Личность**: nivel_sarcasmo (1-5), verbosidad, idioma, celebrar_victorias, insultar_malas_practicas
 
-Usa AskUserQuestion para preguntar qué sección quiere modificar con un **menú
-principal navegable**. No inventes ese menú a mano si puedes evitarlo: toma
-como referencia las funciones canónicas de `core/config_loader.py`
-(`build_config_section_summaries()` y `build_config_section_menu()`) para que
-las descripciones de cada sección salgan de la configuración efectiva real y no
-de texto reconstruido en el prompt. Después de cada cambio, actualiza el
-fichero `.local.md`.
+Используй AskUserQuestion, чтобы спросить, какую секцию изменить, через **навигируемое
+главное меню**. Не придумывай это меню вручную, если можно этого избежать: опирайся
+на каноничные функции из `core/config_loader.py`
+(`build_config_section_summaries()` и `build_config_section_menu()`), чтобы
+описания каждой секции брались из реальной эффективной конфигурации, а не
+из текста, восстановленного в промпте. После каждого изменения обновляй
+файл `.local.md`.
 
-Antes de guardar, construye un **preview antes/después** de la sección tocada.
-No improvises ese diff en prosa si puedes evitarlo: toma como referencia
-`build_config_section_change_preview()` para confirmar qué cambia realmente y
-detectar no-ops antes de reescribir el fichero.
+Перед сохранением построй **preview до/после** затронутой секции.
+Не импровизируй этот diff прозой, если можно этого избежать: опирайся на
+`build_config_section_change_preview()`, чтобы подтвердить, что реально меняется, и
+обнаружить no-op до перезаписи файла.
 
-Cuando el usuario confirme, evita recomponer el ciclo “cargar → aplicar →
-guardar” a mano: usa como referencia `update_config_section()` o
-`update_project_config_section()` para persistir solo la sección tocada sin
-perder notas, orden estable ni claves canónicas.
+Когда пользователь подтвердит, не собирай цикл «загрузить → применить →
+сохранить» вручную: опирайся на `update_config_section()` или
+`update_project_config_section()`, чтобы сохранить только затронутую секцию,
+не потеряв заметки, стабильный порядок и каноничные ключи.
 
-No reescribas el frontmatter “a mano” si puedes evitarlo: toma como referencia
-las funciones canónicas de `core/config_loader.py` (`render_config_markdown()`,
-`save_config()`, `save_project_config()` y `apply_config_section_update()`) para
-mantener orden estable, claves canónicas y round-trip limpio con
+Не переписывай frontmatter «вручную», если можно этого избежать: опирайся на
+каноничные функции из `core/config_loader.py` (`render_config_markdown()`,
+`save_config()`, `save_project_config()` и `apply_config_section_update()`), чтобы
+сохранить стабильный порядок, каноничные ключи и чистый round-trip с
 `load_config()`.
 
-Si el proyecto no tiene configuración y hay ficheros en el directorio actual, ejecuta detección automática de stack y presenta los resultados al usuario para confirmar. Si es la primera sesión del proyecto, puedes encontrar que SessionStart ya haya sembrado `.claude/alfred-dev.local.md` con autonomía por fases en `autonomo` y memoria activada.
+Если у проекта нет конфигурации и в текущем каталоге есть файлы, выполни автоматическое определение стека и покажи результаты пользователю для подтверждения. Если это первая сессия проекта, может оказаться, что SessionStart уже создал `.claude/alfred-dev.local.md` с автономностью по фазам `autonomo` и включённой памятью.
 
-## Sección de agentes opcionales
+## Секция опциональных агентов
 
-El runtime solo admite **Lucius**. No ofrezcas data-engineer, github-manager,
-copywriter, librarian ni el resto del catálogo 0.6.
+Runtime поддерживает только **CTO**. Не предлагай data-engineer, github-manager,
+copywriter, librarian и остальной каталог 0.6.
 
-| Agente | Rol | Cuándo es útil |
-|--------|-----|----------------|
-| **lucius** | Director técnico externo | Segunda opinión vía Codex CLI en un cierre de calidad, `audit` o `ship` |
+| Агент | Роль | Когда полезен |
+|-------|------|---------------|
+| **cto** | CTO | Второе мнение через Codex CLI при закрытии качества, `audit` или `ship` |
 
-Usa el menú canónico de `core/optional_agents.py`
-(`build_optional_agent_group_menu`) con un único grupo `Auditoria`.
+Используй каноничное меню из `core/optional_agents.py`
+(`build_optional_agent_group_menu`) с единственной группой `Auditoria`.
 
 ```text
 AskUserQuestion({
   questions: [
     {
-      question: "¿Quieres activar Lucius como segunda opinión externa?",
+      question: "Хочешь активировать CTO как внешнее второе мнение?",
       header: "Auditoria",
       multiSelect: false,
       options: [
-        { label: "Seguir sin activar más", description: "Pasar al siguiente grupo" },
-        { label: "Lucius", description: "<razón contextual>" }
+        { label: "Seguir sin activar más", description: "Перейти к следующей группе" },
+        { label: "CTO", description: "<контекстная причина>" }
       ]
     }
   ]
 })
 ```
 
-Guarda solo esta clave:
+Сохраняй только этот ключ:
 
 ```yaml
 agentes_opcionales:
-  lucius: false
+  cto: false
 ```
 
-## Sección de memoria persistente
+## Секция постоянной памяти
 
-La memoria persistente guarda decisiones, gates, handoffs, UAT y commits hechos
-en una sesión de Alfred. No importa el historial antiguo de Git ni rellena la
-UI con consejos operativos. Para consultarla usa las tools MCP `alfred-memory`
-o `/alfred-dev:memory-ui`.
+Постоянная память хранит решения, gate, handoff, UAT и коммиты, сделанные
+в сессии Alfred. Она не импортирует старую историю Git и не наполняет
+UI операционными советами. Для обращения к ней используй MCP-инструменты `alfred-memory`
+или `/alfred-dev:memory-ui`.
 
-### Paso 1: comprobar el estado actual
+### Шаг 1: проверить текущее состояние
 
-Primero lee la configuración efectiva y comprueba `memoria.enabled`:
+Сначала прочитай эффективную конфигурацию и проверь `memoria.enabled`:
 
-- **Si `memoria.enabled` es `true` y existe `.claude/alfred-memory.db`**: lee las estadísticas con la herramienta MCP `memory_stats` y presenta un resumen compacto: número de decisiones, commits registrados, iteraciones y fecha del registro más antiguo. Indica que la memoria está **activa**.
-- **Si `memoria.enabled` es `true` pero la DB aún no existe**: indica que la memoria está **configurada como activa** y que la base de datos se inicializará en el siguiente arranque o en cuanto el runtime la necesite.
-- **Si `memoria.enabled` es `false`**: indica que la memoria está **inactiva**, aunque puedan existir datos históricos en `.claude/alfred-memory.db`.
+- **Если `memoria.enabled` равен `true` и существует `.claude/alfred-memory.db`**: прочитай статистику MCP-инструментом `memory_stats` и покажи компактную сводку: число решений, зарегистрированных коммитов, итераций и дату самой старой записи. Укажи, что память **активна**.
+- **Если `memoria.enabled` равен `true`, но БД ещё нет**: укажи, что память **настроена как активная** и что база данных будет инициализирована при следующем запуске или как только она понадобится runtime.
+- **Если `memoria.enabled` равен `false`**: укажи, что память **неактивна**, хотя в `.claude/alfred-memory.db` могут существовать исторические данные.
 
-### Paso 2: preguntar al usuario
+### Шаг 2: спросить пользователя
 
-Usa AskUserQuestion para preguntar al usuario si quiere activar o desactivar la memoria persistente. Presenta las opciones de forma clara:
+Используй AskUserQuestion, чтобы спросить пользователя, хочет ли он включить или выключить постоянную память. Представь варианты чётко:
 
-- **Activar**: Alfred registrará decisiones de diseño, gates, handoffs, UAT y commits de la sesión.
-- **Desactivar**: no se registrará nada nuevo. Los datos existentes se conservan, pero Alfred no los capturará ni los consultará de forma operativa.
+- **Включить**: Alfred будет регистрировать проектные решения, gate, handoff, UAT и коммиты сессии.
+- **Выключить**: ничего нового регистрироваться не будет. Существующие данные сохраняются, но Alfred не будет ни собирать их, ни использовать в работе.
 
-### Paso 3: aplicar la configuración
+### Шаг 3: применить конфигурацию
 
-Si el usuario elige **activar** la memoria, escribe (o actualiza) la sección `memoria:` en el frontmatter de `.claude/alfred-dev.local.md` con estos valores:
+Если пользователь выбирает **включить** память, запиши (или обнови) секцию `memoria:` во frontmatter `.claude/alfred-dev.local.md` с этими значениями:
 
 ```yaml
 memoria:
@@ -150,16 +150,16 @@ memoria:
   retention_days: 365
 ```
 
-Si el usuario elige **desactivar** la memoria, actualiza la sección a:
+Если пользователь выбирает **выключить** память, обнови секцию до:
 
 ```yaml
 memoria:
   enabled: false
 ```
 
-### Paso 4: confirmar
+### Шаг 4: подтвердить
 
-Informa al usuario del resultado:
+Сообщи пользователю результат:
 
-- Si se activó: confirma que solo se registrará lo útil (decisiones, gates, handoffs, UAT, commits de la sesión).
-- Si se desactivó: confirma que la memoria queda inactiva pero los datos existentes no se borran.
+- Если включили: подтверди, что будет регистрироваться только полезное (решения, gate, handoff, UAT, коммиты сессии).
+- Если выключили: подтверди, что память неактивна, но существующие данные не удаляются.

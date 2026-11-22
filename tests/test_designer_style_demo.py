@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para la galeria de demos visuales de Selina."""
+"""Tests para la galeria de demos visuales de Designer."""
 
 import json
 import os
@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import unittest
 
-from core.selina_style_demo import (
+from core.designer_style_demo import (
     STYLE_DEMO_GALLERY_FILENAME,
     render_style_demo_document,
     write_style_demo_gallery,
@@ -23,9 +23,9 @@ WRITE_STYLE_DEMO_GALLERY_SCRIPT = os.path.join(
 )
 
 
-class TestSelinaStyleDemo(unittest.TestCase):
+class TestDesignerStyleDemo(unittest.TestCase):
     def setUp(self):
-        self.project_dir = tempfile.mkdtemp(prefix="alfred-selina-demo-")
+        self.project_dir = tempfile.mkdtemp(prefix="alfred-designer-demo-")
         self.session_dir = os.path.join(self.project_dir, ".alfred-dev", "visual", "session-1")
         self.state_dir = os.path.join(self.session_dir, "state")
         self.content_dir = os.path.join(self.session_dir, "content")
@@ -56,7 +56,7 @@ class TestSelinaStyleDemo(unittest.TestCase):
 
         with open(result["gallery_path"], "r", encoding="utf-8") as fh:
             gallery = fh.read()
-        self.assertIn("Atlas de sistemas de diseño de Selina", gallery)
+        self.assertIn("Atlas de sistemas de diseño de Designer", gallery)
         self.assertIn("/files/demos/neo-brutalism.html", gallery)
         self.assertIn("Maximalismo &amp; Neo-retro", gallery)
 

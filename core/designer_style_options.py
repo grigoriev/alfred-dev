@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generacion canónica de style-options.html para Selina."""
+"""Generacion canónica de style-options.html para Designer."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import os
 import re
 from typing import Any, Dict, List, Optional
 
-from core.selina_style_direction import (
+from core.designer_style_direction import (
     discover_proposals_file,
     load_style_proposals,
     resolve_visual_session_dir,
@@ -1409,7 +1409,7 @@ def render_style_options_html(
     title: str = "Selecciona una direccion visual",
     subtitle: str = "Elige la propuesta que mejor encaja con el producto. Tu clic queda registrado automaticamente.",
 ) -> str:
-    """Renderiza el fragmento HTML canónico de las opciones de Selina."""
+    """Renderiza el fragmento HTML canónico de las opciones de Designer."""
     assigned_flavors = _assign_option_flavors(proposals)
     cards = [
         _render_option_card(proposal, assigned_flavors.get(str(proposal.get("choice", "")).strip()))
@@ -1419,7 +1419,7 @@ def render_style_options_html(
         _font_imports_markup(proposals)
         + '<section class="style-screen">'
         '<div class="style-screen-header">'
-        f"<p class=\"style-screen-kicker\">Selina propone</p>"
+        f"<p class=\"style-screen-kicker\">Designer propone</p>"
         f"<h1>{_escape(title)}</h1>"
         f"<p class=\"style-screen-subtitle\">{_escape(subtitle)}</p>"
         "</div>"
@@ -1439,7 +1439,7 @@ def build_style_options_payload(
     """Carga propuestas normalizadas y genera el HTML listo para escribir."""
     proposals_path = proposals_file or discover_proposals_file(visual_path)
     if not proposals_path:
-        raise ValueError("No se ha encontrado ningun fichero de propuestas de Selina.")
+        raise ValueError("No se ha encontrado ningun fichero de propuestas de Designer.")
 
     proposals = list(load_style_proposals(proposals_path).values())
     if not proposals:
@@ -1467,7 +1467,7 @@ def write_style_options_html(
     title: Optional[str] = None,
     subtitle: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Escribe style-options.html en la sesion visual de Selina."""
+    """Escribe style-options.html en la sesion visual de Designer."""
     payload = build_style_options_payload(
         visual_path,
         proposals_file=proposals_file,

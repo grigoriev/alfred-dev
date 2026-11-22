@@ -1,30 +1,30 @@
-# Registro de compliance
+# Реестр compliance
 
 <!-- alfred-doc:filled -->
 
-No es un dictamen jurídico. Es un registro técnico con evidencia.
+Это не юридическое заключение. Это технический реестр с подтверждениями.
 
-**Fecha:** {{fecha}}
-**Autor:** security-officer
+**Дата:** {{fecha}}
+**Автор:** security-officer
 
-## Alcance
+## Объём
 
-| Marco | Aplica | Motivo |
-|-------|--------|--------|
-| RGPD | {{rgpd_aplica}} | {{rgpd_motivo}} |
+| Рамка | Применимо | Причина |
+|-------|-----------|---------|
+| GDPR (RGPD) | {{rgpd_aplica}} | {{rgpd_motivo}} |
 | NIS2 | {{nis2_aplica}} | {{nis2_motivo}} |
 | CRA | {{cra_aplica}} | {{cra_motivo}} |
 
-## Controles
+## Контроли
 
-| Control | Marco | Estado | Evidencia |
-|---------|-------|--------|-----------|
+| Контроль | Рамка | Статус | Подтверждение |
+|----------|-------|--------|---------------|
 | {{control}} | {{marco}} | {{estado}} | {{ruta_o_test}} |
 
-Estados: `cumple` (con evidencia), `parcial`, `pendiente`, `no aplica`, `riesgo aceptado`.
+Статусы: `cumple` (с подтверждением), `parcial`, `pendiente`, `no aplica`, `riesgo aceptado`.
 
-## Riesgos aceptados
+## Принятые риски
 
-| Hueco | Quién | Cuándo | Motivo |
-|-------|-------|--------|--------|
+| Пробел | Кто | Когда | Причина |
+|--------|-----|-------|---------|
 | {{hueco}} | {{quien}} | {{cuando}} | {{motivo}} |

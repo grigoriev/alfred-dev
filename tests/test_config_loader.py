@@ -163,10 +163,10 @@ class TestLoadConfig(unittest.TestCase):
 
     def test_get_active_optional_agents_returns_enabled_agents_in_catalog_order(self):
         config = load_config("/ruta/que/no/existe")
-        config["agentes_opcionales"]["lucius"] = True
+        config["agentes_opcionales"]["cto"] = True
         self.assertEqual(
             get_active_optional_agents(config),
-            ["lucius"],
+            ["cto"],
         )
 
     def test_build_equipo_sesion_from_config_returns_none_without_runtime_flags(self):
@@ -175,14 +175,40 @@ class TestLoadConfig(unittest.TestCase):
 
     def test_build_equipo_sesion_from_config_preserves_catalog_and_memory(self):
         config = load_config("/ruta/que/no/existe")
-        config["agentes_opcionales"]["lucius"] = True
+        config["agentes_opcionales"]["cto"] = True
         config["memoria"]["enabled"] = True
 
         equipo = build_equipo_sesion_from_config(config)
 
         self.assertEqual(equipo["fuente"], "config_persistida")
-        self.assertTrue(equipo["opcionales_activos"]["lucius"])
+        self.assertTrue(equipo["opcionales_activos"]["cto"])
         self.assertTrue(equipo["infra"]["memoria"])
+
+    def test_legacy_lucius_key_is_accepted_as_cto(self):
+        """Proyectos existentes con `agentes_opcionales.lucius` siguen funcionando."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            claude_dir = os.path.join(tmpdir, ".claude")
+            os.makedirs(claude_dir, exist_ok=True)
+            with open(
+                os.path.join(claude_dir, "alfred-dev.local.md"),
+                "w",
+                encoding="utf-8",
+            ) as f:
+                f.write("---\nagentes_opcionales:\n  lucius: true\n---\n")
+
+            config = load_project_config(tmpdir)
+            equipo = build_project_equipo_sesion(tmpdir)
+
+        self.assertTrue(config["agentes_opcionales"]["cto"])
+        self.assertNotIn("lucius", config["agentes_opcionales"])
+        self.assertEqual(get_active_optional_agents(config), ["cto"])
+        self.assertTrue(equipo["opcionales_activos"]["cto"])
+        # Alias directo sin normalizar y prioridad de la clave canonica.
+        self.assertEqual(get_active_optional_agents({"agentes_opcionales": {"lucius": True}}), ["cto"])
+        self.assertEqual(
+            get_active_optional_agents({"agentes_opcionales": {"cto": False, "lucius": True}}),
+            [],
+        )
 
     def test_build_project_equipo_sesion_reads_local_config(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -196,7 +222,7 @@ class TestLoadConfig(unittest.TestCase):
                 f.write(
                     "---\n"
                     "agentes_opcionales:\n"
-                    "  lucius: true\n"
+                    "  cto: true\n"
                     "memoria:\n"
                     "  enabled: true\n"
                     "---\n"
@@ -205,17 +231,17 @@ class TestLoadConfig(unittest.TestCase):
             equipo = build_project_equipo_sesion(tmpdir)
 
         self.assertEqual(equipo["fuente"], "config_persistida")
-        self.assertTrue(equipo["opcionales_activos"]["lucius"])
+        self.assertTrue(equipo["opcionales_activos"]["cto"])
         self.assertTrue(equipo["infra"]["memoria"])
 
     def test_render_config_markdown_serializes_canonical_frontmatter_and_notes(self):
         config = load_config("/ruta/que/no/existe")
-        config["agentes_opcionales"]["lucius"] = True
+        config["agentes_opcionales"]["cto"] = True
         config["personalidad"]["idioma"] = "es"
         content = render_config_markdown(config, notes="Preferir Netlify sobre Vercel.")
 
         self.assertTrue(content.startswith("---\nautonomia:\n"))
-        self.assertIn("lucius: true", content)
+        self.assertIn("cto: true", content)
         self.assertIn("## Notas", content)
         self.assertIn("Preferir Netlify sobre Vercel.", content)
         self.assertNotIn("\nnotas:", content)
@@ -227,7 +253,7 @@ class TestLoadConfig(unittest.TestCase):
         try:
             config = load_config("/ruta/que/no/existe")
             config["autonomia"]["calidad"] = "interactivo"
-            config["agentes_opcionales"]["lucius"] = True
+            config["agentes_opcionales"]["cto"] = True
             config["memoria"]["enabled"] = True
             save_config(path, config, notes="Revisar copys antes de publicar.")
 
@@ -236,14 +262,14 @@ class TestLoadConfig(unittest.TestCase):
             os.unlink(path)
 
         self.assertEqual(reloaded["autonomia"]["calidad"], "interactivo")
-        self.assertTrue(reloaded["agentes_opcionales"]["lucius"])
+        self.assertTrue(reloaded["agentes_opcionales"]["cto"])
         self.assertTrue(reloaded["memoria"]["enabled"])
         self.assertIn("Revisar copys", reloaded["notas"])
 
     def test_save_project_config_writes_canonical_local_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             config = load_config("/ruta/que/no/existe")
-            config["agentes_opcionales"]["lucius"] = True
+            config["agentes_opcionales"]["cto"] = True
 
             path = save_project_config(
                 tmpdir,
@@ -253,7 +279,7 @@ class TestLoadConfig(unittest.TestCase):
             reloaded = load_config(path)
 
         self.assertTrue(path.endswith(os.path.join(".claude", "alfred-dev.local.md")))
-        self.assertTrue(reloaded["agentes_opcionales"]["lucius"])
+        self.assertTrue(reloaded["agentes_opcionales"]["cto"])
         self.assertIn("tono cercano", reloaded["notas"])
 
     def test_ensure_bootstrap_local_config_creates_minimal_canonical_file(self):
@@ -307,7 +333,7 @@ class TestLoadConfig(unittest.TestCase):
         config = load_config("/ruta/que/no/existe")
         config["autonomia"]["producto"] = "interactivo"
         config["autonomia"]["calidad"] = "semi-autonomo"
-        config["agentes_opcionales"]["lucius"] = True
+        config["agentes_opcionales"]["cto"] = True
         config["memoria"]["enabled"] = True
 
         summaries = build_config_section_summaries(config)
@@ -330,7 +356,7 @@ class TestLoadConfig(unittest.TestCase):
 
         self.assertIn("interactivas", autonomy["summary"])
         self.assertIn("1 activo", agents["summary"])
-        self.assertIn("Lucius", agents["summary"])
+        self.assertIn("CTO", agents["summary"])
         self.assertIn("Activa con sync nativa", memory["summary"])
 
     def test_build_config_section_menu_uses_current_summaries(self):
@@ -345,7 +371,7 @@ class TestLoadConfig(unittest.TestCase):
                     f,
                 )
             config = load_config("/ruta/que/no/existe")
-            config["agentes_opcionales"]["lucius"] = True
+            config["agentes_opcionales"]["cto"] = True
             menu = build_config_section_menu(config, project_dir=tmpdir)
 
         labels = [option["label"] for option in menu["options"]]
@@ -370,7 +396,7 @@ class TestLoadConfig(unittest.TestCase):
         self.assertIn("Agentes opcionales", labels)
         self.assertIn("next", project_option["description"])
         self.assertIn("Detectado automáticamente.", project_option["description"])
-        self.assertIn("Lucius", agents_option["description"])
+        self.assertIn("CTO", agents_option["description"])
 
     def test_apply_config_section_update_normalizes_and_preserves_rest(self):
         config = load_config("/ruta/que/no/existe")
@@ -396,10 +422,10 @@ class TestLoadConfig(unittest.TestCase):
         updated = apply_config_section_update(
             config,
             "agentes_opcionales",
-            {"lucius": True},
+            {"cto": True},
         )
 
-        self.assertTrue(updated["agentes_opcionales"]["lucius"])
+        self.assertTrue(updated["agentes_opcionales"]["cto"])
         self.assertEqual(
             set(updated["agentes_opcionales"].keys()),
             set(get_optional_agent_names()),
@@ -419,7 +445,7 @@ class TestLoadConfig(unittest.TestCase):
                 "bundler": "vite",
             },
             "agentes_opcionales": {
-                "lucius": True,
+                "cto": True,
             },
             "memoria": {
                 "enabled": True,
@@ -703,27 +729,27 @@ class TestDetectStack(unittest.TestCase):
 
 
 class TestOptionalAgents(unittest.TestCase):
-    """Tests para el catalogo reducido de opcionales (solo Lucius)."""
+    """Tests para el catalogo reducido de opcionales (solo CTO)."""
 
     def test_default_config_has_optional_agents(self):
         self.assertIn("agentes_opcionales", DEFAULT_CONFIG)
         agents = DEFAULT_CONFIG["agentes_opcionales"]
-        self.assertEqual(set(agents.keys()), {"lucius"})
-        self.assertFalse(agents["lucius"])
+        self.assertEqual(set(agents.keys()), {"cto"})
+        self.assertFalse(agents["cto"])
 
     def test_optional_agent_catalog_keeps_group_distribution(self):
         grouped = get_optional_agents_by_group()
         self.assertEqual(list(grouped), ["audit"])
-        self.assertEqual(grouped["audit"], ["lucius"])
+        self.assertEqual(grouped["audit"], ["cto"])
 
     def test_build_group_menus_returns_audit_only(self):
         menus = build_optional_agent_group_menus()
         self.assertEqual([menu["group"] for menu in menus], ["audit"])
         labels = [option["label"] for option in menus[0]["options"]]
         self.assertEqual(labels[0], "Seguir sin activar más")
-        self.assertIn("Lucius", labels)
+        self.assertIn("CTO", labels)
 
-    def test_static_suggestions_exclude_lucius(self):
+    def test_static_suggestions_exclude_cto(self):
         self.assertEqual(get_static_suggestible_agent_names(), ())
 
     def test_suggest_empty_for_any_project(self):
@@ -733,11 +759,11 @@ class TestOptionalAgents(unittest.TestCase):
 
     def test_legacy_optional_flags_are_ignored(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-            f.write("---\nagentes_opcionales:\n  data-engineer: true\n  lucius: true\n---\n")
+            f.write("---\nagentes_opcionales:\n  data-engineer: true\n  cto: true\n---\n")
             f.flush()
             config = load_config(f.name)
         os.unlink(f.name)
-        self.assertTrue(config["agentes_opcionales"]["lucius"])
+        self.assertTrue(config["agentes_opcionales"]["cto"])
         self.assertNotIn("data-engineer", config["agentes_opcionales"])
 
 

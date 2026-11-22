@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Utilidades para consumir la elección visual de Selina."""
+"""Utilidades para consumir la elección visual de Designer."""
 
 from __future__ import annotations
 
@@ -60,7 +60,7 @@ def _normalize_choice_event(raw_event: Dict[str, Any]) -> Optional[Dict[str, Opt
 
 
 def read_latest_style_choice(path: str) -> Optional[Dict[str, Optional[str]]]:
-    """Lee el último clic válido de una sesión visual de Selina."""
+    """Lee el último clic válido de una sesión visual de Designer."""
     events_path = events_file_for(path)
     if not os.path.isfile(events_path):
         return None

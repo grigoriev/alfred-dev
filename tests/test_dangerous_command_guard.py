@@ -288,7 +288,7 @@ class TestSafeAlfredHelpers(unittest.TestCase):
 
         self.assertEqual(result.returncode, 2)
         self.assertEqual(result.stdout, "")
-        self.assertIn("COMANDO PELIGROSO BLOQUEADO", result.stderr)
+        self.assertIn("ОПАСНАЯ КОМАНДА ЗАБЛОКИРОВАНА", result.stderr)
 
 
 if __name__ == "__main__":

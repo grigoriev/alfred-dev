@@ -1,29 +1,29 @@
 ---
 name: style-direction
-description: "Abrir y operar el companion visual de Selina para elegir una direccion de estilo en proyectos con interfaz. Skill manual: levanta un servidor local y escribe artefactos visuales."
+description: "Открыть и использовать визуальный companion Designer для выбора направления стиля в проектах с интерфейсом. Ручной skill: поднимает локальный сервер и пишет визуальные артефакты."
 disable-model-invocation: true
 ---
 
-# Guía del servidor visual de Selina
+# Руководство по визуальному серверу Designer
 
-Servidor local en navegador para mostrar sistemas de diseño y opciones visuales
-durante la fase de dirección de estilo. Funciona como un visual companion para
-enseñar el catálogo base de Selina, dejar que el usuario fije familia +
-tipografía + gama de color y cerrar después una ronda final de tres columnas.
+Локальный сервер в браузере для показа систем дизайна и визуальных вариантов
+на фазе направления стиля. Работает как visual companion: показывает базовый
+каталог Designer, позволяет пользователю зафиксировать семейство +
+типографику + цветовую гамму, а затем закрыть финальный раунд из трёх колонок.
 
-## Cuándo usar el servidor visual
+## Когда использовать визуальный сервер
 
-Siempre que Selina genere opciones de estilo. El servidor es la herramienta principal
-de Selina: sirve tanto para enseñar la galería de 10 sistemas de diseño base como
-para el nuevo flujo guiado de selección y la ronda final de 3 propuestas comparables.
+Всегда, когда Designer генерирует варианты стиля. Сервер это главный инструмент
+Designer: он служит и для показа галереи из 10 базовых систем дизайна, и
+для нового guided-процесса выбора, и для финального раунда из 3 сопоставимых предложений.
 
-## Arrancar sesión
+## Запуск сессии
 
 ```bash
 visual/scripts/start-server.sh --project-dir /ruta/al/proyecto
 ```
 
-Respuesta JSON esperada:
+Ожидаемый JSON-ответ:
 
 ```json
 {
@@ -36,114 +36,114 @@ Respuesta JSON esperada:
 }
 ```
 
-Guarda `screen_dir` (directorio donde escribir los HTML de opciones) y `state_dir`
-(directorio donde leer eventos de clic y verificar estado del servidor).
+Сохрани `screen_dir` (каталог, куда писать HTML с вариантами) и `state_dir`
+(каталог, откуда читать события кликов и проверять состояние сервера).
 
-El fichero `state_dir/server-info` contiene el mismo JSON emitido en el arranque.
-Léelo para comprobar que el servidor sigue activo antes de cada operación.
+Файл `state_dir/server-info` содержит тот же JSON, что был выдан при запуске.
+Читай его, чтобы перед каждой операцией убедиться, что сервер ещё активен.
 
-Indica al usuario que abra la URL en el navegador.
+Попроси пользователя открыть URL в браузере.
 
-## El ciclo
+## Цикл
 
-1. Comprueba que el servidor sigue activo leyendo `STATE_DIR/server-info`.
-2. Si aporta contexto, genera primero la galería del catálogo con `python3 visual/scripts/write-style-demo-gallery.py --visual-path "$STATE_DIR"`.
-3. Flujo guiado recomendado:
-   - `python3 visual/scripts/write-style-selector.py --visual-path "$STATE_DIR"` para elegir el sistema base.
-   - lee la elección con `python3 visual/scripts/read-choice.py "$STATE_DIR"`.
-   - `python3 visual/scripts/write-style-selector.py --visual-path "$STATE_DIR" --style-id "<style_id>"` para que el usuario elija tipografía + paleta.
-   - vuelve a leer la elección con `python3 visual/scripts/read-choice.py "$STATE_DIR"`.
-   - `python3 visual/scripts/write-guided-style-options.py --visual-path "$STATE_DIR"` para generar automáticamente la ronda final de 3 variantes a partir de esa selección.
-4. Flujo directo alternativo: si ya tienes las tres propuestas decididas, genera `screen_dir/style-options.html` con `python3 visual/scripts/write-style-options.py --visual-path "$STATE_DIR"`. Si necesitas escribirlo a mano, usa la clase `.style-grid`.
-5. El sidecar JSON final debe vivir en `screen_dir/style-options.json` para poder generar luego el artefacto final sin reinterpretar la pantalla.
-6. Informa al usuario: recuerda la URL, resume qué se muestra, pide que elija una opción.
-7. En el siguiente turno: lee la elección final con `python3 visual/scripts/read-choice.py "$STATE_DIR"` o, si lo prefieres, inspecciona `STATE_DIR/events` directamente.
-8. Genera `docs/style-direction.md` con `python3 visual/scripts/write-style-direction.py --project-dir "$PWD" --visual-path "$STATE_DIR"` o, si necesitas control manual, escribe el artefacto tú misma usando el sidecar JSON.
-9. Escribe `waiting.html` en `screen_dir` para limpiar el navegador hasta la próxima acción.
+1. Убедись, что сервер ещё активен, прочитав `STATE_DIR/server-info`.
+2. Если это добавляет контекста, сначала сгенерируй галерею каталога командой `python3 visual/scripts/write-style-demo-gallery.py --visual-path "$STATE_DIR"`.
+3. Рекомендуемый guided-процесс:
+   - `python3 visual/scripts/write-style-selector.py --visual-path "$STATE_DIR"` для выбора базовой системы.
+   - прочитай выбор командой `python3 visual/scripts/read-choice.py "$STATE_DIR"`.
+   - `python3 visual/scripts/write-style-selector.py --visual-path "$STATE_DIR" --style-id "<style_id>"`, чтобы пользователь выбрал типографику + палитру.
+   - снова прочитай выбор командой `python3 visual/scripts/read-choice.py "$STATE_DIR"`.
+   - `python3 visual/scripts/write-guided-style-options.py --visual-path "$STATE_DIR"`, чтобы автоматически сгенерировать финальный раунд из 3 вариантов на основе этого выбора.
+4. Альтернативный прямой процесс: если три предложения уже решены, сгенерируй `screen_dir/style-options.html` командой `python3 visual/scripts/write-style-options.py --visual-path "$STATE_DIR"`. Если нужно писать вручную, используй класс `.style-grid`.
+5. Финальный JSON sidecar должен лежать в `screen_dir/style-options.json`, чтобы потом можно было сформировать итоговый артефакт без повторной интерпретации экрана.
+6. Сообщи пользователю: напомни URL, кратко опиши, что показано, попроси выбрать один вариант.
+7. В следующем ходе: прочитай финальный выбор командой `python3 visual/scripts/read-choice.py "$STATE_DIR"` или, если предпочитаешь, изучи `STATE_DIR/events` напрямую.
+8. Сгенерируй `docs/style-direction.md` командой `python3 visual/scripts/write-style-direction.py --project-dir "$PWD" --visual-path "$STATE_DIR"` или, если нужен ручной контроль, напиши артефакт сам, используя JSON sidecar.
+9. Запиши `waiting.html` в `screen_dir`, чтобы очистить браузер до следующего действия.
 
-## Sidecar JSON recomendado
+## Рекомендуемый JSON sidecar
 
-Para que el artefacto final salga con buen nivel, intenta que cada propuesta incluya al
-menos:
+Чтобы итоговый артефакт получился хорошего уровня, старайся, чтобы каждое предложение включало
+как минимум:
 
 - `choice`
 - `name`
-- `concept` o `description`
+- `concept` или `description`
 - `palette`
 - `typography`
-- `spacing_density` o `layout_density`
-- `tone` o `mood`
-- `sample_component` o `component_example`
-- `visual_principles` o `design_principles`
-- `layout_grammar` o `composition_grammar`
-- `surface_treatment` o `materiality`
+- `spacing_density` или `layout_density`
+- `tone` или `mood`
+- `sample_component` или `component_example`
+- `visual_principles` или `design_principles`
+- `layout_grammar` или `composition_grammar`
+- `surface_treatment` или `materiality`
 - `shape_language`
 - `motion_language`
-- `signature_elements` o `visual_motifs`
-- `implementation_guardrails` o `guardrails`
-- `prompt_seed` o `design_prompt`
-- `rationale` o `why`
-- `not_this_direction` o `anti_patterns`
-- `context_signals`, `audience` o `constraints`
+- `signature_elements` или `visual_motifs`
+- `implementation_guardrails` или `guardrails`
+- `prompt_seed` или `design_prompt`
+- `rationale` или `why`
+- `not_this_direction` или `anti_patterns`
+- `context_signals`, `audience` или `constraints`
 
-El writer canónico tolera sidecars incompletos y alias razonables, pero cuanto más
-específica sea la propuesta, menos genérica será la dirección final.
+Канонический writer терпимо относится к неполным sidecar и разумным алиасам, но чем
+конкретнее предложение, тем менее шаблонным будет итоговое направление.
 
-### Regla crítica del flujo guiado
+### Критическое правило guided-процесса
 
-Si el usuario ya ha fijado **familia + tipografía + paleta**, las tres variantes finales
-deben seguir perteneciendo a ese mismo sistema. Lo que puede cambiar entre `A / B / C`
-es la composición, la jerarquía o el grado de expresividad, pero no la gramática base
-del sistema elegido.
+Если пользователь уже зафиксировал **семейство + типографику + палитру**, три финальных варианта
+должны по-прежнему принадлежать той же системе. Между `A / B / C` могут меняться
+композиция, иерархия или степень выразительности, но не базовая грамматика
+выбранной системы.
 
-Cuando generes sidecars manuales:
+Когда генерируешь sidecar вручную:
 
-- reutiliza la `prompt_seed` del sistema como semilla principal
-- arrastra siempre `visual_principles`, `layout_grammar` y `signature_elements`
-- usa `implementation_guardrails` para evitar que la variante se desvíe hacia otra familia
-- no mezcles referencias de una tendencia distinta solo para “hacerla más bonita”
+- переиспользуй `prompt_seed` системы как основное зерно
+- всегда переноси `visual_principles`, `layout_grammar` и `signature_elements`
+- используй `implementation_guardrails`, чтобы вариант не уходил в другое семейство
+- не смешивай отсылки к другому тренду только ради того, чтобы «сделать красивее»
 
-## Writer canónico de opciones
+## Канонический writer вариантов
 
-El helper recomendado es:
+Рекомендуемый helper:
 
 ```bash
 python3 visual/scripts/write-style-options.py --visual-path "$STATE_DIR"
 ```
 
-Este script:
+Этот скрипт:
 
-- autodetecta `style-options.json`
-- normaliza aliases comunes del sidecar
-- escribe un fragmento HTML compatible con el servidor real
-- evita depender de assets externos que no existen en el repo
+- автоматически находит `style-options.json`
+- нормализует распространённые алиасы sidecar
+- пишет HTML-фрагмент, совместимый с реальным сервером
+- не зависит от внешних ассетов, которых нет в репозитории
 
-Si necesitas personalizar el copy de cabecera, acepta `--title` y `--subtitle`.
+Если нужно настроить текст заголовка, он принимает `--title` и `--subtitle`.
 
-## Selector guiado de sistema + tipografía + paleta
+## Guided-выбор системы + типографики + палитры
 
-Selina ya puede trabajar en tres pasos naturales:
+Designer теперь может работать в три естественных шага:
 
-1. **Sistema base** — `python3 visual/scripts/write-style-selector.py --visual-path "$STATE_DIR"`
-2. **Tipografía + paleta** — `python3 visual/scripts/write-style-selector.py --visual-path "$STATE_DIR" --style-id "<style_id>"`
-3. **Tres variantes finales** — `python3 visual/scripts/write-guided-style-options.py --visual-path "$STATE_DIR"`
+1. **Базовая система** - `python3 visual/scripts/write-style-selector.py --visual-path "$STATE_DIR"`
+2. **Типографика + палитра** - `python3 visual/scripts/write-style-selector.py --visual-path "$STATE_DIR" --style-id "<style_id>"`
+3. **Три финальных варианта** - `python3 visual/scripts/write-guided-style-options.py --visual-path "$STATE_DIR"`
 
-`read-choice.py` sigue siendo el lector canónico entre pasos. Si la elección
-pertenece al flujo guiado, devolverá además `parsed_choice` con `stage`,
-`style_id`, `font_pairing_id` y `palette_mode`.
+`read-choice.py` по-прежнему остаётся каноническим читателем между шагами. Если выбор
+относится к guided-процессу, он дополнительно вернёт `parsed_choice` с `stage`,
+`style_id`, `font_pairing_id` и `palette_mode`.
 
-## Estructura HTML de las opciones
+## HTML-структура вариантов
 
-El servidor ya envuelve fragmentos HTML en su frame propio e inyecta `helper.js`, así
-que no hace falta escribir un documento completo ni enlazar assets extra. Este es el
-formato recomendado:
+Сервер сам оборачивает HTML-фрагменты в собственный фрейм и подключает `helper.js`,
+поэтому не нужно писать полный документ или подключать дополнительные ассеты. Рекомендуемый
+формат:
 
 ```html
 <section class="style-screen">
   <div class="style-screen-header">
-    <p class="style-screen-kicker">Selina propone</p>
-    <h1>Selecciona una dirección visual</h1>
-    <p class="style-screen-subtitle">Elige la propuesta que mejor encaja con el producto.</p>
+    <p class="style-screen-kicker">Designer предлагает</p>
+    <h1>Выбери визуальное направление</h1>
+    <p class="style-screen-subtitle">Выбери предложение, которое лучше всего подходит продукту.</p>
   </div>
   <div class="style-grid">
 
@@ -152,8 +152,8 @@ formato recomendado:
         <span class="style-letter">A</span>
       </div>
       <div class="style-meta">
-        <h2>Oscuro espacial</h2>
-        <p>Contraste alto, tipografía sans-serif, sensación tecnológica.</p>
+        <h2>Тёмный космос</h2>
+        <p>Высокий контраст, sans-serif типографика, технологичное ощущение.</p>
         <div class="palette">
           <span class="swatch" style="background:#1a1a2e;" title="#1a1a2e"></span>
           <span class="swatch" style="background:#e94560;" title="#e94560"></span>
@@ -167,8 +167,8 @@ formato recomendado:
         <span class="style-letter">B</span>
       </div>
       <div class="style-meta">
-        <h2>Editorial cálido</h2>
-        <p>Tonos crema, serif clásico, aire de revista de lujo.</p>
+        <h2>Тёплый editorial</h2>
+        <p>Кремовые тона, классическая антиква, дух люксового журнала.</p>
         <div class="palette">
           <span class="swatch" style="background:#f5f0e8;" title="#f5f0e8"></span>
           <span class="swatch" style="background:#c8a96e;" title="#c8a96e"></span>
@@ -182,8 +182,8 @@ formato recomendado:
         <span class="style-letter">C</span>
       </div>
       <div class="style-meta">
-        <h2>Minimalismo vibrante</h2>
-        <p>Verde azulado saturado, mucho espacio negativo, tipografía condensada.</p>
+        <h2>Яркий минимализм</h2>
+        <p>Насыщенный сине-зелёный, много негативного пространства, узкий шрифт.</p>
         <div class="palette">
           <span class="swatch" style="background:#0d7377;" title="#0d7377"></span>
           <span class="swatch" style="background:#14ffec;" title="#14ffec"></span>
@@ -196,37 +196,37 @@ formato recomendado:
 </section>
 ```
 
-Cada `.style-option` debe incluir obligatoriamente `data-choice` con un identificador
-único (letra, número o slug). El atributo es el que queda registrado en los eventos
-al hacer clic.
+Каждый `.style-option` ОБЯЗАТЕЛЬНО должен содержать `data-choice` с уникальным идентификатором
+(буква, число или slug). Именно этот атрибут записывается в события
+при клике.
 
-## Formato de eventos
+## Формат событий
 
-El archivo `STATE_DIR/events` contiene una línea JSON por evento, en orden cronológico.
-La forma canónica actual es:
+Файл `STATE_DIR/events` содержит по одной JSON-строке на событие, в хронологическом порядке.
+Актуальная каноническая форма:
 
 ```jsonl
 {"source":"user-event","type":"click","choice":"A","label":"Oscuro espacial","element":".style-option","ts":"2026-03-31T10:14:02Z","timestamp":"2026-03-31T10:14:02Z"}
 {"source":"user-event","type":"click","choice":"A","label":"Oscuro espacial","element":".style-option","ts":"2026-03-31T10:14:05Z","timestamp":"2026-03-31T10:14:05Z"}
 ```
 
-El lector canónico `visual/scripts/read-choice.py` también acepta el formato legacy anterior:
+Канонический читатель `visual/scripts/read-choice.py` также принимает прежний legacy-формат:
 
 ```jsonl
 {"ts":"2026-03-31T10:14:02Z","type":"click","choice":"A","element":".style-option"}
 {"ts":"2026-03-31T10:14:05Z","type":"click","choice":"A","element":".style-option"}
 ```
 
-El último clic con `type: "click"` sobre un `.style-option` se considera la elección
-definitiva del usuario. Si hay varios clics sobre la misma opción, se interpreta como
-confirmación. Si hay clics sobre opciones distintas, prevalece el más reciente.
+Последний клик с `type: "click"` по `.style-option` считается окончательным выбором
+пользователя. Несколько кликов по одному и тому же варианту трактуются как
+подтверждение. Если клики были по разным вариантам, побеждает самый поздний.
 
-## Parar servidor
+## Остановка сервера
 
 ```bash
 visual/scripts/stop-server.sh <session_dir>
 ```
 
-`session_dir` es el directorio de sesión devuelto por `start-server.sh`, o bien el
-padre común de `screen_dir` y `state_dir`. El script detiene el proceso y limpia los
-archivos temporales de la sesión.
+`session_dir` это каталог сессии, возвращённый `start-server.sh`, либо общий
+родитель `screen_dir` и `state_dir`. Скрипт останавливает процесс и удаляет
+временные файлы сессии.

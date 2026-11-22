@@ -35,7 +35,7 @@ if __package__ in {None, ""}:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.config_loader import detect_stack
-from core.optional_agents import order_optional_agent_names
+from core.optional_agents import normalize_optional_agent_flags, order_optional_agent_names
 from core.project_docs import (
     check_project_docs,
     ensure_project_docs,
@@ -119,14 +119,14 @@ _SKIP_DIRS = {
 _GREENFIELD_COMMAND = "alfred"
 _SELF_ROUTING_COMMANDS = frozenset({"alfred"})
 _NEXT_ACTION_SOURCE_LABELS = {
-    "state": "sesión activa",
-    "handoff": "handoff pendiente",
-    "verify": "verificación/UAT",
-    "brownfield": "mapa brownfield",
+    "state": "активная сессия",
+    "handoff": "незакрытый handoff",
+    "verify": "проверка/UAT",
+    "brownfield": "карта brownfield",
     "discovery": "discovery",
-    "current": "estado operativo actual",
-    "project": "contexto del proyecto",
-    "default": "contexto mínimo",
+    "current": "текущее рабочее состояние",
+    "project": "контекст проекта",
+    "default": "минимальный контекст",
 }
 _KANBAN_RELATIVE_BY_STATUS = {
     "backlog": KANBAN_BACKLOG_RELATIVE_PATH,
@@ -159,7 +159,7 @@ def _session_optional_agent_flags(session: Dict[str, Any]) -> Dict[str, bool]:
         return {}
     return {
         str(agent_name).strip(): bool(is_active)
-        for agent_name, is_active in raw_flags.items()
+        for agent_name, is_active in normalize_optional_agent_flags(raw_flags).items()
         if str(agent_name).strip()
     }
 
@@ -261,7 +261,7 @@ _KNOWN_ALFRED_COMMANDS = frozenset({
     "update",
     "help",
     "memory-ui",
-    "lucius",
+    "cto",
 })
 
 
@@ -1399,13 +1399,21 @@ def _completed_style_visual_phase(session: Dict[str, Any]) -> Optional[Dict[str,
     return None
 
 
-def _load_latest_selina_choice(project_dir: str) -> Optional[Dict[str, Any]]:
+def _designer_field(phase_result: Dict[str, Any], field: str) -> Any:
+    """Lee ``designer_<field>`` con fallback a la clave legacy ``selina_<field>``."""
+    value = phase_result.get(f"designer_{field}")
+    if not value:
+        value = phase_result.get(f"selina_{field}")
+    return value
+
+
+def _load_latest_designer_choice(project_dir: str) -> Optional[Dict[str, Any]]:
     visual_root = _project_path(project_dir, VISUAL_SESSION_ROOT_RELATIVE_PATH)
     if not os.path.isdir(visual_root):
         return None
 
     try:
-        from core.selina_visual import read_latest_style_choice  # noqa: PLC0415
+        from core.designer_visual import read_latest_style_choice  # noqa: PLC0415
     except Exception:
         return None
 
@@ -1450,11 +1458,11 @@ def _enrich_style_visual_phase_result(project_dir: str, phase_result: Dict[str, 
         artifacts.append(STYLE_DIRECTION_RELATIVE_PATH)
     enriched["artefactos"] = artifacts
 
-    choice = _load_latest_selina_choice(project_dir)
+    choice = _load_latest_designer_choice(project_dir)
     if isinstance(choice, dict):
-        enriched["selina_choice"] = choice.get("choice")
-        enriched["selina_label"] = choice.get("label")
-        enriched["selina_timestamp"] = choice.get("timestamp")
+        enriched["designer_choice"] = choice.get("choice")
+        enriched["designer_label"] = choice.get("label")
+        enriched["designer_timestamp"] = choice.get("timestamp")
 
     return enriched
 
@@ -1518,8 +1526,8 @@ def _phase_task_notes(
             note += f" Iteraciones internas: {iterations}."
         if artifacts:
             note += f" Artefactos registrados: {len(artifacts)}."
-        if phase_result.get("selina_choice"):
-            label = phase_result.get("selina_label") or phase_result.get("selina_choice")
+        if _designer_field(phase_result, "choice"):
+            label = _designer_field(phase_result, "label") or _designer_field(phase_result, "choice")
             note += f" Elección visual: {label}."
         return note
 
@@ -1537,9 +1545,9 @@ def _phase_task_evidence(phase_result: Optional[Dict[str, Any]]) -> str:
     result = str(phase_result.get("resultado", "")).strip()
     if result == "saltada":
         return ""
-    if phase_result.get("selina_choice"):
-        label = str(phase_result.get("selina_label") or phase_result.get("selina_choice")).strip()
-        timestamp = str(phase_result.get("selina_timestamp", "")).strip() or completed_at
+    if _designer_field(phase_result, "choice"):
+        label = str(_designer_field(phase_result, "label") or _designer_field(phase_result, "choice")).strip()
+        timestamp = str((_designer_field(phase_result, "timestamp") or "")).strip() or completed_at
         evidence = f"Elección visual '{label}' registrada"
         if timestamp:
             evidence += f" en {timestamp}"
@@ -1588,10 +1596,10 @@ def _phase_task_body(
         completed_at = str(phase_result.get("completada_en", "")).strip()
         if completed_at:
             lines.append(f"Completada en: {completed_at}")
-        if phase_result.get("selina_choice"):
-            choice_label = str(phase_result.get("selina_label") or phase_result.get("selina_choice")).strip()
+        if _designer_field(phase_result, "choice"):
+            choice_label = str(_designer_field(phase_result, "label") or _designer_field(phase_result, "choice")).strip()
             lines.append(f"Elección visual: {choice_label}")
-            choice_timestamp = str(phase_result.get("selina_timestamp", "")).strip()
+            choice_timestamp = str((_designer_field(phase_result, "timestamp") or "")).strip()
             if choice_timestamp:
                 lines.append(f"Elección registrada en: {choice_timestamp}")
 
@@ -2630,7 +2638,7 @@ def render_standup_markdown(snapshot: Dict[str, Any]) -> str:
     focus = snapshot.get("focus", {})
     kanban = snapshot.get("kanban", {})
     lines = [
-        f"## Standup diario — {snapshot.get('standup_date', _now_utc().date().isoformat())}",
+        f"## Ежедневный standup: {snapshot.get('standup_date', _now_utc().date().isoformat())}",
         "",
         f"- Done: {len(kanban.get('done', []))}",
         f"- In progress: {len(kanban.get('in_progress', []))}",
@@ -2639,30 +2647,30 @@ def render_standup_markdown(snapshot: Dict[str, Any]) -> str:
     ]
     if kanban.get("internal_total"):
         lines.append(
-            f"- Internas: {kanban['internal_total']} "
-            f"(fase: {kanban.get('phase_total', 0)}, verify: {kanban.get('verify_total', 0)})"
+            f"- Внутренние: {kanban['internal_total']} "
+            f"(фаза: {kanban.get('phase_total', 0)}, verify: {kanban.get('verify_total', 0)})"
         )
     if kanban.get("progress_pct") is not None:
-        lines.append(f"- Progreso estimado: {kanban['progress_pct']} %")
+        lines.append(f"- Оценка прогресса: {kanban['progress_pct']} %")
 
     if focus.get("in_progress"):
-        lines.extend(["", "### En curso", ""])
+        lines.extend(["", "### В работе", ""])
         lines.extend(f"- {item}" for item in focus["in_progress"])
 
     if focus.get("blocked"):
-        lines.extend(["", "### Bloqueos", ""])
+        lines.extend(["", "### Блокеры", ""])
         lines.extend(f"- {item}" for item in focus["blocked"])
 
     if focus.get("done"):
-        lines.extend(["", "### Últimos completados", ""])
+        lines.extend(["", "### Последние завершённые", ""])
         lines.extend(f"- {item}" for item in focus["done"])
 
     progress_signals = snapshot.get("progress_signals") or snapshot.get("current_signals") or []
     if progress_signals:
-        lines.extend(["", "### Señales", ""])
+        lines.extend(["", "### Сигналы", ""])
         lines.extend(f"- {item}" for item in progress_signals[:3])
 
-    _extend_next_action_section(lines, next_action, heading="### Siguiente paso")
+    _extend_next_action_section(lines, next_action, heading="### Следующий шаг")
     return "\n".join(lines).strip() + "\n"
 
 
@@ -2683,25 +2691,25 @@ def render_lane_markdown(snapshot: Dict[str, Any]) -> str:
     label = _KANBAN_STATUS_LABELS.get(lane, lane)
     tasks = snapshot.get("tasks", [])
     next_action = snapshot.get("next_action", {"command": "alfred", "reason": ""})
-    lines = [f"## Tareas en {label}", ""]
+    lines = [f"## Задачи в {label}", ""]
     if not tasks:
-        lines.append("No hay tareas en esta columna.")
+        lines.append("В этой колонке нет задач.")
     else:
         for task in tasks:
             lines.append(f"### {_task_reference(task)}")
             lines.append("")
-            lines.append(f"- Estado: {label}")
+            lines.append(f"- Статус: {label}")
             if task.get("agent"):
-                lines.append(f"- Agente: {task['agent']}")
+                lines.append(f"- Агент: {task['agent']}")
             if task.get("criteria"):
-                lines.append(f"- Criterios: {', '.join(task['criteria'])}")
+                lines.append(f"- Критерии: {', '.join(task['criteria'])}")
             if task.get("dependencies"):
-                lines.append(f"- Dependencias: {task['dependencies']}")
+                lines.append(f"- Зависимости: {task['dependencies']}")
             if task.get("notes"):
-                lines.append(f"- Notas: {task['notes']}")
+                lines.append(f"- Заметки: {task['notes']}")
             if task.get("evidence"):
-                lines.append(f"- Evidencia: {task['evidence']}")
-            lines.append(f"- Fuente: `{task.get('path', '-')}`")
+                lines.append(f"- Подтверждение: {task['evidence']}")
+            lines.append(f"- Источник: `{task.get('path', '-')}`")
             lines.append("")
     _extend_next_action_section(lines, next_action)
     return "\n".join(lines).strip() + "\n"
@@ -2718,12 +2726,12 @@ def validate_operational_artifacts(project_dir: str) -> Dict[str, Any]:
     checks: List[str] = []
 
     if not tasks:
-        warnings.append("No hay tareas detectadas en docs/project/kanban/.")
+        warnings.append("В docs/project/kanban/ не найдено задач.")
     else:
-        checks.append(f"Se han detectado {len(visible_tasks)} tareas visibles en el kanban.")
+        checks.append(f"Видимых задач в kanban: {len(visible_tasks)}.")
         if internal_count:
             checks.append(
-                f"Hay {internal_count} tareas internas de coordinación (phase/verify)."
+                f"Внутренних координационных задач (phase/verify): {internal_count}."
             )
 
     seen_ids: Dict[str, str] = {}
@@ -2734,7 +2742,7 @@ def validate_operational_artifacts(project_dir: str) -> Dict[str, Any]:
             missing_ids += 1
         elif task_id in seen_ids:
             errors.append(
-                f"La tarea {task_id} aparece duplicada en '{seen_ids[task_id]}' y '{task['status']}'."
+                f"Задача {task_id} дублируется в '{seen_ids[task_id]}' и '{task['status']}'."
             )
         else:
             seen_ids[task_id] = task["status"]
@@ -2744,14 +2752,14 @@ def validate_operational_artifacts(project_dir: str) -> Dict[str, Any]:
             and task["status"] in {"in-progress", "blocked"}
             and not task.get("agent")
         ):
-            warnings.append(f"{_task_reference(task)} no tiene agente responsable visible.")
+            warnings.append(f"{_task_reference(task)}: не указан ответственный агент.")
         if (
             _is_visible_kanban_task(task)
             and task["status"] == "blocked"
             and not (task.get("dependencies") or task.get("notes"))
         ):
             warnings.append(
-                f"{_task_reference(task)} está bloqueada, pero no indica dependencia ni motivo."
+                f"{_task_reference(task)} заблокирована, но не указаны ни зависимость, ни причина."
             )
         if (
             _is_visible_kanban_task(task)
@@ -2759,23 +2767,23 @@ def validate_operational_artifacts(project_dir: str) -> Dict[str, Any]:
             and not task.get("evidence")
             and not _task_is_skipped_phase(task)
         ):
-            warnings.append(f"{_task_reference(task)} está en done sin evidencia explícita.")
+            warnings.append(f"{_task_reference(task)} в done без явного подтверждения.")
 
     if missing_ids:
         warnings.append(
-            f"Hay {missing_ids} tareas sin identificador [T-XXX]; el sync con GitHub será parcial."
+            f"Задач без идентификатора [T-XXX]: {missing_ids}; синхронизация с GitHub будет частичной."
         )
 
     traceability_md = _read_text_if_exists(project_dir, TRACEABILITY_MD_RELATIVE_PATH)
     progress_md = _read_text_if_exists(project_dir, PROGRESS_MD_RELATIVE_PATH)
     if traceability_md:
-        checks.append("Existe docs/project/traceability.md.")
+        checks.append("docs/project/traceability.md существует.")
     else:
-        warnings.append("Falta docs/project/traceability.md.")
+        warnings.append("Нет docs/project/traceability.md.")
     if progress_md:
-        checks.append("Existe docs/project/progress.md.")
+        checks.append("docs/project/progress.md существует.")
     else:
-        warnings.append("Falta docs/project/progress.md.")
+        warnings.append("Нет docs/project/progress.md.")
 
     traced_criteria = set(_extract_criteria_ids(traceability_md))
     referenced_criteria = {
@@ -2786,33 +2794,33 @@ def validate_operational_artifacts(project_dir: str) -> Dict[str, Any]:
     missing_traceability = sorted(referenced_criteria - traced_criteria)
     if missing_traceability:
         warnings.append(
-            "Hay criterios referenciados en tareas que no aparecen en la trazabilidad: "
+            "В задачах есть критерии, которых нет в трассируемости: "
             + ", ".join(missing_traceability)
         )
     elif referenced_criteria:
-        checks.append("Los criterios visibles en tareas también aparecen en la trazabilidad.")
+        checks.append("Критерии из задач присутствуют и в трассируемости.")
 
     verify_suggestion = suggest_verify_action(project_dir)
     uat = load_uat(project_dir)
     if verify_suggestion is not None:
         if uat:
             warnings.append(
-                "Existe UAT registrada, pero no cubre el último flujo completado o sigue pendiente de cierre."
+                "UAT записана, но не покрывает последний завершённый процесс или ещё не закрыта."
             )
         else:
-            warnings.append("La verificación/UAT del último flujo completado sigue pendiente.")
+            warnings.append("Проверка/UAT последнего завершённого процесса ещё не пройдена.")
     elif uat:
-        checks.append(f"Existe UAT en estado '{_status_label(uat.get('status', ''))}'.")
+        checks.append(f"UAT есть, статус '{_status_label_ru(uat.get('status', ''))}'.")
 
     state = _load_active_session_state(project_dir) or load_state(_project_path(project_dir, STATE_RELATIVE_PATH))
     if isinstance(state, dict):
         style_phase = _completed_style_visual_phase(state)
         if style_phase is not None:
             if os.path.isfile(_project_path(project_dir, STYLE_DIRECTION_RELATIVE_PATH)):
-                checks.append("Existe docs/style-direction.md para la fase estilo_visual.")
+                checks.append("Для фазы estilo_visual есть docs/style-direction.md.")
             else:
                 warnings.append(
-                    "La fase estilo_visual figura como completada, pero falta docs/style-direction.md."
+                    "Фаза estilo_visual отмечена как завершённая, но docs/style-direction.md нет."
                 )
 
     sync_state = _read_json_file(_project_path(project_dir, GITHUB_SYNC_JSON_RELATIVE_PATH))
@@ -2831,10 +2839,10 @@ def validate_operational_artifacts(project_dir: str) -> Dict[str, Any]:
         ]
         if sync_missing:
             warnings.append(
-                "Hay tareas no sincronizadas con GitHub: " + ", ".join(sync_missing[:5])
+                "Есть задачи, не синхронизированные с GitHub: " + ", ".join(sync_missing[:5])
             )
         else:
-            checks.append("El mapa de sincronización con GitHub cubre todas las tareas con ID.")
+            checks.append("Карта синхронизации с GitHub покрывает все задачи с ID.")
         stale_sync = sorted(
             task_id
             for task_id in mapped
@@ -2842,7 +2850,7 @@ def validate_operational_artifacts(project_dir: str) -> Dict[str, Any]:
         )
         if stale_sync:
             warnings.append(
-                "El mapa de GitHub conserva tareas que ya no existen en el kanban local: "
+                "В карте GitHub остались задачи, которых уже нет в локальном kanban: "
                 + ", ".join(stale_sync[:5])
             )
 
@@ -2864,31 +2872,31 @@ def validate_operational_artifacts(project_dir: str) -> Dict[str, Any]:
 def render_validation_markdown(report: Dict[str, Any]) -> str:
     status = report.get("status", "desconocido")
     verdict = {
-        "ok": "APROBADO",
-        "warning": "APROBADO CON AVISOS",
-        "error": "RECHAZADO",
+        "ok": "ПРОЙДЕНО",
+        "warning": "ПРОЙДЕНО С ПРЕДУПРЕЖДЕНИЯМИ",
+        "error": "ОТКЛОНЕНО",
     }.get(status, status.upper())
     next_action = report.get("next_action", {"command": "alfred", "reason": ""})
     lines = [
-        f"## Validación operativa — {verdict}",
+        f"## Рабочая валидация: {verdict}",
         "",
-        "### Resumen",
+        "### Сводка",
         "",
-        f"- Checks en verde: {len(report.get('checks') or [])}",
-        f"- Avisos: {len(report.get('warnings') or [])}",
-        f"- Errores: {len(report.get('errors') or [])}",
+        f"- Зелёных проверок: {len(report.get('checks') or [])}",
+        f"- Предупреждений: {len(report.get('warnings') or [])}",
+        f"- Ошибок: {len(report.get('errors') or [])}",
     ]
 
     if report.get("checks"):
-        lines.extend(["", "### Checks", ""])
+        lines.extend(["", "### Проверки", ""])
         lines.extend(f"- {item}" for item in report["checks"])
 
     if report.get("warnings"):
-        lines.extend(["", "### Avisos", ""])
+        lines.extend(["", "### Предупреждения", ""])
         lines.extend(f"- {item}" for item in report["warnings"])
 
     if report.get("errors"):
-        lines.extend(["", "### Errores", ""])
+        lines.extend(["", "### Ошибки", ""])
         lines.extend(f"- {item}" for item in report["errors"])
 
     _extend_next_action_section(lines, next_action)
@@ -2897,27 +2905,27 @@ def render_validation_markdown(report: Dict[str, Any]) -> str:
 
 def render_normalize_kanban_markdown(result: Dict[str, Any]) -> str:
     lines = [
-        "## Normalización de kanban",
+        "## Нормализация kanban",
         "",
-        f"- Tareas ajustadas: {result.get('count', 0)}",
+        f"- Исправлено задач: {result.get('count', 0)}",
     ]
     changed = result.get("changed", [])
     if changed:
-        lines.extend(["", "### Tipos asignados", ""])
+        lines.extend(["", "### Назначенные типы", ""])
         for item in changed:
-            task_id = item.get("id") or "sin-id"
-            title = item.get("title") or "sin título"
+            task_id = item.get("id") or "без-id"
+            title = item.get("title") or "без названия"
             task_type = item.get("task_type") or "generic"
             status = item.get("status") or "desconocido"
             lines.append(f"- [{task_id}] {title} -> `{task_type}` ({status})")
     else:
-        lines.append("- El tablero ya estaba normalizado.")
+        lines.append("- Доска уже была нормализована.")
     return "\n".join(lines).strip() + "\n"
 
 
 def search_project_context(project_dir: str, query: str, limit: int = 10) -> Dict[str, Any]:
     if not (query or "").strip():
-        raise RuntimeError("Debes indicar un término de búsqueda para /alfred-dev:search.")
+        raise RuntimeError("Укажи поисковый запрос для /alfred-dev:search.")
 
     normalized_query = _normalize_free_text(query)
     doc_results: List[Dict[str, Any]] = []
@@ -2998,22 +3006,22 @@ def render_search_markdown(results: Dict[str, Any]) -> str:
     query = results.get("query", "")
     doc_results = results.get("docs", [])
     memory_results = results.get("memory", [])
-    lines = [f"## Resultados para `{query}`", ""]
+    lines = [f"## Результаты для `{query}`", ""]
 
     if doc_results:
-        lines.extend(["### Artefactos del proyecto", ""])
+        lines.extend(["### Артефакты проекта", ""])
         for item in doc_results:
             lines.append(
                 f"- `{item['path']}:{item['line']}` — {item['snippet']}"
             )
 
     if memory_results:
-        lines.extend(["", "### Memoria SQLite", ""])
+        lines.extend(["", "### Память SQLite", ""])
         for item in memory_results:
             lines.append(f"- {item['label']}")
 
     if not doc_results and not memory_results:
-        lines.append("No se han encontrado coincidencias en SonIA ni en la memoria del proyecto.")
+        lines.append("Совпадений не найдено ни в SonIA, ни в памяти проекта.")
 
     return "\n".join(lines).strip() + "\n"
 
@@ -3277,7 +3285,7 @@ def launch_memory_ui(
     while _now_utc().timestamp() < deadline:
         if proc.poll() is not None:
             detail = _read_text_if_exists(project_dir, GUI_LOG_RELATIVE_PATH).strip()
-            raise RuntimeError(detail or "La Memory UI terminó antes de quedar lista.")
+            raise RuntimeError(detail or "Memory UI завершилась, не успев запуститься.")
         if _is_memory_ui_reachable(
             url,
             expected_project_dir=project_dir,
@@ -3292,7 +3300,7 @@ def launch_memory_ui(
         except OSError:
             pass
         detail = _read_text_if_exists(project_dir, GUI_LOG_RELATIVE_PATH).strip()
-        raise RuntimeError(detail or "La Memory UI no respondió dentro del tiempo esperado.")
+        raise RuntimeError(detail or "Memory UI не ответила за отведённое время.")
 
     with open(port_path, "w", encoding="utf-8") as fh:
         fh.write(str(port))
@@ -3353,7 +3361,10 @@ def stop_memory_ui(project_dir: str) -> Dict[str, Any]:
     }
 
 
-_MEMORY_UI_STOP_TOKENS = frozenset({"stop", "cerrar", "detener", "off", "halt"})
+_MEMORY_UI_STOP_TOKENS = frozenset({
+    "stop", "cerrar", "detener", "off", "halt",
+    "стоп", "закрой", "закрыть", "останови", "остановить", "выключи",
+})
 _MEMORY_UI_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 
 
@@ -3371,8 +3382,8 @@ def assert_memory_ui_loopback_host(host: str) -> str:
     normalized = str(host or "").strip().lower()
     if normalized not in _MEMORY_UI_LOOPBACK_HOSTS:
         raise RuntimeError(
-            "Memory UI solo acepta host de loopback "
-            f"(127.0.0.1, ::1 o localhost), no {host!r}."
+            "Memory UI принимает только loopback-хост "
+            f"(127.0.0.1, ::1 или localhost), а не {host!r}."
         )
     return host
 
@@ -3380,17 +3391,17 @@ def assert_memory_ui_loopback_host(host: str) -> str:
 def render_memory_ui_stop_markdown(result: Dict[str, Any]) -> str:
     if result.get("stopped"):
         return (
-            "## Memory UI detenida\n\n"
-            f"- PID: {result.get('pid', 'desconocido')}\n"
-            f"- URL previa: {result.get('url', 'desconocida')}\n"
+            "## Memory UI остановлена\n\n"
+            f"- PID: {result.get('pid', 'неизвестно')}\n"
+            f"- Прежний URL: {result.get('url', 'неизвестно')}\n"
         )
     reason = str(result.get("reason") or "not-running")
     if reason == "stale-state":
         return (
-            "## Memory UI no estaba en ejecución\n\n"
-            "- Había un estado local obsoleto y se ha limpiado.\n"
+            "## Memory UI не была запущена\n\n"
+            "- Было устаревшее локальное состояние, оно очищено.\n"
         )
-    return "## Memory UI no estaba en ejecución\n"
+    return "## Memory UI не была запущена\n"
 
 
 def render_memory_ui_markdown(result: Dict[str, Any]) -> str:
@@ -3399,22 +3410,22 @@ def render_memory_ui_markdown(result: Dict[str, Any]) -> str:
 
     reused = bool(result.get("reused"))
     lines = [
-        "## Memory UI lista",
+        "## Memory UI готова",
         "",
-        f"- URL: {result.get('url', 'desconocida')}",
+        f"- URL: {result.get('url', 'неизвестно')}",
         f"- SQLite: `{result.get('db_path', '.claude/alfred-memory.db')}`",
-        f"- Estado: {'reutilizada' if reused else 'arrancada ahora'}",
-        "- Refresco automático: cada 8 segundos",
-        "- Vistas: overview, timeline, decisiones, grafo, commits y búsqueda",
-        "- Para cerrarla ahora: `/alfred-dev:memory-ui stop`",
-        "- Al terminar la sesión de Claude se detiene sola",
+        f"- Состояние: {'использована повторно' if reused else 'запущена сейчас'}",
+        "- Автообновление: каждые 8 секунд",
+        "- Представления: overview, timeline, решения, граф, коммиты и поиск",
+        "- Чтобы закрыть её сейчас: `/alfred-dev:memory-ui stop`",
+        "- Остановится сама по окончании сессии Claude",
         "",
-        "### Qué verás",
+        "### Что ты увидишь",
         "",
-        "- Estado operativo del proyecto y siguiente paso recomendado",
-        "- Timeline de iteraciones y eventos",
-        "- Decisiones con sus relaciones visibles",
-        "- Commits recientes y salud de la memoria",
+        "- Рабочее состояние проекта и рекомендуемый следующий шаг",
+        "- Timeline итераций и событий",
+        "- Решения с видимыми связями",
+        "- Недавние коммиты и состояние памяти",
     ]
     return "\n".join(lines).strip() + "\n"
 
@@ -3433,7 +3444,7 @@ def _run_command(
     )
     if check and proc.returncode != 0:
         detail = (proc.stderr or proc.stdout or "").strip()
-        raise RuntimeError(detail or f"El comando falló: {' '.join(args)}")
+        raise RuntimeError(detail or f"Команда завершилась с ошибкой: {' '.join(args)}")
     return proc
 
 
@@ -3446,7 +3457,7 @@ def _run_command_json(args: List[str], cwd: Optional[str] = None) -> Any:
         return json.loads(output)
     except json.JSONDecodeError as exc:
         raise RuntimeError(
-            f"Respuesta JSON inesperada de {' '.join(args)}: {exc}"
+            f"Неожиданный JSON-ответ от {' '.join(args)}: {exc}"
         ) from exc
 
 
@@ -3462,7 +3473,7 @@ def _detect_github_repo(project_dir: str, raw_request: str = "") -> str:
     remote = (proc.stdout or "").strip()
     if not remote:
         raise RuntimeError(
-            "No se pudo detectar el repositorio GitHub. Añade un remoto `origin` o pasa `owner/repo`."
+            "Не удалось определить репозиторий GitHub. Добавь remote `origin` или передай `owner/repo`."
         )
 
     patterns = [
@@ -3475,7 +3486,7 @@ def _detect_github_repo(project_dir: str, raw_request: str = "") -> str:
             return match.group("repo")
 
     raise RuntimeError(
-        f"El remoto origin no apunta a GitHub o no se pudo parsear: {remote}"
+        f"Remote origin не указывает на GitHub или не разбирается: {remote}"
     )
 
 
@@ -4014,23 +4025,23 @@ def render_github_sync_markdown(result: Dict[str, Any]) -> str:
 def render_github_sync_cli_summary(result: Dict[str, Any]) -> str:
     next_action = result.get("next_action", {"command": "alfred", "directive": ""})
     counts = [
-        f"sincronizadas={len(result.get('tasks', []))}",
-        f"omitidas={len(result.get('skipped', []))}",
-        f"internas={len(result.get('internal_omitted', []))}",
-        f"retiradas={len(result.get('retired', []))}",
+        f"синхронизировано={len(result.get('tasks', []))}",
+        f"пропущено={len(result.get('skipped', []))}",
+        f"внутренние={len(result.get('internal_omitted', []))}",
+        f"снято={len(result.get('retired', []))}",
         f"drift={len(result.get('remote_drift', []))}",
     ]
     lines = [
-        "## SonIA Sync listo",
+        "## SonIA Sync готов",
         "",
-        f"- Repo: `{result.get('repo', '-')}`",
-        f"- Issue paraguas: {result.get('board_issue', {}).get('url', 'pendiente')}",
-        f"- Conteo: {', '.join(counts)}",
-        f"- Estado local: `{GITHUB_SYNC_JSON_RELATIVE_PATH}`",
-        f"- Informe detallado: `{GITHUB_SYNC_MD_RELATIVE_PATH}`",
+        f"- Репозиторий: `{result.get('repo', '-')}`",
+        f"- Зонтичный issue: {result.get('board_issue', {}).get('url', 'ожидается')}",
+        f"- Счётчики: {', '.join(counts)}",
+        f"- Локальное состояние: `{GITHUB_SYNC_JSON_RELATIVE_PATH}`",
+        f"- Подробный отчёт: `{GITHUB_SYNC_MD_RELATIVE_PATH}`",
         (
-            f"- Siguiente paso: `/alfred-dev:{next_action.get('command', 'alfred')}` "
-            f"— {next_action.get('directive', 'Avanza con el siguiente comando recomendado.')}"
+            f"- Следующий шаг: `/alfred-dev:{next_action.get('command', 'alfred')}`: "
+            f"{next_action.get('directive', 'Переходи к следующей рекомендуемой команде.')}"
         ),
     ]
     return "\n".join(lines).strip() + "\n"
@@ -4045,12 +4056,12 @@ def sync_project_to_github(project_dir: str, raw_request: str = "") -> Dict[str,
         for task in board.get(status, [])
     ]
     if not tasks:
-        raise RuntimeError("No hay tareas en docs/project/kanban/ para sincronizar.")
+        raise RuntimeError("В docs/project/kanban/ нет задач для синхронизации.")
 
     validation = validate_operational_artifacts(project_dir)
     if validation.get("errors"):
         raise RuntimeError(
-            "El kanban no se puede sincronizar de forma fiable: "
+            "Kanban нельзя надёжно синхронизировать: "
             + "; ".join(validation["errors"])
         )
 
@@ -4065,7 +4076,7 @@ def sync_project_to_github(project_dir: str, raw_request: str = "") -> Dict[str,
     internal_omitted = [task for task in tasks if not _is_syncable_kanban_task(task)]
     if not syncable_tasks:
         raise RuntimeError(
-            "No hay tareas con identificador [T-XXX] para sincronizar a GitHub Issues."
+            "Нет задач с идентификатором [T-XXX] для синхронизации с GitHub Issues."
         )
 
     _ensure_gh_ready()
@@ -4188,6 +4199,7 @@ def _extract_recommended_alfred_command(markdown: str) -> Optional[str]:
         if (
             "comando recomendado" not in normalized_line
             and "siguiente comando recomendado" not in normalized_line
+            and "рекомендуемая команда" not in normalized_line
         ):
             continue
         window = "\n".join(lines[index : index + 4])
@@ -4652,15 +4664,15 @@ def render_codebase_map_summary(result: Dict[str, Any]) -> str:
     """Resumen breve listo para devolver en CLI tras map-codebase."""
     stack = result.get("stack", {})
     focus_area = result.get("focus_area")
-    focus_line = f"- Foco analizado: {focus_area}\n" if focus_area else ""
+    focus_line = f"- Проанализированный фокус: {focus_area}\n" if focus_area else ""
     return (
-        "## Mapeo brownfield completado\n\n"
-        f"- Proyecto: `{result.get('project_name', 'proyecto')}`\n"
-        f"- Stack detectado: runtime `{stack.get('runtime', 'desconocido')}`, "
-        f"framework `{stack.get('framework', 'desconocido')}`\n"
+        "## Карта brownfield составлена\n\n"
+        f"- Проект: `{result.get('project_name', 'проект')}`\n"
+        f"- Обнаруженный стек: runtime `{stack.get('runtime', 'неизвестно')}`, "
+        f"framework `{stack.get('framework', 'неизвестно')}`\n"
         f"{focus_line}"
-        f"- Artefactos: `{CODEBASE_MAP_RELATIVE_PATH}` y `{CURRENT_RELATIVE_PATH}`\n"
-        f"- Siguiente comando recomendado: `/alfred-dev:{result.get('recommended_command', 'alfred')}`\n"
+        f"- Артефакты: `{CODEBASE_MAP_RELATIVE_PATH}` и `{CURRENT_RELATIVE_PATH}`\n"
+        f"- Рекомендуемая следующая команда: `/alfred-dev:{result.get('recommended_command', 'alfred')}`\n"
     )
 
 
@@ -4670,29 +4682,29 @@ def render_discovery_summary(result: Dict[str, Any]) -> str:
     open_questions = result.get("open_questions") or []
     risks = result.get("risks") or []
     scope_line = (
-        f"- Alcance inicial: {scope_items[0]}\n"
+        f"- Начальный объём: {scope_items[0]}\n"
         if isinstance(scope_items, list) and scope_items
         else ""
     )
     question_line = (
-        f"- Pregunta abierta clave: {open_questions[0]}\n"
+        f"- Ключевой открытый вопрос: {open_questions[0]}\n"
         if isinstance(open_questions, list) and open_questions
         else ""
     )
     risk_line = (
-        f"- Riesgo principal: {risks[0]}\n"
+        f"- Главный риск: {risks[0]}\n"
         if isinstance(risks, list) and risks
         else ""
     )
     return (
-        "## Refinado preparado\n\n"
-        f"- Foco: `{result.get('description', 'siguiente trabajo')}`\n"
-        f"- Actor principal: `{result.get('actor', 'por definir')}`\n"
+        "## Уточнение подготовлено\n\n"
+        f"- Фокус: `{result.get('description', 'следующая работа')}`\n"
+        f"- Основной актор: `{result.get('actor', 'не определён')}`\n"
         f"{scope_line}"
         f"{question_line}"
         f"{risk_line}"
-        f"- Artefactos: `{DISCOVERY_MD_RELATIVE_PATH}` y `{CURRENT_RELATIVE_PATH}`\n"
-        f"- Siguiente comando recomendado: `/alfred-dev:{result.get('recommended_command', 'feature')}`\n"
+        f"- Артефакты: `{DISCOVERY_MD_RELATIVE_PATH}` и `{CURRENT_RELATIVE_PATH}`\n"
+        f"- Рекомендуемая следующая команда: `/alfred-dev:{result.get('recommended_command', 'feature')}`\n"
     )
 
 
@@ -4700,23 +4712,23 @@ def render_quick_setup_summary(result: Dict[str, Any]) -> str:
     """Resumen breve para devolver cuando quick ya quedó sembrado por prefetch."""
     needs_map = result.get("needs_codebase_map")
     map_note = (
-        "- Nota: el repo parece brownfield y conviene ejecutar `/alfred-dev:map-codebase` antes de tocar código.\n"
+        "- Примечание: репозиторий похож на brownfield, перед правкой кода стоит выполнить `/alfred-dev:map-codebase`.\n"
         if needs_map
         else ""
     )
     return (
-        "## Quick preparado\n\n"
-        f"- Sesión activa: `{result.get('command', 'quick')}` en fase `{result.get('phase', 'ejecucion_acotada')}`\n"
-        f"- Cambio pedido: `{result.get('description', 'cambio rápido acotado')}`\n"
-        f"- Estado persistido: `{STATE_RELATIVE_PATH}`\n"
+        "## Quick подготовлен\n\n"
+        f"- Активная сессия: `{result.get('command', 'quick')}` в фазе `{result.get('phase', 'ejecucion_acotada')}`\n"
+        f"- Запрошенное изменение: `{result.get('description', 'быстрое ограниченное изменение')}`\n"
+        f"- Сохранённое состояние: `{STATE_RELATIVE_PATH}`\n"
         f"{map_note}"
-        f"- Siguiente paso esperado al cerrar: `{result.get('next_command', '/alfred-dev:verify')}`\n"
-        "- Cierre canónico: responde con este resumen, sin bloques Insight ni explicación larga.\n"
+        f"- Ожидаемый шаг после завершения: `{result.get('next_command', '/alfred-dev:verify')}`\n"
+        "- Каноническое завершение: ответь этим резюме, без блоков Insight и длинных объяснений.\n"
     )
 
 
 _HELPER_FIRST_FLOW_COMMANDS = frozenset({"feature", "fix", "spike", "ship", "audit"})
-_LUCIUS_SCOPES = frozenset({"all", "security", "tests", "architecture", "performance"})
+_CTO_SCOPES = frozenset({"all", "security", "tests", "architecture", "performance"})
 
 
 def _default_flow_description(command: str) -> str:
@@ -4788,29 +4800,29 @@ def render_flow_start_summary(result: Dict[str, Any]) -> str:
     """Resumen breve para devolver cuando un flujo largo quedó sembrado."""
     command = result.get("command", "flujo")
     marker = result.get("headless_marker") or f"{command.upper()}_HEADLESS_START"
-    pending_gate = result.get("pending_gate") or "sin gate pendiente detectada"
-    phase_description = result.get("phase_description") or "Primera fase del flujo."
+    pending_gate = result.get("pending_gate") or "незакрытая gate не обнаружена"
+    phase_description = result.get("phase_description") or "Первая фаза процесса."
     artifacts = result.get("artifacts") or []
-    artifact_lines = "\n".join(f"- `{item}`" for item in artifacts) if artifacts else "- Ninguno"
+    artifact_lines = "\n".join(f"- `{item}`" for item in artifacts) if artifacts else "- Нет"
     sonarqube_section = _render_audit_sonarqube_summary(result)
     return (
         f"`{marker}`\n\n"
-        "## Flujo preparado\n\n"
-        f"- Sesión activa: `{command}` en fase `{result.get('phase', 'fase_inicial')}`\n"
-        f"- Trabajo pedido: `{result.get('description', 'trabajo')}`\n"
-        f"- Gate pendiente: {pending_gate}\n"
-        f"- Estado persistido: `{STATE_RELATIVE_PATH}`\n"
-        f"- Siguiente paso: `{result.get('next_command', '/alfred-dev:resume')}`\n\n"
+        "## Процесс подготовлен\n\n"
+        f"- Активная сессия: `{command}` в фазе `{result.get('phase', 'fase_inicial')}`\n"
+        f"- Запрошенная работа: `{result.get('description', 'работа')}`\n"
+        f"- Незакрытая gate: {pending_gate}\n"
+        f"- Сохранённое состояние: `{STATE_RELATIVE_PATH}`\n"
+        f"- Следующий шаг: `{result.get('next_command', '/alfred-dev:resume')}`\n\n"
         f"{sonarqube_section}"
-        "### Primera fase\n\n"
+        "### Первая фаза\n\n"
         f"{phase_description}\n\n"
-        "### Artefactos preparados\n\n"
+        "### Подготовленные артефакты\n\n"
         f"{artifact_lines}\n\n"
-        "No he marcado fases como completadas ni he aprobado gates humanas: el helper solo deja el flujo listo para continuar sin bloquear `claude -p`.\n"
+        "Я не отмечал фазы как завершённые и не одобрял человеческие gates: helper только готовит процесс к продолжению, не блокируя `claude -p`.\n"
     )
 
 
-def _parse_lucius_request(raw_request: str) -> Dict[str, Any]:
+def _parse_cto_request(raw_request: str) -> Dict[str, Any]:
     try:
         tokens = shlex.split(raw_request or "")
     except ValueError:
@@ -4834,7 +4846,7 @@ def _parse_lucius_request(raw_request: str) -> Dict[str, Any]:
                 invalid_scope = ""
             else:
                 candidate = tokens[index + 1].strip().lower()
-                if candidate in _LUCIUS_SCOPES:
+                if candidate in _CTO_SCOPES:
                     scope = candidate
                 else:
                     invalid_scope = candidate
@@ -4843,7 +4855,7 @@ def _parse_lucius_request(raw_request: str) -> Dict[str, Any]:
             continue
         if token.startswith("--scope="):
             candidate = token.split("=", 1)[1].strip().lower()
-            if candidate in _LUCIUS_SCOPES:
+            if candidate in _CTO_SCOPES:
                 scope = candidate
             else:
                 invalid_scope = candidate
@@ -4866,16 +4878,16 @@ def _parse_lucius_request(raw_request: str) -> Dict[str, Any]:
     }
 
 
-def render_lucius_summary(result: Dict[str, Any]) -> str:
-    marker = result.get("headless_marker", "LUCIUS_HEADLESS_START")
+def render_cto_summary(result: Dict[str, Any]) -> str:
+    marker = result.get("headless_marker", "CTO_HEADLESS_START")
     valid = bool(result.get("valid", True))
     if not valid:
         return (
-            "`LUCIUS_INVALID_SCOPE`\n\n"
-            "## Scope inválido\n\n"
-            f"- Valor recibido: `{result.get('invalid_scope', '')}`\n"
-            f"- Scopes válidos: `{', '.join(sorted(_LUCIUS_SCOPES))}`\n"
-            "- No lanzo Lucius, no ejecuto Codex CLI y no modifico el proyecto.\n"
+            "`CTO_INVALID_SCOPE`\n\n"
+            "## Недопустимый scope\n\n"
+            f"- Полученное значение: `{result.get('invalid_scope', '')}`\n"
+            f"- Допустимые scopes: `{', '.join(sorted(_CTO_SCOPES))}`\n"
+            "- Я не запускаю CTO, не выполняю Codex CLI и не изменяю проект.\n"
         )
 
     codex_status = result.get("codex_status", "unknown")
@@ -4883,31 +4895,31 @@ def render_lucius_summary(result: Dict[str, Any]) -> str:
     version_line = f"- Codex CLI: `{codex_version}`\n" if codex_version else f"- Codex CLI: `{codex_status}`\n"
     return (
         f"`{marker}`\n\n"
-        "## Lucius preparado\n\n"
-        f"- Directorio objetivo: `{result.get('target', '.')}`\n"
+        "## CTO подготовлен\n\n"
+        f"- Целевой каталог: `{result.get('target', '.')}`\n"
         f"- Scope: `{result.get('scope', 'all')}`\n"
         f"{version_line}"
-        "- Ejecución externa: pendiente de sesión interactiva.\n"
-        "- No he lanzado Agent, no he ejecutado `codex exec` y no presento esto como sign-off de QA, seguridad o arquitectura.\n\n"
-        "### Siguiente paso\n\n"
-        "Ejecuta `/alfred-dev:lucius` en sesión interactiva si quieres autorizar la revisión externa con Codex CLI.\n"
+        "- Внешний запуск: ожидает интерактивной сессии.\n"
+        "- Я не запускал Agent, не выполнял `codex exec` и не выдаю это за sign-off QA, безопасности или архитектуры.\n\n"
+        "### Следующий шаг\n\n"
+        "Выполни `/alfred-dev:cto` в интерактивной сессии, если хочешь разрешить внешнее ревью через Codex CLI.\n"
     )
 
 
-def prepare_lucius_review(project_dir: str, raw_request: str = "") -> Dict[str, Any]:
-    parsed = _parse_lucius_request(raw_request)
+def prepare_cto_review(project_dir: str, raw_request: str = "") -> Dict[str, Any]:
+    parsed = _parse_cto_request(raw_request)
     result = {
-        "command": "lucius",
+        "command": "cto",
         "target": parsed["target"],
         "scope": parsed["scope"],
         "valid": parsed["valid"],
         "invalid_scope": parsed["invalid_scope"],
-        "headless_marker": "LUCIUS_HEADLESS_START",
-        "next_command": "/alfred-dev:lucius",
+        "headless_marker": "CTO_HEADLESS_START",
+        "next_command": "/alfred-dev:cto",
     }
 
     if not parsed["valid"]:
-        result["headless_marker"] = "LUCIUS_INVALID_SCOPE"
+        result["headless_marker"] = "CTO_INVALID_SCOPE"
         result["codex_status"] = "not_checked"
         return result
 
@@ -4949,11 +4961,11 @@ def _build_audit_sonarqube_preflight() -> Dict[str, Any]:
             "status": "docker_missing",
             "sonarqube_autorizado": False,
             "headless_marker": "AUDIT_DOCKER_INSTALL_MENU_HEADLESS",
-            "summary": "Docker no esta disponible en PATH; SonarQube requiere decision humana antes de instalar o preparar Docker.",
-            "menu_title": "Preparar Docker para SonarQube",
+            "summary": "Docker недоступен в PATH; перед установкой или подготовкой Docker для SonarQube нужно решение человека.",
+            "menu_title": "Подготовить Docker для SonarQube",
             "menu_options": [
-                "Instalar/preparar Docker (Recomendado)",
-                "Seguir sin SonarQube",
+                "Установить/подготовить Docker (рекомендуется)",
+                "Продолжить без SonarQube",
             ],
         }
 
@@ -4972,12 +4984,12 @@ def _build_audit_sonarqube_preflight() -> Dict[str, Any]:
             "status": "docker_missing",
             "sonarqube_autorizado": False,
             "headless_marker": "AUDIT_DOCKER_INSTALL_MENU_HEADLESS",
-            "summary": "Docker no esta disponible en PATH; SonarQube requiere decision humana antes de instalar o preparar Docker.",
+            "summary": "Docker недоступен в PATH; перед установкой или подготовкой Docker для SonarQube нужно решение человека.",
             "detail": missing_signal[:500],
-            "menu_title": "Preparar Docker para SonarQube",
+            "menu_title": "Подготовить Docker для SonarQube",
             "menu_options": [
-                "Instalar/preparar Docker (Recomendado)",
-                "Seguir sin SonarQube",
+                "Установить/подготовить Docker (рекомендуется)",
+                "Продолжить без SonarQube",
             ],
         }
 
@@ -4986,7 +4998,7 @@ def _build_audit_sonarqube_preflight() -> Dict[str, Any]:
             "status": "docker_ready",
             "sonarqube_autorizado": True,
             "headless_marker": "AUDIT_HEADLESS_START",
-            "summary": "Docker esta instalado y el daemon responde; SonarQube queda autorizado para la auditoria interactiva.",
+            "summary": "Docker установлен, daemon отвечает; SonarQube разрешён для интерактивного аудита.",
             "menu_title": "",
             "menu_options": [],
         }
@@ -4997,14 +5009,14 @@ def _build_audit_sonarqube_preflight() -> Dict[str, Any]:
         "sonarqube_autorizado": False,
         "headless_marker": "AUDIT_DOCKER_START_MENU_HEADLESS",
         "summary": (
-            "Docker existe, pero el daemon no responde; SonarQube requiere decision humana "
-            "antes de arrancar Docker Desktop o el servicio."
+            "Docker есть, но daemon не отвечает; перед запуском Docker Desktop или сервиса "
+            "для SonarQube нужно решение человека."
         ),
         "detail": detail[:500],
-        "menu_title": "Arrancar Docker para SonarQube",
+        "menu_title": "Запустить Docker для SonarQube",
         "menu_options": [
-            "Arrancar Docker y ejecutar SonarQube (Recomendado)",
-            "Seguir sin SonarQube",
+            "Запустить Docker и выполнить SonarQube (рекомендуется)",
+            "Продолжить без SonarQube",
         ],
     }
 
@@ -5021,20 +5033,20 @@ def _render_audit_sonarqube_summary(result: Dict[str, Any]) -> str:
     menu_block = ""
     if option_lines:
         menu_block = (
-            "### Menú SonarQube pendiente\n\n"
+            "### Меню SonarQube ожидает выбора\n\n"
             f"`{marker}`\n\n"
-            f"**{preflight.get('menu_title', 'Decision SonarQube')}**\n\n"
+            f"**{preflight.get('menu_title', 'Решение по SonarQube')}**\n\n"
             f"{option_lines}\n\n"
-            "En headless no elijo por el usuario ni intento instalar/arrancar Docker.\n\n"
+            "В headless я не выбираю за пользователя и не пытаюсь установить/запустить Docker.\n\n"
         )
 
     detail = preflight.get("detail")
-    detail_line = f"- Detalle Docker: {detail}\n" if detail else ""
+    detail_line = f"- Подробности Docker: {detail}\n" if detail else ""
     return (
         "### Preflight SonarQube\n\n"
-        f"- Estado: `{preflight.get('status', 'desconocido')}`\n"
-        f"- Autorizado para SonarQube: `{str(preflight.get('sonarqube_autorizado', False)).lower()}`\n"
-        f"- Lectura: {preflight.get('summary', 'sin resumen')}\n"
+        f"- Статус: `{preflight.get('status', 'неизвестно')}`\n"
+        f"- Разрешено для SonarQube: `{str(preflight.get('sonarqube_autorizado', False)).lower()}`\n"
+        f"- Вывод: {preflight.get('summary', 'нет резюме')}\n"
         f"{detail_line}\n"
         f"{menu_block}"
     )
@@ -5045,7 +5057,7 @@ def start_flow_session(project_dir: str, command: str, raw_request: str = "") ->
     normalized_command = (command or "").strip().lower()
     if normalized_command not in _HELPER_FIRST_FLOW_COMMANDS:
         raise RuntimeError(
-            "start-flow solo admite feature, fix, spike, ship o audit."
+            "start-flow поддерживает только feature, fix, spike, ship или audit."
         )
 
     description = _normalize_request_description(
@@ -5078,13 +5090,13 @@ def start_flow_session(project_dir: str, command: str, raw_request: str = "") ->
                 result["headless_marker"] = result["sonarqube_preflight"].get("headless_marker", "AUDIT_HEADLESS_START")
             return result
         raise RuntimeError(
-            "Ya existe una sesión activa. Usa /alfred-dev:next o /alfred-dev:resume antes de abrir otro flujo."
+            "Активная сессия уже есть. Используй /alfred-dev:next или /alfred-dev:resume, прежде чем открывать другой процесс."
         )
 
     handoff = load_handoff(project_dir)
     if handoff and not handoff.get("resolved", False):
         raise RuntimeError(
-            "Hay un handoff pendiente. Retómalo con /alfred-dev:resume antes de abrir otro flujo."
+            "Есть незакрытый handoff. Продолжи его через /alfred-dev:resume, прежде чем открывать другой процесс."
         )
 
     session = run_flow(normalized_command, description, project_dir=project_dir)
@@ -5184,10 +5196,10 @@ def render_prefetch_response(payload: Dict[str, Any]) -> str:
         if source_command == "alfred":
             recommended = payload.get("recommended_command", "discuss")
             return (
-                "## Ruta decidida: `/alfred-dev:map-codebase`\n\n"
-                "- Detectado repo brownfield sin mapa persistente.\n"
-                f"- Artefactos preparados: `{CODEBASE_MAP_RELATIVE_PATH}` y `{CURRENT_RELATIVE_PATH}`\n"
-                f"- Siguiente comando recomendado: `/alfred-dev:{recommended}`\n"
+                "## Выбранный маршрут: `/alfred-dev:map-codebase`\n\n"
+                "- Обнаружен brownfield-репозиторий без постоянной карты.\n"
+                f"- Подготовленные артефакты: `{CODEBASE_MAP_RELATIVE_PATH}` и `{CURRENT_RELATIVE_PATH}`\n"
+                f"- Рекомендуемая следующая команда: `/alfred-dev:{recommended}`\n"
             )
         return render_codebase_map_summary(payload)
 
@@ -5200,8 +5212,8 @@ def render_prefetch_response(payload: Dict[str, Any]) -> str:
     if prefetched_command in _HELPER_FIRST_FLOW_COMMANDS:
         return render_flow_start_summary(payload)
 
-    if prefetched_command == "lucius":
-        return render_lucius_summary(payload)
+    if prefetched_command == "cto":
+        return render_cto_summary(payload)
 
     if prefetched_command == "memory-ui":
         if payload.get("stopped") or payload.get("reason") in {"not-running", "stale-state"}:
@@ -5216,13 +5228,13 @@ def write_codebase_map_files(project_dir: str, raw_request: str = "") -> Dict[st
     state = load_state(_project_path(project_dir, STATE_RELATIVE_PATH))
     if state and state.get("fase_actual") != "completado":
         raise RuntimeError(
-            "Ya existe una sesión activa. Usa /alfred-dev:next antes de volver a mapear el codebase."
+            "Активная сессия уже есть. Используй /alfred-dev:next, прежде чем заново составлять карту кодовой базы."
         )
 
     handoff = load_handoff(project_dir)
     if handoff and not handoff.get("resolved", False):
         raise RuntimeError(
-            "Hay un handoff pendiente. Usa /alfred-dev:resume antes de abrir /alfred-dev:map-codebase."
+            "Есть незакрытый handoff. Используй /alfred-dev:resume, прежде чем открывать /alfred-dev:map-codebase."
         )
 
     package_data = _load_package_json(project_dir)
@@ -5379,9 +5391,15 @@ def is_session_paused(session: Optional[Dict[str, Any]]) -> bool:
 
 
 def _normalize_free_text(text: str) -> str:
-    normalized = unicodedata.normalize("NFKD", text or "")
-    normalized = normalized.encode("ascii", "ignore").decode("ascii")
-    return normalized.lower().strip()
+    composed = unicodedata.normalize("NFC", text or "").lower().replace("ё", "е")
+    out = []
+    for char in composed:
+        if ord(char) < 128 or "\u0400" <= char <= "\u04ff":
+            out.append(char)
+            continue
+        decomposed = unicodedata.normalize("NFKD", char)
+        out.append(decomposed.encode("ascii", "ignore").decode("ascii"))
+    return "".join(out).strip()
 
 
 def _last_completed_at(state: Dict[str, Any]) -> str:
@@ -5406,8 +5424,8 @@ def build_verification_target(project_dir: str) -> Optional[Dict[str, Any]]:
         return {
             "blocked": True,
             "reason": (
-                f"La sesión '{state.get('comando', 'desconocido')}' sigue activa "
-                f"en la fase '{state.get('fase_actual', 'desconocida')}'."
+                f"Сессия '{state.get('comando', 'desconocido')}' всё ещё активна "
+                f"в фазе '{state.get('fase_actual', 'desconocida')}'."
             ),
             "command": state.get("comando", "desconocido"),
             "phase": state.get("fase_actual", "desconocida"),
@@ -5463,9 +5481,18 @@ def _parse_verify_request(raw_request: str) -> Dict[str, str]:
     notes = parts[1].strip() if len(parts) > 1 else ""
     notes = notes.lstrip(":.- ").strip()
 
-    approved = {"aprobado", "aprobar", "ok", "pass", "passed", "aceptado", "validado"}
-    rejected = {"rechazado", "rechazar", "ko", "fail", "failed", "falla", "fallado"}
-    pending = {"pendiente", "preparar", "prepare", "reset", "reabrir", "abrir"}
+    approved = {
+        "aprobado", "aprobar", "ok", "pass", "passed", "aceptado", "validado",
+        "одобрено", "одобрить", "принято", "принять", "ок",
+    }
+    rejected = {
+        "rechazado", "rechazar", "ko", "fail", "failed", "falla", "fallado",
+        "отклонено", "отклонить", "провал",
+    }
+    pending = {
+        "pendiente", "preparar", "prepare", "reset", "reabrir", "abrir",
+        "ожидает", "подготовить", "переоткрыть", "открыть",
+    }
 
     if token in approved:
         return {"status": "approved", "notes": notes}
@@ -5482,6 +5509,32 @@ def _status_label(status: str) -> str:
         "approved": "aprobada",
         "rejected": "rechazada",
     }.get(status, status or "desconocido")
+
+
+def _status_label_ru(status: str) -> str:
+    return {
+        "pending": "в ожидании",
+        "approved": "одобрена",
+        "rejected": "отклонена",
+    }.get(status, status or "неизвестно")
+
+
+def _session_status_label_ru(label: str) -> str:
+    return {
+        "completado y verificado": "завершено и проверено",
+        "completado con UAT rechazada": "завершено, UAT отклонена",
+        "completado pendiente de UAT": "завершено, ожидает UAT",
+        "pausado": "на паузе",
+        "activo": "активно",
+        "sin sesión activa": "нет активной сессии",
+    }.get(label, label)
+
+
+def _team_source_label_ru(label: str) -> str:
+    return {
+        "configuración persistida": "сохранённая конфигурация",
+        "composición dinámica": "динамический состав",
+    }.get(label, label)
 
 
 def _next_command_for_uat(status: str) -> str:
@@ -5583,7 +5636,7 @@ def write_uat_files(project_dir: str, raw_request: str = "") -> Dict[str, Any]:
     target = build_verification_target(project_dir)
     if target is None:
         raise RuntimeError(
-            "No hay suficiente contexto para preparar una verificación manual todavía."
+            "Пока недостаточно контекста, чтобы подготовить ручную проверку."
         )
     if target.get("blocked"):
         raise RuntimeError(target["reason"])
@@ -5638,7 +5691,7 @@ def _build_next_action_payload(
         "command": command,
         "reason": reason,
         "source": source,
-        "source_label": _NEXT_ACTION_SOURCE_LABELS.get(source, source or "desconocida"),
+        "source_label": _NEXT_ACTION_SOURCE_LABELS.get(source, source or "неизвестно"),
         "focus": focus,
         "directive": directive,
         "urgency": urgency,
@@ -5656,14 +5709,14 @@ def suggest_verify_action(project_dir: str) -> Optional[Dict[str, str]]:
         return _build_next_action_payload(
             "verify",
             (
-                "El último flujo completado todavía no tiene una verificación "
-                "manual/UAT registrada."
+                "У последнего завершённого процесса ещё нет записанной "
+                "ручной проверки/UAT."
             ),
             "verify",
-            focus="Cerrar la verificación pendiente",
+            focus="Закрыть незавершённую проверку",
             directive=(
-                "Prepara o registra la UAT del último entregable antes de abrir "
-                "otro flujo nuevo."
+                "Подготовь или запиши UAT последнего результата, прежде чем открывать "
+                "новый процесс."
             ),
             urgency="alta",
         )
@@ -5671,12 +5724,12 @@ def suggest_verify_action(project_dir: str) -> Optional[Dict[str, str]]:
     if uat.get("status") == "pending":
         return _build_next_action_payload(
             "verify",
-            "La verificación manual/UAT del último flujo completado sigue pendiente.",
+            "Ручная проверка/UAT последнего завершённого процесса всё ещё не пройдена.",
             "verify",
-            focus="Cerrar la verificación pendiente",
+            focus="Закрыть незавершённую проверку",
             directive=(
-                "Completa o actualiza la UAT pendiente antes de continuar con un "
-                "nuevo ciclo de trabajo."
+                "Заверши или обнови незакрытую UAT, прежде чем начинать "
+                "новый цикл работы."
             ),
             urgency="alta",
         )
@@ -5692,12 +5745,12 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
         phase = state.get("fase_actual", "desconocida")
         return _build_next_action_payload(
             "resume",
-            f"Hay una sesión activa de '{command}' en la fase '{phase}'.",
+            f"Есть активная сессия '{command}' в фазе '{phase}'.",
             "state",
-            focus="Retomar el flujo en curso",
+            focus="Продолжить текущий процесс",
             directive=(
-                f"Reanuda `{command}` en `{phase}` y trabaja sobre la gate pendiente "
-                "sin abrir otro flujo."
+                f"Возобнови `{command}` в `{phase}` и работай над незакрытой gate, "
+                "не открывая другой процесс."
             ),
             urgency="alta",
         )
@@ -5707,13 +5760,13 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
         return _build_next_action_payload(
             "resume",
             (
-                f"Existe un handoff pendiente para '{handoff['command']}' "
-                f"en la fase '{handoff['phase']}'."
+                f"Есть незакрытый handoff для '{handoff['command']}' "
+                f"в фазе '{handoff['phase']}'."
             ),
             "handoff",
-            focus="Recuperar el handoff pendiente",
+            focus="Подхватить незакрытый handoff",
             directive=(
-                f"Retoma `{handoff['command']}` desde `{handoff['phase']}` con "
+                f"Продолжи `{handoff['command']}` с `{handoff['phase']}` через "
                 f"`{handoff.get('resume_command', '/alfred-dev:resume')}`."
             ),
             urgency="alta",
@@ -5727,14 +5780,14 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
         return _build_next_action_payload(
             "map-codebase",
             (
-                "El proyecto ya tiene código, pero todavía no existe un mapa "
-                "persistente del codebase en docs/project/."
+                "В проекте уже есть код, но постоянной карты кодовой базы "
+                "в docs/project/ ещё нет."
             ),
             "brownfield",
-            focus="Mapear el codebase brownfield",
+            focus="Составить карту brownfield-кодовой базы",
             directive=(
-                "Genera el mapa brownfield antes de abrir un flujo nuevo para que "
-                "el contexto operativo quede persistido."
+                "Создай карту brownfield до открытия нового процесса, чтобы "
+                "рабочий контекст был сохранён."
             ),
             urgency="alta",
         )
@@ -5745,14 +5798,14 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
         return _build_next_action_payload(
             discovery_command,
             (
-                "Existe un refinado previo en docs/project/discovery.md "
-                f"que recomienda continuar con '{discovery_command}'."
+                "В docs/project/discovery.md есть прежнее уточнение, "
+                f"которое рекомендует продолжить с '{discovery_command}'."
             ),
             "discovery",
-            focus="Seguir la recomendación del discovery",
+            focus="Следовать рекомендации discovery",
             directive=(
-                f"Continúa con `/alfred-dev:{discovery_command}` usando el refinado "
-                "persistido como base operativa."
+                f"Продолжи с `/alfred-dev:{discovery_command}`, опираясь на сохранённое "
+                "уточнение как на рабочую основу."
             ),
             urgency="media",
         )
@@ -5763,14 +5816,14 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
         return _build_next_action_payload(
             current_command,
             (
-                "Existe un estado operativo en docs/project/current.md "
-                f"que recomienda continuar con '{current_command}'."
+                "В docs/project/current.md есть рабочее состояние, "
+                f"которое рекомендует продолжить с '{current_command}'."
             ),
             "current",
-            focus="Seguir el estado operativo persistido",
+            focus="Следовать сохранённому рабочему состоянию",
             directive=(
-                f"Continúa con `/alfred-dev:{current_command}` apoyándote en "
-                "`docs/project/current.md` y los artefactos ya sembrados."
+                f"Продолжи с `/alfred-dev:{current_command}`, опираясь на "
+                "`docs/project/current.md` и уже созданные артефакты."
             ),
             urgency="media",
         )
@@ -5779,14 +5832,14 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
         return _build_next_action_payload(
             _GREENFIELD_COMMAND,
             (
-                "No hay sesión activa. Alfred puede dirigir el siguiente flujo "
-                "usando el contexto ya existente del proyecto."
+                "Активной сессии нет. Alfred может выбрать следующий процесс "
+                "на основе уже существующего контекста проекта."
             ),
             "project",
-            focus="Elegir el siguiente flujo razonable",
+            focus="Выбрать разумный следующий процесс",
             directive=(
-                "Abre `/alfred` para decidir el siguiente flujo sobre el "
-                "contexto ya existente del proyecto."
+                "Открой `/alfred`, чтобы выбрать следующий процесс на основе "
+                "уже существующего контекста проекта."
             ),
             urgency="media",
         )
@@ -5794,14 +5847,14 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
     return _build_next_action_payload(
         _GREENFIELD_COMMAND,
         (
-            "No hay trabajo en curso ni un codebase brownfield claro. "
-            "Conviene empezar por el asistente contextual."
+            "Нет ни текущей работы, ни явной brownfield-кодовой базы. "
+            "Лучше начать с контекстного ассистента."
         ),
         "default",
-        focus="Arrancar el contexto de trabajo",
+        focus="Запустить рабочий контекст",
         directive=(
-            "Empieza por `/alfred` para elegir el flujo correcto y "
-            "sembrar el contexto inicial."
+            "Начни с `/alfred`, чтобы выбрать правильный процесс и "
+            "заложить начальный контекст."
         ),
         urgency="media",
     )
@@ -5809,22 +5862,22 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
 
 def render_next_markdown(suggestion: Dict[str, str]) -> str:
     lines = [
-        "## Siguiente paso operativo",
+        "## Следующий рабочий шаг",
         "",
-        f"- Foco: {suggestion.get('focus', 'Siguiente paso recomendado')}",
+        f"- Фокус: {suggestion.get('focus', 'Рекомендуемый следующий шаг')}",
         (
-            f"- Fuente: {suggestion.get('source_label', suggestion.get('source', 'desconocida'))} "
-            f"(`{suggestion.get('source', 'desconocida')}`)"
+            f"- Источник: {suggestion.get('source_label', suggestion.get('source', 'неизвестно'))} "
+            f"(`{suggestion.get('source', 'неизвестно')}`)"
         ),
-        f"- Comando: `/alfred-dev:{suggestion.get('command', 'alfred')}`",
+        f"- Команда: `/alfred-dev:{suggestion.get('command', 'alfred')}`",
         (
-            "- Qué hacer ahora: "
+            "- Что делать сейчас: "
             + suggestion.get(
                 "directive",
-                "Avanza con el siguiente comando recomendado.",
+                "Переходи к следующей рекомендуемой команде.",
             )
         ),
-        f"- Motivo: {suggestion.get('reason', 'Sin razón disponible.')}",
+        f"- Причина: {suggestion.get('reason', 'Причина недоступна.')}",
     ]
     return "\n".join(lines).strip() + "\n"
 
@@ -5991,27 +6044,27 @@ def _extend_next_action_section(
     lines: List[str],
     next_action: Dict[str, str],
     *,
-    heading: str = "### Siguiente paso recomendado",
+    heading: str = "### Рекомендуемый следующий шаг",
 ) -> None:
     lines.extend(
         [
             "",
             heading,
             "",
-            f"- Foco: {next_action.get('focus', 'Siguiente paso recomendado')}",
+            f"- Фокус: {next_action.get('focus', 'Рекомендуемый следующий шаг')}",
             (
-                f"- Fuente: {next_action.get('source_label', next_action.get('source', 'desconocida'))} "
-                f"(`{next_action.get('source', 'desconocida')}`)"
+                f"- Источник: {next_action.get('source_label', next_action.get('source', 'неизвестно'))} "
+                f"(`{next_action.get('source', 'неизвестно')}`)"
             ),
-            f"- Comando: `/alfred-dev:{next_action.get('command', 'alfred')}`",
+            f"- Команда: `/alfred-dev:{next_action.get('command', 'alfred')}`",
             (
-                "- Qué hacer ahora: "
+                "- Что делать сейчас: "
                 + next_action.get(
                     "directive",
-                    "Avanza con el siguiente comando recomendado.",
+                    "Переходи к следующей рекомендуемой команде.",
                 )
             ),
-            f"- Motivo: {next_action.get('reason', 'Sin razón disponible.')}",
+            f"- Причина: {next_action.get('reason', 'Причина недоступна.')}",
         ]
     )
 
@@ -6074,32 +6127,32 @@ def render_status_markdown(snapshot: Dict[str, Any]) -> str:
     pending_gate = snapshot.get("pending_gate", "")
     artifacts = snapshot.get("artifacts", [])
 
-    lines = ["## Estado operativo de Alfred Dev", ""]
+    lines = ["## Рабочее состояние Alfred Dev", ""]
 
     if isinstance(state, dict):
         lines.extend(
             [
-                "### Sesión",
+                "### Сессия",
                 "",
-                f"- Flujo: `{state.get('comando', 'desconocido')}`",
-                f"- Descripción: {state.get('descripcion', 'Sin descripción')}",
-                f"- Estado: {snapshot.get('session_status_label', 'desconocido')}",
+                f"- Процесс: `{state.get('comando', 'desconocido')}`",
+                f"- Описание: {state.get('descripcion', 'Без описания')}",
+                f"- Статус: {_session_status_label_ru(snapshot.get('session_status_label', 'неизвестно'))}",
             ]
         )
         if state.get("fase_actual") != "completado":
-            lines.append(f"- Fase actual: `{state.get('fase_actual', 'desconocida')}`")
+            lines.append(f"- Текущая фаза: `{state.get('fase_actual', 'desconocida')}`")
         if pending_gate:
-            lines.append(f"- Gate pendiente: `{pending_gate}`")
+            lines.append(f"- Незакрытая gate: `{pending_gate}`")
         if team_source:
-            lines.append(f"- Origen del equipo runtime: {team_source}.")
+            lines.append(f"- Источник runtime-команды: {_team_source_label_ru(team_source)}.")
         if handoff and not handoff.get("resolved", False):
             lines.append(
-                f"- Handoff pendiente: reanudar con `{handoff.get('resume_command', '/alfred-dev:resume')}` desde `{handoff.get('phase', 'desconocida')}`."
+                f"- Незакрытый handoff: продолжить через `{handoff.get('resume_command', '/alfred-dev:resume')}` с `{handoff.get('phase', 'desconocida')}`."
             )
         on_demand_optionals = _session_on_demand_optionals_for_flow(state)
         if on_demand_optionals:
             lines.append(
-                "- Opcionales solo bajo demanda: "
+                "- Опциональные агенты только по запросу: "
                 + ", ".join(f"`{agent}`" for agent in on_demand_optionals)
                 + "."
             )
@@ -6108,54 +6161,54 @@ def render_status_markdown(snapshot: Dict[str, Any]) -> str:
             [
                 "### Handoff",
                 "",
-                f"- Flujo pendiente: `{handoff.get('command', 'desconocido')}`",
-                f"- Fase: `{handoff.get('phase', 'desconocida')}`",
-                f"- Reanudar con: `{handoff.get('resume_command', '/alfred-dev:resume')}`",
+                f"- Незавершённый процесс: `{handoff.get('command', 'desconocido')}`",
+                f"- Фаза: `{handoff.get('phase', 'desconocida')}`",
+                f"- Продолжить через: `{handoff.get('resume_command', '/alfred-dev:resume')}`",
             ]
         )
     else:
         lines.extend(
             [
-                "### Sesión",
+                "### Сессия",
                 "",
-                "No hay sesión activa ni handoff pendiente visible.",
+                "Нет ни активной сессии, ни видимого незакрытого handoff.",
             ]
         )
 
     lines.extend(
         [
             "",
-            "### Proyecto",
+            "### Проект",
             "",
-            f"- Kanban visible: {len(kanban.get('done', []))} done, {len(kanban.get('in_progress', []))} in progress, {len(kanban.get('backlog', []))} backlog, {len(kanban.get('blocked', []))} blocked.",
+            f"- Видимый kanban: {len(kanban.get('done', []))} done, {len(kanban.get('in_progress', []))} in progress, {len(kanban.get('backlog', []))} backlog, {len(kanban.get('blocked', []))} blocked.",
         ]
     )
     if kanban.get("internal_total"):
         lines.append(
-            f"- Tareas internas: {kanban['internal_total']} (fase: {kanban.get('phase_total', 0)}, verify: {kanban.get('verify_total', 0)})."
+            f"- Внутренние задачи: {kanban['internal_total']} (фаза: {kanban.get('phase_total', 0)}, verify: {kanban.get('verify_total', 0)})."
         )
     if kanban.get("progress_pct") is not None:
-        lines.append(f"- Progreso visible estimado: {kanban['progress_pct']} %.")
+        lines.append(f"- Оценка видимого прогресса: {kanban['progress_pct']} %.")
     if artifacts:
-        lines.append(f"- Artefactos acumulados en la sesión: {len(artifacts)}.")
+        lines.append(f"- Артефактов накоплено за сессию: {len(artifacts)}.")
     if uat:
-        lines.append(f"- UAT: {_status_label(uat.get('status', ''))}.")
+        lines.append(f"- UAT: {_status_label_ru(uat.get('status', ''))}.")
 
     if phase_rows:
-        lines.extend(["", "### Fases registradas", ""])
+        lines.extend(["", "### Записанные фазы", ""])
         for row in phase_rows:
             summary = f"- `{row['name']}` -> `{row['status']}` · gate `{row['gate']}`"
             if row["iterations"] > 0:
-                summary += f" · iteraciones {row['iterations']}"
+                summary += f" · итераций {row['iterations']}"
             if row["artifacts"]:
-                summary += f" · artefactos {len(row['artifacts'])}"
+                summary += f" · артефактов {len(row['artifacts'])}"
             lines.append(summary)
 
     project_signal_cards = snapshot.get("project_signal_cards") or []
     if project_signal_cards:
-        lines.extend(["", "### Señales operativas", ""])
+        lines.extend(["", "### Рабочие сигналы", ""])
         for card in project_signal_cards[:3]:
-            lines.append(f"#### {card.get('title', 'Señal')}")
+            lines.append(f"#### {card.get('title', 'Сигнал')}")
             lines.append("")
             if card.get("description"):
                 lines.append(f"- {card.get('description')}")
@@ -6175,45 +6228,45 @@ def render_progress_markdown(snapshot: Dict[str, Any]) -> str:
     kanban = snapshot.get("kanban", {})
     next_action = snapshot.get("next_action", {"command": "alfred", "reason": ""})
 
-    lines = ["## Resumen operativo del proyecto", ""]
+    lines = ["## Рабочая сводка проекта", ""]
 
     if state and state.get("fase_actual") != "completado" and not is_session_paused(state):
         lines.extend(
             [
-                "### Flujo activo",
+                "### Активный процесс",
                 "",
-                f"- Flujo: `{state.get('comando', 'desconocido')}`",
-                f"- Descripción: {state.get('descripcion', 'Sin descripción')}",
-                f"- Fase actual: `{state.get('fase_actual', 'desconocida')}`",
+                f"- Процесс: `{state.get('comando', 'desconocido')}`",
+                f"- Описание: {state.get('descripcion', 'Без описания')}",
+                f"- Текущая фаза: `{state.get('fase_actual', 'desconocida')}`",
             ]
         )
     elif handoff and not handoff.get("resolved", False):
         lines.extend(
             [
-                "### Handoff pendiente",
+                "### Незакрытый handoff",
                 "",
-                f"- Flujo: `{handoff.get('command', 'desconocido')}`",
-                f"- Fase: `{handoff.get('phase', 'desconocida')}`",
-                f"- Siguiente paso: `{handoff.get('resume_command', '/alfred-dev:resume')}`",
+                f"- Процесс: `{handoff.get('command', 'desconocido')}`",
+                f"- Фаза: `{handoff.get('phase', 'desconocida')}`",
+                f"- Следующий шаг: `{handoff.get('resume_command', '/alfred-dev:resume')}`",
             ]
         )
     elif state and state.get("fase_actual") != "completado" and is_session_paused(state):
         lines.extend(
             [
-                "### Sesión pausada",
+                "### Сессия на паузе",
                 "",
-                f"- Flujo: `{state.get('comando', 'desconocido')}`",
-                f"- Descripción: {state.get('descripcion', 'Sin descripción')}",
-                f"- Fase pausada: `{state.get('fase_actual', 'desconocida')}`",
-                "- Falta un handoff visible; conviene regenerarlo con `/alfred-dev:pause` o retomar con `/alfred-dev:resume`.",
+                f"- Процесс: `{state.get('comando', 'desconocido')}`",
+                f"- Описание: {state.get('descripcion', 'Без описания')}",
+                f"- Фаза на паузе: `{state.get('fase_actual', 'desconocida')}`",
+                "- Видимого handoff нет; стоит пересоздать его через `/alfred-dev:pause` или продолжить через `/alfred-dev:resume`.",
             ]
         )
     else:
         lines.extend(
             [
-                "### Flujo activo",
+                "### Активный процесс",
                 "",
-                "No hay sesión activa de Alfred, ni handoff pendiente, ni trabajo en curso detectado.",
+                "Нет ни активной сессии Alfred, ни незакрытого handoff, ни обнаруженной текущей работы.",
             ]
         )
 
@@ -6228,33 +6281,33 @@ def render_progress_markdown(snapshot: Dict[str, Any]) -> str:
     )
     if kanban.get("internal_total"):
         lines.append(
-            f"- Internas: {kanban['internal_total']} "
-            f"(fase: {kanban.get('phase_total', 0)}, verify: {kanban.get('verify_total', 0)})"
+            f"- Внутренние: {kanban['internal_total']} "
+            f"(фаза: {kanban.get('phase_total', 0)}, verify: {kanban.get('verify_total', 0)})"
         )
     if kanban.get("progress_pct") is not None:
-        lines.append(f"- Progreso estimado: {kanban['progress_pct']} %")
+        lines.append(f"- Оценка прогресса: {kanban['progress_pct']} %")
 
     progress_signals = snapshot.get("progress_signals") or snapshot.get("current_signals") or []
     if progress_signals:
-        lines.extend(["", "### Notas de progreso", ""])
+        lines.extend(["", "### Заметки о прогрессе", ""])
         lines.extend(f"- {item}" for item in progress_signals)
 
     traceability_signals = snapshot.get("traceability_signals") or []
     if traceability_signals:
-        lines.extend(["", "### Trazabilidad", ""])
+        lines.extend(["", "### Трассируемость", ""])
         lines.extend(f"- {item}" for item in traceability_signals)
 
     if uat:
         lines.extend(["", "### UAT", ""])
         lines.extend(
             [
-                f"- Estado: {_status_label(uat.get('status', ''))}",
-                f"- Objetivo: `{uat.get('target_command', 'desconocido')}`",
+                f"- Статус: {_status_label_ru(uat.get('status', ''))}",
+                f"- Цель: `{uat.get('target_command', 'desconocido')}`",
             ]
         )
         notes = uat.get("notes")
         if notes:
-            lines.append(f"- Nota principal: {notes}")
+            lines.append(f"- Главная заметка: {notes}")
 
     _extend_next_action_section(lines, next_action)
 
@@ -6263,27 +6316,46 @@ def render_progress_markdown(snapshot: Dict[str, Any]) -> str:
 
 def _infer_primary_actor(description: str) -> str:
     normalized = _normalize_free_text(description)
-    if "onboarding" in normalized and "desarroll" in normalized:
-        return "desarrollador o colaborador técnico"
-    if "onboarding" in normalized or "registro" in normalized or "primer acceso" in normalized:
-        return "usuario nuevo"
-    if "admin" in normalized or "administr" in normalized:
-        return "administrador"
-    if "equipo" in normalized or "operacion" in normalized:
-        return "equipo interno"
-    return "actor principal por confirmar"
+    is_onboarding = "onboarding" in normalized or "онбординг" in normalized
+    if is_onboarding and ("desarroll" in normalized or "разработчик" in normalized):
+        return "разработчик или технический участник"
+    if is_onboarding or any(
+        token in normalized
+        for token in ("registro", "primer acceso", "регистрац", "первый вход")
+    ):
+        return "новый пользователь"
+    if any(token in normalized for token in ("admin", "administr", "админ", "администр")):
+        return "администратор"
+    if any(token in normalized for token in ("equipo", "operacion", "команд", "операц")):
+        return "внутренняя команда"
+    return "основной актор требует уточнения"
 
 
 def _infer_recommended_command(description: str) -> str:
     normalized = _normalize_free_text(description)
 
-    if any(token in normalized for token in ("bug", "error", "fallo", "regresion", "arreglar", "corregir")):
+    if any(
+        token in normalized
+        for token in (
+            "bug", "error", "fallo", "regresion", "arreglar", "corregir",
+            "баг", "ошибк", "сбой", "регресс", "почини", "исправ", "пада", "сломал",
+        )
+    ):
         return "fix"
-    if any(token in normalized for token in ("investig", "compar", "benchmark", "poc", "viable", "explorar")):
+    if any(
+        token in normalized
+        for token in (
+            "investig", "compar", "benchmark", "poc", "viable", "explorar",
+            "исследова", "исследуй", "сравни", "осуществим", "изучи",
+        )
+    ):
         return "spike"
     if any(
         token in normalized
-        for token in ("copy", "texto", "ajuste pequeno", "ajuste menor", "cambio pequeno", "tooltip")
+        for token in (
+            "copy", "texto", "ajuste pequeno", "ajuste menor", "cambio pequeno", "tooltip",
+            "текст", "опечатк", "небольшая правка", "мелкая правка", "небольшое изменение",
+        )
     ):
         return "quick"
     return "feature"
@@ -6291,18 +6363,18 @@ def _infer_recommended_command(description: str) -> str:
 
 def _build_scope_items(description: str, recommended_command: str) -> List[str]:
     base_items = [
-        f"Clarificar el flujo principal asociado a: {description}.",
-        "Definir qué pasos y estados visibles forman parte del alcance inicial.",
-        "Acordar criterios de éxito observables antes de abrir implementación.",
+        f"Прояснить основной процесс, связанный с: {description}.",
+        "Определить, какие шаги и видимые состояния входят в начальный объём.",
+        "Согласовать наблюдаемые критерии успеха до начала реализации.",
     ]
     if recommended_command == "quick":
-        base_items.append("Mantener el cambio acotado para poder ejecutarlo en quick mode.")
+        base_items.append("Держать изменение ограниченным, чтобы выполнить его в quick mode.")
     elif recommended_command == "fix":
-        base_items.append("Aislar el comportamiento roto y la expectativa correcta antes de corregirlo.")
+        base_items.append("Изолировать сломанное поведение и правильное ожидание до исправления.")
     elif recommended_command == "spike":
-        base_items.append("Cerrar primero las incógnitas técnicas o de enfoque antes de comprometer desarrollo.")
+        base_items.append("Сначала закрыть технические или концептуальные неизвестные, а потом браться за разработку.")
     else:
-        base_items.append("Preparar una base lo bastante clara como para abrir PRD e implementación completa.")
+        base_items.append("Подготовить достаточно ясную основу, чтобы открыть PRD и полную реализацию.")
     return base_items
 
 
@@ -6393,13 +6465,13 @@ def write_discovery_files(project_dir: str, raw_request: str = "") -> Dict[str, 
     state = load_state(_project_path(project_dir, STATE_RELATIVE_PATH))
     if state and state.get("fase_actual") != "completado":
         raise RuntimeError(
-            "Ya existe una sesión activa. Usa /alfred-dev:next antes de abrir discuss."
+            "Активная сессия уже есть. Используй /alfred-dev:next, прежде чем открывать discuss."
         )
 
     handoff = load_handoff(project_dir)
     if handoff and not handoff.get("resolved", False):
         raise RuntimeError(
-            "Hay un handoff pendiente. Usa /alfred-dev:resume antes de abrir discuss."
+            "Есть незакрытый handoff. Используй /alfred-dev:resume, прежде чем открывать discuss."
         )
 
     description = _normalize_request_description(raw_request, "Siguiente trabajo a refinar")
@@ -6432,12 +6504,12 @@ def write_discovery_files(project_dir: str, raw_request: str = "") -> Dict[str, 
             "Si aparecen detalles menores no críticos, Alfred puede continuar con supuestos razonables.",
         ],
         "open_questions": [
-            "Qué criterio de éxito marcaría que este trabajo ha quedado realmente resuelto.",
-            "Qué edge case o restricción de negocio no puede quedarse fuera del primer alcance.",
+            "Какой критерий успеха покажет, что эта работа действительно решена.",
+            "Какой edge case или бизнес-ограничение нельзя оставить за пределами первого объёма.",
         ],
         "risks": [
-            "Arrancar implementación sin cerrar alcance puede generar retrabajo o UX inconsistente.",
-            "Si el actor principal está mal identificado, el flujo refinado puede desviarse del problema real.",
+            "Начало реализации без закрытого объёма может привести к переделкам или несогласованному UX.",
+            "Если основной актор определён неверно, уточнённый процесс может уйти от реальной проблемы.",
         ],
     }
 
@@ -6536,19 +6608,19 @@ def start_quick_session(project_dir: str, raw_request: str = "") -> Dict[str, An
                 "bypass_path": arm_stop_hook_bypass(project_dir, "/alfred-dev:quick"),
             }
         raise RuntimeError(
-            "Ya existe una sesión activa. Usa /alfred-dev:next o /alfred-dev:resume antes de abrir quick."
+            "Активная сессия уже есть. Используй /alfred-dev:next или /alfred-dev:resume, прежде чем открывать quick."
         )
 
     handoff = load_handoff(project_dir)
     if handoff and not handoff.get("resolved", False):
         raise RuntimeError(
-            "Hay un handoff pendiente. Retómalo con /alfred-dev:resume antes de abrir quick."
+            "Есть незакрытый handoff. Продолжи его через /alfred-dev:resume, прежде чем открывать quick."
         )
 
     verify_suggestion = suggest_verify_action(project_dir)
     if verify_suggestion is not None:
         raise RuntimeError(
-            "Todavía hay una verificación manual/UAT pendiente. Usa /alfred-dev:verify antes de abrir quick."
+            "Ручная проверка/UAT ещё не пройдена. Используй /alfred-dev:verify, прежде чем открывать quick."
         )
 
     session = run_flow("quick", description, project_dir=project_dir)
@@ -6660,8 +6732,8 @@ def build_handoff(project_dir: str) -> Optional[Dict[str, Any]]:
         "artifacts": state.get("artefactos", []),
         "resume_command": "/alfred-dev:resume",
         "next_step": (
-            f"Retomar '{state.get('comando', 'desconocido')}' "
-            f"desde la fase '{state.get('fase_actual', 'desconocida')}'."
+            f"Продолжить '{state.get('comando', 'desconocido')}' "
+            f"с фазы '{state.get('fase_actual', 'desconocida')}'."
         ),
         "resolved": False,
     }
@@ -6998,27 +7070,27 @@ def render_handoff_markdown(handoff: Dict[str, Any]) -> str:
 
 def render_pause_markdown(result: Dict[str, Any]) -> str:
     """Renderiza una pausa helper-first en formato humano."""
-    gate = result.get("pending_gate") or "sin gate pendiente detectada"
-    next_step = result.get("next_step") or "Retomar la sesión con `/alfred-dev:resume`."
+    gate = result.get("pending_gate") or "незакрытая gate не обнаружена"
+    next_step = result.get("next_step") or "Продолжить сессию через `/alfred-dev:resume`."
     return (
-        "## Sesión pausada\n\n"
-        f"- Flujo: `{result.get('command', '-')}`\n"
-        f"- Descripción: `{result.get('description', '-')}`\n"
-        f"- Fase actual: `{result.get('phase', '-')}`\n"
-        f"- Gate pendiente: {gate}\n"
-        f"- Handoff guardado en: `{HANDOFF_JSON_RELATIVE_PATH}` y `{HANDOFF_MD_RELATIVE_PATH}`\n"
-        f"- Estado actualizado en: `{STATE_RELATIVE_PATH}`\n"
-        f"- Comando de retorno: `/alfred-dev:resume`\n"
-        f"- Siguiente acción: {next_step}\n"
+        "## Сессия на паузе\n\n"
+        f"- Процесс: `{result.get('command', '-')}`\n"
+        f"- Описание: `{result.get('description', '-')}`\n"
+        f"- Текущая фаза: `{result.get('phase', '-')}`\n"
+        f"- Незакрытая gate: {gate}\n"
+        f"- Handoff сохранён в: `{HANDOFF_JSON_RELATIVE_PATH}` и `{HANDOFF_MD_RELATIVE_PATH}`\n"
+        f"- Состояние обновлено в: `{STATE_RELATIVE_PATH}`\n"
+        f"- Команда возврата: `/alfred-dev:resume`\n"
+        f"- Следующее действие: {next_step}\n"
     )
 
 
 def render_resume_markdown(result: Dict[str, Any]) -> str:
     """Renderiza una reanudación helper-first en formato humano."""
-    gate = result.get("pending_gate") or "sin gate pendiente detectada"
-    next_step = result.get("next_step") or "Consulta `/alfred-dev:next` para seguir."
+    gate = result.get("pending_gate") or "незакрытая gate не обнаружена"
+    next_step = result.get("next_step") or "Загляни в `/alfred-dev:next`, чтобы продолжить."
     handoff_note = (
-        f"- Handoff resuelto: `{HANDOFF_JSON_RELATIVE_PATH}`\n"
+        f"- Handoff закрыт: `{HANDOFF_JSON_RELATIVE_PATH}`\n"
         if result.get("handoff_path")
         else ""
     )
@@ -7027,25 +7099,25 @@ def render_resume_markdown(result: Dict[str, Any]) -> str:
     if last_title:
         chosen = result.get("last_decision_chosen") or ""
         memory_note = (
-            f"- Última decisión: {last_title}"
+            f"- Последнее решение: {last_title}"
             + (f" → {chosen}" if chosen else "")
             + "\n"
         )
     adr_note = ""
     accepted = result.get("accepted_adrs") or ""
     if accepted:
-        adr_note = f"- ADRs aceptados: {accepted}\n"
+        adr_note = f"- Принятые ADR: {accepted}\n"
     return (
-        "## Sesión reanudada\n\n"
-        f"- Flujo: `{result.get('command', '-')}`\n"
-        f"- Descripción: `{result.get('description', '-')}`\n"
-        f"- Fase actual: `{result.get('phase', '-')}`\n"
-        f"- Gate pendiente: {gate}\n"
+        "## Сессия возобновлена\n\n"
+        f"- Процесс: `{result.get('command', '-')}`\n"
+        f"- Описание: `{result.get('description', '-')}`\n"
+        f"- Текущая фаза: `{result.get('phase', '-')}`\n"
+        f"- Незакрытая gate: {gate}\n"
         f"{handoff_note}"
         f"{memory_note}"
         f"{adr_note}"
-        f"- Estado activo: `{STATE_RELATIVE_PATH}`\n"
-        f"- Siguiente acción: {next_step}\n"
+        f"- Активное состояние: `{STATE_RELATIVE_PATH}`\n"
+        f"- Следующее действие: {next_step}\n"
     )
 
 
@@ -7115,7 +7187,7 @@ def resume_session(project_dir: str) -> Optional[Dict[str, str]]:
         result["phase"] = state.get("fase_actual", "")
         result["pending_gate"] = get_pending_gate(state)
         result["next_step"] = (
-            f"Retomar '{state.get('comando', 'flujo')}' desde la fase "
+            f"Продолжить '{state.get('comando', 'flujo')}' с фазы "
             f"'{state.get('fase_actual', 'desconocida')}'."
         )
     elif active_handoff and handoff is not None:
@@ -7317,17 +7389,17 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Argumento libre recibido desde /alfred-dev:quick",
     )
 
-    lucius_parser = subparsers.add_parser(
-        "lucius",
-        help="Prepara una revisión Lucius sin ejecutar Codex CLI",
+    cto_parser = subparsers.add_parser(
+        "cto",
+        help="Prepara una revisión CTO sin ejecutar Codex CLI",
     )
-    lucius_parser.add_argument("project_dir", nargs="?", default=".")
-    lucius_parser.add_argument("--json", action="store_true", dest="as_json")
-    lucius_parser.add_argument(
+    cto_parser.add_argument("project_dir", nargs="?", default=".")
+    cto_parser.add_argument("--json", action="store_true", dest="as_json")
+    cto_parser.add_argument(
         "--raw",
         default="",
         dest="raw_request",
-        help="Argumentos recibidos desde /alfred-dev:lucius",
+        help="Argumentos recibidos desde /alfred-dev:cto",
     )
 
     start_flow_parser = subparsers.add_parser(
@@ -7439,7 +7511,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.command == "write-handoff":
         result = write_handoff_files(project_dir)
         if result is None:
-            print("No hay sesión activa para generar handoff.", file=sys.stderr)
+            print("Нет активной сессии, для которой можно создать handoff.", file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))
         return 0
@@ -7447,7 +7519,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.command == "pause":
         result = pause_session(project_dir)
         if result is None:
-            print("No hay sesión activa para pausar.", file=sys.stderr)
+            print("Нет активной сессии, которую можно поставить на паузу.", file=sys.stderr)
             return 1
         if args.as_json:
             print(json.dumps(result, ensure_ascii=False))
@@ -7458,7 +7530,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.command == "resume":
         result = resume_session(project_dir)
         if result is None:
-            print("No hay sesión pausada o activa para reanudar.", file=sys.stderr)
+            print("Нет приостановленной или активной сессии, которую можно возобновить.", file=sys.stderr)
             return 1
         if args.as_json:
             print(json.dumps(result, ensure_ascii=False))
@@ -7602,12 +7674,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(render_quick_setup_summary(result))
         return 0
 
-    if args.command == "lucius":
-        result = prepare_lucius_review(project_dir, raw_request=args.raw_request)
+    if args.command == "cto":
+        result = prepare_cto_review(project_dir, raw_request=args.raw_request)
         if args.as_json:
             print(json.dumps(result, ensure_ascii=False))
         else:
-            print(render_lucius_summary(result))
+            print(render_cto_summary(result))
         return 0
 
     if args.command == "start-flow":
@@ -7700,7 +7772,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
         return 0
 
-    parser.error("Comando no soportado")
+    parser.error("Команда не поддерживается")
     return 2
 
 

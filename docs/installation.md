@@ -21,7 +21,7 @@ con la CLI nativa de Claude Code.
 La orden:
 
 ```bash
-claude plugin marketplace add 686f6c61/alfred-dev --scope user
+claude plugin marketplace add grigoriev/alfred-dev --scope user
 ```
 
 le dice a Claude Code que registre una **fuente GitHub propia** en
@@ -46,7 +46,7 @@ La diferencia es que Alfred Dev **no los gestiona ya uno por uno**. Los
 comandos de Claude Code se encargan de materializarlos:
 
 ```bash
-claude plugin marketplace add 686f6c61/alfred-dev --scope user
+claude plugin marketplace add grigoriev/alfred-dev --scope user
 claude plugin install alfred-dev@alfred-dev --scope user
 ```
 
@@ -103,7 +103,7 @@ sequenceDiagram
     S->>C: claude plugin uninstall alfred-dev@alfred-dev --scope local
     S->>C: claude plugin uninstall alfred-dev@alfred-dev --scope project
     S->>C: claude plugin marketplace remove alfred-dev --scope user (si existe)
-    S->>C: claude plugin marketplace add 686f6c61/alfred-dev --scope user
+    S->>C: claude plugin marketplace add grigoriev/alfred-dev --scope user
     C-->>P: Registrar fuente global en known_marketplaces.json
     S->>C: claude plugin install alfred-dev@alfred-dev --scope user
     C-->>P: Refrescar cache + installed_plugins + enabledPlugins
@@ -121,7 +121,7 @@ sequenceDiagram
 **Uso:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/686f6c61/alfred-dev/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash
 ```
 
 Si ya tienes el repo clonado o descargado localmente, puedes ejecutar el mismo
@@ -160,7 +160,7 @@ Una vez verificado el entorno:
    `claude plugin marketplace remove alfred-dev --scope project`;
 3. desinstala la instancia previa `user` del plugin si sigue registrada;
 4. elimina el registro previo `user` de Alfred Dev si existe;
-5. ejecuta `claude plugin marketplace add 686f6c61/alfred-dev --scope user`;
+5. ejecuta `claude plugin marketplace add grigoriev/alfred-dev --scope user`;
 6. confirma que Claude Code dejó registrada la fuente GitHub en `known_marketplaces.json`;
 7. ejecuta `claude plugin install alfred-dev@alfred-dev --scope user`;
 8. no pisa `~/.claude/skills` ni crea `~/.claude/skills/alfred/SKILL.md` ni
@@ -233,7 +233,7 @@ disponible fuera del repo.
 **Uso (PowerShell):**
 
 ```powershell
-irm https://raw.githubusercontent.com/686f6c61/alfred-dev/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.ps1 | iex
 ```
 
 La filosofía es la misma que en Bash: la CLI de Claude Code hace la instalación
@@ -266,7 +266,7 @@ quedara algún rastro.
 **macOS / Linux:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/686f6c61/alfred-dev/main/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.sh | bash
 ```
 
 Desde una copia local del repo:
@@ -278,7 +278,7 @@ bash ./uninstall.sh
 **Windows (PowerShell):**
 
 ```powershell
-irm https://raw.githubusercontent.com/686f6c61/alfred-dev/main/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.ps1 | iex
 ```
 
 ### Que se elimina
@@ -337,7 +337,7 @@ existe, `projectPath` de la entrada `alfred-dev@alfred-dev`. Si la CLI no
 devuelve la entrada, usa como fallback el `plugin.json` mas reciente dentro de
 `~/.claude/plugins/cache/alfred-dev/` y marca el scope como desconocido.
 
-**Paso 2 -- Consultar la última release en GitHub.** Hace una peticion a la API de GitHub en `https://api.github.com/repos/686f6c61/alfred-dev/releases/latest` y extrae el `tag_name` (versión), el `name` (titulo de la release), el `body` (notas del cambio) y la fecha de publicacion.
+**Paso 2 -- Consultar la última release en GitHub.** Hace una peticion a la API de GitHub en `https://api.github.com/repos/grigoriev/alfred-dev/releases/latest` y extrae el `tag_name` (versión), el `name` (titulo de la release), el `body` (notas del cambio) y la fecha de publicacion.
 
 **Paso 3 -- Comparar versiones.** El `tag_name` (sin el prefijo `v`) y la versión instalada deben compararse como semver real, nunca como texto plano. `0.10.0` es mayor que `0.9.0`, aunque lexicograficamente parezca lo contrario. Si la release es mas nueva, el comando muestra las notas y ofrece un único menú con dos opciones: actualizar ahora o cancelar. Si las versiones coinciden, informa de que el plugin esta al dia y termina.
 
@@ -357,8 +357,8 @@ la ruta global de usuario salvo en instalaciones `managed`:
   comando lo explica antes: la actualización normaliza a instalación global de
   usuario.
 
-- **macOS / Linux:** `curl -fsSL https://raw.githubusercontent.com/686f6c61/alfred-dev/main/install.sh | bash`
-- **Windows:** `irm https://raw.githubusercontent.com/686f6c61/alfred-dev/main/install.ps1 | iex`
+- **macOS / Linux:** `curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash`
+- **Windows:** `irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.ps1 | iex`
 
 - En scope `managed`, no intenta actualizar: informa de que la instalación la
   controla una política de administrador.
@@ -442,7 +442,7 @@ update alfred-dev` antes de instalar.
 La recuperación recomendada es ejecutar otra vez el instalador:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/686f6c61/alfred-dev/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash
 ```
 
 Si necesitas repararlo manualmente, el flujo equivalente es:

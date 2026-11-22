@@ -292,7 +292,7 @@ class TestSession(unittest.TestCase):
             session["fase_numero"] = 4
             session["equipo_sesion"] = {
                 "opcionales_activos": {
-                    "lucius": True,
+                    "cto": True,
                 },
                 "infra": {
                     "memoria": False,
@@ -311,14 +311,14 @@ class TestSession(unittest.TestCase):
                 traceability = fh.read()
 
         self.assertIn(
-            "Especialistas opcionales activos: secuencial: `lucius`.",
+            "Especialistas opcionales activos: secuencial: `cto`.",
             current,
         )
         self.assertIn(
-            "`calidad` -> `en curso` · gate `automatico+seguridad` · opcionales secuencial: `lucius`",
+            "`calidad` -> `en curso` · gate `automatico+seguridad` · opcionales secuencial: `cto`",
             progress,
         )
-        self.assertIn("- Opcionales secuenciales: `lucius`.", traceability)
+        self.assertIn("- Opcionales secuenciales: `cto`.", traceability)
 
     def test_save_state_operational_docs_show_release_optionals_for_ship(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -327,7 +327,7 @@ class TestSession(unittest.TestCase):
             session = create_session("ship", "Release 1.2.0")
             session["equipo_sesion"] = {
                 "opcionales_activos": {
-                    "lucius": True,
+                    "cto": True,
                 },
                 "infra": {
                     "memoria": False,
@@ -337,7 +337,7 @@ class TestSession(unittest.TestCase):
             }
 
             expectations = [
-                ("auditoria_final", 0, "secuencial: `lucius`"),
+                ("auditoria_final", 0, "secuencial: `cto`"),
             ]
 
             for phase_name, phase_number, expected_summary in expectations:
@@ -381,7 +381,7 @@ class TestSession(unittest.TestCase):
                 )
             _save_project_config_with_optionals(
                 tmpdir,
-                ["lucius"],
+                ["cto"],
             )
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
 
@@ -397,23 +397,23 @@ class TestSession(unittest.TestCase):
                 traceability = fh.read()
 
         self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"lucius"})
-        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["lucius"])
+        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
+        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
         self.assertIn("- Origen del equipo runtime: configuración persistida.", current)
         self.assertIn("- Origen del equipo runtime: configuración persistida.", progress)
         self.assertIn("- Origen del equipo runtime: configuración persistida.", traceability)
         self.assertIn(
-            "`calidad` -> `pendiente` · gate `automatico+seguridad` · opcionales secuencial: `lucius`",
+            "`calidad` -> `pendiente` · gate `automatico+seguridad` · opcionales secuencial: `cto`",
             progress,
         )
-        self.assertIn("- Opcionales secuenciales: `lucius`.", traceability)
+        self.assertIn("- Opcionales secuenciales: `cto`.", traceability)
 
     def test_fix_flow_uses_persisted_optional_agents_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             _save_project_config_with_optionals(
                 tmpdir,
-                ["lucius"],
+                ["cto"],
             )
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
 
@@ -429,23 +429,23 @@ class TestSession(unittest.TestCase):
                 traceability = fh.read()
 
         self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"lucius"})
-        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["lucius"])
+        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
+        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
         self.assertIn("- Origen del equipo runtime: configuración persistida.", current)
         self.assertIn("- Origen del equipo runtime: configuración persistida.", progress)
         self.assertIn("- Origen del equipo runtime: configuración persistida.", traceability)
         self.assertIn(
-            "`validacion` -> `pendiente` · gate `automatico+seguridad` · opcionales secuencial: `lucius`",
+            "`validacion` -> `pendiente` · gate `automatico+seguridad` · opcionales secuencial: `cto`",
             progress,
         )
-        self.assertIn("- Opcionales secuenciales: `lucius`.", traceability)
+        self.assertIn("- Opcionales secuenciales: `cto`.", traceability)
 
     def test_ship_flow_uses_persisted_optional_agents_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             _save_project_config_with_optionals(
                 tmpdir,
-                ["lucius"],
+                ["cto"],
             )
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
 
@@ -461,24 +461,24 @@ class TestSession(unittest.TestCase):
                 traceability = fh.read()
 
         self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"lucius"})
-        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["lucius"])
+        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
+        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
         self.assertIn("- Origen del equipo runtime: configuración persistida.", current)
         self.assertIn("- Origen del equipo runtime: configuración persistida.", progress)
         self.assertIn("- Origen del equipo runtime: configuración persistida.", traceability)
-        self.assertIn("Especialistas opcionales activos: secuencial: `lucius`.", current)
+        self.assertIn("Especialistas opcionales activos: secuencial: `cto`.", current)
         self.assertIn(
-            "`auditoria_final` -> `en curso` · gate `automatico+seguridad` · opcionales secuencial: `lucius`",
+            "`auditoria_final` -> `en curso` · gate `automatico+seguridad` · opcionales secuencial: `cto`",
             progress,
         )
-        self.assertIn("- Opcionales secuenciales: `lucius`.", traceability)
+        self.assertIn("- Opcionales secuenciales: `cto`.", traceability)
 
     def test_quick_flow_uses_persisted_optional_agents_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             _save_project_config_with_optionals(
                 tmpdir,
-                ["lucius"],
+                ["cto"],
             )
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
 
@@ -494,23 +494,23 @@ class TestSession(unittest.TestCase):
                 traceability = fh.read()
 
         self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"lucius"})
-        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["lucius"])
+        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
+        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
         self.assertIn("- Origen del equipo runtime: configuración persistida.", current)
         self.assertIn("- Origen del equipo runtime: configuración persistida.", progress)
         self.assertIn("- Origen del equipo runtime: configuración persistida.", traceability)
         self.assertIn(
-            "`validacion_rapida` -> `pendiente` · gate `automatico+seguridad` · opcionales secuencial: `lucius`",
+            "`validacion_rapida` -> `pendiente` · gate `automatico+seguridad` · opcionales secuencial: `cto`",
             progress,
         )
-        self.assertIn("- Opcionales secuenciales: `lucius`.", traceability)
+        self.assertIn("- Opcionales secuenciales: `cto`.", traceability)
 
     def test_audit_flow_uses_persisted_optional_agents_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             _save_project_config_with_optionals(
                 tmpdir,
-                ["lucius"],
+                ["cto"],
             )
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
 
@@ -526,24 +526,24 @@ class TestSession(unittest.TestCase):
                 traceability = fh.read()
 
         self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"lucius"})
-        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["lucius"])
+        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
+        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
         self.assertIn("- Origen del equipo runtime: configuración persistida.", current)
         self.assertIn("- Origen del equipo runtime: configuración persistida.", progress)
         self.assertIn("- Origen del equipo runtime: configuración persistida.", traceability)
-        self.assertIn("Especialistas opcionales activos: secuencial: `lucius`.", current)
+        self.assertIn("Especialistas opcionales activos: secuencial: `cto`.", current)
         self.assertIn(
-            "`auditoria_paralela` -> `en curso` · gate `automatico+seguridad` · opcionales secuencial: `lucius`",
+            "`auditoria_paralela` -> `en curso` · gate `automatico+seguridad` · opcionales secuencial: `cto`",
             progress,
         )
-        self.assertIn("- Opcionales secuenciales: `lucius`.", traceability)
+        self.assertIn("- Opcionales secuenciales: `cto`.", traceability)
 
     def test_spike_flow_marks_persisted_optionals_as_on_demand_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             _save_project_config_with_optionals(
                 tmpdir,
-                ["lucius"],
+                ["cto"],
             )
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
 
@@ -559,27 +559,27 @@ class TestSession(unittest.TestCase):
                 traceability = fh.read()
 
         self.assertEqual(persisted["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"lucius"})
-        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["lucius"])
+        self.assertEqual(set(persisted["equipo_sesion"]["opcionales_activos"]), {"cto"})
+        self.assertTrue(persisted["equipo_sesion"]["opcionales_activos"]["cto"])
         self.assertIn("- Origen del equipo runtime: configuración persistida.", current)
         self.assertIn("- Origen del equipo runtime: configuración persistida.", progress)
         self.assertIn("- Origen del equipo runtime: configuración persistida.", traceability)
         self.assertIn(
-            "- Opcionales activos solo bajo demanda en este flujo: `lucius`.",
+            "- Opcionales activos solo bajo demanda en este flujo: `cto`.",
             current,
         )
         self.assertIn(
-            "- Opcionales activos solo bajo demanda en este flujo: `lucius`.",
+            "- Opcionales activos solo bajo demanda en este flujo: `cto`.",
             progress,
         )
         self.assertIn(
-            "- Opcionales activos solo bajo demanda en este flujo: `lucius`.",
+            "- Opcionales activos solo bajo demanda en este flujo: `cto`.",
             traceability,
         )
         self.assertIn("`exploracion` -> `en curso` · gate `libre`", progress)
         self.assertIn("`conclusiones` -> `pendiente` · gate `usuario`", progress)
 
-    def test_save_state_operational_docs_show_lucius_for_audit(self):
+    def test_save_state_operational_docs_show_cto_for_audit(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
             state_path = os.path.join(tmpdir, ".claude", "alfred-dev-state.json")
@@ -588,7 +588,7 @@ class TestSession(unittest.TestCase):
             session["fase_numero"] = 0
             session["equipo_sesion"] = {
                 "opcionales_activos": {
-                    "lucius": True,
+                    "cto": True,
                 },
                 "infra": {
                     "memoria": False,
@@ -606,9 +606,9 @@ class TestSession(unittest.TestCase):
             with open(os.path.join(tmpdir, TRACEABILITY_MD_RELATIVE_PATH), "r", encoding="utf-8") as fh:
                 traceability = fh.read()
 
-        self.assertIn("Especialistas opcionales activos: secuencial: `lucius`.", current)
-        self.assertIn("secuencial: `lucius`", progress)
-        self.assertIn("- Opcionales secuenciales: `lucius`.", traceability)
+        self.assertIn("Especialistas opcionales activos: secuencial: `cto`.", current)
+        self.assertIn("secuencial: `cto`", progress)
+        self.assertIn("- Opcionales secuenciales: `cto`.", traceability)
 
     def test_save_state_marks_skipped_phase_task_as_done(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -638,7 +638,7 @@ class TestSession(unittest.TestCase):
     def test_ship_empaquetado_has_no_optional_agents(self):
         effective = get_effective_agents(
             "empaquetado",
-            {"lucius": True},
+            {"cto": True},
         )
         self.assertEqual(effective["paralelo"], [])
         self.assertEqual(effective["secuencial"], [])
@@ -781,7 +781,7 @@ class TestAdvancePhase(unittest.TestCase):
 # Se usa como referencia en los tests de validación y run_flow.
 VALID_EQUIPO_SESION = {
     "opcionales_activos": {
-        "lucius": True,
+        "cto": True,
     },
     "infra": {
         "memoria": True,
@@ -822,14 +822,23 @@ class TestValidateEquipoSesion(unittest.TestCase):
         """TC-22b: si falta un agente conocido, devuelve False."""
         import copy
         malo = copy.deepcopy(VALID_EQUIPO_SESION)
-        del malo["opcionales_activos"]["lucius"]
+        del malo["opcionales_activos"]["cto"]
         self.assertFalse(_validate_equipo_sesion(malo))
+
+    def test_tc22c_clave_legacy_lucius_se_acepta_como_cto(self):
+        """TC-22c: estados antiguos con `lucius` se normalizan a `cto`."""
+        import copy
+        legacy = copy.deepcopy(VALID_EQUIPO_SESION)
+        legacy["opcionales_activos"]["lucius"] = legacy["opcionales_activos"].pop("cto")
+        self.assertTrue(_validate_equipo_sesion(legacy))
+        self.assertIn("cto", legacy["opcionales_activos"])
+        self.assertNotIn("lucius", legacy["opcionales_activos"])
 
     def test_tc23_valor_no_bool_en_opcionales(self):
         """TC-23: un valor no booleano en opcionales devuelve False."""
         import copy
         malo = copy.deepcopy(VALID_EQUIPO_SESION)
-        malo["opcionales_activos"]["lucius"] = "si"
+        malo["opcionales_activos"]["cto"] = "si"
         self.assertFalse(_validate_equipo_sesion(malo))
 
     def test_tc23b_fuente_persistida_tambien_es_valida(self):
@@ -892,7 +901,7 @@ class TestRunFlow(unittest.TestCase):
         calidad = get_effective_agents("calidad", opcionales)
         self.assertEqual(arquitectura["paralelo"], [])
         self.assertEqual(arquitectura["secuencial"], [])
-        self.assertIn("lucius", calidad["secuencial"])
+        self.assertIn("cto", calidad["secuencial"])
 
     def test_tc24_retrocompatibilidad_get_effective_agents_con_none(self):
         """TC-24: get_effective_agents(fase, None) sigue funcionando."""
@@ -932,7 +941,7 @@ class TestRunFlow(unittest.TestCase):
                 fh.write(
                     "---\n"
                     "agentes_opcionales:\n"
-                    "  lucius: true\n"
+                    "  cto: true\n"
                     "memoria:\n"
                     "  enabled: true\n"
                     "---\n"
@@ -946,8 +955,8 @@ class TestRunFlow(unittest.TestCase):
 
         self.assertIsNotNone(session["equipo_sesion"])
         self.assertEqual(session["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertEqual(set(session["equipo_sesion"]["opcionales_activos"]), {"lucius"})
-        self.assertTrue(session["equipo_sesion"]["opcionales_activos"]["lucius"])
+        self.assertEqual(set(session["equipo_sesion"]["opcionales_activos"]), {"cto"})
+        self.assertTrue(session["equipo_sesion"]["opcionales_activos"]["cto"])
         self.assertTrue(session["equipo_sesion"]["infra"]["memoria"])
 
     def test_run_flow_invalid_ephemeral_team_falls_back_to_persisted_project_config(self):
@@ -962,7 +971,7 @@ class TestRunFlow(unittest.TestCase):
                 fh.write(
                     "---\n"
                     "agentes_opcionales:\n"
-                    "  lucius: true\n"
+                    "  cto: true\n"
                     "---\n"
                 )
 
@@ -974,27 +983,27 @@ class TestRunFlow(unittest.TestCase):
             )
 
         self.assertEqual(session["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertTrue(session["equipo_sesion"]["opcionales_activos"]["lucius"])
+        self.assertTrue(session["equipo_sesion"]["opcionales_activos"]["cto"])
         self.assertIsNotNone(session["equipo_sesion_error"])
         self.assertIn("Se aplicó la configuración persistida", session["equipo_sesion_error"])
 
     def test_quick_flow_uses_optional_agents_on_light_phases(self):
-        """quick integra Lucius solo en la validación rápida."""
+        """quick integra CTO solo en la validación rápida."""
         opcionales = {
             **VALID_EQUIPO_SESION["opcionales_activos"],
-            "lucius": True,
+            "cto": True,
         }
         ejecucion = get_effective_agents("ejecucion_acotada", opcionales)
         validacion = get_effective_agents("validacion_rapida", opcionales)
         self.assertEqual(ejecucion["paralelo"], [])
         self.assertEqual(ejecucion["secuencial"], [])
-        self.assertIn("lucius", validacion["secuencial"])
+        self.assertIn("cto", validacion["secuencial"])
 
     def test_fix_flow_uses_optional_agents_on_bug_phases(self):
-        """fix integra Lucius solo en validacion."""
+        """fix integra CTO solo en validacion."""
         opcionales = {
             **VALID_EQUIPO_SESION["opcionales_activos"],
-            "lucius": True,
+            "cto": True,
         }
         diagnostico = get_effective_agents("diagnostico", opcionales)
         correccion = get_effective_agents("correccion", opcionales)
@@ -1004,38 +1013,38 @@ class TestRunFlow(unittest.TestCase):
         self.assertEqual(diagnostico["secuencial"], [])
         self.assertEqual(correccion["paralelo"], [])
         self.assertEqual(correccion["secuencial"], [])
-        self.assertIn("lucius", validacion["secuencial"])
+        self.assertIn("cto", validacion["secuencial"])
 
     def test_unknown_optional_flags_are_ignored_by_effective_agents(self):
         """Los opcionales recortados no reaparecen aunque vengan en el estado."""
         opcionales = {
-            "lucius": True,
+            "cto": True,
             "copywriter": True,
             "github-manager": True,
         }
         calidad = get_effective_agents("calidad", opcionales)
         documentacion = get_effective_agents("documentacion", opcionales)
         empaquetado = get_effective_agents("empaquetado", opcionales)
-        self.assertEqual(calidad["secuencial"], ["lucius"])
+        self.assertEqual(calidad["secuencial"], ["cto"])
         self.assertEqual(documentacion["paralelo"], [])
         self.assertEqual(empaquetado["secuencial"], [])
 
-    def test_lucius_runs_as_external_audit_in_quality_closures(self):
-        """Lucius se integra al cierre como auditoría secuencial externa."""
+    def test_cto_runs_as_external_audit_in_quality_closures(self):
+        """CTO se integra al cierre como auditoría secuencial externa."""
         opcionales = {
             **VALID_EQUIPO_SESION["opcionales_activos"],
-            "lucius": True,
+            "cto": True,
         }
         calidad = get_effective_agents("calidad", opcionales)
         auditoria = get_effective_agents("auditoria_final", opcionales)
-        self.assertIn("lucius", calidad["secuencial"])
-        self.assertIn("lucius", auditoria["secuencial"])
+        self.assertIn("cto", calidad["secuencial"])
+        self.assertIn("cto", auditoria["secuencial"])
 
     def test_ship_and_audit_use_release_optional_agents(self):
-        """ship y audit integran Lucius en las fases de auditoria."""
+        """ship y audit integran CTO en las fases de auditoria."""
         opcionales = {
             **VALID_EQUIPO_SESION["opcionales_activos"],
-            "lucius": True,
+            "cto": True,
         }
         auditoria_final = get_effective_agents("auditoria_final", opcionales)
         documentacion = get_effective_agents("documentacion", opcionales)
@@ -1043,11 +1052,11 @@ class TestRunFlow(unittest.TestCase):
         despliegue = get_effective_agents("despliegue", opcionales)
         auditoria_paralela = get_effective_agents("auditoria_paralela", opcionales)
 
-        self.assertIn("lucius", auditoria_final["secuencial"])
+        self.assertIn("cto", auditoria_final["secuencial"])
         self.assertEqual(documentacion["paralelo"], [])
         self.assertEqual(empaquetado["secuencial"], [])
         self.assertEqual(despliegue["secuencial"], [])
-        self.assertIn("lucius", auditoria_paralela["secuencial"])
+        self.assertIn("cto", auditoria_paralela["secuencial"])
 
 
 class TestLoopIterativo(unittest.TestCase):
@@ -1133,7 +1142,7 @@ class TestAutopilot(unittest.TestCase):
                 fh.write(
                     "---\n"
                     "agentes_opcionales:\n"
-                    "  lucius: true\n"
+                    "  cto: true\n"
                     "---\n"
                 )
 
@@ -1141,7 +1150,7 @@ class TestAutopilot(unittest.TestCase):
 
         self.assertTrue(session["autopilot"])
         self.assertEqual(session["equipo_sesion"]["fuente"], "config_persistida")
-        self.assertTrue(session["equipo_sesion"]["opcionales_activos"]["lucius"])
+        self.assertTrue(session["equipo_sesion"]["opcionales_activos"]["cto"])
         self.assertEqual(session["iteraciones_fase"], 0)
         self.assertEqual(session["max_iteraciones_fase"], MAX_PHASE_ITERATIONS)
 

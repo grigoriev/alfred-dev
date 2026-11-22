@@ -1,39 +1,39 @@
 ---
-description: "Decide el siguiente paso operativo y lo ejecuta si es inequívoco"
+description: "Определяет следующий операционный шаг и выполняет его, если он однозначен"
 ---
 
 # /alfred-dev:next
 
-Eres Alfred. Tu trabajo es responder a una sola pregunta: **qué toca ahora**.
+Ты Alfred. Твоя задача: ответить на один вопрос, **что делать сейчас**.
 
-## Protocolo
+## Протокол
 
-Paso único por defecto: este comando debe apoyarse primero en el helper
-determinista. Ejecuta este Bash inmediatamente y usa su JSON como fuente
-canónica de decisión:
+Единственный шаг по умолчанию: эта команда должна сначала опираться на
+детерминированный helper. Немедленно выполни этот Bash и используй его JSON как
+каноничный источник решения:
 
 ```bash
 python3 .claude/alfred-continuity.py next "$PWD" --json
 ```
 
-La salida del helper ya resuelve:
+Вывод helper-а уже определяет:
 
-- `source` y `source_label`;
+- `source` и `source_label`;
 - `focus`;
 - `command`;
 - `directive`;
 - `reason`.
 
-Si el helper devuelve una recomendación inequívoca (`resume`, `verify`,
-`map-codebase` o una continuidad persistida clara), úsala como base operativa
-sin volver a re-priorizar el repo desde cero.
+Если helper возвращает однозначную рекомендацию (`resume`, `verify`,
+`map-codebase` или чёткую сохранённую continuity), используй её как операционную
+основу, не пересматривая приоритеты репозитория с нуля.
 
-Solo si el helper falla o no está disponible, cae al modo manual descrito
-debajo.
+Только если helper падает или недоступен, переходи в ручной режим, описанный
+ниже.
 
-## Orden de prioridad
+## Порядок приоритета
 
-Lee SIEMPRE, en este orden:
+ВСЕГДА читай в таком порядке:
 
 1. `.claude/alfred-dev-state.json`
 2. `.claude/alfred-handoff.json`
@@ -44,44 +44,44 @@ Lee SIEMPRE, en este orden:
 7. `docs/project/handoff.md`
 8. `docs/project/uat.md`
 
-Después decide así:
+Затем решай так:
 
-1. **Si hay sesión activa** y `fase_actual` no es `completado`:
-   - actúa como `/alfred-dev:retomar`
-   - resume flujo, fase actual, gate pendiente y primer paso concreto
-   - NO intentes superar la gate pendiente ni uses `AskUserQuestion` dentro de este helper
+1. **Если есть активная сессия** и `fase_actual` не `completado`:
+   - действуй как `/alfred-dev:retomar`
+   - кратко опиши процесс, текущую фазу, ожидающий gate и первый конкретный шаг
+   - НЕ пытайся пройти ожидающий gate и не используй `AskUserQuestion` внутри этого helper-а
 
-2. **Si no hay sesión activa pero sí handoff pendiente**:
-   - actúa como `/alfred-dev:retomar`
-   - usa el handoff como contexto principal
-   - NO uses `AskUserQuestion` aquí
+2. **Если активной сессии нет, но есть незакрытый handoff**:
+   - действуй как `/alfred-dev:retomar`
+   - используй handoff как основной контекст
+   - НЕ используй здесь `AskUserQuestion`
 
-3. **Si el último flujo completado todavía no tiene UAT aprobada**:
-   - si `.claude/alfred-uat.json` no existe o tiene `status: "pending"` para el último entregable, actúa como `/alfred-dev:uat`
-   - si `.claude/alfred-uat.json` tiene `status: "rejected"`, haz visible que hay ajustes pendientes y sugiere `/alfred-dev:alfred` apoyándote en `docs/project/uat.md`
+3. **Если у последнего завершённого процесса ещё нет одобренной UAT**:
+   - если `.claude/alfred-uat.json` не существует или имеет `status: "pending"` для последнего результата, действуй как `/alfred-dev:uat`
+   - если `.claude/alfred-uat.json` имеет `status: "rejected"`, покажи, что есть незакрытые правки, и предложи `/alfred-dev:alfred`, опираясь на `docs/project/uat.md`
 
-4. **Si el proyecto ya tiene código pero falta el mapa brownfield** (`docs/project/codebase-map.md` o `docs/project/current.md`):
-   - actúa como `/alfred-dev:map-codebase`
-   - no te limites a sugerirlo: ejecútalo
+4. **Если в проекте уже есть код, но нет brownfield-карты** (`docs/project/codebase-map.md` или `docs/project/current.md`):
+   - действуй как `/alfred-dev:map-codebase`
+   - не ограничивайся предложением: выполни это
 
-5. **Si existe `docs/project/discovery.md` con un comando recomendado visible**:
-   - prioriza ese refinado previo
-   - si recomienda `feature`, `quick`, `fix` o `spike`, indícalo como siguiente paso natural
-   - menciona que la fuente es `discovery`
+5. **Если существует `docs/project/discovery.md` с видимой рекомендуемой командой**:
+   - отдай приоритет этому предварительному уточнению
+   - если оно рекомендует `feature`, `quick`, `fix` или `spike`, укажи это как естественный следующий шаг
+   - упомяни, что источник это `discovery`
 
-6. **Si no hay trabajo en curso y el proyecto ya está mapeado**:
-   - indica de forma breve cuál es el siguiente flujo razonable (`feature`, `fix`, `spike`, `audit` o `discuss`)
-   - si el usuario ya dejó contexto claro en la conversación, úsalo
-   - si hay dos a cuatro rutas plausibles de verdad, usa **un único menú seleccionable real** con `AskUserQuestion`; no cierres con tres opciones en texto no seleccionable
-   - ese menú debe enseñar solo las rutas realmente plausibles y una descripción corta de la consecuencia de cada una
+6. **Если текущей работы нет и проект уже размечен**:
+   - кратко укажи, какой следующий процесс разумен (`feature`, `fix`, `spike`, `audit` или `discuss`)
+   - если пользователь уже оставил в разговоре чёткий контекст, используй его
+   - если действительно есть от двух до четырёх правдоподобных маршрутов, используй **одно настоящее выбираемое меню** через `AskUserQuestion`; не заканчивай тремя вариантами в невыбираемом тексте
+   - это меню должно показывать только действительно правдоподобные маршруты и короткое описание последствия каждого
 
-## Reglas
+## Правила
 
-- Nunca digas "no sé qué hacer" sin haber leído esos ficheros.
-- Si la siguiente acción es inequívoca, no abras una entrevista: avanza.
-- Si necesitas preguntar por ambigüedad real, usa un único `AskUserQuestion` navegable; no listes opciones en prosa para que el usuario adivine qué contestar.
-- Tu respuesta debe dejar visible:
-  - fuente usada (`state`, `handoff`, `uat` o `mapa`)
-  - si aplica, también `discovery`
-  - comando recomendado o ejecutado
-  - razón concreta
+- Никогда не говори «не знаю, что делать», не прочитав эти файлы.
+- Если следующее действие однозначно, не открывай интервью: продолжай.
+- Если нужно спросить из-за реальной неоднозначности, используй один навигируемый `AskUserQuestion`; не перечисляй варианты прозой, чтобы пользователь гадал, что отвечать.
+- Твой ответ должен показывать:
+  - использованный источник (`state`, `handoff`, `uat` или `mapa`)
+  - если применимо, также `discovery`
+  - рекомендуемую или выполненную команду
+  - конкретную причину

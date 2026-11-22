@@ -2,7 +2,7 @@
 # Alfred Dev -- script de instalacion para Claude Code (Windows)
 #
 # Uso:
-#   irm https://raw.githubusercontent.com/686f6c61/alfred-dev/main/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.ps1 | iex
 #
 # Que hace:
 #   1. Verifica que Claude Code esta instalado
@@ -18,7 +18,7 @@
 
 $ErrorActionPreference = 'Stop'
 
-$Repo = "686f6c61/alfred-dev"
+$Repo = "grigoriev/alfred-dev"
 $PluginName = "alfred-dev"
 $Version = "0.7.0"
 

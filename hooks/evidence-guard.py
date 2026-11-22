@@ -56,7 +56,7 @@ def main():
         data = json.load(sys.stdin)
     except (ValueError, json.JSONDecodeError) as e:
         print(
-            f"{_LOG_PREFIX} Aviso: no se pudo leer la entrada: {e}",
+            f"{_LOG_PREFIX} Предупреждение: не удалось прочитать вход: {e}",
             file=sys.stderr,
         )
         sys.exit(0)
@@ -81,13 +81,13 @@ def main():
 
         if result == "unknown":
             print(
-                f"{_LOG_PREFIX} Tests ejecutados pero no se pudo determinar "
-                f"el resultado. El comando se ha registrado igualmente.",
+                f"{_LOG_PREFIX} Тесты запущены, но результат определить "
+                f"не удалось. Команда всё равно записана.",
                 file=sys.stderr,
             )
     except Exception as e:
         print(
-            f"{_LOG_PREFIX} Error inesperado (fail-open, no bloquea): {e}",
+            f"{_LOG_PREFIX} Непредвиденная ошибка (fail-open, не блокирует): {e}",
             file=sys.stderr,
         )
 

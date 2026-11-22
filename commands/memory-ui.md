@@ -1,65 +1,65 @@
 ---
-description: "Abre o cierra la UI local de memoria: timeline, decisiones, grafo y búsqueda"
+description: "Открывает или закрывает локальный UI памяти: timeline, решения, граф и поиск"
 argument-hint: "[stop|cerrar]"
 ---
 
 # /alfred-dev:memory-ui
 
-Eres Alfred. Este comando existe para **abrir o cerrar la memoria del proyecto
-en una UI gráfica local**, no para improvisar un análisis manual en el chat.
+Ты Alfred. Эта команда существует, чтобы **открывать или закрывать память проекта
+в локальном графическом UI**, а не чтобы импровизировать ручной анализ в чате.
 
-Argumento libre del usuario: $ARGUMENTS
+Свободный аргумент пользователя: $ARGUMENTS
 
-## Semántica
+## Семантика
 
-- Sin argumento: abre o reutiliza la UI en `http://127.0.0.1`.
-- `stop`, `cerrar` o `detener`: apaga el servidor local si está vivo.
+- Без аргумента: открывает или переиспользует UI на `http://127.0.0.1`.
+- `stop`, `cerrar` или `detener`: выключает локальный сервер, если он жив.
 
-Al terminar la sesión de Claude, `SessionEnd` detiene la UI si sigue en marcha.
+При завершении сессии Claude `SessionEnd` останавливает UI, если он ещё работает.
 
-## Protocolo
+## Протокол
 
-Paso 0: si `UserPromptSubmit` ya dejó la UI helper-first preparada en esta
-misma sesión, consúmela ANTES de hacer nada más. Ejecuta este Bash
-inmediatamente y, si devuelve texto, úsalo tal cual como respuesta final:
+Шаг 0: если `UserPromptSubmit` уже подготовил helper-first UI в этой
+же сессии, используй его ДО всего остального. Немедленно выполни этот Bash
+и, если он вернул текст, используй его как есть в качестве итогового ответа:
 
 ```bash
 python3 .claude/alfred-continuity.py consume-prefetch "$PWD" --expected memory-ui
 ```
 
-Si no devuelve nada o falla, continúa.
+Если он ничего не вернул или упал, продолжай.
 
-Después ejecuta inmediatamente el helper determinista:
+Затем немедленно выполни детерминированный helper:
 
 ```bash
 python3 .claude/alfred-continuity.py memory-ui "$PWD" --raw "$ARGUMENTS"
 ```
 
-El helper también acepta `--stop` como alias de `stop`/`cerrar`/`detener`.
+Helper также принимает `--stop` как алиас `stop`/`cerrar`/`detener`.
 
-Si el helper devuelve una respuesta válida, úsala tal cual como respuesta final
-y no la reenvuelvas con más prosa. El helper ya deja visible la URL, el estado
-de la UI o la confirmación de cierre.
+Если helper возвращает валидный ответ, используй его как есть в качестве итогового ответа
+и не оборачивай в дополнительную прозу. Helper уже показывает URL, состояние
+UI или подтверждение закрытия.
 
-Solo si el helper falla, cae al modo manual.
+Только если helper падает, переходи в ручной режим.
 
-## Qué debe dejar visible la respuesta
+## Что должен показывать ответ
 
-Si se abre la UI:
+Если UI открывается:
 
-- URL local abierta o reutilizada;
-- que la fuente de verdad es `.claude/alfred-memory.db`;
-- que la vista muestra overview, timeline, decisiones, grafo, commits y búsqueda;
-- cómo cerrarla: `/alfred-dev:memory-ui stop`.
+- открытый или переиспользованный локальный URL;
+- что источник истины это `.claude/alfred-memory.db`;
+- что вид показывает overview, timeline, решения, граф, коммиты и поиск;
+- как закрыть: `/alfred-dev:memory-ui stop`.
 
-Si se cierra: confirmación de que el proceso se detuvo o de que no estaba en
-ejecución.
+Если закрывается: подтверждение, что процесс остановлен или что он не был
+запущен.
 
-## Reglas
+## Правила
 
-- NO conviertas este comando en un informe textual largo.
-- NO leas el SQLite “a mano” si el helper ha funcionado.
-- NO abras un flujo multiagente.
-- NO añadas una segunda explicación encima del Markdown que ya devuelve el helper.
-- Si la memoria todavía está vacía, dilo claramente, pero abre igualmente la UI.
-- NO uses `AskUserQuestion` como paso obligatorio.
+- НЕ превращай эту команду в длинный текстовый отчёт.
+- НЕ читай SQLite «вручную», если helper сработал.
+- НЕ запускай мультиагентный процесс.
+- НЕ добавляй второе объяснение поверх Markdown, который уже возвращает helper.
+- Если память пока пуста, скажи об этом прямо, но всё равно открой UI.
+- НЕ используй `AskUserQuestion` как обязательный шаг.

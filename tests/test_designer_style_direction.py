@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import unittest
 
-from core.selina_style_direction import (
+from core.designer_style_direction import (
     discover_proposals_file,
     render_style_direction_markdown,
     write_style_direction_artifact,
@@ -23,9 +23,9 @@ WRITE_STYLE_DIRECTION_SCRIPT = os.path.join(
 )
 
 
-class TestSelinaStyleDirection(unittest.TestCase):
+class TestDesignerStyleDirection(unittest.TestCase):
     def setUp(self):
-        self.project_dir = tempfile.mkdtemp(prefix="alfred-selina-style-")
+        self.project_dir = tempfile.mkdtemp(prefix="alfred-designer-style-")
         self.session_dir = os.path.join(self.project_dir, ".alfred-dev", "visual", "session-1")
         self.state_dir = os.path.join(self.session_dir, "state")
         self.content_dir = os.path.join(self.session_dir, "content")
@@ -115,7 +115,7 @@ class TestSelinaStyleDirection(unittest.TestCase):
             content = fh.read()
 
         self.assertIn(
-            "Selina recomienda `B` — Editorial cálido como sistema de diseño base para esta fase.",
+            "Designer recomienda `B` — Editorial cálido como sistema de diseño base para esta fase.",
             content,
         )
         self.assertIn("## Por qué gana esta opción", content)

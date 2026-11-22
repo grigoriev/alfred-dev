@@ -32,8 +32,8 @@ def _load_payload() -> dict:
         return json.load(sys.stdin)
     except (ValueError, json.JSONDecodeError) as exc:
         print(
-            f"[El Paranoico] No he podido analizar la entrada del hook: {exc}. "
-            "Operación bloqueada por precaución.",
+            f"[Параноик] Не удалось разобрать вход hook: {exc}. "
+            "Операция заблокирована из предосторожности.",
             file=sys.stderr,
         )
         raise SystemExit(2)
@@ -86,9 +86,9 @@ def main() -> None:
         if not label:
             continue
         print(
-            "\n[El Paranoico] ALERTA DE SEGURIDAD - Operación bloqueada\n\n"
-            f"He detectado un secreto ({describe_secret_label(label)}).\n"
-            "No lo hardcodees. Usa .env, variables de entorno o un gestor de secretos.\n",
+            "\n[Параноик] ТРЕВОГА БЕЗОПАСНОСТИ: операция заблокирована\n\n"
+            f"Обнаружен секрет ({describe_secret_label(label)}).\n"
+            "Не хардкодь его. Используй .env, переменные окружения или менеджер секретов.\n",
             file=sys.stderr,
         )
         raise SystemExit(2)

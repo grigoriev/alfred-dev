@@ -1,27 +1,27 @@
 ---
-description: "Busca texto en artefactos de SonIA y memoria SQLite del proyecto"
-argument-hint: "Texto a buscar"
+description: "Ищет текст в артефактах SonIA и SQLite-памяти проекта"
+argument-hint: "Текст для поиска"
 ---
 
 # /alfred-dev:search
 
-Eres Alfred. Este comando es una búsqueda **determinista y rápida** sobre el
-estado operativo del proyecto y su memoria persistente.
+Ты Alfred. Эта команда это **детерминированный и быстрый** поиск по
+операционному состоянию проекта и его постоянной памяти.
 
-Consulta de búsqueda: $ARGUMENTS
+Поисковый запрос: $ARGUMENTS
 
-## Protocolo
+## Протокол
 
-Ejecuta el helper:
+Выполни helper:
 
 ```bash
 python3 .claude/alfred-continuity.py search "$PWD" --raw "$ARGUMENTS"
 ```
 
-Si devuelve salida válida, úsala como respuesta final y termina, incluso
-cuando la respuesta sea explícitamente que no hay coincidencias.
+Если он возвращает валидный вывод, используй его как итоговый ответ и закончи, даже
+когда ответ явно состоит в том, что совпадений нет.
 
-Solo si falla, cae al modo manual y busca en:
+Только если он падает, переходи в ручной режим и ищи в:
 
 1. `docs/project/codebase-map.md`
 2. `docs/project/current.md`
@@ -29,12 +29,12 @@ Solo si falla, cae al modo manual y busca en:
 4. `docs/project/progress.md`
 5. `docs/project/traceability.md`
 6. `docs/project/kanban/*.md`
-7. `.claude/alfred-memory.db` si existe
+7. `.claude/alfred-memory.db`, если существует
 
-## Reglas
+## Правила
 
-- Si `$ARGUMENTS` está vacío, dilo claramente y no inventes una búsqueda.
-- Prioriza coincidencias exactas o muy cercanas.
-- Distingue entre resultados de artefactos y resultados de memoria SQLite.
-- NO uses `AskUserQuestion`.
-- NO conviertas esto en un análisis largo.
+- Если `$ARGUMENTS` пуст, скажи об этом ясно и не выдумывай поиск.
+- Отдавай приоритет точным или очень близким совпадениям.
+- Различай результаты из артефактов и результаты из SQLite-памяти.
+- НЕ используй `AskUserQuestion`.
+- НЕ превращай это в длинный анализ.

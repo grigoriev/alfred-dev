@@ -70,30 +70,30 @@ def _is_java_keystore(_base_name, ext):
 
 _SENSITIVE_PATTERNS = [
     # Variables de entorno
-    (_is_env_file, "Fichero de variables de entorno"),
+    (_is_env_file, "Файл переменных окружения"),
     # Claves privadas
-    (_is_private_key, "Clave privada o certificado"),
+    (_is_private_key, "Приватный ключ или сертификат"),
     # SSH keys
-    (_is_ssh_private_key, "Clave SSH privada"),
+    (_is_ssh_private_key, "Приватный SSH-ключ"),
     # Credenciales de servicios
-    (_is_service_credentials_file, "Credenciales de servicio"),
+    (_is_service_credentials_file, "Учётные данные сервиса"),
     # htpasswd
-    (_is_htpasswd, "Fichero de contrasenas Apache"),
+    (_is_htpasswd, "Файл паролей Apache"),
     # Nota: credenciales AWS se detectan por ruta en _PATH_PATTERNS,
     # no por nombre base, porque "credentials" y "config" son demasiado genericos.
     # Keystore
-    (_is_java_keystore, "Almacen de claves Java"),
+    (_is_java_keystore, "Хранилище ключей Java"),
 ]
 
 # Patrones evaluados sobre la ruta completa (no solo el nombre base)
 _PATH_PATTERNS = [
-    (".aws/credentials", "Credenciales AWS"),
-    (".aws/config", "Configuracion AWS con posibles credenciales"),
-    ("/.docker/config.json", "Credenciales Docker"),
-    ("/.kube/config", "Configuracion de Kubernetes"),
-    ("/.terraform/terraform.tfstate", "Estado Terraform con posibles secretos"),
-    (".ssh/", "Directorio SSH (posibles claves privadas)"),
-    (".gnupg/", "Directorio GPG (posibles claves privadas)"),
+    (".aws/credentials", "Учётные данные AWS"),
+    (".aws/config", "Конфигурация AWS, возможно с учётными данными"),
+    ("/.docker/config.json", "Учётные данные Docker"),
+    ("/.kube/config", "Конфигурация Kubernetes"),
+    ("/.terraform/terraform.tfstate", "Состояние Terraform, возможно с секретами"),
+    (".ssh/", "Каталог SSH (возможны приватные ключи)"),
+    (".gnupg/", "Каталог GPG (возможны приватные ключи)"),
 ]
 
 
@@ -130,7 +130,7 @@ def main():
                 break
         except Exception as exc:
             print(
-                f"[Alfred Dev] Error evaluando patron de fichero sensible "
+                f"[Alfred Dev] Ошибка при проверке шаблона чувствительного файла "
                 f"'{description}': {exc}",
                 file=sys.stderr,
             )
@@ -145,11 +145,11 @@ def main():
 
     if warning is not None:
         print(
-            f"\n[Alfred Dev] AVISO: lectura de fichero sensible\n\n"
-            f"  Fichero: {file_path}\n"
-            f"  Tipo:    {warning}\n\n"
-            f"  Ten cuidado de no filtrar el contenido de este fichero\n"
-            f"  en respuestas, commits, logs o artefactos generados.\n",
+            f"\n[Alfred Dev] ВНИМАНИЕ: чтение чувствительного файла\n\n"
+            f"  Файл: {file_path}\n"
+            f"  Тип:  {warning}\n\n"
+            f"  Не допусти утечки содержимого этого файла\n"
+            f"  в ответы, коммиты, логи или созданные артефакты.\n",
             file=sys.stderr,
         )
 

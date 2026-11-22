@@ -1,5 +1,5 @@
 /**
- * helper.js — Cliente WebSocket para el visor de Selina.
+ * helper.js — Cliente WebSocket para el visor de Designer.
  *
  * Se inyecta como script inline en cada pagina servida por server.cjs.
  * Gestiona la conexion WebSocket, la seleccion de opciones por parte

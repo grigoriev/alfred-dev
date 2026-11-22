@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para las funciones del orquestador de Selina (la estilista)."""
+"""Tests para las funciones del orquestador de Designer (la estilista)."""
 
 import os
 import sys
@@ -86,7 +86,7 @@ class TestHasFrontend(unittest.TestCase):
         self.assertFalse(has_frontend(stack))
 
 
-class TestSelinaPhase(unittest.TestCase):
+class TestDesignerPhase(unittest.TestCase):
     """Verifica que la fase estilo_visual esta correctamente integrada."""
 
     def test_feature_flow_has_7_phases(self):
@@ -96,9 +96,9 @@ class TestSelinaPhase(unittest.TestCase):
         fase = FLOWS["feature"]["fases"][1]
         self.assertEqual(fase["nombre"], "estilo_visual")
 
-    def test_estilo_visual_uses_selina(self):
+    def test_estilo_visual_uses_designer(self):
         fase = FLOWS["feature"]["fases"][1]
-        self.assertEqual(fase["agentes"], ["selina"])
+        self.assertEqual(fase["agentes"], ["designer"])
 
     def test_estilo_visual_gate_is_usuario(self):
         fase = FLOWS["feature"]["fases"][1]
@@ -135,10 +135,10 @@ class TestSelinaPhase(unittest.TestCase):
         self.assertEqual(session["fase_actual"], "arquitectura")
 
 
-class TestSelinaFullFlow(unittest.TestCase):
-    """Verifica el flujo completo feature con Selina."""
+class TestDesignerFullFlow(unittest.TestCase):
+    """Verifica el flujo completo feature con Designer."""
 
-    def test_full_feature_flow_with_selina(self):
+    def test_full_feature_flow_with_designer(self):
         """Recorrer las 7 fases del flujo feature."""
         session = create_session("feature", "App con dashboard")
 
@@ -186,7 +186,7 @@ class TestSelinaFullFlow(unittest.TestCase):
         self.assertFalse(result["passed"])
 
 
-class TestSelinaSkippedWhenNoFrontend(unittest.TestCase):
+class TestDesignerSkippedWhenNoFrontend(unittest.TestCase):
     """Verifica que estilo_visual se salta en proyectos sin frontend."""
 
     def test_skip_estilo_visual_when_no_frontend(self):

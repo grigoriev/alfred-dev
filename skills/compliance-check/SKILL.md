@@ -1,89 +1,89 @@
 ---
 name: compliance-check
-description: "Usar para verificar cumplimiento RGPD, NIS2 y CRA. También: verificar RGPD, cumplimiento normativo, NIS2, CRA, Cyber Resilience Act, protección de datos, regulación europea."
+description: "Использовать для проверки соответствия GDPR (RGPD), NIS2 и CRA. Также: проверить GDPR, RGPD, нормативное соответствие, compliance, NIS2, CRA, Cyber Resilience Act, защита данных, европейское регулирование."
 ---
 
-# Verificación de cumplimiento normativo
+# Проверка нормативного соответствия
 
-## Resumen
+## Резюме
 
-Este skill evalúa el proyecto contra tres marcos regulatorios europeos fundamentales: RGPD (protección de datos), NIS2 (ciberseguridad de infraestructuras) y CRA (Cyber Resilience Act, seguridad de productos con elementos digitales). El resultado es un informe de conformidad con el estado actual del proyecto frente a cada requisito y las acciones necesarias para alcanzar el cumplimiento.
+Этот skill оценивает проект по трём основным европейским регуляторным рамкам: GDPR (RGPD, защита данных), NIS2 (кибербезопасность инфраструктур) и CRA (Cyber Resilience Act, безопасность продуктов с цифровыми элементами). Результат: отчёт о соответствии с текущим состоянием проекта по каждому требованию и действиями, необходимыми для достижения соответствия.
 
-No se trata de un dictamen jurídico, sino de una evaluación técnica que identifica las lagunas y orienta las acciones de desarrollo necesarias.
+Это не юридическое заключение, а техническая оценка, которая выявляет пробелы и направляет действия по разработке.
 
-## Proceso
+## Процесс
 
-1. **Determinar qué normativas aplican.** No todos los proyectos están sujetos a las tres:
+1. **Определить, какие нормативы применимы.** Не все проекты подпадают под все три:
 
-   - **RGPD:** aplica si el software trata datos personales de personas en la UE.
-   - **NIS2:** aplica si la organización opera en sectores críticos o es proveedor de servicios digitales.
-   - **CRA:** aplica a productos con elementos digitales comercializados en la UE (incluyendo software open source con uso comercial).
+   - **GDPR (RGPD):** применим, если ПО обрабатывает персональные данные лиц в ЕС.
+   - **NIS2:** применим, если организация работает в критических секторах или является поставщиком цифровых услуг.
+   - **CRA:** применим к продуктам с цифровыми элементами, поставляемым на рынок ЕС (включая open source ПО с коммерческим использованием).
 
-2. **Checklist RGPD:**
+2. **Чек-лист GDPR (RGPD):**
 
-   - [ ] Base jurídica para el tratamiento de datos (consentimiento, interés legítimo, contrato, etc.).
-   - [ ] Minimización de datos: solo se recogen los datos estrictamente necesarios.
-   - [ ] Evaluación de impacto (DPIA) para tratamientos de alto riesgo.
-   - [ ] Registro de actividades de tratamiento documentado.
-   - [ ] Derecho de acceso: el usuario puede consultar sus datos.
-   - [ ] Derecho de rectificación: el usuario puede corregir sus datos.
-   - [ ] Derecho al olvido: el usuario puede solicitar la eliminación de sus datos.
-   - [ ] Portabilidad: el usuario puede exportar sus datos en formato estándar.
-   - [ ] Notificación de brechas en 72 horas.
-   - [ ] Cifrado de datos personales en tránsito y en reposo.
-   - [ ] Delegado de Protección de Datos (DPO) designado si aplica.
+   - [ ] Правовое основание обработки данных (согласие, законный интерес, договор и т. д.).
+   - [ ] Минимизация данных: собираются только строго необходимые данные.
+   - [ ] Оценка воздействия (DPIA) для обработки с высоким риском.
+   - [ ] Задокументирован реестр действий по обработке.
+   - [ ] Право доступа: пользователь может запросить свои данные.
+   - [ ] Право на исправление: пользователь может исправить свои данные.
+   - [ ] Право на забвение: пользователь может запросить удаление своих данных.
+   - [ ] Переносимость: пользователь может экспортировать свои данные в стандартном формате.
+   - [ ] Уведомление о нарушениях в течение 72 часов.
+   - [ ] Шифрование персональных данных при передаче и при хранении.
+   - [ ] Назначен ответственный за защиту данных (DPO), если применимо.
 
-3. **Checklist NIS2:**
+3. **Чек-лист NIS2:**
 
-   - [ ] Gestión de riesgos de ciberseguridad documentada.
-   - [ ] Política de seguridad de la información aprobada por la dirección.
-   - [ ] Notificación de incidentes: alerta temprana en 24h, informe completo en 72h.
-   - [ ] Seguridad de la cadena de suministro: evaluación de proveedores.
-   - [ ] Gobernanza: responsabilidades de ciberseguridad asignadas.
-   - [ ] Plan de continuidad de negocio y recuperación ante desastres.
-   - [ ] Formación en ciberseguridad para el personal.
-   - [ ] Gestión de vulnerabilidades y actualizaciones.
-   - [ ] Autenticación multifactor para accesos críticos.
+   - [ ] Задокументировано управление рисками кибербезопасности.
+   - [ ] Политика информационной безопасности утверждена руководством.
+   - [ ] Уведомление об инцидентах: раннее предупреждение в течение 24 ч, полный отчёт в течение 72 ч.
+   - [ ] Безопасность цепочки поставок: оценка поставщиков.
+   - [ ] Управление: назначены обязанности по кибербезопасности.
+   - [ ] План непрерывности бизнеса и аварийного восстановления.
+   - [ ] Обучение персонала кибербезопасности.
+   - [ ] Управление уязвимостями и обновлениями.
+   - [ ] Многофакторная аутентификация для критических доступов.
 
-4. **Checklist CRA (Cyber Resilience Act):**
+4. **Чек-лист CRA (Cyber Resilience Act):**
 
-   - [ ] SBOM (Software Bill of Materials) generado y mantenido.
-   - [ ] Actualizaciones de seguridad disponibles durante todo el ciclo de vida.
-   - [ ] Diseño seguro por defecto (secure by default).
-   - [ ] Documentación técnica del producto disponible.
-   - [ ] Gestión de vulnerabilidades con proceso de reporte.
-   - [ ] Notificación de vulnerabilidades activamente explotadas en 24h a ENISA.
-   - [ ] Evaluación de conformidad (autoevaluación o certificación según categoría).
-   - [ ] Marcado CE para productos conformes.
+   - [ ] SBOM (Software Bill of Materials) сформирован и поддерживается.
+   - [ ] Обновления безопасности доступны в течение всего жизненного цикла.
+   - [ ] Безопасный дизайн по умолчанию (secure by default).
+   - [ ] Доступна техническая документация продукта.
+   - [ ] Управление уязвимостями с процессом сообщения о них.
+   - [ ] Уведомление ENISA об активно эксплуатируемых уязвимостях в течение 24 ч.
+   - [ ] Оценка соответствия (самооценка или сертификация в зависимости от категории).
+   - [ ] Маркировка CE для соответствующих продуктов.
 
-5. **Escribir el registro vivo.** No dejes el resultado solo en el chat.
-   El destino canónico es `docs/project/compliance.md`. Si no existe, créalo
-   antes con `python3 .claude/alfred-continuity.py sync-project-docs "$PWD"`.
-   Usa `templates/compliance.md` como forma. Para cada control: estado,
-   evidencia (ruta de código, test o config) y acciones. Sin evidencia no
-   marques `cumple`. Sustituye `<!-- alfred-doc:scaffold -->` por
+5. **Записать живой реестр.** Не оставляй результат только в чате.
+   Каноническое место: `docs/project/compliance.md`. Если файла нет, создай
+   его заранее командой `python3 .claude/alfred-continuity.py sync-project-docs "$PWD"`.
+   Используй `templates/compliance.md` как форму. Для каждого контроля: статус,
+   подтверждение (путь к коду, тест или конфигурация) и действия. Без подтверждения
+   не ставь `cumple`. Замени `<!-- alfred-doc:scaffold -->` на
    `<!-- alfred-doc:filled -->`.
 
-## Criterios de éxito
+## Критерии успеха
 
-- Se han identificado las normativas aplicables al proyecto.
-- Cada checklist se ha revisado punto por punto con estado documentado.
-- Las acciones necesarias están priorizadas por riesgo e impacto.
-- El informe es accionable: un desarrollador puede tomar cada acción y ejecutarla.
-- El registro vive en `docs/project/compliance.md` con marcador `filled`.
-- El estado de cumplimiento se ha registrado en la memoria del proyecto.
+- Определены нормативы, применимые к проекту.
+- Каждый чек-лист проверен по пунктам, статус задокументирован.
+- Необходимые действия приоритизированы по риску и влиянию.
+- Отчёт практичен: разработчик может взять любое действие и выполнить его.
+- Реестр находится в `docs/project/compliance.md` с маркером `filled`.
+- Состояние соответствия записано в память проекта.
 
-## Paso final: registro en memoria
+## Заключительный шаг: запись в память
 
-Registrar el estado de cumplimiento en la memoria del proyecto con `memory_log_decision` para seguimiento entre sesiones. Esto permite comparar la evolución del cumplimiento a lo largo del tiempo y detectar regresiones normativas.
+Записать состояние соответствия в память проекта через `memory_log_decision` для отслеживания между сессиями. Это позволяет сравнивать динамику соответствия во времени и обнаруживать нормативные регрессии.
 
-## Nota de versión
+## Примечание о версии
 
-Este skill se basa en RGPD (Reglamento 2016/679), NIS2 (Directiva 2022/2555) y CRA (Reglamento 2024/2847). Verificar si han entrado en vigor actualizaciones posteriores a estas referencias antes de dar por válida la evaluación.
+Этот skill основан на GDPR (RGPD, Регламент 2016/679), NIS2 (Директива 2022/2555) и CRA (Регламент 2024/2847). Перед тем как считать оценку действительной, проверь, не вступили ли в силу более поздние обновления этих документов.
 
-## Qué NO hacer
+## Чего НЕ делать
 
-- No tratar esta evaluación como sustituto de asesoría legal. Es una evaluación técnica que identifica lagunas, pero las decisiones jurídicas requieren un profesional cualificado.
-- No marcar un requisito como cumplido sin evidencia técnica que lo respalde (código, configuración, documentación verificable).
-- No ignorar el CRA por tratarse de software open source. El CRA aplica a OSS con uso comercial; la exención solo cubre al software libre sin ánimo de lucro ni actividad comercial.
-- No dar por cerrada la evaluación sin documentar los requisitos que no aplican y la justificación de por qué no aplican.
+- Не считай эту оценку заменой юридической консультации. Это техническая оценка, которая выявляет пробелы, но юридические решения требуют квалифицированного специалиста.
+- Не отмечай требование как выполненное без технического подтверждения (код, конфигурация, проверяемая документация).
+- Не игнорируй CRA на том основании, что это open source ПО. CRA применим к OSS с коммерческим использованием; исключение распространяется только на свободное ПО без цели получения прибыли и без коммерческой деятельности.
+- Не считай оценку завершённой, не задокументировав неприменимые требования и обоснование, почему они неприменимы.

@@ -217,7 +217,7 @@ def _codex_preflight() -> dict[str, Any]:
         if flag not in help_result["stdout_preview"]
     ]:
         payload["status"] = "exec_help_missing_flags"
-        payload["reason"] = "codex exec no expone flags requeridos para Lucius."
+        payload["reason"] = "codex exec no expone flags requeridos para CTO."
         payload["missing_flags"] = missing_flags
     else:
         payload["status"] = "ready"
@@ -269,14 +269,14 @@ def _counts(payload: dict[str, Any]) -> dict[str, int]:
     statuses = [
         payload.get("github", {}).get("status", "unknown"),
         payload.get("docker_sonarqube", {}).get("status", "unknown"),
-        payload.get("codex_lucius", {}).get("status", "unknown"),
+        payload.get("codex_cto", {}).get("status", "unknown"),
     ]
     return {
         "ready": sum(1 for status in statuses if status in {"ready", "docker_ready", "ok"}),
         "blocked": sum(1 for status in statuses if status not in {"ready", "docker_ready", "ok"}),
         "live_attempted": sum(
             1
-            for section in ("github", "docker_sonarqube", "codex_lucius")
+            for section in ("github", "docker_sonarqube", "codex_cto")
             if payload.get(section, {}).get("write_attempted")
             or payload.get(section, {}).get("live_attempted")
         ),
@@ -296,7 +296,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "github": _github_preflight(args.github_repo),
         "docker_sonarqube": _docker_sonarqube_preflight(),
-        "codex_lucius": _codex_preflight(),
+        "codex_cto": _codex_preflight(),
     }
 
     if args.allow_github_write:
@@ -304,7 +304,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         payload["github"] = _github_live_sync(args.github_repo)
     if args.allow_codex_exec:
         payload["mode"] = "live"
-        payload["codex_lucius"] = _codex_live_exec()
+        payload["codex_cto"] = _codex_live_exec()
 
     payload["counts"] = _counts(payload)
     return payload
@@ -340,7 +340,7 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     if args.allow_github_write and payload["github"].get("status") != "ok":
         return 1
-    if args.allow_codex_exec and payload["codex_lucius"].get("status") != "ok":
+    if args.allow_codex_exec and payload["codex_cto"].get("status") != "ok":
         return 1
     if args.require_all_ready and payload["counts"]["blocked"]:
         return 2

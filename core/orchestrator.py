@@ -42,7 +42,11 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from core.optional_agents import get_optional_agent_names, get_optional_integrations
+from core.optional_agents import (
+    get_optional_agent_names,
+    get_optional_integrations,
+    normalize_optional_agent_flags,
+)
 
 # --- Constantes de tipos de gate -------------------------------------------
 # Se extraen como constantes para evitar la duplicación de literales
@@ -90,7 +94,7 @@ FLOWS: Dict[str, Dict[str, Any]] = {
             },
             {
                 "nombre": "estilo_visual",
-                "agentes": ["selina"],
+                "agentes": ["designer"],
                 "paralelo": False,
                 "gate": "gate_estilo",
                 "gate_tipo": GATE_USUARIO,
@@ -543,6 +547,10 @@ def _validate_equipo_sesion(equipo_sesion: Any) -> bool:
             file=sys.stderr,
         )
         return False
+
+    # Estados antiguos pueden usar nombres legacy (p. ej. "lucius").
+    opcionales = normalize_optional_agent_flags(opcionales)
+    equipo_sesion["opcionales_activos"] = opcionales
 
     # Las claves conocidas deben estar presentes. Claves extra se aceptan
     # con aviso (tolerancia ante extensiones futuras).

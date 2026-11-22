@@ -27,7 +27,7 @@ class TestSessionBrief(unittest.TestCase):
             self.assertIn("/alfred-dev:feature", text)
             self.assertIn("Agent Teams", text)
             self.assertIn("slash command", text.lower())
-            self.assertIn("No hay sesión abierta", text)
+            self.assertIn("Открытой сессии нет", text)
 
     def test_active_session_points_to_retomar(self):
         with tempfile.TemporaryDirectory() as tmpdir:

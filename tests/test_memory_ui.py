@@ -326,7 +326,7 @@ class TestMemoryUI(unittest.TestCase):
                     "fases_completadas": [],
                     "equipo_sesion": {
                         "opcionales_activos": {
-                            "lucius": True,
+                            "cto": True,
                         },
                         "infra": {"memoria": False},
                         "fuente": "config_persistida",
@@ -347,7 +347,7 @@ class TestMemoryUI(unittest.TestCase):
         )
         self.assertIn("Origen runtime: configuración persistida.", team_card["items"])
         self.assertIn(
-            "Opcionales solo bajo demanda en este flujo: `lucius`.",
+            "Opcionales solo bajo demanda en este flujo: `cto`.",
             team_card["items"],
         )
 
@@ -782,7 +782,7 @@ class TestMemoryUI(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         payload = json.loads(result.stdout)
         self.assertTrue(payload.get("stopped"))
-        self.assertIn("detenida", render_memory_ui_markdown(payload).lower())
+        self.assertIn("остановлена", render_memory_ui_markdown(payload).lower())
         self.assertFalse(
             os.path.exists(os.path.join(self.tmpdir, ".claude", "alfred-memory-ui.json"))
         )

@@ -1,112 +1,112 @@
-# Modelo de amenazas: {{nombre_componente}}
+# Модель угроз: {{nombre_componente}}
 
-**Fecha:** {{fecha}}
-**Autor:** security-officer
-**Metodología:** STRIDE
+**Дата:** {{fecha}}
+**Автор:** security-officer
+**Методология:** STRIDE
 
-## Superficie de ataque
+## Поверхность атаки
 
 {{superficie_de_ataque}}
 
-## Activos a proteger
+## Защищаемые активы
 
-| Activo | Clasificación | Impacto de compromiso |
-|--------|--------------|----------------------|
+| Актив | Классификация | Влияние компрометации |
+|-------|---------------|-----------------------|
 | {{activo_1}} | {{clasificacion_1}} | {{impacto_1}} |
 
-## Análisis STRIDE
+## Анализ STRIDE
 
-### Spoofing (suplantación de identidad)
+### Spoofing (подмена личности)
 {{analisis_spoofing}}
 
-### Tampering (manipulación)
+### Tampering (подделка)
 {{analisis_tampering}}
 
-### Repudiation (repudio)
+### Repudiation (отказ от авторства)
 {{analisis_repudiation}}
 
-### Information Disclosure (fuga de información)
+### Information Disclosure (утечка информации)
 {{analisis_disclosure}}
 
-### Denial of Service (denegación de servicio)
+### Denial of Service (отказ в обслуживании)
 {{analisis_dos}}
 
-### Elevation of Privilege (elevación de privilegios)
+### Elevation of Privilege (повышение привилегий)
 {{analisis_elevation}}
 
-## Matriz de riesgo
+## Матрица рисков
 
-| Amenaza | Probabilidad | Impacto | Riesgo | Mitigación |
-|---------|-------------|---------|--------|------------|
+| Угроза | Вероятность | Влияние | Риск | Мера по снижению |
+|--------|-------------|---------|------|------------------|
 | {{amenaza_1}} | {{prob_1}} | {{imp_1}} | {{riesgo_1}} | {{mit_1}} |
 
-## Recomendaciones
+## Рекомендации
 
 {{recomendaciones}}
 
-<!-- EJEMPLO COMPLETADO ─────────────────────────────────────────────────
+<!-- ЗАПОЛНЕННЫЙ ПРИМЕР ─────────────────────────────────────────────────
 
-# Modelo de amenazas: memoria persistente (alfred-memory.db)
+# Модель угроз: постоянная память (alfred-memory.db)
 
-**Fecha:** 2026-02-21
-**Autor:** security-officer
-**Metodologia:** STRIDE
+**Дата:** 2026-02-21
+**Автор:** security-officer
+**Методология:** STRIDE
 
-## Superficie de ataque
+## Поверхность атаки
 
-- Fichero SQLite local en `.claude/alfred-memory.db`.
-- Hooks que escriben datos de la sesion en la DB.
-- Servidor MCP stdio que expone 15 herramientas de lectura/escritura.
-- Funcion import que lee ficheros externos (git log, ADRs en disco).
+- Локальный файл SQLite в `.claude/alfred-memory.db`.
+- Hooks, которые пишут данные сессии в БД.
+- MCP-сервер stdio, предоставляющий 15 инструментов чтения/записи.
+- Функция import, читающая внешние файлы (git log, ADR на диске).
 
-## Activos a proteger
+## Защищаемые активы
 
-| Activo | Clasificacion | Impacto de compromiso |
-|--------|--------------|----------------------|
-| Contenido de la DB | Confidencial | Fuga de decisiones de diseno, posibles secretos residuales |
-| Integridad de la DB | Critico | Datos corruptos invalidan la trazabilidad |
-| Fichero DB en disco | Sensible | Acceso no autorizado a todo el historial |
+| Актив | Классификация | Влияние компрометации |
+|-------|---------------|-----------------------|
+| Содержимое БД | Конфиденциально | Утечка проектных решений, возможные остаточные секреты |
+| Целостность БД | Критично | Повреждённые данные обесценивают трассируемость |
+| Файл БД на диске | Чувствительно | Несанкционированный доступ ко всей истории |
 
-## Analisis STRIDE
+## Анализ STRIDE
 
-### Spoofing (suplantacion de identidad)
-Riesgo bajo. La DB es local y no tiene autenticacion porque corre dentro del
-proceso de Claude Code, que ya esta autenticado.
+### Spoofing (подмена личности)
+Риск низкий. БД локальная и не имеет аутентификации, потому что работает внутри
+процесса Claude Code, который уже аутентифицирован.
 
-### Tampering (manipulacion)
-Riesgo medio. Un proceso local malicioso podria modificar la DB. Mitigacion:
-permisos 0600 y WAL mode que protege contra escrituras parciales.
+### Tampering (подделка)
+Риск средний. Вредоносный локальный процесс мог бы изменить БД. Мера: права 0600
+и режим WAL, защищающий от частичной записи.
 
-### Repudiation (repudio)
-Riesgo bajo. Los eventos incluyen timestamps y source_type que permiten
-rastrear el origen. Los commits tienen SHA verificable.
+### Repudiation (отказ от авторства)
+Риск низкий. События содержат timestamps и source_type, позволяющие
+проследить источник. У коммитов проверяемый SHA.
 
-### Information Disclosure (fuga de informacion)
-Riesgo alto. La DB podria contener secretos si sanitize_content() falla.
-Mitigacion: 14 patrones regex aplicados a todo texto antes de persistir.
+### Information Disclosure (утечка информации)
+Риск высокий. БД может содержать секреты, если sanitize_content() сработает неверно.
+Мера: 14 регулярных выражений применяются ко всему тексту перед сохранением.
 
-### Denial of Service (denegacion de servicio)
-Riesgo bajo. Una DB muy grande podria ralentizar las busquedas. Mitigacion:
-purga automatica con retention_days y limites en queries.
+### Denial of Service (отказ в обслуживании)
+Риск низкий. Очень большая БД может замедлить поиск. Мера:
+автоматическая очистка по retention_days и лимиты в запросах.
 
-### Elevation of Privilege (elevacion de privilegios)
-Riesgo bajo. El servidor MCP no ejecuta codigo arbitrario; solo lee y
-escribe en SQLite mediante queries parametrizadas.
+### Elevation of Privilege (повышение привилегий)
+Риск низкий. MCP-сервер не выполняет произвольный код; он только читает и
+пишет в SQLite через параметризованные запросы.
 
-## Matriz de riesgo
+## Матрица рисков
 
-| Amenaza | Probabilidad | Impacto | Riesgo | Mitigacion |
-|---------|-------------|---------|--------|------------|
-| Secretos en DB | Media | Alto | Alto | sanitize_content() con 14 patrones |
-| DB accesible por otros usuarios | Baja | Alto | Medio | chmod 0600 + check_health() |
-| SQL injection via MCP | Baja | Alto | Medio | Queries parametrizadas en todo el codigo |
-| Corrupcion por crash | Baja | Medio | Bajo | WAL mode + backup antes de migraciones |
+| Угроза | Вероятность | Влияние | Риск | Мера по снижению |
+|--------|-------------|---------|------|------------------|
+| Секреты в БД | Средняя | Высокое | Высокий | sanitize_content() с 14 шаблонами |
+| БД доступна другим пользователям | Низкая | Высокое | Средний | chmod 0600 + check_health() |
+| SQL injection через MCP | Низкая | Высокое | Средний | Параметризованные запросы во всём коде |
+| Повреждение при сбое | Низкая | Среднее | Низкий | Режим WAL + backup перед миграциями |
 
-## Recomendaciones
+## Рекомендации
 
-1. Mantener sanitize_content() actualizado con nuevos patrones de secretos.
-2. Ejecutar check_health() periodicamente para verificar permisos y FTS.
-3. No exponer la DB via red (solo acceso local).
-4. Considerar cifrado at-rest en futuras versiones.
+1. Поддерживать sanitize_content() в актуальном состоянии с новыми шаблонами секретов.
+2. Периодически запускать check_health() для проверки прав и FTS.
+3. Не открывать БД по сети (только локальный доступ).
+4. Рассмотреть шифрование at-rest в будущих версиях.
 
-──────────────────────────────────────────────── FIN DEL EJEMPLO -->
+──────────────────────────────────────────────── КОНЕЦ ПРИМЕРА -->

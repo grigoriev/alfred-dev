@@ -46,7 +46,7 @@ _DANGEROUS_PATTERNS = [
             r"(?=-[a-zA-Z]*r)(?=.*-[a-zA-Z]*f)"
             r".*\s+(/\s|/\*|/$|~\s|~$|~\/|\$HOME|\$\{HOME\}|/usr|/etc|/var|/boot|/System)"
         ),
-        "Borrado catastrofico: rm -rf sobre directorio raiz o de sistema",
+        "Катастрофическое удаление: rm -rf по корневому или системному каталогу",
     ),
     # Force push a ramas protegidas
     (
@@ -55,7 +55,7 @@ _DANGEROUS_PATTERNS = [
             r"(--force\b|-f\b)"
             r".*\b(main|master)\b"
         ),
-        "Force push a rama protegida (main/master): riesgo de perdida de historial",
+        "Force push в защищённую ветку (main/master): риск потери истории",
     ),
     # Variante: force push sin rama explicita (se asume rama actual)
     (
@@ -64,12 +64,12 @@ _DANGEROUS_PATTERNS = [
             r"|git\s+push\s+-f\s*$"
             r"|git\s+push\s+--force\s*$"
         ),
-        "Force push sin rama explicita: verifica que no estas en main/master",
+        "Force push без явной ветки: проверь, что ты не на main/master",
     ),
     # Destruccion de base de datos
     (
         re.compile(r"DROP\s+(DATABASE|TABLE|SCHEMA)\s", re.IGNORECASE),
-        "Destruccion de datos: DROP DATABASE/TABLE/SCHEMA",
+        "Уничтожение данных: DROP DATABASE/TABLE/SCHEMA",
     ),
     # Docker prune agresivo (cubre -af, -fa, -a -f, -f -a y combinaciones con otros flags)
     (
@@ -78,37 +78,37 @@ _DANGEROUS_PATTERNS = [
             r"|docker\s+system\s+prune\s+.*-a\b.*-f\b"
             r"|docker\s+system\s+prune\s+.*-f\b.*-a\b"
         ),
-        "Docker system prune con -af: elimina todos los datos de contenedores",
+        "Docker system prune с -af: удаляет все данные контейнеров",
     ),
     # Permisos inseguros
     (
         re.compile(r"chmod\s+(-R\s+)?777\s+/"),
-        "Permisos inseguros: chmod 777 recursivo sobre directorio raiz",
+        "Небезопасные права: рекурсивный chmod 777 на корневой каталог",
     ),
     # Fork bomb (variantes comunes en bash)
     (
         re.compile(r":\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;?\s*:"),
-        "Fork bomb: denegacion de servicio local",
+        "Fork bomb: локальный отказ в обслуживании",
     ),
     # Formateo de disco
     (
         re.compile(r"mkfs\.\w+\s+/dev/"),
-        "Formateo de disco: mkfs sobre dispositivo de bloque",
+        "Форматирование диска: mkfs на блочном устройстве",
     ),
     # dd sobre dispositivo de bloque
     (
         re.compile(r"dd\s+.*of=/dev/(sd|hd|nvme|vd|xvd)"),
-        "Escritura directa a dispositivo de bloque con dd",
+        "Прямая запись на блочное устройство через dd",
     ),
     # Escritura a dispositivo via redireccion
     (
         re.compile(r">\s*/dev/(sd|hd|nvme|vd|xvd)"),
-        "Redireccion de salida a dispositivo de bloque",
+        "Перенаправление вывода на блочное устройство",
     ),
     # git reset --hard a remote (destructivo en combinacion con push)
     (
         re.compile(r"git\s+reset\s+--hard\s+origin/(main|master)"),
-        "git reset --hard a origin/main: descarta todos los cambios locales",
+        "git reset --hard на origin/main: отбрасывает все локальные изменения",
     ),
 ]
 
@@ -346,7 +346,7 @@ def _detect_rm(tokens):
         return None
     targets = [token for token in core_tokens[1:] if not token.startswith("-")]
     if any(_is_sensitive_rm_target(target) for target in targets):
-        return "Borrado catastrofico: rm -rf sobre directorio raiz o de sistema"
+        return "Катастрофическое удаление: rm -rf по корневому или системному каталогу"
     return None
 
 
@@ -367,8 +367,8 @@ def _detect_git_push(tokens):
 
     protected_refs = {"main", "master", "origin/main", "origin/master", "refs/heads/main", "refs/heads/master"}
     if any(token in protected_refs for token in core_tokens[2:] if not token.startswith("-")):
-        return "Force push a rama protegida (main/master): riesgo de perdida de historial"
-    return "Force push sin rama explicita: verifica que no estas en main/master"
+        return "Force push в защищённую ветку (main/master): риск потери истории"
+    return "Force push без явной ветки: проверь, что ты не на main/master"
 
 
 def _detect_sql_drop(tokens):
@@ -378,12 +378,12 @@ def _detect_sql_drop(tokens):
     first = _command_basename(core_tokens[0]).lower()
     if first == "drop":
         if len(core_tokens) > 1 and core_tokens[1].upper() in {"DATABASE", "TABLE", "SCHEMA"}:
-            return "Destruccion de datos: DROP DATABASE/TABLE/SCHEMA"
+            return "Уничтожение данных: DROP DATABASE/TABLE/SCHEMA"
         return None
     if _command_basename(core_tokens[0]) not in _SQL_CLIENTS:
         return None
     if any(_DROP_SQL_REGEX.search(token) for token in core_tokens[1:]):
-        return "Destruccion de datos: DROP DATABASE/TABLE/SCHEMA"
+        return "Уничтожение данных: DROP DATABASE/TABLE/SCHEMA"
     return None
 
 
@@ -407,7 +407,7 @@ def _detect_docker_prune(tokens):
         for token in core_tokens[3:]
     )
     if has_all and has_force:
-        return "Docker system prune con -af: elimina todos los datos de contenedores"
+        return "Docker system prune с -af: удаляет все данные контейнеров"
     return None
 
 
@@ -421,14 +421,14 @@ def _detect_chmod(tokens):
         return None
     targets = mode_tokens[1:]
     if any(_is_absolute_permission_target(target) for target in targets):
-        return "Permisos inseguros: chmod 777 recursivo sobre directorio raiz"
+        return "Небезопасные права: рекурсивный chmod 777 на корневой каталог"
     return None
 
 
 def _detect_fork_bomb(tokens):
     core_tokens = _strip_leading_wrappers(tokens)
     if core_tokens[:3] == [":(){", ":|:&", "};:"]:
-        return "Fork bomb: denegacion de servicio local"
+        return "Fork bomb: локальный отказ в обслуживании"
     return None
 
 
@@ -439,7 +439,7 @@ def _detect_mkfs(tokens):
     if not _command_basename(core_tokens[0]).startswith("mkfs."):
         return None
     if any(token.startswith("/dev/") for token in core_tokens[1:]):
-        return "Formateo de disco: mkfs sobre dispositivo de bloque"
+        return "Форматирование диска: mkfs на блочном устройстве"
     return None
 
 
@@ -448,14 +448,14 @@ def _detect_dd(tokens):
     if not core_tokens or _command_basename(core_tokens[0]) != "dd":
         return None
     if any(re.match(r"of=/dev/(sd|hd|nvme|vd|xvd)\w*", token) for token in core_tokens[1:]):
-        return "Escritura directa a dispositivo de bloque con dd"
+        return "Прямая запись на блочное устройство через dd"
     return None
 
 
 def _detect_redirection_to_device(command: str):
     stripped = _strip_quoted_content(command)
     if _DEVICE_REDIRECT_REGEX.search(stripped):
-        return "Redireccion de salida a dispositivo de bloque"
+        return "Перенаправление вывода на блочное устройство"
     return None
 
 
@@ -468,7 +468,7 @@ def _detect_git_reset(tokens):
     if "--hard" in core_tokens[2:] and any(
         token in {"origin/main", "origin/master"} for token in core_tokens[2:]
     ):
-        return "git reset --hard a origin/main: descarta todos los cambios locales"
+        return "git reset --hard на origin/main: отбрасывает все локальные изменения"
     return None
 
 
@@ -555,8 +555,8 @@ def main():
         # Fail-closed: si no podemos parsear, bloquear por precaucion.
         # Un guard de seguridad que falla en abierto equivale a no tenerlo.
         print(
-            f"[Alfred Dev] BLOQUEADO: no se pudo parsear la entrada del hook: {e}. "
-            f"La guardia de comandos peligrosos bloquea por precaucion.",
+            f"[Alfred Dev] ЗАБЛОКИРОВАНО: не удалось разобрать вход hook: {e}. "
+            f"Защита от опасных команд блокирует из предосторожности.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -583,11 +583,11 @@ def main():
     if description:
         # Bloquear con aviso explicativo
         print(
-            f"\n[Alfred Dev] COMANDO PELIGROSO BLOQUEADO\n\n"
-            f"  Comando:  {command[:200]}\n"
-            f"  Riesgo:   {description}\n\n"
-            f"  Si realmente necesitas ejecutar este comando, pidele\n"
-            f"  al usuario que lo ejecute manualmente en su terminal.\n",
+            f"\n[Alfred Dev] ОПАСНАЯ КОМАНДА ЗАБЛОКИРОВАНА\n\n"
+            f"  Команда:  {command[:200]}\n"
+            f"  Риск:     {description}\n\n"
+            f"  Если эту команду действительно нужно выполнить, попроси\n"
+            f"  пользователя запустить её вручную в своём терминале.\n",
             file=sys.stderr,
         )
         sys.exit(2)

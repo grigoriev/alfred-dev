@@ -1,13 +1,13 @@
 {
   "name": "alfred-dev",
   "displayName": "Alfred Dev",
-  "description": "Plugin de ingeniería de software: 8 agentes de núcleo, Selina si hay frontend y Lucius bajo demanda. Memoria persistente por proyecto, quality gates y flujos desde la idea hasta la entrega.",
+  "description": "Плагин программной инженерии: 8 базовых агентов, Designer при наличии фронтенда и CTO по запросу. Постоянная память по проекту, quality gates и процессы от идеи до поставки. Русский форк Alfred Dev.",
   "version": "0.7.0",
   "author": {
     "name": "686f6c61"
   },
-  "homepage": "https://alfred-dev.com",
-  "repository": "https://github.com/686f6c61/alfred-dev",
+  "homepage": "https://github.com/grigoriev/alfred-dev",
+  "repository": "https://github.com/grigoriev/alfred-dev",
   "license": "MIT",
   "keywords": ["sdlc", "agents", "security", "tdd", "devops", "qa", "product", "spanish"],
   "commands": [
@@ -17,7 +17,7 @@
     "./commands/discuss.md",
     "./commands/feature.md",
     "./commands/fix.md",
-    "./commands/lucius.md",
+    "./commands/cto.md",
     "./commands/map-codebase.md",
     "./commands/memory-ui.md",
     "./commands/pause.md",

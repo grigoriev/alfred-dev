@@ -1,101 +1,101 @@
 ---
 name: incident-response
-description: "Protocolo de respuesta ante incidentes en produccion: triaje, mitigacion, causa raiz y postmortem. Usar ante caidas, errores criticos, incidentes de seguridad o degradacion de servicio."
+description: "Протокол реагирования на инциденты в production: триаж, митигация, первопричина и постмортем. Использовать при падениях, критических ошибках, инцидентах безопасности или деградации сервиса."
 disable-model-invocation: true
 ---
 
-# Respuesta ante incidentes
+# Реагирование на инциденты
 
-El usuario ha reportado o detectado un incidente en produccion. Sigue este protocolo paso a paso para gestionar la respuesta de forma estructurada, desde el triaje inicial hasta el postmortem final.
+Пользователь сообщил об инциденте в production или обнаружил его. Следуй этому протоколу шаг за шагом, чтобы вести реагирование структурированно, от первичного триажа до итогового постмортема.
 
-## Resumen
+## Резюме
 
-Los incidentes en produccion requieren una respuesta rapida pero ordenada. La tentacion es saltar directamente al codigo, pero sin un triaje previo se pierde tiempo en diagnosticos erroneos. Este protocolo exige documentar cada paso y registrar las lecciones aprendidas para reducir recurrencias.
+Инциденты в production требуют быстрой, но упорядоченной реакции. Соблазн прыгнуть сразу в код велик, но без предварительного триажа время теряется на ошибочную диагностику. Этот протокол требует документировать каждый шаг и фиксировать извлечённые уроки, чтобы снизить число повторений.
 
-## Proceso
+## Процесс
 
-### Fase 1: Triaje (qa-engineer)
+### Фаза 1: Триаж (qa-engineer)
 
-Usa la herramienta Agent para lanzar al agente `qa-engineer` con la siguiente mision:
+Используй инструмент Agent, чтобы запустить агента `qa-engineer` со следующей миссией:
 
-1. Clasificar la severidad del incidente (P0 critico, P1 alto, P2 medio, P3 bajo).
-2. Identificar el impacto: usuarios afectados, funcionalidad comprometida, datos en riesgo.
-3. Recopilar evidencia: logs, trazas, capturas, mensajes de error.
-4. Definir si hay workaround inmediato.
+1. Классифицировать серьёзность инцидента (P0 критический, P1 высокий, P2 средний, P3 низкий).
+2. Определить влияние: затронутые пользователи, нарушенная функциональность, данные под угрозой.
+3. Собрать подтверждения: логи, трассы, скриншоты, сообщения об ошибках.
+4. Определить, есть ли немедленный workaround.
 
-**Artefacto:** informe de triaje con severidad, impacto y evidencia.
+**Артефакт:** отчёт о триаже с серьёзностью, влиянием и подтверждениями.
 
-### Fase 2: Mitigacion (senior-dev)
+### Фаза 2: Митигация (senior-dev)
 
-Si el triaje indica P0 o P1, ejecutar mitigacion inmediata:
+Если триаж показывает P0 или P1, выполнить немедленную митигацию:
 
-1. Aplicar workaround si existe (rollback, feature flag, redirect de trafico).
-2. Si no hay workaround, desarrollar hotfix minimo con test de regresion.
-3. Desplegar la mitigacion y verificar que el impacto se reduce.
+1. Применить workaround, если он есть (rollback, feature flag, перенаправление трафика).
+2. Если workaround нет, разработать минимальный hotfix с регрессионным тестом.
+3. Развернуть митигацию и проверить, что влияние уменьшается.
 
-**Artefacto:** commit de mitigacion con test de regresion.
+**Артефакт:** коммит с митигацией и регрессионным тестом.
 
-### Fase 3: Analisis de causa raiz (senior-dev + security-officer)
+### Фаза 3: Анализ первопричины (senior-dev + security-officer)
 
-Una vez mitigado el impacto, investigar la causa raiz:
+Когда влияние смягчено, исследовать первопричину:
 
-1. Trazar la cadena de eventos desde el trigger hasta el fallo.
-2. Identificar la causa raiz (no el sintoma).
-3. Si el incidente tiene componente de seguridad, el security-officer audita la cadena.
-4. Registrar la causa raiz como decision en la memoria del proyecto.
+1. Проследить цепочку событий от триггера до сбоя.
+2. Определить первопричину (не симптом).
+3. Если у инцидента есть компонент безопасности, security-officer проводит аудит цепочки.
+4. Записать первопричину как решение в память проекта.
 
-**Artefacto:** documento de RCA (Root Cause Analysis).
+**Артефакт:** документ RCA (Root Cause Analysis).
 
-### Fase 4: Postmortem
+### Фаза 4: Постмортем
 
-Generar un informe postmortem completo:
+Сформировать полный отчёт постмортема:
 
-1. Cronologia del incidente (cuando se detecto, cuando se mitigo, cuando se resolvio).
-2. Causa raiz confirmada.
-3. Acciones correctivas con responsable y fecha limite.
-4. Acciones preventivas para evitar recurrencia.
-5. Lecciones aprendidas.
+1. Хронология инцидента (когда обнаружен, когда смягчён, когда решён).
+2. Подтверждённая первопричина.
+3. Корректирующие действия с ответственным и сроком.
+4. Превентивные действия для предотвращения повторения.
+5. Извлечённые уроки.
 
-**Artefacto:** documento postmortem en formato Markdown.
+**Артефакт:** документ постмортема в формате Markdown.
 
-## Formato del postmortem
+## Формат постмортема
 
 ```markdown
-# Postmortem: [titulo del incidente]
+# Постмортем: [название инцидента]
 
-**Fecha:** YYYY-MM-DD
-**Severidad:** P0/P1/P2/P3
-**Duracion:** X horas/minutos
-**Impacto:** [descripcion del impacto]
+**Дата:** YYYY-MM-DD
+**Серьёзность:** P0/P1/P2/P3
+**Длительность:** X часов/минут
+**Влияние:** [описание влияния]
 
-## Cronologia
-- HH:MM - [evento]
-- HH:MM - [evento]
+## Хронология
+- HH:MM - [событие]
+- HH:MM - [событие]
 
-## Causa raiz
-[Explicacion detallada]
+## Первопричина
+[Подробное объяснение]
 
-## Acciones correctivas
-- [ ] [accion] - Responsable: [nombre] - Fecha: YYYY-MM-DD
+## Корректирующие действия
+- [ ] [действие] - Ответственный: [имя] - Дата: YYYY-MM-DD
 
-## Acciones preventivas
-- [ ] [accion] - Responsable: [nombre] - Fecha: YYYY-MM-DD
+## Превентивные действия
+- [ ] [действие] - Ответственный: [имя] - Дата: YYYY-MM-DD
 
-## Lecciones aprendidas
-1. [leccion]
+## Извлечённые уроки
+1. [урок]
 ```
 
-## Criterios de exito
+## Критерии успеха
 
-- El incidente tiene una severidad asignada con criterios objetivos.
-- La mitigacion se aplica antes de investigar la causa raiz (primero apagar el fuego).
-- Existe un documento de RCA que identifica la causa raiz real, no solo el sintoma.
-- El postmortem esta completo con cronologia, acciones correctivas y preventivas.
-- Las lecciones aprendidas quedan registradas en la memoria del proyecto.
-- Las acciones correctivas tienen responsable y fecha limite asignados.
+- Инциденту назначена серьёзность по объективным критериям.
+- Митигация применяется до исследования первопричины (сначала потушить пожар).
+- Существует документ RCA, определяющий реальную первопричину, а не только симптом.
+- Постмортем полный: с хронологией, корректирующими и превентивными действиями.
+- Извлечённые уроки записаны в память проекта.
+- У корректирующих действий назначены ответственный и срок.
 
-## Que NO hacer
+## Чего НЕ делать
 
-- **No saltar el triaje para ir directamente al codigo.** Sin un triaje previo se pierde tiempo en hipotesis equivocadas y se corre el riesgo de aplicar cambios que empeoren la situacion. El triaje estructura la respuesta y prioriza correctamente.
-- **No cerrar el incidente sin postmortem.** Un incidente sin postmortem es una oportunidad perdida de aprendizaje. Aunque el fix sea trivial, documentar que fallo y por que evita recurrencias y genera conocimiento institucional.
-- **No culpar personas en el postmortem.** El postmortem se enfoca en procesos y sistemas, no en individuos. La pregunta correcta es "que fallo en el sistema que permitio este error" y no "quien cometio el error". Un postmortem punitivo destruye la confianza y desincentiva la transparencia.
+- **Не пропускай триаж, чтобы сразу идти в код.** Без предварительного триажа время теряется на ошибочные гипотезы, и есть риск применить изменения, которые ухудшат ситуацию. Триаж структурирует реагирование и правильно расставляет приоритеты.
+- **Не закрывай инцидент без постмортема.** Инцидент без постмортема это упущенная возможность научиться. Даже если исправление тривиально, документирование того, что сломалось и почему, предотвращает повторения и создаёт институциональное знание.
+- **Не обвиняй людей в постмортеме.** Постмортем фокусируется на процессах и системах, а не на личностях. Правильный вопрос: «что в системе позволило этой ошибке случиться», а не «кто совершил ошибку». Карательный постмортем разрушает доверие и отбивает желание быть прозрачным.

@@ -27,7 +27,11 @@ from typing import Any, Dict, List, Optional, Tuple
 if __package__ in {None, ""}:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.optional_agents import get_optional_integrations, order_optional_agent_names
+from core.optional_agents import (
+    get_optional_integrations,
+    normalize_optional_agent_flags,
+    order_optional_agent_names,
+)
 from core.orchestrator import FLOWS
 
 
@@ -132,7 +136,7 @@ def _session_on_demand_optionals_for_flow(session: Dict[str, Any]) -> List[str]:
         return []
 
     activos = order_optional_agent_names(
-        name for name, enabled in opcionales.items() if enabled
+        name for name, enabled in normalize_optional_agent_flags(opcionales).items() if enabled
     )
     on_demand: List[str] = []
     for agent_name in activos:
@@ -499,7 +503,7 @@ def _section_summary(
     equipo = session.get("equipo_sesion") or {}
     opcionales = equipo.get("opcionales_activos", {}) if isinstance(equipo, dict) else {}
     activos = order_optional_agent_names(
-        name for name, enabled in opcionales.items() if enabled
+        name for name, enabled in normalize_optional_agent_flags(opcionales).items() if enabled
     )
     team_source = _session_team_source_label(session)
     on_demand = _session_on_demand_optionals_for_flow(session)
@@ -678,7 +682,7 @@ def _section_team(session: Dict[str, Any]) -> str:
         return ""
 
     opcionales = equipo.get("opcionales_activos", {})
-    activos = [name for name, enabled in opcionales.items() if enabled]
+    activos = [name for name, enabled in normalize_optional_agent_flags(opcionales).items() if enabled]
 
     if not activos:
         return ""

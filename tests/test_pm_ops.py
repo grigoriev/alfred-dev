@@ -266,7 +266,7 @@ class TestPmHelpers(unittest.TestCase):
             snapshot = build_standup_snapshot(tmpdir)
             content = render_standup_markdown(snapshot)
 
-        self.assertIn("## Standup diario", content)
+        self.assertIn("## Ежедневный standup", content)
         self.assertIn("[T-002] Implementar endpoint POST /login", content)
         self.assertIn("[T-004] Integrar sesión persistente", content)
         self.assertIn("/alfred-dev:verify", content)
@@ -300,7 +300,7 @@ class TestPmHelpers(unittest.TestCase):
             snapshot = build_lane_snapshot(tmpdir, "blocked")
             content = render_lane_markdown(snapshot)
 
-        self.assertIn("Tareas en blocked", content)
+        self.assertIn("Задачи в blocked", content)
         self.assertIn("Decisión de cookies seguras", content)
 
     def test_validate_detects_warnings(self):
@@ -321,9 +321,9 @@ class TestPmHelpers(unittest.TestCase):
             content = render_validation_markdown(report)
 
         self.assertEqual(report["status"], "warning")
-        self.assertIn("### Resumen", content)
-        self.assertIn("- Avisos: 1", content)
-        self.assertIn("done sin evidencia", content)
+        self.assertIn("### Сводка", content)
+        self.assertIn("- Предупреждений: 1", content)
+        self.assertIn("done без явного подтверждения", content)
 
     def test_validate_warns_when_uat_is_stale_for_latest_completed_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -360,7 +360,7 @@ class TestPmHelpers(unittest.TestCase):
             content = render_validation_markdown(report)
 
         self.assertEqual(report["status"], "warning")
-        self.assertIn("no cubre el último flujo completado", content)
+        self.assertIn("не покрывает последний завершённый процесс", content)
 
     def test_validate_does_not_require_evidence_for_skipped_phase_tasks(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -395,7 +395,7 @@ class TestPmHelpers(unittest.TestCase):
 
         self.assertEqual(report["status"], "warning")
         self.assertTrue(
-            any("estilo_visual figura como completada" in warning for warning in report["warnings"])
+            any("estilo_visual отмечена как завершённая" in warning for warning in report["warnings"])
         )
 
     def test_validate_ignores_internal_tasks_for_sync_coverage(self):
@@ -469,7 +469,7 @@ class TestPmHelpers(unittest.TestCase):
             content = render_validation_markdown(report)
 
         self.assertEqual(report["status"], "warning")
-        self.assertIn("ya no existen en el kanban local", content)
+        self.assertIn("которых уже нет в локальном kanban", content)
         self.assertIn("T-099", content)
 
     def test_search_finds_docs_and_memory(self):
@@ -515,9 +515,9 @@ class TestPmHelpers(unittest.TestCase):
             )
 
         self.assertEqual(standup.returncode, 0, msg=standup.stderr)
-        self.assertIn("## Standup diario", standup.stdout)
+        self.assertIn("## Ежедневный standup", standup.stdout)
         self.assertEqual(search.returncode, 0, msg=search.stderr)
-        self.assertIn("## Resultados para `login`", search.stdout)
+        self.assertIn("## Результаты для `login`", search.stdout)
 
     def test_cli_normalize_kanban_normalizes_legacy_task_types(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -558,8 +558,8 @@ class TestPmHelpers(unittest.TestCase):
             board = load_kanban_board(tmpdir)
 
         self.assertEqual(proc.returncode, 0, msg=proc.stderr)
-        self.assertIn("## Normalización de kanban", proc.stdout)
-        self.assertIn("Tareas ajustadas: 3", proc.stdout)
+        self.assertIn("## Нормализация kanban", proc.stdout)
+        self.assertIn("Исправлено задач: 3", proc.stdout)
         self.assertEqual(board["backlog"][0]["task_type"], "verify")
         self.assertEqual(board["in-progress"][0]["task_type"], "main")
         self.assertEqual(board["in-progress"][1]["task_type"], "phase")
@@ -666,7 +666,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
             with self.assertRaises(RuntimeError) as ctx:
                 sync_project_to_github(tmpdir)
 
-        self.assertIn("no se puede sincronizar de forma fiable", str(ctx.exception))
+        self.assertIn("нельзя надёжно синхронизировать", str(ctx.exception))
         self.assertIn("T-010", str(ctx.exception))
 
     def test_sync_project_to_github_requires_at_least_one_task_id(self):
@@ -684,7 +684,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
             with self.assertRaises(RuntimeError) as ctx:
                 sync_project_to_github(tmpdir)
 
-        self.assertIn("No hay tareas con identificador", str(ctx.exception))
+        self.assertIn("Нет задач с идентификатором", str(ctx.exception))
 
     def test_sync_project_to_github_omits_internal_tasks(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1183,8 +1183,8 @@ class TestGitHubSyncHelpers(unittest.TestCase):
 
         summary = render_github_sync_cli_summary(result)
 
-        self.assertIn("## SonIA Sync listo", summary)
-        self.assertIn("sincronizadas=1", summary)
+        self.assertIn("## SonIA Sync готов", summary)
+        self.assertIn("синхронизировано=1", summary)
         self.assertIn(GITHUB_SYNC_JSON_RELATIVE_PATH, summary)
         self.assertIn(GITHUB_SYNC_MD_RELATIVE_PATH, summary)
         self.assertIn("/alfred-dev:feature", summary)

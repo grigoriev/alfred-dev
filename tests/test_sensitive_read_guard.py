@@ -220,8 +220,8 @@ class TestMainFunction(unittest.TestCase):
         output = self._run_hook({
             "tool_input": {"file_path": "/project/.env"}
         })
-        self.assertIn("AVISO", output)
-        self.assertIn("variables de entorno", output.lower())
+        self.assertIn("ВНИМАНИЕ", output)
+        self.assertIn("переменных окружения", output.lower())
 
     def test_normal_file_no_warning(self):
         """Leer un fichero normal no debe generar aviso."""
@@ -235,7 +235,7 @@ class TestMainFunction(unittest.TestCase):
         output = self._run_hook({
             "tool_input": {"file_path": "/home/user/.ssh/id_rsa"}
         })
-        self.assertIn("AVISO", output)
+        self.assertIn("ВНИМАНИЕ", output)
 
     def test_empty_path_no_warning(self):
         """Ruta vacia no debe generar aviso."""
@@ -260,22 +260,22 @@ class TestMainFunction(unittest.TestCase):
         output = self._run_hook({
             "tool_input": {"path": "/project/.env.local"}
         })
-        self.assertIn("AVISO", output)
+        self.assertIn("ВНИМАНИЕ", output)
 
     def test_pem_file_warning(self):
         """Leer un fichero .pem debe generar aviso."""
         output = self._run_hook({
             "tool_input": {"file_path": "/certs/server.pem"}
         })
-        self.assertIn("AVISO", output)
-        self.assertIn("Clave privada", output)
+        self.assertIn("ВНИМАНИЕ", output)
+        self.assertIn("Приватный ключ", output)
 
     def test_docker_config_warning(self):
         """La configuracion Docker debe avisar como credencial sensible."""
         output = self._run_hook({
             "tool_input": {"file_path": "/home/user/.docker/config.json"}
         })
-        self.assertIn("AVISO", output)
+        self.assertIn("ВНИМАНИЕ", output)
         self.assertIn("Docker", output)
 
     def test_service_account_variant_warning(self):
@@ -283,15 +283,15 @@ class TestMainFunction(unittest.TestCase):
         output = self._run_hook({
             "tool_input": {"file_path": "/secrets/service-account.prod.json"}
         })
-        self.assertIn("AVISO", output)
-        self.assertIn("Credenciales de servicio", output)
+        self.assertIn("ВНИМАНИЕ", output)
+        self.assertIn("Учётные данные сервиса", output)
 
     def test_kube_config_warning(self):
         """La configuracion de kubeconfig debe avisar."""
         output = self._run_hook({
             "tool_input": {"file_path": "/home/user/.kube/config"}
         })
-        self.assertIn("AVISO", output)
+        self.assertIn("ВНИМАНИЕ", output)
         self.assertIn("Kubernetes", output)
 
 

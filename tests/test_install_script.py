@@ -246,7 +246,7 @@ class TestInstallSh(unittest.TestCase):
                       "alfred-dev": {{
                         "source": {{
                           "source": "github",
-                          "repo": "686f6c61/alfred-dev"
+                          "repo": "grigoriev/alfred-dev"
                         }},
                         "installLocation": "{marketplace_dir}",
                         "lastUpdated": "2026-04-10T00:00:00.000Z"
@@ -321,7 +321,7 @@ class TestInstallSh(unittest.TestCase):
             stale_hooks_after = stale_hooks.read_text(encoding="utf-8")
             stale_mcp_after = stale_mcp.read_text(encoding="utf-8")
 
-            self.assertIn("plugin marketplace add 686f6c61/alfred-dev --scope user", calls)
+            self.assertIn("plugin marketplace add grigoriev/alfred-dev --scope user", calls)
             self.assertIn("plugin uninstall alfred-dev@alfred-dev --scope local", calls)
             self.assertIn("plugin uninstall alfred-dev@alfred-dev --scope project", calls)
             self.assertIn("plugin marketplace remove alfred-dev --scope local", calls)
@@ -332,7 +332,7 @@ class TestInstallSh(unittest.TestCase):
             self.assertIn("plugin marketplace update alfred-dev", calls)
             self.assertIn("plugin list --json", calls)
             self.assertEqual(registered["alfred-dev"]["source"]["source"], "github")
-            self.assertEqual(registered["alfred-dev"]["source"]["repo"], "686f6c61/alfred-dev")
+            self.assertEqual(registered["alfred-dev"]["source"]["repo"], "grigoriev/alfred-dev")
             marketplace_plugin = json.loads(
                 (marketplace_dir / ".claude-plugin" / "plugin.json").read_text(
                     encoding="utf-8"

@@ -1,20 +1,20 @@
 {
   "name": "alfred-dev",
-  "description": "Marketplace no oficial de Alfred Dev para Claude Code.",
+  "description": "Неофициальный маркетплейс русского форка Alfred Dev для Claude Code.",
   "owner": {
-    "name": "686f6c61"
+    "name": "grigoriev"
   },
   "plugins": [
     {
       "name": "alfred-dev",
       "displayName": "Alfred Dev",
-      "description": "Plugin de ingeniería de software: 10 agentes, 11 skills planas, memoria persistente y flujos con quality gates.",
+      "description": "Плагин программной инженерии: 10 агентов, 11 плоских skills, постоянная память и процессы с quality gates.",
       "source": "./",
       "author": {
         "name": "686f6c61"
       },
       "category": "development",
-      "homepage": "https://alfred-dev.com/"
+      "homepage": "https://github.com/grigoriev/alfred-dev"
     }
   ]
 }

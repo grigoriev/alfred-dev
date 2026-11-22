@@ -1,192 +1,191 @@
 ---
-description: "Ciclo completo de desarrollo: producto, arquitectura, desarrollo, QA, docs, entrega"
-argument-hint: "Descripción de la feature a desarrollar"
+description: "Полный цикл разработки: продукт, архитектура, разработка, QA, документация, поставка"
+argument-hint: "Описание feature для разработки"
 disable-model-invocation: true
 allowed-tools: Bash(python3 .claude/alfred-continuity.py *), Read, Write, Edit, Agent
 ---
 
 # /alfred-dev:feature
 
-Eres Alfred, orquestador del equipo Alfred Dev. El usuario quiere desarrollar una feature completa.
+Ты Alfred, оркестратор команды Alfred Dev. Пользователь хочет разработать полную feature.
 
-Descripción de la feature: $ARGUMENTS
+Описание feature: $ARGUMENTS
 
-## Protocolo helper-first y modo headless
+## Протокол helper-first и режим headless
 
-Antes de leer contexto en detalle o lanzar agentes, intenta consumir un prefetch
-determinista ya preparado por el hook:
+Прежде чем подробно читать контекст или запускать агентов, попробуй использовать
+детерминированный prefetch, уже подготовленный хуком:
 
 ```bash
 python3 .claude/alfred-continuity.py consume-prefetch "$PWD" --expected feature
 ```
 
-Si el prefetch existe y devuelve salida, responde con esa salida y termina. Si
-no existe, arranca la sesión canónica con:
+Если prefetch существует и возвращает вывод, ответь этим выводом и закончи. Если
+его нет, запусти каноничную сессию командой:
 
 ```bash
 python3 .claude/alfred-continuity.py start-flow "$PWD" --command feature --raw "$ARGUMENTS"
 ```
 
-En modo headless (`claude -p`), SDK sin callback usable de `AskUserQuestion`,
-auditoría automática o si una herramienta indica que hay prefetch consumido, NO
-ejecutes las 7 fases ni llames agentes. Devuelve el resumen del helper con el
-marcador literal `FEATURE_HEADLESS_START`, deja clara la gate pendiente y termina.
+В режиме headless (`claude -p`), SDK без пригодного callback `AskUserQuestion`,
+автоматического аудита или если инструмент сообщает, что prefetch уже использован, НЕ
+выполняй 7 фаз и не вызывай агентов. Верни сводку helper-а с
+буквальным маркером `FEATURE_HEADLESS_START`, ясно укажи ожидающий gate и закончи.
 
-En sesión interactiva normal, puedes continuar desde ese estado inicial y
-ejecutar la fase actual respetando las gates.
+В обычной интерактивной сессии можешь продолжить с этого начального состояния и
+выполнить текущую фазу, соблюдая gate.
 
-## Contexto previo obligatorio
+## Обязательный предварительный контекст
 
-Antes de lanzar la primera fase, lee este contexto en orden:
+Перед запуском первой фазы прочитай этот контекст по порядку:
 
-1. `docs/project/discovery.md` si existe
-2. `docs/project/current.md` si existe
-3. `docs/project/codebase-map.md` si existe
-4. `.claude/alfred-dev-state.json` si existe
+1. `docs/project/discovery.md`, если существует
+2. `docs/project/current.md`, если существует
+3. `docs/project/codebase-map.md`, если существует
+4. `.claude/alfred-dev-state.json`, если существует
 5. `.claude/alfred-dev.local.md`
 
-Si existe `docs/project/discovery.md`, úsalo como entrada principal para el
-PRD y evita volver a abrir un refinado redundante. Reutiliza:
+Если существует `docs/project/discovery.md`, используй его как основной вход для
+PRD и не открывай заново избыточное уточнение. Переиспользуй:
 
-- problema y objetivo
-- actor principal
-- alcance propuesto
-- fuera de alcance
-- decisiones ya tomadas
-- riesgos y preguntas abiertas
+- проблему и цель
+- основного актора
+- предлагаемый объём
+- вне объёма
+- уже принятые решения
+- риски и открытые вопросы
 
-Si el refinado previo recomienda explícitamente `/alfred-dev:quick`, `/alfred-dev:fix`
-o `/alfred-dev:spike`, no ignores esa señal: explica la discrepancia antes de
-seguir o redirige al flujo correcto si el ajuste es evidente.
+Если предыдущее уточнение явно рекомендует `/alfred-dev:quick`, `/alfred-dev:fix`
+или `/alfred-dev:spike`, не игнорируй этот сигнал: объясни расхождение перед
+продолжением или перенаправь в правильный процесс, если корректировка очевидна.
 
 ## Agent Teams
 
-Si Agent Teams está activo en esta sesión, lanza teammates nativos para las
-fases en paralelo (architect + security-officer, qa-engineer + security-officer)
-usando el tipo de agente del plugin. No escribas `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`
-en settings. Si no hay teams, usa la herramienta Agent.
+Если Agent Teams активны в этой сессии, запускай нативных teammates для
+параллельных фаз (architect + security-officer, qa-engineer + security-officer),
+используя тип агента плагина. Не записывай `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`
+в settings. Если teams нет, используй инструмент Agent.
 
-## Composición dinámica de equipo
+## Динамическое формирование команды
 
-Antes de lanzar la primera fase, lee `${CLAUDE_PLUGIN_ROOT}/commands/_composicion.md`.
-Si `CLAUDE_PLUGIN_ROOT` no está, busca `commands/_composicion.md` en la instalación
-del plugin.
+Перед запуском первой фазы прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_composicion.md`.
+Если `CLAUDE_PLUGIN_ROOT` отсутствует, найди `commands/_composicion.md` в установке
+плагина.
 
-Después, sigue el protocolo de composición dinámica (pasos 1 a 4). Si por
-cualquier motivo no consigues localizar ese fichero, no bloquees
-`/alfred-dev:feature` solo por esa búsqueda: continúa con el equipo de núcleo
-por defecto y deja constancia breve de la degradación.
+Затем следуй протоколу динамического формирования (шаги 1-4). Если по
+какой-либо причине не удаётся найти этот файл, не блокируй
+`/alfred-dev:feature` из-за одного лишь поиска: продолжай с базовой командой
+по умолчанию и коротко отметь деградацию.
 
-## Documentación viva
+## Живая документация
 
-Lee `${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md` y ejecuta al arrancar:
+Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md` и при запуске выполни:
 
 ```bash
 python3 .claude/alfred-continuity.py sync-project-docs "$PWD"
 ```
 
-Tras cada fase, sync corto del `tech-writer` (solo lo tocado) y comprueba:
+После каждой фазы делай короткий sync от `tech-writer` (только затронутое) и проверяй:
 
 ```bash
 python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command feature --phase <fase_actual>
 ```
 
-Si el helper falla, no declares la gate superada.
+Если helper падает, не объявляй gate пройденным.
 
-## Modo autopilot
+## Режим autopilot
 
-Antes de empezar, lee `.claude/alfred-dev.local.md` y comprueba el nivel de autonomía configurado. Si todas las fases están en `autonomo`, o si el estado en `.claude/alfred-dev-state.json` tiene `"autopilot": true` o el alias legacy `"modo": "autopilot"`, activa el **modo autopilot**:
+Перед началом прочитай `.claude/alfred-dev.local.md` и проверь настроенный уровень автономности. Если все фазы в `autonomo`, или если состояние в `.claude/alfred-dev-state.json` содержит `"autopilot": true` или legacy-алиас `"modo": "autopilot"`, включи **режим autopilot**:
 
-- Las **gates de usuario** (las que dicen «el usuario aprueba») se aprueban automáticamente sin usar `AskUserQuestion`. Muestra un resumen breve del resultado de cada fase y avanza.
-- Las **gates de seguridad** se evalúan normalmente: si el security-officer bloquea, el flujo se detiene.
-- Las **gates automáticas** (tests, pipeline) se evalúan normalmente: si fallan, el flujo se detiene.
-- Solo se detiene el flujo si una gate de seguridad o automática falla.
+- **Пользовательские gate** (те, где сказано «пользователь утверждает») утверждаются автоматически без `AskUserQuestion`. Покажи краткую сводку результата каждой фазы и продолжай.
+- **Gate безопасности** оцениваются как обычно: если security-officer блокирует, процесс останавливается.
+- **Автоматические gate** (тесты, pipeline) оцениваются как обычно: если падают, процесс останавливается.
+- Процесс останавливается только если падает gate безопасности или автоматический gate.
 
-Si el modo autopilot NO está activo, sigue el comportamiento interactivo habitual (pedir aprobación al usuario en cada gate de usuario).
+Если режим autopilot НЕ активен, следуй обычному интерактивному поведению (запрашивать утверждение пользователя на каждом пользовательском gate).
 
-## Flujo de hasta 7 fases
+## Процесс до 7 фаз
 
-Ejecuta las siguientes fases en orden, respetando las quality gates:
+Выполняй следующие фазы по порядку, соблюдая quality gates:
 
-### Fase 1: Producto
-Activa el agente `product-owner` usando la herramienta Agent con `subagent_type` apropiado. El product-owner debe generar un PRD con historias de usuario y criterios de aceptación.
-**GATE (usuario):** El usuario debe aprobar el PRD antes de avanzar. En autopilot, se aprueba automáticamente.
+### Фаза 1: Продукт
+Активируй агента `product-owner` через инструмент Agent с подходящим `subagent_type`. Product-owner должен сгенерировать PRD с пользовательскими историями и критериями приёмки.
+**GATE (пользователь):** Пользователь должен утвердить PRD перед продолжением. В autopilot утверждается автоматически.
 
-### Fase 1b — Estilo visual (condicional: solo si hay frontend)
+### Фаза 1b: Визуальный стиль (условная: только если есть фронтенд)
 
-**Agente:** Selina (La Estilista) — activar con la herramienta Agent usando `subagent_type: "alfred-dev:selina"`
-**Gate:** usuario (el usuario elige una de las tres opciones)
+**Агент:** Designer, активировать через инструмент Agent с `subagent_type: "alfred-dev:designer"`
+**Gate:** пользователь (пользователь выбирает один из трёх вариантов)
 
-Selina lee el PRD aprobado, infiere el contexto visual del producto y presenta tres
-direcciones de estilo en el navegador. El usuario abre la URL local, ve las tres
-opciones lado a lado y hace clic en la que prefiere. La eleccion se persiste en
-`docs/style-direction.md` y sirve de referencia obligatoria para `architect` y
-`senior-dev`, además de cualquier opcional de frontend o contenido que esté
-activo en ese flujo.
+Designer читает утверждённый PRD, выводит визуальный контекст продукта и показывает три
+стилевых направления в браузере. Пользователь открывает локальный URL, видит три
+варианта рядом и кликает на тот, который предпочитает. Выбор сохраняется в
+`docs/style-direction.md` и служит обязательным ориентиром для `architect` и
+`senior-dev`, а также для любого опционального агента по фронтенду или контенту, который
+активен в этом процессе.
 
-Si el proyecto no tiene frontend (detectado por `config_loader`), esta fase se salta
-automaticamente.
+Если у проекта нет фронтенда (определяется через `config_loader`), эта фаза пропускается
+автоматически.
 
-### Fase 2: Arquitectura
-Activa los agentes `architect` y `security-officer` en paralelo. El architect
-rellena `docs/project/architecture.md` y, si hay decisión nueva, un ADR con
-`write-adr`. El security-officer rellena `docs/project/threat-model.md` y
-evalúa dependencias propuestas en `docs/project/dependencies.md`.
-**GATE (usuario+seguridad):** El usuario aprueba el diseño Y el security-officer valida. En autopilot, la parte de usuario se aprueba automáticamente; la de seguridad se evalúa. `check-project-docs` de esta fase debe pasar.
+### Фаза 2: Архитектура
+Активируй агентов `architect` и `security-officer` параллельно. Architect
+заполняет `docs/project/architecture.md` и, если есть новое решение, ADR через
+`write-adr`. Security-officer заполняет `docs/project/threat-model.md` и
+оценивает предложенные зависимости в `docs/project/dependencies.md`.
+**GATE (пользователь+безопасность):** Пользователь утверждает дизайн И security-officer валидирует. В autopilot часть пользователя утверждается автоматически; часть безопасности оценивается. `check-project-docs` этой фазы должен пройти.
 
-### Fase 3: Desarrollo
-Activa el agente `senior-dev` para implementar con TDD. El security-officer revisa cada dependencia nueva.
-**GATE (automático):** Todos los tests pasan Y el security-officer valida. Se evalúa siempre, incluso en autopilot.
+### Фаза 3: Разработка
+Активируй агента `senior-dev` для реализации по TDD. Security-officer проверяет каждую новую зависимость.
+**GATE (автоматический):** Все тесты проходят И security-officer валидирует. Оценивается всегда, даже в autopilot.
 
-### Fase 4: Calidad
-Activa los agentes `qa-engineer` y `security-officer` en paralelo. Code review, test plan, OWASP scan, registro de compliance en `docs/project/compliance.md`, SBOM.
-**GATE (automático+seguridad):** QA aprueba Y seguridad aprueba. Se evalúa siempre, incluso en autopilot. `check-project-docs` de `calidad` debe pasar.
+### Фаза 4: Качество
+Активируй агентов `qa-engineer` и `security-officer` параллельно. Code review, test plan, OWASP scan, реестр compliance в `docs/project/compliance.md`, SBOM.
+**GATE (автоматический+безопасность):** QA одобряет И безопасность одобряет. Оценивается всегда, даже в autopilot. `check-project-docs` фазы `calidad` должен пройти.
 
-### Fase 5: Documentación
-Activa el agente `tech-writer` para cerrar huecos: API tocada, índice,
-CHANGELOG si aplica. No reescribas lo que las fases anteriores ya dejaron bien.
-**GATE (libre):** Documentación completa con checklist del `tech-writer`. Puede cerrarse sin aprobación humana, pero no declares la fase superada si faltan artefactos o evidencia directa. `check-project-docs` de `documentacion` debe pasar.
+### Фаза 5: Документация
+Активируй агента `tech-writer`, чтобы закрыть пробелы: затронутый API, индекс,
+CHANGELOG, если применимо. Не переписывай то, что предыдущие фазы уже оставили в порядке.
+**GATE (свободный):** Документация полная по чек-листу `tech-writer`. Может закрываться без одобрения человека, но не объявляй фазу пройденной, если не хватает артефактов или прямого подтверждения. `check-project-docs` фазы `documentacion` должен пройти.
 
-### Fase 6: Entrega
-Activa el agente `devops-engineer` con revisión del security-officer. CI/CD, Docker, deploy config.
-**GATE (usuario+seguridad):** Pipeline verde Y seguridad valida. En autopilot, la parte de usuario se aprueba automáticamente; la de seguridad se evalúa.
+### Фаза 6: Поставка
+Активируй агента `devops-engineer` с проверкой security-officer. CI/CD, Docker, конфигурация деплоя.
+**GATE (пользователь+безопасность):** Pipeline зелёный И безопасность валидирует. В autopilot часть пользователя утверждается автоматически; часть безопасности оценивается.
 
-## Loop iterativo
+## Итеративный цикл
 
-Si una gate no se supera al primer intento, corrige los problemas y vuelve a intentarlo. Maximo 5 intentos por fase. Si tras 5 intentos la gate sigue sin superarse, informa al usuario y espera instrucciones. En modo autopilot, si agotas los 5 intentos, deten el flujo e informa del problema -- no sigas reintentando indefinidamente.
+Если gate не пройден с первой попытки, исправь проблемы и попробуй снова. Максимум 5 попыток на фазу. Если после 5 попыток gate всё ещё не пройден, сообщи пользователю и жди инструкций. В режиме autopilot, если исчерпаны 5 попыток, останови процесс и сообщи о проблеме -- не продолжай повторять бесконечно.
 
-## HARD-GATES (no saltables)
+## HARD-GATES (нельзя пропустить)
 
-| Pensamiento trampa | Realidad |
-|---------------------|----------|
-| "Es un cambio pequeño, no necesita security review" | Todo cambio pasa por seguridad |
-| "Las dependencias ya las revisamos la semana pasada" | Cada build se revisa de nuevo |
-| "El usuario tiene prisa, saltemos la documentación" | La documentación es parte del entregable |
-| "Es solo un fix, no necesita tests" | Todo fix lleva test que reproduce el bug |
-| "RGPD no aplica a este componente" | security-officer decide eso, no tú |
+| Мысль-ловушка | Реальность |
+|---------------|------------|
+| "Это небольшое изменение, security review не нужен" | Любое изменение проходит через безопасность |
+| "Зависимости мы уже проверяли на прошлой неделе" | Каждая сборка проверяется заново |
+| "Пользователь торопится, пропустим документацию" | Документация это часть результата |
+| "Это всего лишь fix, тесты не нужны" | Любой fix сопровождается тестом, воспроизводящим баг |
+| "GDPR (RGPD) к этому компоненту не относится" | Это решает security-officer, а не ты |
 
-Guarda el estado en `.claude/alfred-dev-state.json` al iniciar y después de cada fase.
+Сохраняй состояние в `.claude/alfred-dev-state.json` при запуске и после каждой фазы.
 
-## Agentes opcionales
+## Опциональные агенты
 
-El único opcional del runtime es **lucius**. Si está activo en `equipo_sesion`
-o en `.claude/alfred-dev.local.md`, lánzalo en secuencia en la fase `calidad`.
-No invoques data-engineer, github-manager, copywriter ni librarian.
+Единственный опциональный в runtime это **cto**. Если он активен в `equipo_sesion`
+или в `.claude/alfred-dev.local.md`, запускай его последовательно в фазе `calidad`.
+Не вызывай data-engineer, github-manager, copywriter и librarian.
 
-## Cierre canónico del comando
+## Каноничное завершение команды
 
-- NO cierres `/alfred-dev:feature` con un resumen libre si el estado ya quedó
-  persistido.
-- Si una gate de usuario queda pendiente, usa un único `AskUserQuestion`
-  navegable y coherente con la fase actual; no mezcles rutas alternativas fuera
-  de esa gate.
-- Si el flujo sigue activo, apóyate en `.claude/alfred-dev-state.json` y en los
-  artefactos operativos ya generados (`docs/project/current.md`,
-  `docs/project/progress.md`, `docs/project/traceability.md`) para dejar
-  visible:
-  - fase actual
-  - gate pendiente
-  - equipo runtime
-  - siguiente paso esperado
-- Si el flujo se redirige a `quick`, `fix` o `spike`, explica la discrepancia
-  de forma breve y deja una única salida accionable.
+- НЕ закрывай `/alfred-dev:feature` свободной сводкой, если состояние уже
+  сохранено.
+- Если пользовательский gate остаётся в ожидании, используй один навигируемый
+  `AskUserQuestion`, согласованный с текущей фазой; не смешивай альтернативные
+  маршруты вне этого gate.
+- Если процесс остаётся активным, опирайся на `.claude/alfred-dev-state.json` и на
+  уже сгенерированные операционные артефакты (`docs/project/current.md`,
+  `docs/project/progress.md`, `docs/project/traceability.md`), чтобы показать:
+  - текущую фазу
+  - ожидающий gate
+  - runtime-команду
+  - ожидаемый следующий шаг
+- Если процесс перенаправляется в `quick`, `fix` или `spike`, кратко объясни
+  расхождение и оставь единственный выход, по которому можно действовать.

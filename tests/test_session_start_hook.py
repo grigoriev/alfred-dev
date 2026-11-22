@@ -46,6 +46,7 @@ class TestSessionStartHookContract(unittest.TestCase):
 
     def test_hook_uses_current_update_command_and_semver_ordering(self):
         self.assertNotIn("api.github.com/repos/686f6c61/alfred-dev/releases/latest", self.hook)
+        self.assertNotIn("api.github.com/repos/grigoriev/alfred-dev/releases/latest", self.hook)
 
     def test_hook_injects_next_step_recommendation(self):
         self.assertIn("/alfred-dev:retomar", self.hook)
@@ -281,7 +282,7 @@ class TestSessionStartRuntime(unittest.TestCase):
                     "  documentacion: autonomo\n"
                     "  entrega: autonomo\n"
                     "agentes_opcionales:\n"
-                    "  lucius: true\n"
+                    "  cto: true\n"
                     "  seo-specialist: true\n"
                     "memoria:\n"
                     "  enabled: false\n"

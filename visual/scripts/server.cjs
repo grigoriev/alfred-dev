@@ -1,5 +1,5 @@
 /**
- * server.cjs — Servidor HTTP + WebSocket para la visualizacion de Selina.
+ * server.cjs — Servidor HTTP + WebSocket para la visualizacion de Designer.
  *
  * Usa exclusivamente modulos nativos de Node.js (http, crypto, fs, path).
  * Sirve contenido HTML desde un directorio de sesion, inyecta helper.js,
@@ -268,7 +268,7 @@ function injectHelper(html) {
 
 /**
  * Extrae bloques de estilos que conviene mover al <head> del frame.
- * Ahora mismo se usa para imports tipográficos generados por Selina.
+ * Ahora mismo se usa para imports tipográficos generados por Designer.
  * @param {string} fragment
  * @returns {{ fragment: string, headHtml: string }}
  */
@@ -302,7 +302,7 @@ function wrapInFrame(fragment) {
 /** Pagina de espera cuando aun no hay contenido HTML. */
 function waitingPage() {
   const template = loadFrameTemplate();
-  const msg = '<p class="waiting-message">Esperando a que Selina prepare las opciones de estilo...</p>';
+  const msg = '<p class="waiting-message">Esperando a que Designer prepare las opciones de estilo...</p>';
   const wrapped = template.replace('<!-- CONTENT -->', msg);
   return injectHelper(wrapped);
 }

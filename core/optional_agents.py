@@ -13,7 +13,7 @@ OPTIONAL_AGENT_GROUP_LABELS: Dict[str, str] = {
 }
 
 OPTIONAL_AGENT_GROUP_QUESTIONS: Dict[str, str] = {
-    "audit": "¿Quieres activar Lucius como segunda opinión externa?",
+    "audit": "¿Quieres activar CTO como segunda opinión externa?",
 }
 
 OPTIONAL_AGENT_MENU_EXIT = {
@@ -28,9 +28,9 @@ OPTIONAL_AGENT_MENU_DONE = {
 
 
 OPTIONAL_AGENT_CATALOG: Dict[str, Dict[str, Any]] = {
-    "lucius": {
+    "cto": {
         "group": "audit",
-        "label": "Lucius",
+        "label": "CTO",
         "specialty": "Segunda opinión técnica externa y auditoría de cierre",
         "static_suggestion": False,
         "integration": {
@@ -45,6 +45,29 @@ OPTIONAL_AGENT_CATALOG: Dict[str, Dict[str, Any]] = {
         },
     },
 }
+
+
+# Nombres antiguos aceptados al leer config o estado de proyectos existentes.
+LEGACY_OPTIONAL_AGENT_ALIASES: Dict[str, str] = {
+    "lucius": "cto",
+}
+
+
+def canonical_optional_agent_name(agent_name: Any) -> str:
+    """Traduce un nombre legacy de agente opcional a su nombre canónico."""
+    name = str(agent_name).strip()
+    return LEGACY_OPTIONAL_AGENT_ALIASES.get(name, name)
+
+
+def normalize_optional_agent_flags(raw_flags: Dict[Any, Any]) -> Dict[str, Any]:
+    """Renombra claves legacy; la clave canónica gana si aparecen ambas."""
+    normalized: Dict[str, Any] = {}
+    for raw_name, value in raw_flags.items():
+        name = canonical_optional_agent_name(raw_name)
+        is_canonical = name == str(raw_name).strip()
+        if is_canonical or name not in normalized:
+            normalized[name] = value
+    return normalized
 
 
 def get_optional_agent_names() -> Tuple[str, ...]:

@@ -1,74 +1,74 @@
 ---
 name: threat-model
-description: "Usar para modelar amenazas con metodología STRIDE. También: análisis de amenazas, STRIDE, superficie de ataque, vectores de ataque, modelado de amenazas."
+description: "Использовать для моделирования угроз по методологии STRIDE. Также: анализ угроз, STRIDE, поверхность атаки, векторы атаки, threat modeling, моделирование угроз."
 ---
 
-# Modelado de amenazas STRIDE
+# Моделирование угроз STRIDE
 
-## Resumen
+## Резюме
 
-Este skill aplica la metodología STRIDE para identificar y clasificar amenazas de seguridad en el sistema. STRIDE es un modelo desarrollado por Microsoft que categoriza las amenazas en seis tipos, proporcionando un framework sistemático para no dejarse nada en el tintero.
+Этот skill применяет методологию STRIDE для выявления и классификации угроз безопасности в системе. STRIDE это модель, разработанная Microsoft, которая делит угрозы на шесть типов и даёт системный framework, чтобы ничего не упустить.
 
-El modelado de amenazas se hace idealmente al principio del desarrollo (cuando es más barato corregir), pero también es valioso como ejercicio periódico para sistemas existentes.
+Моделирование угроз лучше всего проводить в начале разработки (когда исправлять дешевле), но оно также полезно как периодическое упражнение для существующих систем.
 
-## Proceso
+## Процесс
 
-1. **Identificar los componentes del sistema.** Listar todos los elementos relevantes:
+1. **Определить компоненты системы.** Перечислить все значимые элементы:
 
-   - Aplicaciones y servicios.
-   - Bases de datos y almacenes de datos.
-   - APIs e interfaces externas.
-   - Infraestructura (servidores, redes, balanceadores).
-   - Usuarios y roles.
-   - Flujos de datos entre componentes.
+   - Приложения и сервисы.
+   - Базы данных и хранилища данных.
+   - API и внешние интерфейсы.
+   - Инфраструктура (серверы, сети, балансировщики).
+   - Пользователи и роли.
+   - Потоки данных между компонентами.
 
-2. **Generar diagrama de flujo de datos (DFD).** Dibujar con Mermaid los flujos de datos entre componentes, identificando los límites de confianza (trust boundaries). Las amenazas suelen concentrarse en los puntos donde los datos cruzan un límite de confianza.
+2. **Построить диаграмму потоков данных (DFD).** Нарисовать в Mermaid потоки данных между компонентами, отметив границы доверия (trust boundaries). Угрозы обычно концентрируются там, где данные пересекают границу доверия.
 
-3. **Aplicar STRIDE a cada componente.** Para cada elemento del diagrama, evaluar las seis categorías:
+3. **Применить STRIDE к каждому компоненту.** Для каждого элемента диаграммы оценить шесть категорий:
 
-   | Categoría | Descripción | Pregunta clave |
-   |-----------|-------------|----------------|
-   | **S**poofing (suplantación) | Un atacante se hace pasar por otro usuario o sistema. | Cómo se verifica la identidad en este punto? |
-   | **T**ampering (manipulación) | Un atacante modifica datos en tránsito o en reposo. | Cómo se garantiza la integridad de los datos? |
-   | **R**epudiation (repudio) | Un usuario niega haber realizado una acción. | Hay registro de auditoría fiable? |
-   | **I**nformation Disclosure (fuga de información) | Datos sensibles se exponen a quien no debería verlos. | Qué datos se exponen y a quién? |
-   | **D**enial of Service (denegación de servicio) | El sistema se vuelve inaccesible para usuarios legítimos. | Qué recursos se pueden agotar? |
-   | **E**levation of Privilege (elevación de privilegios) | Un usuario obtiene permisos que no le corresponden. | Cómo se aplican los controles de acceso? |
+   | Категория | Описание | Ключевой вопрос |
+   |-----------|----------|-----------------|
+   | **S**poofing (подмена) | Атакующий выдаёт себя за другого пользователя или систему. | Как проверяется личность в этой точке? |
+   | **T**ampering (подделка) | Атакующий изменяет данные при передаче или хранении. | Как гарантируется целостность данных? |
+   | **R**epudiation (отказ от авторства) | Пользователь отрицает, что выполнил действие. | Есть ли надёжный журнал аудита? |
+   | **I**nformation Disclosure (утечка информации) | Чувствительные данные становятся доступны тем, кто не должен их видеть. | Какие данные раскрываются и кому? |
+   | **D**enial of Service (отказ в обслуживании) | Система становится недоступной для легитимных пользователей. | Какие ресурсы можно исчерпать? |
+   | **E**levation of Privilege (повышение привилегий) | Пользователь получает права, которые ему не положены. | Как применяются средства контроля доступа? |
 
-4. **Clasificar cada amenaza por riesgo.** Usar una matriz de probabilidad e impacto:
+4. **Классифицировать каждую угрозу по риску.** Использовать матрицу вероятности и влияния:
 
-   - **Probabilidad:** alta (fácil de explotar, atacante poco sofisticado) / media / baja (requiere acceso interno y conocimiento especializado).
-   - **Impacto:** crítico (pérdida de datos, brecha de seguridad) / alto (interrupción del servicio) / medio (degradación parcial) / bajo (molestia menor).
+   - **Вероятность:** высокая (легко эксплуатировать, атакующему не нужна высокая квалификация) / средняя / низкая (требует внутреннего доступа и специальных знаний).
+   - **Влияние:** критическое (потеря данных, брешь в безопасности) / высокое (прерывание сервиса) / среднее (частичная деградация) / низкое (мелкое неудобство).
 
-5. **Proponer mitigaciones para cada amenaza.** Las mitigaciones deben ser concretas y accionables:
+5. **Предложить меры по снижению для каждой угрозы.** Меры должны быть конкретными и выполнимыми:
 
-   - No: "mejorar la seguridad".
-   - Sí: "implementar rate limiting de 100 peticiones/minuto en el endpoint de login".
+   - Нет: «улучшить безопасность».
+   - Да: «внедрить rate limiting 100 запросов/минуту на endpoint логина».
 
-6. **Priorizar por ratio riesgo/esfuerzo.** Las mitigaciones de alto impacto y bajo esfuerzo van primero. Las de bajo impacto y alto esfuerzo se documentan pero se posponen.
+6. **Приоритизировать по соотношению риск/усилия.** Меры с высоким влиянием и малыми усилиями идут первыми. Меры с низким влиянием и большими усилиями документируются, но откладываются.
 
-7. **Documentar el modelo.** Destino canónico: `docs/project/threat-model.md`.
-   Si no existe, créalo con `sync-project-docs`. Parte de componentes y
-   flujos reales, no de una lista genérica. Usa `templates/threat-model.md`
-   como forma. Sustituye `<!-- alfred-doc:scaffold -->` por
+7. **Задокументировать модель.** Каноническое место: `docs/project/threat-model.md`.
+   Если файла нет, создай его через `sync-project-docs`. Исходи из реальных компонентов и
+   потоков, а не из общего списка. Используй `templates/threat-model.md`
+   как форму. Замени `<!-- alfred-doc:scaffold -->` на
    `<!-- alfred-doc:filled -->`.
 
-## Criterios de éxito
+## Критерии успеха
 
-- Todos los componentes del sistema han sido evaluados contra las 6 categorías STRIDE.
-- Las amenazas están clasificadas por probabilidad e impacto.
-- Cada amenaza tiene al menos una mitigación propuesta.
-- Las mitigaciones están priorizadas por ratio riesgo/esfuerzo.
-- El modelo vive en `docs/project/threat-model.md` con marcador `filled`.
-- Las amenazas y mitigaciones se han registrado en la memoria del proyecto.
+- Все компоненты системы оценены по 6 категориям STRIDE.
+- Угрозы классифицированы по вероятности и влиянию.
+- У каждой угрозы есть хотя бы одна предложенная мера.
+- Меры приоритизированы по соотношению риск/усилия.
+- Модель находится в `docs/project/threat-model.md` с маркером `filled`.
+- Угрозы и меры записаны в память проекта.
 
-## Paso de memoria
+## Шаг памяти
 
-Registrar las amenazas identificadas y las mitigaciones propuestas en la memoria del proyecto con `memory_log_decision`. Esto permite hacer seguimiento del estado de las mitigaciones entre sesiones y detectar si aparecen nuevas superficies de ataque con la evolución del sistema.
+Записать выявленные угрозы и предложенные меры в память проекта через `memory_log_decision`. Это позволяет отслеживать состояние мер между сессиями и замечать новые поверхности атаки по мере развития системы.
 
-## Qué NO hacer
+## Чего НЕ делать
 
-- No modelar amenazas en abstracto sin conocer la arquitectura real del sistema. El modelo debe partir de los componentes y flujos de datos concretos, no de una lista genérica.
-- No limitarse a las amenazas técnicas. Las amenazas organizativas (ingeniería social, acceso físico, insiders) también son relevantes si el sistema maneja datos sensibles.
-- No dejar el modelo de amenazas como un documento estático. Debe revisarse cuando cambia la arquitectura, se añaden integraciones o se despliega en un nuevo entorno.
-- No proponer mitigaciones vagas como "mejorar la seguridad". Cada mitigación debe ser concreta, implementable y verificable.
+- Не моделировать угрозы абстрактно, не зная реальной архитектуры системы. Модель должна исходить из конкретных компонентов и потоков данных, а не из общего списка.
+- Не ограничиваться техническими угрозами. Организационные угрозы (социальная инженерия, физический доступ, инсайдеры) тоже важны, если система работает с чувствительными данными.
+- Не оставлять модель угроз статичным документом. Её нужно пересматривать при изменении архитектуры, добавлении интеграций или развёртывании в новом окружении.
+- Не предлагать расплывчатые меры вроде «улучшить безопасность». Каждая мера должна быть конкретной, реализуемой и проверяемой.

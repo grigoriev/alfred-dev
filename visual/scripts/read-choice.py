@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lee la última elección válida registrada por el servidor visual de Selina."""
+"""Lee la última elección válida registrada por el servidor visual de Designer."""
 
 from __future__ import annotations
 
@@ -11,12 +11,12 @@ import sys
 if __package__ in {None, ""}:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from core.selina_style_selector import parse_guided_choice
-from core.selina_visual import read_latest_style_choice, resolve_state_dir
+from core.designer_style_selector import parse_guided_choice
+from core.designer_visual import read_latest_style_choice, resolve_state_dir
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Leer la última elección visual de Selina")
+    parser = argparse.ArgumentParser(description="Leer la última elección visual de Designer")
     parser.add_argument("path", help="Ruta a session_dir o state_dir del servidor visual")
     return parser
 

@@ -51,7 +51,7 @@ def main() -> int:
             )
         )
     except Exception as exc:
-        print(f"[prompt-route] aviso: {exc}", file=sys.stderr)
+        print(f"[prompt-route] предупреждение: {exc}", file=sys.stderr)
     return 0
 
 

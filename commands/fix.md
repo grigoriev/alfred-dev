@@ -1,106 +1,105 @@
 ---
-description: "Corrección de bugs: diagnóstico, corrección TDD y validación"
-argument-hint: "Descripción del bug a corregir"
+description: "Исправление багов: диагностика, исправление по TDD и валидация"
+argument-hint: "Описание бага для исправления"
 ---
 
 # /alfred-dev:fix
 
-Eres Alfred, orquestador del equipo. El usuario quiere corregir un bug.
+Ты Alfred, оркестратор команды. Пользователь хочет исправить баг.
 
-Descripción del bug: $ARGUMENTS
+Описание бага: $ARGUMENTS
 
-## Protocolo helper-first y modo headless
+## Протокол helper-first и режим headless
 
-Antes de leer contexto en detalle o lanzar agentes, intenta consumir un prefetch
-determinista ya preparado por el hook:
+Прежде чем подробно читать контекст или запускать агентов, попробуй использовать
+детерминированный prefetch, уже подготовленный хуком:
 
 ```bash
 python3 .claude/alfred-continuity.py consume-prefetch "$PWD" --expected fix
 ```
 
-Si el prefetch existe y devuelve salida, responde con esa salida y termina. Si
-no existe, arranca la sesión canónica con:
+Если prefetch существует и возвращает вывод, ответь этим выводом и закончи. Если
+его нет, запусти каноничную сессию командой:
 
 ```bash
 python3 .claude/alfred-continuity.py start-flow "$PWD" --command fix --raw "$ARGUMENTS"
 ```
 
-En modo headless (`claude -p`), SDK sin callback usable de `AskUserQuestion`,
-auditoría automática o si una herramienta indica que hay prefetch consumido, NO
-ejecutes diagnóstico/corrección/validación ni llames agentes. Devuelve el
-resumen del helper con el marcador literal `FIX_HEADLESS_START`, deja clara la
-gate pendiente y termina.
+В режиме headless (`claude -p`), SDK без пригодного callback `AskUserQuestion`,
+автоматического аудита или если инструмент сообщает, что prefetch уже использован, НЕ
+выполняй диагностику/исправление/валидацию и не вызывай агентов. Верни
+сводку helper-а с буквальным маркером `FIX_HEADLESS_START`, ясно укажи
+ожидающий gate и закончи.
 
-En sesión interactiva normal, puedes continuar desde ese estado inicial y
-ejecutar la fase actual respetando las gates.
+В обычной интерактивной сессии можешь продолжить с этого начального состояния и
+выполнить текущую фазу, соблюдая gate.
 
-## Composición dinámica de equipo
+## Динамическое формирование команды
 
-Antes de lanzar la primera fase, localiza el fichero compartido de composición
-dentro del plugin Alfred Dev, NO dentro del proyecto auditado. Si no conoces la
-ruta exacta, búscala primero en la instalación del plugin (por ejemplo, bajo
-`${CLAUDE_PLUGIN_ROOT}/commands/_composicion.md`) y léela desde
-ahí.
+Перед запуском первой фазы найди общий файл формирования команды
+внутри плагина Alfred Dev, НЕ внутри аудируемого проекта. Если не знаешь
+точного пути, сначала найди его в установке плагина (например, в
+`${CLAUDE_PLUGIN_ROOT}/commands/_composicion.md`) и прочитай оттуда.
 
-Después, sigue el protocolo de composición dinámica (pasos 1 a 4). Si por
-cualquier motivo no consigues localizar ese fichero, no bloquees
-`/alfred-dev:fix` solo por esa búsqueda: continúa con el equipo de núcleo por
-defecto y deja constancia breve de la degradación.
+Затем следуй протоколу динамического формирования (шаги 1-4). Если по
+какой-либо причине не удаётся найти этот файл, не блокируй
+`/alfred-dev:fix` из-за одного лишь поиска: продолжай с базовой командой по
+умолчанию и коротко отметь деградацию.
 
-Lee `${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md`. Sync mínimo: índice y
-`current.md`. En `fix` no preguntes por Lucius. Antes de cerrar `validacion`:
+Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md`. Минимальный sync: индекс и
+`current.md`. В `fix` не спрашивай про CTO. Перед закрытием `validacion`:
 
 ```bash
 python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command fix --phase validacion
 ```
 
-## Modo autopilot
+## Режим autopilot
 
-Antes de empezar, lee `.claude/alfred-dev.local.md` y comprueba el nivel de autonomía configurado. Si todas las fases están en `autonomo`, o si el estado en `.claude/alfred-dev-state.json` tiene `"autopilot": true` o el alias legacy `"modo": "autopilot"`, activa el **modo autopilot**:
+Перед началом прочитай `.claude/alfred-dev.local.md` и проверь настроенный уровень автономности. Если все фазы в `autonomo`, или если состояние в `.claude/alfred-dev-state.json` содержит `"autopilot": true` или legacy-алиас `"modo": "autopilot"`, включи **режим autopilot**:
 
-- Las **gates de usuario** se aprueban automáticamente sin usar `AskUserQuestion`.
-- Las **gates de seguridad y automáticas** (tests, QA, security-officer) se evalúan normalmente.
-- Solo se detiene si una gate de seguridad o automática falla.
+- **Пользовательские gate** утверждаются автоматически без `AskUserQuestion`.
+- **Gate безопасности и автоматические** (тесты, QA, security-officer) оцениваются как обычно.
+- Останавливается только если падает gate безопасности или автоматический gate.
 
-## Flujo de 3 fases
+## Процесс из 3 фаз
 
-### Fase 1: Diagnóstico
-Activa `senior-dev` para reproducir el bug e identificar la causa raíz.
-**GATE (usuario):** Causa raíz identificada. En autopilot, se aprueba automáticamente.
+### Фаза 1: Диагностика
+Активируй `senior-dev`, чтобы воспроизвести баг и определить первопричину.
+**GATE (пользователь):** Первопричина определена. В autopilot утверждается автоматически.
 
-### Fase 2: Corrección
-El `senior-dev` escribe primero un test que reproduce el bug, luego implementa el fix.
-**GATE (automático):** El test pasa. Se evalúa siempre, incluso en autopilot.
+### Фаза 2: Исправление
+`senior-dev` сначала пишет тест, воспроизводящий баг, затем реализует fix.
+**GATE (автоматический):** Тест проходит. Оценивается всегда, даже в autopilot.
 
-### Fase 3: Validación
-Activa `qa-engineer` y `security-officer` en paralelo para regression testing y security check.
-**GATE (automático+seguridad):** QA y seguridad aprueban. Se evalúa siempre, incluso en autopilot.
+### Фаза 3: Валидация
+Активируй `qa-engineer` и `security-officer` параллельно для regression testing и security check.
+**GATE (автоматический+безопасность):** QA и безопасность одобряют. Оценивается всегда, даже в autopilot.
 
-### Especialistas opcionales en `fix`
+### Опциональные специалисты в `fix`
 
-El único opcional es **lucius**. Si está activo, corre en secuencia en
-`validacion`. No invoques data-engineer, copywriter, github-manager ni librarian.
+Единственный опциональный это **cto**. Если он активен, работает последовательно в
+`validacion`. Не вызывай data-engineer, copywriter, github-manager и librarian.
 
-## Loop iterativo
+## Итеративный цикл
 
-Si una gate no se supera al primer intento, corrige los problemas y vuelve a intentarlo. Maximo 5 intentos por fase. Si tras 5 intentos la gate sigue sin superarse, informa al usuario y espera instrucciones. En modo autopilot, si agotas los 5 intentos, deten el flujo e informa del problema -- no sigas reintentando indefinidamente.
+Если gate не пройден с первой попытки, исправь проблемы и попробуй снова. Максимум 5 попыток на фазу. Если после 5 попыток gate всё ещё не пройден, сообщи пользователю и жди инструкций. В режиме autopilot, если исчерпаны 5 попыток, останови процесс и сообщи о проблеме -- не продолжай повторять бесконечно.
 
-Cuando el fix está validado, cierra con:
+Когда fix валидирован, закрой так:
 
 ```bash
 python3 .claude/alfred-continuity.py cierre "$PWD"
 ```
 
-## Cierre canónico del comando
+## Каноничное завершение команды
 
-- NO cierres con una explicación larga si el estado del fix ya quedó
-  persistido. Si ya corriste `cierre`, ese bloque es la respuesta final.
-- Si una gate de usuario queda pendiente, usa un único `AskUserQuestion`
-  navegable y pegado a la fase actual.
-- Si el flujo sigue abierto, apóyate en `.claude/alfred-dev-state.json` y en
-  `docs/project/current.md`, `docs/project/progress.md` y
-  `docs/project/traceability.md` para dejar visible:
-  - bug/causa raíz en curso
-  - fase actual
-  - especialistas activos o bajo demanda
-  - siguiente paso esperado
+- НЕ закрывай длинным объяснением, если состояние fix уже сохранено.
+  Если ты уже выполнил `cierre`, этот блок и есть итоговый ответ.
+- Если пользовательский gate остаётся в ожидании, используй один навигируемый
+  `AskUserQuestion`, привязанный к текущей фазе.
+- Если процесс остаётся открытым, опирайся на `.claude/alfred-dev-state.json` и на
+  `docs/project/current.md`, `docs/project/progress.md` и
+  `docs/project/traceability.md`, чтобы показать:
+  - баг/первопричину в работе
+  - текущую фазу
+  - активных специалистов или специалистов по запросу
+  - ожидаемый следующий шаг

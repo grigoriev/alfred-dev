@@ -553,9 +553,9 @@ class TestRuntimeSurfaceCounts(unittest.TestCase):
 class TestReadmeAndDocsSurface(unittest.TestCase):
     def test_readme_matches_current_public_claims(self):
         readme = _read("README.md")
-        self.assertIn("11 skills", _normalize(readme))
+        self.assertIn(_normalize("11 плоских skills"), _normalize(readme))
         self.assertIn("Python 3.10+", readme)
-        self.assertIn("Novedades en v0.7.0", readme)
+        self.assertIn("## Новое в v0.7.0", readme)
 
     def test_docs_readme_and_architecture_match_current_surface(self):
         docs_readme = _read("docs/README.md")
@@ -603,14 +603,14 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
                 f"docs/agents/README.md no enlaza la ficha pública de {agent_name}",
             )
 
-    def test_feature_docs_protect_selina_phase(self):
+    def test_feature_docs_protect_designer_phase(self):
         flows = _read("docs/flows.md")
         feature_command = _read("commands/feature.md")
-        lucius = _read("docs/agents/lucius.md")
+        cto = _read("docs/agents/cto.md")
 
         self.assertIn("estilo", _normalize(flows))
-        self.assertIn("selina", _normalize(feature_command))
-        self.assertIn("lucius", _normalize(lucius))
+        self.assertIn("designer", _normalize(feature_command))
+        self.assertIn("cto", _normalize(cto))
 
     def test_large_commands_define_canonical_closeout_contracts(self):
         feature_command = _read("commands/feature.md")
@@ -619,30 +619,30 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
         ship_command = _read("commands/ship.md")
         audit_command = _read("commands/audit.md")
 
-        self.assertIn("## Cierre canónico del comando", feature_command)
+        self.assertIn("## Каноничное завершение команды", feature_command)
         self.assertIn(".claude/alfred-dev-state.json", feature_command)
         self.assertIn("docs/project/current.md", feature_command)
         self.assertIn("AskUserQuestion", feature_command)
-        self.assertIn("siguiente paso esperado", feature_command)
+        self.assertIn("ожидаемый следующий шаг", feature_command)
 
-        self.assertIn("## Cierre canónico del comando", quick_command)
-        self.assertIn("segunda planificación libre", quick_command)
+        self.assertIn("## Каноничное завершение команды", quick_command)
+        self.assertIn("свободной планировкой", quick_command)
         self.assertIn("docs/project/traceability.md", quick_command)
         self.assertIn("/alfred-dev:uat", quick_command)
 
-        self.assertIn("## Cierre canónico del comando", fix_command)
-        self.assertIn("bug/causa raíz en curso", fix_command)
+        self.assertIn("## Каноничное завершение команды", fix_command)
+        self.assertIn("баг/первопричину в работе", fix_command)
         self.assertIn("docs/project/progress.md", fix_command)
 
-        self.assertIn("## Cierre canónico del comando", ship_command)
-        self.assertIn("La gate de despliegue debe resolverse con un único `AskUserQuestion`", ship_command)
-        self.assertIn("fase de release actual", ship_command)
-        self.assertIn("todavía no desplegar", ship_command)
+        self.assertIn("## Каноничное завершение команды", ship_command)
+        self.assertIn("Gate развёртывания должен решаться одним навигируемым `AskUserQuestion`", ship_command)
+        self.assertIn("текущую фазу релиза", ship_command)
+        self.assertIn("пока не разворачивать", ship_command)
 
-        self.assertIn("## Cierre canónico del comando", audit_command)
-        self.assertIn("preflight de SonarQube requiere decisión humana", audit_command)
-        self.assertIn("resumen ejecutivo accionable", audit_command)
-        self.assertIn("no sustituye los hallazgos", audit_command)
+        self.assertIn("## Каноничное завершение команды", audit_command)
+        self.assertIn("preflight SonarQube требует решения человека", audit_command)
+        self.assertIn("действенную сводку для руководства", audit_command)
+        self.assertIn("не заменяет находки", audit_command)
 
     def test_hooks_docs_keep_dangerous_command_guard_fail_closed(self):
         hooks_doc_norm = _normalize(_read("docs/hooks.md"))
@@ -665,11 +665,11 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
 
         readme_config = _slice_between(
             readme,
-            "## Configuracion",
-            "## Descargo de responsabilidad",
+            "## Конфигурация",
+            "## Отказ от ответственности",
         )
         self.assertIn("entrega: autonomo", readme_config)
-        self.assertIn("lucius: false", readme_config)
+        self.assertIn("cto: false", readme_config)
         self.assertNotIn("seguridad: autonomo", readme_config)
         self.assertNotIn("devops: semi-autonomo", readme_config)
 
@@ -677,12 +677,12 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
             "producto, arquitectura, desarrollo, calidad, documentacion, entrega",
             config_command_norm,
         )
-        self.assertIn("principal navegable", config_command_norm)
-        self.assertIn("modo no interactivo", config_command_norm)
+        self.assertIn(_normalize("главное меню"), config_command_norm)
+        self.assertIn(_normalize("Неинтерактивный режим"), config_command_norm)
         self.assertIn("config_headless_menu", config_command_norm)
-        self.assertIn("vuelve cancelada", config_command_norm)
+        self.assertIn(_normalize("возвращается отменённым"), config_command_norm)
         self.assertIn("core/config_cli.py", config_command_norm)
-        self.assertIn("menu", config_command_norm)
+        self.assertIn("меню", config_command_norm)
         self.assertIn("build_config_section_summaries()", config_command_norm)
         self.assertIn("build_config_section_menu()", config_command_norm)
         self.assertIn("apply_config_section_update()", config_command_norm)
@@ -722,27 +722,27 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
         self.assertIn('python3 .claude/alfred-continuity.py progress "$PWD"', progress_command)
         self.assertIn("focus", progress_command)
         self.assertIn("directive", progress_command)
-        self.assertIn("úsalo como respuesta final", progress_command)
+        self.assertIn("используй её как итоговый ответ", progress_command)
         self.assertIn('python3 .claude/alfred-continuity.py resume "$PWD"', resume_command)
         self.assertIn("focus", sync_github_command)
         self.assertIn("directive", sync_github_command)
-        self.assertIn("úsala como respuesta final y termina", sync_github_command)
-        self.assertIn("menos de 12 líneas", sync_github_command)
-        self.assertIn("no añadas bloques `Insight`", sync_github_command)
-        self.assertIn("no sigas explorando", sync_github_command)
+        self.assertIn("используй его как итоговый ответ и закончи", sync_github_command)
+        self.assertIn("короче 12 строк", sync_github_command)
+        self.assertIn("не добавляй блоки `Insight`", sync_github_command)
+        self.assertIn("не продолжай исследование", sync_github_command)
         self.assertIn('python3 .claude/alfred-continuity.py pause "$PWD"', pause_command)
-        self.assertIn("Primero ejecuta el helper determinista", pause_command)
-        self.assertIn("Solo si el helper falla, cae al modo manual", pause_command)
-        self.assertIn("No la reenvuelvas con un segundo resumen", pause_command)
+        self.assertIn("Сначала выполни детерминированный helper", pause_command)
+        self.assertIn("Только если helper падает, переходи в ручной режим", pause_command)
+        self.assertIn("Не оборачивай его во вторую сводку", pause_command)
         self.assertIn('python3 .claude/alfred-continuity.py resume "$PWD"', resume_command)
-        self.assertIn("Primero ejecuta el helper determinista", resume_command)
-        self.assertIn("Solo si el helper falla, cae al modo manual", resume_command)
-        self.assertIn("No la reenvuelvas con un segundo resumen", resume_command)
+        self.assertIn("Сначала выполни детерминированный helper", resume_command)
+        self.assertIn("Только если helper падает, переходи в ручной режим", resume_command)
+        self.assertIn("Не оборачивай его во вторую сводку", resume_command)
         self.assertIn('python3 .claude/alfred-continuity.py verify "$PWD" --raw "$ARGUMENTS"', verify_command)
-        self.assertIn("Si el helper devuelve una respuesta válida, úsala como respuesta final", verify_command)
-        self.assertIn("NO añadas una segunda capa de resumen", verify_command)
-        self.assertIn("## Cierre canónico del comando", update_command)
-        self.assertIn("un único menú seleccionable real", update_command)
+        self.assertIn("Если helper возвращает валидный ответ, используй его как итоговый ответ", verify_command)
+        self.assertIn("НЕ добавляй второй слой сводки", verify_command)
+        self.assertIn("## Каноничное завершение команды", update_command)
+        self.assertIn("одно настоящее выбираемое меню", update_command)
 
     def test_long_flows_are_helper_first_for_headless_runs(self):
         activity_capture = _read("hooks/activity-capture.py")
@@ -768,32 +768,32 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
             self.assertIn("consume-prefetch", command_doc)
             self.assertIn("start-flow", command_doc)
             self.assertIn("--command " + command, command_doc)
-            self.assertIn("modo headless", _normalize(command_doc))
+            self.assertIn("режиме headless", _normalize(command_doc))
             self.assertIn(marker, command_doc)
-            self.assertIn("NO", command_doc)
-            self.assertIn("llames agentes", command_doc)
+            self.assertIn("НЕ", command_doc)
+            self.assertIn("не вызывай агентов", command_doc)
 
         audit_command = _read("commands/audit.md")
         self.assertIn("AUDIT_DOCKER_INSTALL_MENU_HEADLESS", audit_command)
         self.assertIn("AUDIT_DOCKER_START_MENU_HEADLESS", audit_command)
-        self.assertIn("no autoelijas", audit_command)
+        self.assertIn("не выбирай сам", audit_command)
 
-    def test_lucius_is_helper_first_for_headless_runs(self):
+    def test_cto_is_helper_first_for_headless_runs(self):
         activity_capture = _read("hooks/activity-capture.py")
         session_start = _read("hooks/session-start.sh")
-        lucius_command = _read("commands/lucius.md")
+        cto_command = _read("commands/cto.md")
 
-        self.assertIn('"lucius"', activity_capture)
-        self.assertIn("prepare_lucius_review", activity_capture)
-        self.assertIn("Lucius", session_start)
-        self.assertIn("consume-prefetch", lucius_command)
-        self.assertIn('python3 .claude/alfred-continuity.py lucius "$PWD" --raw "$ARGUMENTS"', lucius_command)
-        self.assertIn("modo headless", _normalize(lucius_command))
-        self.assertIn("LUCIUS_HEADLESS_START", lucius_command)
-        self.assertIn("LUCIUS_INVALID_SCOPE", lucius_command)
-        self.assertIn("NO lances Agent", lucius_command)
-        self.assertIn("ejecutes `codex exec`", lucius_command)
-        self.assertIn("NO presentes una revisión como hecha", lucius_command)
+        self.assertIn('"cto"', activity_capture)
+        self.assertIn("prepare_cto_review", activity_capture)
+        self.assertIn("CTO", session_start)
+        self.assertIn("consume-prefetch", cto_command)
+        self.assertIn('python3 .claude/alfred-continuity.py cto "$PWD" --raw "$ARGUMENTS"', cto_command)
+        self.assertIn("режиме headless", _normalize(cto_command))
+        self.assertIn("CTO_HEADLESS_START", cto_command)
+        self.assertIn("CTO_INVALID_SCOPE", cto_command)
+        self.assertIn("НЕ запускай Agent", cto_command)
+        self.assertIn("выполняй `codex exec`", cto_command)
+        self.assertIn("НЕ представляй проверку как выполненную", cto_command)
 
 
 class TestInstallSurfaceContracts(unittest.TestCase):
@@ -822,9 +822,9 @@ class TestInstallSurfaceContracts(unittest.TestCase):
     def test_quick_headless_closes_compactly_after_helper_first(self):
         quick = _read("commands/quick.md")
 
-        self.assertIn("cierra con ese resumen y termina", quick)
-        self.assertIn("menos de 20 líneas", quick)
-        self.assertIn("sin bloques `Insight`", quick)
+        self.assertIn("закрой этой сводкой и закончи", quick)
+        self.assertIn("короче 20 строк", quick)
+        self.assertIn("без блоков `Insight`", quick)
 
     def test_installation_docs_describe_claude_cli_based_flow(self):
         install_doc = _read("docs/installation.md")
@@ -832,7 +832,7 @@ class TestInstallSurfaceContracts(unittest.TestCase):
         update_command = _read("commands/update.md")
         docs_readme = _read("docs/README.md")
 
-        self.assertIn("claude plugin marketplace add 686f6c61/alfred-dev --scope user", install_doc)
+        self.assertIn("claude plugin marketplace add grigoriev/alfred-dev --scope user", install_doc)
         self.assertIn("claude plugin install alfred-dev@alfred-dev --scope user", install_doc)
         self.assertIn("claude plugin uninstall alfred-dev@alfred-dev --scope local", install_doc)
         self.assertIn("claude plugin uninstall alfred-dev@alfred-dev --scope project", install_doc)
@@ -859,25 +859,26 @@ class TestInstallSurfaceContracts(unittest.TestCase):
         self.assertIn(".mcp.json", install_doc)
         self.assertIn("fuente github propia", _normalize(install_doc))
         self.assertIn("no oficial", _normalize(install_doc))
-        self.assertIn("fuente github global", _normalize(readme))
+        self.assertIn(_normalize("глобальный источник GitHub"), _normalize(readme))
         self.assertIn("unico menu seleccionable", _normalize(install_doc))
-        self.assertIn("un unico `askuserquestion`", _normalize(update_command))
+        self.assertIn(_normalize("один `AskUserQuestion`"), _normalize(update_command))
         self.assertIn("claude plugin list --json", update_command)
-        self.assertIn("normaliza a `--scope user`", update_command)
-        self.assertIn("no pisa `~/.claude/skills`", update_command)
+        self.assertIn("нормализует их в `--scope user`", update_command)
+        self.assertIn("не затрагивает `~/.claude/skills`", update_command)
         self.assertNotIn("alias personal global `/alfred`", update_command)
+        self.assertNotIn("персональный глобальный алиас `/alfred`", update_command)
         self.assertIn("~/.claude/skills/alfred/SKILL.md", install_doc)
         self.assertIn("~/.claude/commands/alfred.md", update_command)
         self.assertIn("no se usa `--scope local` como ruta soportada", install_doc)
         self.assertIn("limpia primero cualquier rastro `local` o `project`", install_doc)
-        self.assertIn("No uses `claude plugin update --scope local`", update_command)
+        self.assertIn("Не используй `claude plugin update --scope local`", update_command)
         self.assertIn("plugin:alfred-dev:alfred-memory", install_doc)
         self.assertIn("Pending approval", install_doc)
         self.assertIn("docs/release.md", readme)
         self.assertIn("release.md", docs_readme)
         self.assertNotIn("release-audit-0.6.0.md", readme)
         self.assertNotIn("release-audit-0.6.0.md", docs_readme)
-        self.assertIn("Nunca", update_command)
+        self.assertIn("**Никогда не**", update_command)
         self.assertIn("0.10.0", update_command)
         self.assertIn('echo \'{"version":2,"plugins":{}}\'', install_doc)
         self.assertNotIn("git clone --depth 1", install_doc)
@@ -973,7 +974,7 @@ class TestInstallSurfaceContracts(unittest.TestCase):
         self.assertIn("cli nativa de claude code", _normalize(install_doc))
         self.assertIn("claude plugin uninstall alfred-dev@alfred-dev --scope user", _normalize(install_doc))
         self.assertIn("claude plugin marketplace remove alfred-dev --scope user", _normalize(install_doc))
-        self.assertIn("cli nativa de claude code", _normalize(readme))
+        self.assertIn(_normalize("нативный CLI Claude Code"), _normalize(readme))
         if _has_site():
             site = _read("site/src/components/BrutalistLandingPage.astro")
             self.assertIn("claude plugin uninstall alfred-dev@alfred-dev --scope user", site)
@@ -985,9 +986,9 @@ class TestOptionalAgentsContracts(unittest.TestCase):
         composition = _read("commands/_composicion.md")
         configuration = _read("docs/configuration.md")
 
-        self.assertIn("lucius", _normalize(config))
+        self.assertIn("cto", _normalize(config))
         self.assertIn("build_optional_agent_group_menu", config)
-        self.assertIn("Selina", composition)
+        self.assertIn("Designer", composition)
         self.assertIn("build_optional_agent_group_menus()", configuration)
 
     def test_copywriter_doc_does_not_overpromise_automatic_quality_integration(self):
@@ -1017,7 +1018,7 @@ class TestOptionalAgentsContracts(unittest.TestCase):
         self.assertIn("No decide indexación", i18n)
 
     def test_technical_optional_docs_keep_runtime_boundaries_clear(self):
-        self.skipTest("opcionales tecnicos eliminados; solo queda lucius")
+        self.skipTest("opcionales tecnicos eliminados; solo queda cto")
         composition = _read("commands/_composicion.md")
         data = _read("docs/agents/data-engineer.md")
         performance = _read("docs/agents/performance-engineer.md")
@@ -1081,7 +1082,7 @@ class TestLandingSurfaceContracts(unittest.TestCase):
         self.assertIn("{ number: 62, label: 'Skills' }", es)
         self.assertIn("Son 9 agentes especializados", es)
         self.assertIn("19 agentes. catalogo publicado de 62 skills. 13 hooks. 25 comandos namespaced + /alfred.", _normalize(es))
-        self.assertIn("Lucius", es)
+        self.assertIn("CTO", es)
 
     def test_english_landing_uses_current_counts(self):
         if not _has_site():
@@ -1093,7 +1094,7 @@ class TestLandingSurfaceContracts(unittest.TestCase):
         self.assertIn("{ number: 62, label: 'Skills' }", en)
         self.assertIn("They are 9 specialised agents", en)
         self.assertIn("19 agents. Published catalog of 62 skills. 13 hooks. 25 namespaced commands + /alfred.", en)
-        self.assertIn("Lucius", en)
+        self.assertIn("CTO", en)
 
 
 if __name__ == "__main__":

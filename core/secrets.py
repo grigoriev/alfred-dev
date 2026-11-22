@@ -94,19 +94,19 @@ SECRET_PATTERNS: List[Tuple[re.Pattern, str]] = [
 ]
 
 SECRET_DESCRIPTIONS = {
-    "AWS_KEY": "AWS Access Key (patron AKIA...)",
+    "AWS_KEY": "AWS Access Key (шаблон AKIA...)",
     "ANTHROPIC_KEY": "Anthropic API Key",
-    "SK_KEY": "Clave API con prefijo sk- (OpenAI, Stripe u otro)",
+    "SK_KEY": "API-ключ с префиксом sk- (OpenAI, Stripe или другой)",
     "GITHUB_TOKEN": "GitHub Personal Access Token",
     "SLACK_TOKEN": "Slack Token",
-    "GOOGLE_KEY": "Google API Key (patron AIza...)",
+    "GOOGLE_KEY": "Google API Key (шаблон AIza...)",
     "SENDGRID_KEY": "SendGrid API Key",
-    "PRIVATE_KEY": "Clave privada PEM/SSH",
-    "JWT": "JWT token hardcodeado",
-    "CONNECTION_STRING": "Connection string con credenciales",
+    "PRIVATE_KEY": "Приватный ключ PEM/SSH",
+    "JWT": "Захардкоженный JWT-токен",
+    "CONNECTION_STRING": "Connection string с учётными данными",
     "SLACK_WEBHOOK": "Slack Webhook URL",
     "DISCORD_WEBHOOK": "Discord Webhook URL",
-    "HARDCODED_CREDENTIAL": "Credencial hardcodeada en asignacion",
+    "HARDCODED_CREDENTIAL": "Захардкоженные учётные данные в присваивании",
 }
 
 _ALLOWED_ENV_SUFFIXES = {

@@ -54,7 +54,7 @@ class TestUninstallSh(unittest.TestCase):
                 json.dumps(
                     {
                         "alfred-dev": {
-                            "source": {"source": "github", "repo": "686f6c61/alfred-dev"}
+                            "source": {"source": "github", "repo": "grigoriev/alfred-dev"}
                         }
                     }
                 ),

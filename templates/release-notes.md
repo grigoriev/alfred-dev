@@ -1,70 +1,70 @@
 # Release Notes: v{{version}}
 
-**Fecha:** {{fecha}}
-**Autor:** tech-writer
+**Дата:** {{fecha}}
+**Автор:** tech-writer
 
-## Resumen
+## Резюме
 
 {{resumen_release}}
 
-## Novedades
+## Новое
 
 {{novedades}}
 
-## Correcciones
+## Исправления
 
 {{correcciones}}
 
-## Cambios importantes
+## Важные изменения
 
 {{breaking_changes}}
 
-## Guía de migración
+## Руководство по миграции
 
 {{guia_migracion}}
 
-## Problemas conocidos
+## Известные проблемы
 
 {{problemas_conocidos}}
 
-## Agradecimientos
+## Благодарности
 
 {{agradecimientos}}
 
-<!-- EJEMPLO COMPLETADO ─────────────────────────────────────────────────
+<!-- ЗАПОЛНЕННЫЙ ПРИМЕР ─────────────────────────────────────────────────
 
 # Release Notes: v0.3.0
 
-**Fecha:** 2026-02-28
-**Autor:** tech-writer
+**Дата:** 2026-02-28
+**Автор:** tech-writer
 
-## Resumen
+## Резюме
 
 {{resumen_version}}
 
-## Novedades
+## Новое
 
 {{novedades}}
 
-## Correcciones
+## Исправления
 
 {{correcciones}}
 
-## Cambios importantes
+## Важные изменения
 
 {{cambios_importantes}}
 
-## Guia de migracion
+## Руководство по миграции
 
 {{guia_migracion_detallada}}
 
-## Problemas conocidos
+## Известные проблемы
 
 {{problemas_conocidos}}
 
-## Agradecimientos
+## Благодарности
 
-Gracias a los usuarios que reportaron el conflicto de puertos con otros
-proyectos Alfred Dev activos en la misma maquina.
+Спасибо пользователям, сообщившим о конфликте портов с другими
+активными проектами Alfred Dev на той же машине.
 
-──────────────────────────────────────────────── FIN DEL EJEMPLO -->
+──────────────────────────────────────────────── КОНЕЦ ПРИМЕРА -->

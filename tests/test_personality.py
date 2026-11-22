@@ -15,18 +15,18 @@ class TestPersonality(unittest.TestCase):
         core = {
             "alfred", "product-owner", "architect", "senior-dev",
             "security-officer", "qa-engineer", "devops-engineer", "tech-writer",
-            "selina", "lucius",
+            "designer", "cto",
         }
         self.assertEqual(set(AGENTS.keys()), core)
 
     def test_optional_agents_have_flag(self):
-        self.assertIn("lucius", AGENTS)
+        self.assertIn("cto", AGENTS)
 
     def test_core_agents_not_optional(self):
         core_names = {
             "alfred", "product-owner", "architect", "senior-dev",
             "security-officer", "qa-engineer", "devops-engineer", "tech-writer",
-            "selina",
+            "designer",
         }
         for name in core_names:
             self.assertFalse(

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Renderizado de demos visuales y galeria del catalogo de Selina."""
+"""Renderizado de demos visuales y galeria del catalogo de Designer."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import html
 import os
 from typing import Dict, List, Optional
 
-from core.selina_style_catalog import (
+from core.designer_style_catalog import (
     DEFAULT_STYLE_ID,
     get_palette_modes,
     get_style_catalog,
@@ -15,13 +15,13 @@ from core.selina_style_catalog import (
     resolve_font_pairing,
     resolve_palette,
 )
-from core.selina_style_direction import resolve_visual_session_dir
+from core.designer_style_direction import resolve_visual_session_dir
 
 
-STYLE_DEMO_GALLERY_FILENAME = "selina-style-gallery.html"
+STYLE_DEMO_GALLERY_FILENAME = "designer-style-gallery.html"
 
 DEMO_CONTENT = {
-    "eyebrow": "Selina / sandbox de sistemas de diseño",
+    "eyebrow": "Designer / sandbox de sistemas de diseño",
     "headline": "Claude Code, pero con un sistema de diseño de verdad",
     "body": (
         "Una landing simple para comparar sistemas de diseño con el mismo contenido: "
@@ -47,7 +47,7 @@ DEMO_CONTENT = {
         },
         {
             "title": "Direccion visual antes del CSS",
-            "body": "Selina fija el lenguaje visual antes de que architect o senior-dev diseñen componentes.",
+            "body": "Designer fija el lenguaje visual antes de que architect o senior-dev diseñen componentes.",
         },
         {
             "title": "Entrega con evidencia",
@@ -72,7 +72,7 @@ def _style_class(style_id: str) -> str:
 
 def _refs_markup(items: List[Dict[str, str]]) -> str:
     if not items:
-        return '<span class="style-links__empty">Sin referencias fijadas: Selina define el sistema de diseño a partir del contexto.</span>'
+        return '<span class="style-links__empty">Sin referencias fijadas: Designer define el sistema de diseño a partir del contexto.</span>'
     return "".join(
         f'<a href="{_escape(item["url"])}" target="_blank" rel="noreferrer">{_escape(item["label"])}</a>'
         for item in items
@@ -1200,7 +1200,7 @@ def render_style_demo_document(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{_escape(style["name"])} — Demo de sistema de diseño de Selina</title>
+  <title>{_escape(style["name"])} — Demo de sistema de diseño de Designer</title>
   {google_fonts_link}
   <style>
     {_demo_base_css(palette, pairing["headings"], pairing["body"])}
@@ -1211,7 +1211,7 @@ def render_style_demo_document(
   <div class="demo-shell">
     <header class="topbar">
       <div class="topbar__brand">
-        <span class="brand-badge">SELINA</span>
+        <span class="brand-badge">DESIGNER</span>
         <span class="style-badge">{_escape(style["name"])}</span>
         <span class="style-badge">{_escape(resolved_palette_mode)}</span>
       </div>
@@ -1259,7 +1259,7 @@ def render_style_demo_document(
     <section class="cta-band" id="cta">
       <p class="section-kicker">{_escape(style["description"])}</p>
       <h2>{_escape(style["when_to_use"])}</h2>
-      <p>Esta demo no pretende cerrar diseño final. Sirve para validar si este sistema de diseño merece pasar a la siguiente ronda de Selina.</p>
+      <p>Esta demo no pretende cerrar diseño final. Sirve para validar si este sistema de diseño merece pasar a la siguiente ronda de Designer.</p>
     </section>
   </div>
 </body>
@@ -1270,9 +1270,9 @@ def render_style_demo_document(
 def render_style_gallery_html(title: Optional[str] = None, subtitle: Optional[str] = None) -> str:
     """Renderiza una galería navegable del catálogo de sistemas de diseño."""
     catalog = get_style_catalog()
-    title_text = title or "Atlas de sistemas de diseño de Selina"
+    title_text = title or "Atlas de sistemas de diseño de Designer"
     subtitle_text = subtitle or (
-        "Catálogo de sistemas de diseño para explorar direcciones comparables antes de que Selina "
+        "Catálogo de sistemas de diseño para explorar direcciones comparables antes de que Designer "
         "proponga las tres opciones finales de una fase real."
     )
 
@@ -1322,10 +1322,10 @@ def render_style_gallery_html(title: Optional[str] = None, subtitle: Optional[st
 <body>
   <div class="gallery-body">
     <section class="gallery-head">
-      <p class="section-kicker">Selina / catálogo de sistemas de diseño</p>
+      <p class="section-kicker">Designer / catálogo de sistemas de diseño</p>
       <h1>{_escape(title_text)}</h1>
       <p>{_escape(subtitle_text)}</p>
-      <p>Regla operativa: el catálogo puede tener muchos sistemas de diseño base, pero la fase real de Selina sigue cerrando con tres propuestas comparables, no con diez opciones a la vez.</p>
+      <p>Regla operativa: el catálogo puede tener muchos sistemas de diseño base, pero la fase real de Designer sigue cerrando con tres propuestas comparables, no con diez opciones a la vez.</p>
     </section>
     <section class="gallery-grid">
       {"".join(card_markup)}

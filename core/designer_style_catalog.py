@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Catalogo canonico de direcciones visuales para Selina."""
+"""Catalogo canonico de direcciones visuales para Designer."""
 
 from __future__ import annotations
 
@@ -306,7 +306,7 @@ STYLE_CATALOG: Tuple[Dict[str, Any], ...] = (
     {
         "id": DEFAULT_STYLE_ID,
         "name": "Libre / Contextual",
-        "summary": "Selina trabaja como hasta ahora y decide la direccion a partir del producto, sin casar el proyecto con una tendencia previa.",
+        "summary": "Designer trabaja como hasta ahora y decide la direccion a partir del producto, sin casar el proyecto con una tendencia previa.",
         "description": "Modo sin sistema de diseño prefijado. Sirve cuando la mejor respuesta sale del PRD, del usuario y del contexto real del producto.",
         "when_to_use": "Conviene cuando quieres criterio visual sin imponer una corriente concreta desde el principio.",
         "anti_patterns": [
@@ -315,7 +315,7 @@ STYLE_CATALOG: Tuple[Dict[str, Any], ...] = (
         ],
         "context_signals": [
             "Producto con necesidades mixtas o todavia poco definidas.",
-            "Equipo que quiere que Selina parta del problema antes que de la estetica.",
+            "Equipo que quiere que Designer parta del problema antes que de la estetica.",
         ],
         "references": [],
         "palette_modes": ["recommended", "pastel", "solid", "monochrome"],
@@ -781,7 +781,7 @@ def get_style_trend(style_id: str) -> Dict[str, Any]:
     """Devuelve una familia visual canonica por id."""
     normalized_id = str(style_id or "").strip()
     if normalized_id not in STYLE_CATALOG_BY_ID:
-        raise KeyError(f"Estilo de Selina desconocido: {normalized_id}")
+        raise KeyError(f"Estilo de Designer desconocido: {normalized_id}")
     return _with_style_cues(STYLE_CATALOG_BY_ID[normalized_id])
 
 
@@ -878,7 +878,7 @@ def build_style_catalog_proposal(
     custom_headings: Optional[str] = None,
     custom_body: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Construye una propuesta de Selina a partir del catalogo."""
+    """Construye una propuesta de Designer a partir del catalogo."""
     style = get_style_trend(style_id)
     palette, resolved_palette_mode = resolve_palette(style_id, palette_mode)
     palette_mode_meta = resolve_palette_mode_meta(resolved_palette_mode)

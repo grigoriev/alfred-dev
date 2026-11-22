@@ -24,13 +24,13 @@ def main() -> int:
 
         stop_memory_ui(project_dir)
     except Exception as exc:
-        print(f"[session-end] aviso: no se pudo detener Memory UI: {exc}", file=sys.stderr)
+        print(f"[session-end] предупреждение: не удалось остановить Memory UI: {exc}", file=sys.stderr)
     try:
         from core.hygiene import write_session_cierre
 
         write_session_cierre(project_dir)
     except Exception as exc:
-        print(f"[session-end] aviso: no se pudo escribir el cierre: {exc}", file=sys.stderr)
+        print(f"[session-end] предупреждение: не удалось записать итог сессии: {exc}", file=sys.stderr)
     return 0
 
 

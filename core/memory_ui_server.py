@@ -497,8 +497,8 @@ HTML_TEMPLATE = """<!doctype html>
         </div>
         <div class="hero-links">
           <a href="https://alfred-dev.com/" target="_blank" rel="noopener noreferrer">Web</a>
-          <a href="https://github.com/686f6c61/alfred-dev#readme" target="_blank" rel="noopener noreferrer">README</a>
-          <a href="https://github.com/686f6c61/alfred-dev/tree/main/docs" target="_blank" rel="noopener noreferrer">Docs</a>
+          <a href="https://github.com/grigoriev/alfred-dev#readme" target="_blank" rel="noopener noreferrer">README</a>
+          <a href="https://github.com/grigoriev/alfred-dev/tree/ru/docs" target="_blank" rel="noopener noreferrer">Docs</a>
         </div>
       </div>
       <div class="hero-meta">

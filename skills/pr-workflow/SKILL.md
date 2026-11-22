@@ -1,59 +1,59 @@
 ---
 name: pr-workflow
-description: "Crear pull requests completas con descripcion, labels y reviewers"
+description: "Создавать полноценные pull requests с описанием, labels и reviewers"
 disable-model-invocation: true
 ---
 
-# Crear pull requests completas
+# Создание полноценных pull requests
 
-## Resumen
+## Резюме
 
-Este skill guia el proceso de creacion de una pull request bien documentada, desde la verificacion de cambios hasta la asignacion de reviewers. Una PR no es solo un mecanismo de merge: es una pieza de comunicacion que explica a los revisores que se ha cambiado, por que y como verificarlo.
+Этот skill ведёт через процесс создания хорошо задокументированной pull request: от проверки изменений до назначения reviewers. PR это не просто механизм merge: это сообщение, которое объясняет ревьюерам, что изменено, почему и как это проверить.
 
-El objetivo es que cualquier miembro del equipo pueda entender la PR sin necesidad de leer cada linea de codigo antes de abrir el diff.
+Цель в том, чтобы любой член команды мог понять PR, не читая каждую строку кода до открытия diff.
 
-## Proceso
+## Процесс
 
-1. **Verificar el estado de los cambios.** Ejecutar `git diff` y `git status` para confirmar que los cambios pendientes corresponden a lo que se quiere incluir en la PR. Si hay cambios sin commitear, confirmar con el usuario si deben incluirse o quedarse fuera.
+1. **Проверить состояние изменений.** Выполнить `git diff` и `git status`, чтобы убедиться, что незакоммиченные изменения соответствуют тому, что нужно включить в PR. Если есть незакоммиченные изменения, уточнить у пользователя, включать ли их или оставить за рамками.
 
-2. **Verificar la rama.** Asegurarse de que se trabaja en una rama feature o fix, no directamente en main. Si no existe rama, crearla con un nombre descriptivo: `feature/nombre-funcionalidad` o `fix/descripcion-bug`.
+2. **Проверить ветку.** Убедиться, что работа идёт в ветке feature или fix, а не прямо в main. Если ветки нет, создать её с описательным именем: `feature/nombre-funcionalidad` или `fix/descripcion-bug`.
 
-3. **Redactar el titulo.** El titulo debe tener menos de 70 caracteres y describir el cambio de forma clara. Formato recomendado: `tipo: descripcion breve`. Ejemplos:
+3. **Написать заголовок.** Заголовок должен быть короче 70 символов и ясно описывать изменение. Рекомендуемый формат: `тип: краткое описание`. Примеры:
 
-   - `feat: anadir filtro de busqueda por fecha`
-   - `fix: corregir calculo de IVA en facturas`
-   - `refactor: extraer logica de validacion a modulo propio`
+   - `feat: добавить фильтр поиска по дате`
+   - `fix: исправить расчёт НДС в счетах`
+   - `refactor: вынести логику валидации в отдельный модуль`
 
-4. **Redactar la descripcion.** Seguir esta estructura estandarizada:
+4. **Написать описание.** Следовать этой стандартной структуре:
 
    ```markdown
-   ## Resumen
-   - [1-3 puntos explicando que cambia y por que]
+   ## Резюме
+   - [1-3 пункта: что меняется и почему]
 
-   ## Motivacion
-   [Por que es necesario este cambio. Enlazar al issue si existe.]
+   ## Мотивация
+   [Почему это изменение необходимо. Дать ссылку на issue, если он есть.]
 
-   ## Plan de pruebas
-   - [ ] [Pasos concretos para verificar que el cambio funciona]
-   - [ ] [Comprobaciones de regresion]
+   ## План тестирования
+   - [ ] [Конкретные шаги для проверки, что изменение работает]
+   - [ ] [Проверки на регрессию]
 
-   ## Notas para el revisor
-   [Contexto adicional, decisiones de diseno, areas que necesitan atencion especial]
+   ## Заметки для ревьюера
+   [Дополнительный контекст, проектные решения, области, требующие особого внимания]
    ```
 
-5. **Asignar labels.** Etiquetar la PR segun el tipo de cambio (`bug`, `feature`, `refactor`, `docs`) y la prioridad si aplica. Usar `gh pr edit --add-label` para asignarlas.
+5. **Назначить labels.** Пометить PR по типу изменения (`bug`, `feature`, `refactor`, `docs`) и приоритету, если применимо. Использовать `gh pr edit --add-label` для назначения.
 
-6. **Enlazar issues.** Si la PR resuelve un issue, incluir `Closes #XX` en la descripcion para que GitHub lo cierre automaticamente al hacer merge.
+6. **Связать issues.** Если PR решает issue, включить `Closes #XX` в описание, чтобы GitHub закрыл его автоматически при merge.
 
-7. **Asignar reviewers.** Seleccionar revisores relevantes segun el area del codigo afectada. Usar `gh pr create --reviewer usuario1,usuario2` o `gh pr edit --add-reviewer` si la PR ya existe.
+7. **Назначить reviewers.** Выбрать подходящих ревьюеров по области затронутого кода. Использовать `gh pr create --reviewer usuario1,usuario2` или `gh pr edit --add-reviewer`, если PR уже существует.
 
-8. **Crear la PR.** Ejecutar `gh pr create` con titulo, descripcion, labels y reviewers. Verificar que la PR aparece correctamente en GitHub y que los checks de CI arrancan.
+8. **Создать PR.** Выполнить `gh pr create` с заголовком, описанием, labels и reviewers. Проверить, что PR корректно отображается на GitHub и что проверки CI запускаются.
 
-9. **Revisar el resultado.** Comprobar que la descripcion se renderiza bien, que los enlaces a issues funcionan y que los reviewers han sido notificados.
+9. **Проверить результат.** Убедиться, что описание хорошо отрисовывается, ссылки на issues работают и reviewers получили уведомление.
 
-## Que NO hacer
+## Чего НЕ делать
 
-- No incluir lineas `Co-Authored-By` ni menciones a asistentes o herramientas de IA en la PR.
-- No crear PRs sin descripcion: el titulo no es suficiente para comunicar el contexto.
-- No asignar reviewers de forma indiscriminada; elegir a quienes conocen el area afectada.
-- No mezclar cambios no relacionados en la misma PR.
+- Не включать строки `Co-Authored-By` и упоминания ассистентов или ИИ-инструментов в PR.
+- Не создавать PR без описания: заголовка недостаточно, чтобы передать контекст.
+- Не назначать reviewers без разбора; выбирать тех, кто знает затронутую область.
+- Не смешивать несвязанные изменения в одной PR.

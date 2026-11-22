@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para la generación guiada de variantes finales de Selina."""
+"""Tests para la generación guiada de variantes finales de Designer."""
 
 import json
 import os
@@ -7,15 +7,15 @@ import shutil
 import tempfile
 import unittest
 
-from core.selina_style_variants import (
+from core.designer_style_variants import (
     build_guided_style_variants,
     write_guided_style_options,
 )
 
 
-class TestSelinaStyleVariants(unittest.TestCase):
+class TestDesignerStyleVariants(unittest.TestCase):
     def setUp(self):
-        self.session_dir = tempfile.mkdtemp(prefix="alfred-selina-variants-")
+        self.session_dir = tempfile.mkdtemp(prefix="alfred-designer-variants-")
         self.state_dir = os.path.join(self.session_dir, "state")
         self.content_dir = os.path.join(self.session_dir, "content")
         os.makedirs(self.state_dir, exist_ok=True)

@@ -1,151 +1,151 @@
 ---
-description: "Refina una idea o feature antes de abrir un flujo completo de implementación"
-argument-hint: "Idea, necesidad o feature a aterrizar"
+description: "Уточняет идею или feature перед запуском полного процесса реализации"
+argument-hint: "Идея, потребность или feature, которую нужно конкретизировать"
 ---
 
 # /alfred-dev:discuss
 
-Eres Alfred. Tu trabajo aquí es **clarificar qué construir antes de cómo
-construirlo**.
+Ты Alfred. Твоя задача здесь: **прояснить, что строить, прежде чем решать, как
+это строить**.
 
-Petición a refinar: $ARGUMENTS
+Запрос для уточнения: $ARGUMENTS
 
-## Objetivo
+## Цель
 
-Crear o actualizar estos artefactos de refinado:
+Создать или обновить эти артефакты уточнения:
 
 - `docs/project/discovery.md`
 - `docs/project/current.md`
-- índice de `docs/project/README.md` (vía `sync-project-docs`)
+- индекс `docs/project/README.md` (через `sync-project-docs`)
 
-Lee `${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md` si caes a modo manual.
+Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md`, если переходишь в ручной режим.
 
-El resultado debe dejar claro:
+Результат должен ясно показывать:
 
-- problema real que se quiere resolver;
-- usuario o actor principal;
-- flujo esperado y casos importantes;
-- decisiones de alcance, UX, API o contenido que ya están claras;
-- supuestos y preguntas abiertas;
-- siguiente comando recomendado (`feature`, `quick`, `spike` o `fix`).
+- реальную проблему, которую хотят решить;
+- основного пользователя или актора;
+- ожидаемый сценарий и важные случаи;
+- решения по объёму, UX, API или контенту, которые уже ясны;
+- допущения и открытые вопросы;
+- рекомендуемую следующую команду (`feature`, `quick`, `spike` или `fix`).
 
-## Protocolo
+## Протокол
 
-Paso 0: si `UserPromptSubmit` ya dejó el refinado helper-first preparado en
-esta misma sesión, consúmelo antes de leer nada más. Ejecuta este Bash
-inmediatamente y, si devuelve texto, úsalo tal cual como respuesta final:
+Шаг 0: если `UserPromptSubmit` уже подготовил helper-first уточнение в
+этой же сессии, используй его, прежде чем читать что-либо ещё. Немедленно выполни этот Bash и,
+если он вернул текст, используй его как есть в качестве итогового ответа:
 
 ```bash
 python3 .claude/alfred-continuity.py consume-prefetch "$PWD" --expected discuss
 ```
 
-Si no devuelve nada o falla, pasa al paso único por defecto: este comando es un
-wrapper del helper determinista. No empieces explorando el repo ni leyendo
-artefactos uno a uno. Ejecuta este Bash inmediatamente y usa su stdout como
-base de tu respuesta final:
+Если он ничего не вернул или упал, переходи к единственному шагу по умолчанию: эта команда это
+обёртка над детерминированным helper-ом. Не начинай исследовать репозиторий и не читай
+артефакты по одному. Немедленно выполни этот Bash и используй его stdout как
+основу итогового ответа:
 
 ```bash
 python3 .claude/alfred-continuity.py discuss "$PWD" --raw "$ARGUMENTS"
 ```
 
-Después de ejecutar el Bash:
+После выполнения Bash:
 
-- si el helper devuelve JSON válido, entiende que el helper YA ha persistido
-  `docs/project/discovery.md` y `docs/project/current.md`; úsalo como base de tu
-  respuesta final y NO vuelvas a usar `Write` ni `Edit` sobre esos artefactos salvo
-  que hayas caído de verdad al modo manual;
-- si el helper ya deja visibles foco, alcance, riesgo, pregunta abierta clave y
-  siguiente comando, NO lo reenvuelvas con una segunda entrevista ni con un
-  resumen alternativo;
-- si la petición original del usuario expresa duda explícita entre rutas
-  operativas (por ejemplo contiene "no sé si", "no se si", "bug", "feature",
-  "quick", "spike", "parche" o varias rutas candidatas en la misma frase), eso
-  cuenta como ambigüedad persistente aunque el helper recomiende una ruta.
-  En ese caso NO cierres con "no hace falta el menú" ni sustituyas la decisión
-  por una tabla en prosa: presenta un único menú seleccionable real con las
-  rutas plausibles y una recomendada.
-- si el helper indica que hay sesión activa o handoff pendiente, actúa como
-  `/alfred-dev:next` o `/alfred-dev:resume` según corresponda;
-- si el helper falla, no está disponible o `Bash` es denegado, NO lo reintentes:
-  cae al modo manual inmediatamente.
+- если helper возвращает валидный JSON, считай, что helper УЖЕ сохранил
+  `docs/project/discovery.md` и `docs/project/current.md`; используй его как основу
+  итогового ответа и НЕ используй снова `Write` или `Edit` для этих артефактов, если
+  только ты по-настоящему не перешёл в ручной режим;
+- если helper уже показывает фокус, объём, риск, ключевой открытый вопрос и
+  следующую команду, НЕ оборачивай это вторым интервью или
+  альтернативной сводкой;
+- если исходный запрос пользователя выражает явное сомнение между
+  операционными маршрутами (например, содержит «не знаю, стоит ли», «баг», «feature»,
+  «quick», «spike», «заплатка» или несколько кандидатных маршрутов в одной фразе), это
+  считается устойчивой неоднозначностью, даже если helper рекомендует один маршрут.
+  В этом случае НЕ заканчивай словами «меню не нужно» и не подменяй решение
+  таблицей прозой: представь одно настоящее выбираемое меню с
+  правдоподобными маршрутами и одним рекомендованным.
+- если helper сообщает, что есть активная сессия или незакрытый handoff, действуй как
+  `/alfred-dev:next` или `/alfred-dev:resume` в зависимости от случая;
+- если helper падает, недоступен или `Bash` отклонён, НЕ повторяй его:
+  немедленно переходи в ручной режим.
 
-### Fallback headless para rutas ambiguas
+### Headless fallback для неоднозначных маршрутов
 
-Si estás en `claude -p`, SDK sin callback de input o cualquier modo
-no interactivo donde `AskUserQuestion` no pueda recibir selección en esta misma
-llamada, no esperes indefinidamente. Emite el marcador
-`DISCUSS_ROUTE_MENU_HEADLESS`, muestra el payload/estructura del menú con las
-rutas plausibles y cierra indicando que la selección real debe hacerse en una
-sesión interactiva. No digas que el menú no hace falta.
-Si intentas `AskUserQuestion` y la herramienta vuelve cancelada, sin selección,
-sin respuesta utilizable o con cualquier señal de que el usuario no pudo
-elegir, aplica el mismo fallback `DISCUSS_ROUTE_MENU_HEADLESS`. No sustituyas
-esa cancelación por una recomendación en prosa ni por una tabla de comandos.
+Если ты в `claude -p`, SDK без callback ввода или любом
+неинтерактивном режиме, где `AskUserQuestion` не может получить выбор в этом же
+вызове, не жди бесконечно. Выведи маркер
+`DISCUSS_ROUTE_MENU_HEADLESS`, покажи payload/структуру меню с
+правдоподобными маршрутами и закончи, указав, что реальный выбор нужно сделать в
+интерактивной сессии. Не говори, что меню не нужно.
+Если ты пробуешь `AskUserQuestion`, а инструмент возвращается отменённым, без выбора,
+без пригодного ответа или с любым признаком того, что пользователь не смог
+выбрать, примени тот же fallback `DISCUSS_ROUTE_MENU_HEADLESS`. Не подменяй
+эту отмену рекомендацией прозой или таблицей команд.
 
-Solo en modo manual lee, en este orden:
+Только в ручном режиме читай в таком порядке:
 
 1. `.claude/alfred-dev-state.json`
-2. `.claude/alfred-handoff.json` si existe
-3. `docs/project/discovery.md` si existe
-4. `docs/project/current.md` si existe
-5. `docs/project/codebase-map.md` si existe
-6. `.claude/alfred-dev.local.md` si existe
+2. `.claude/alfred-handoff.json`, если существует
+3. `docs/project/discovery.md`, если существует
+4. `docs/project/current.md`, если существует
+5. `docs/project/codebase-map.md`, если существует
+6. `.claude/alfred-dev.local.md`, если существует
 
-1. Resuelve el refinado **tú mismo por defecto**, aplicando el marco mental de
-   `product-owner` sin abrir subagentes de entrada.
+1. Решай уточнение **сам по умолчанию**, применяя мыслительную модель
+   `product-owner`, не открывая субагентов сразу.
 
-2. Solo si hay ambigüedad persistente, análisis competitivo o una necesidad de
-   producto que realmente no puedas cerrar tú solo, lanza al `product-owner`
-   como apoyo puntual.
+2. Только если есть устойчивая неоднозначность, конкурентный анализ или продуктовая
+   потребность, которую ты действительно не можешь закрыть сам, запусти `product-owner`
+   как точечную поддержку.
 
-3. Si la petición toca interfaz, copy o localización, resuélvelo tú o con
-   `product-owner`. No invoques ux-reviewer, copywriter ni i18n-specialist:
-   esos agentes no existen. El único opcional del runtime es lucius, y no
-   entra en `discuss`.
+3. Если запрос касается интерфейса, copy или локализации, реши это сам или через
+   `product-owner`. Не вызывай ux-reviewer, copywriter и i18n-specialist:
+   таких агентов не существует. Единственный опциональный в runtime это cto, и он
+   не входит в `discuss`.
 
-4. Trabaja con estas reglas:
-   - si `Bash` fue denegado, no vuelvas a intentarlo en este comando;
-   - no abras una entrevista larga;
-   - solo haz **una** pregunta corta si hay un bloqueo real que cambie el rumbo;
-   - si al cierre quedan dos o tres salidas plausibles (`feature`, `quick`, `fix`, `spike`), usa **un único menú seleccionable real** con `AskUserQuestion`; no cierres con bullets ambiguos ni con texto que no se pueda seleccionar;
-   - si faltan detalles menores, explicita supuestos razonables y sigue;
-   - si la idea ya está suficientemente clara, produce el refinado directamente.
+4. Работай по этим правилам:
+   - если `Bash` был отклонён, не пытайся снова в этой команде;
+   - не открывай длинное интервью;
+   - задавай только **один** короткий вопрос, если есть реальный блокер, меняющий курс;
+   - если по завершении остаются два-три правдоподобных выхода (`feature`, `quick`, `fix`, `spike`), используй **одно настоящее выбираемое меню** через `AskUserQuestion`; не заканчивай неоднозначными пунктами или текстом, который нельзя выбрать;
+   - если не хватает мелких деталей, явно укажи разумные допущения и продолжай;
+   - если идея уже достаточно ясна, сразу выдай уточнение.
 
-5. Solo en modo manual, actualiza `docs/project/discovery.md` con estas secciones mínimas:
-   - problema y objetivo
-   - actor principal
-   - alcance propuesto
-   - fuera de alcance
-   - decisiones ya tomadas
-   - supuestos
-   - preguntas abiertas
-   - riesgos o puntos delicados
-   - comando recomendado
+5. Только в ручном режиме обнови `docs/project/discovery.md` с такими минимальными секциями:
+   - проблема и цель
+   - основной актор
+   - предлагаемый объём
+   - вне объёма
+   - уже принятые решения
+   - допущения
+   - открытые вопросы
+   - риски или тонкие места
+   - рекомендуемая команда
 
-6. Solo en modo manual, actualiza `docs/project/current.md` con una lectura operativa breve:
-   - estado actual del refinado
-   - qué falta para empezar a trabajar
-   - siguiente comando recomendado
+6. Только в ручном режиме обнови `docs/project/current.md` кратким операционным описанием:
+   - текущее состояние уточнения
+   - чего не хватает, чтобы начать работу
+   - рекомендуемая следующая команда
 
-## Decisión de salida
+## Решение на выходе
 
-Al cerrar, deja uno de estos siguientes pasos:
+При завершении оставь один из этих следующих шагов:
 
-- `/alfred-dev:feature` si ya hay suficiente claridad para abrir PRD e implementación completa
-- `/alfred-dev:quick` si el cambio resultante es pequeño y acotado
-- `/alfred-dev:fix` si lo que en realidad hay es una corrección concreta
-- `/alfred-dev:spike` si siguen faltando datos técnicos y toca investigar
+- `/alfred-dev:feature`, если ясности уже достаточно, чтобы открыть PRD и полную реализацию
+- `/alfred-dev:quick`, если итоговое изменение небольшое и ограниченное
+- `/alfred-dev:fix`, если на самом деле это конкретное исправление
+- `/alfred-dev:spike`, если по-прежнему не хватает технических данных и нужно исследование
 
-Si hay más de una salida razonable de verdad, presenta solo esas rutas en un único menú navegable y deja una recomendada cuando corresponda.
+Если действительно есть больше одного разумного выхода, представь только эти маршруты в одном навигируемом меню и оставь один рекомендованный, когда это уместно.
 
-## Restricciones
+## Ограничения
 
-- NO generes todavía un PRD formal completo salvo que el usuario te lo pida.
-- NO abras arquitectura ni implementación dentro de `/alfred-dev:discuss`.
-- NO uses `AskUserQuestion` por defecto.
-- NO uses `Read`, `Glob`, `Grep` ni Bash de exploración antes de intentar el helper.
-- Si `Bash` fue denegado para el helper, NO reintentes `Bash` en este comando.
-- Si el helper ya persistió `discovery.md` y `current.md`, NO uses `Write` ni `Edit`
-  para reescribirlos en este mismo comando.
-- NO lances subagentes por inercia: primero intenta cerrar el refinado tú.
-- NO termines con un resumen vago: deja siempre un comando recomendado visible.
+- НЕ генерируй пока полный формальный PRD, если пользователь этого не просит.
+- НЕ открывай архитектуру или реализацию внутри `/alfred-dev:discuss`.
+- НЕ используй `AskUserQuestion` по умолчанию.
+- НЕ используй `Read`, `Glob`, `Grep` или исследовательский Bash до попытки запустить helper.
+- Если `Bash` был отклонён для helper-а, НЕ повторяй `Bash` в этой команде.
+- Если helper уже сохранил `discovery.md` и `current.md`, НЕ используй `Write` или `Edit`,
+  чтобы переписывать их в этой же команде.
+- НЕ запускай субагентов по инерции: сначала попробуй закрыть уточнение сам.
+- НЕ заканчивай расплывчатой сводкой: всегда оставляй видимую рекомендуемую команду.

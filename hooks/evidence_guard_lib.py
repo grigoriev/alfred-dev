@@ -155,8 +155,8 @@ def _load_evidence(project_dir: Optional[str] = None) -> List[Dict[str, Any]]:
         if isinstance(data, list):
             return data
         print(
-            f"[evidence-guard] Aviso: el fichero de evidencia no contiene "
-            f"una lista. Se descarta el contenido.",
+            f"[evidence-guard] Предупреждение: файл evidence не содержит "
+            f"список. Содержимое отброшено.",
             file=sys.stderr,
         )
         return []
@@ -164,14 +164,14 @@ def _load_evidence(project_dir: Optional[str] = None) -> List[Dict[str, Any]]:
         return []
     except json.JSONDecodeError as e:
         print(
-            f"[evidence-guard] Aviso: fichero de evidencia corrupto "
-            f"({path}): {e}. Se perdera la evidencia anterior.",
+            f"[evidence-guard] Предупреждение: файл evidence повреждён "
+            f"({path}): {e}. Предыдущие подтверждения будут потеряны.",
             file=sys.stderr,
         )
         return []
     except OSError as e:
         print(
-            f"[evidence-guard] Aviso: no se pudo leer la evidencia "
+            f"[evidence-guard] Предупреждение: не удалось прочитать evidence "
             f"({path}): {e}.",
             file=sys.stderr,
         )
@@ -193,9 +193,9 @@ def _save_evidence(
             json.dump(trimmed, f, ensure_ascii=False, indent=2)
     except OSError as e:
         print(
-            f"[evidence-guard] Error: no se pudo guardar la evidencia "
-            f"en '{path}': {e}. Los resultados de tests de esta "
-            f"ejecucion no quedaran registrados.",
+            f"[evidence-guard] Ошибка: не удалось сохранить evidence "
+            f"в '{path}': {e}. Результаты тестов этого "
+            f"запуска не будут записаны.",
             file=sys.stderr,
         )
 
@@ -259,8 +259,8 @@ def get_evidence(
 
     if skipped > 0:
         print(
-            f"[evidence-guard] Aviso: se descartaron {skipped} registros "
-            f"de evidencia con timestamp invalido.",
+            f"[evidence-guard] Предупреждение: отброшено записей evidence "
+            f"с неверным timestamp: {skipped}.",
             file=sys.stderr,
         )
 
@@ -293,7 +293,7 @@ def clear_evidence(project_dir: Optional[str] = None) -> None:
             os.unlink(path)
     except OSError as e:
         print(
-            f"[evidence-guard] Aviso: no se pudo eliminar la evidencia "
+            f"[evidence-guard] Предупреждение: не удалось удалить evidence "
             f"({path}): {e}.",
             file=sys.stderr,
         )

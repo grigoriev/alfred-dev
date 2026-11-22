@@ -1,5 +1,5 @@
 """
-test_visual_server.py — Tests de integracion para el servidor visual de Selina.
+test_visual_server.py — Tests de integracion para el servidor visual de Designer.
 
 Comprueba el ciclo de vida del servidor (arranque, respuesta HTTP, escritura
 de estado) usando subprocess para lanzar server.cjs y http.client para las
@@ -247,7 +247,7 @@ class TestServerLifecycle(unittest.TestCase):
         self.assertIn('Hola mundo', body)
 
     def test_server_wraps_fragments_in_frame(self):
-        """Un fragmento sin DOCTYPE se envuelve en el frame (contiene 'Selina')."""
+        """Un fragmento sin DOCTYPE se envuelve en el frame (contiene 'Designer')."""
         self._start_server()
 
         fragment = '<p>Fragmento de prueba</p>'
@@ -258,11 +258,11 @@ class TestServerLifecycle(unittest.TestCase):
 
         status, body = self._get('/')
         self.assertEqual(status, 200)
-        self.assertIn('Selina', body)
+        self.assertIn('Designer', body)
         self.assertIn('Fragmento de prueba', body)
 
     def test_server_moves_font_imports_from_fragment_to_head(self):
-        """Los imports de tipografia de Selina deben acabar en el <head> del frame."""
+        """Los imports de tipografia de Designer deben acabar en el <head> del frame."""
         self._start_server()
 
         fragment = (
@@ -293,7 +293,7 @@ class TestServerLifecycle(unittest.TestCase):
         status, body = self._get('/')
         self.assertEqual(status, 200)
         self.assertIn('Documento completo', body)
-        # Un documento completo NO debe contener la cabecera de Selina del frame
+        # Un documento completo NO debe contener la cabecera de Designer del frame
         # (a menos que el propio documento la incluya)
         # Verificamos que no tiene la clase alfred-header del frame
         self.assertNotIn('alfred-header', body)
@@ -324,7 +324,7 @@ class TestServerLifecycle(unittest.TestCase):
         self.assertEqual(info['port'], self.port)
 
     def test_server_records_click_events_with_canonical_shape(self):
-        """Los clics WS se guardan con el contrato canónico esperado por Selina."""
+        """Los clics WS se guardan con el contrato canónico esperado por Designer."""
         self._start_server()
         ws = self._open_websocket()
         try:

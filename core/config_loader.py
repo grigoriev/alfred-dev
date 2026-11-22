@@ -32,6 +32,7 @@ from core.optional_agents import (
     get_optional_agent_names,
     get_optional_integrations,
     get_static_suggestible_agent_names,
+    normalize_optional_agent_flags,
     order_optional_agent_names,
 )
 
@@ -275,6 +276,7 @@ def get_active_optional_agents(config: Dict[str, Any]) -> List[str]:
     opcionales = config.get("agentes_opcionales", {})
     if not isinstance(opcionales, dict):
         return []
+    opcionales = normalize_optional_agent_flags(opcionales)
 
     known = set(get_optional_agent_names())
     return order_optional_agent_names(
@@ -308,6 +310,7 @@ def build_equipo_sesion_from_config(
     flags = build_optional_agent_flags()
     raw_optionals = config.get("agentes_opcionales", {})
     if isinstance(raw_optionals, dict):
+        raw_optionals = normalize_optional_agent_flags(raw_optionals)
         for agent_name in flags:
             if agent_name in raw_optionals:
                 flags[agent_name] = bool(raw_optionals.get(agent_name, False))
@@ -975,7 +978,7 @@ def has_frontend(stack: dict) -> bool:
     """
     Determina si el stack del proyecto incluye un framework con interfaz de usuario.
 
-    Se usa como condicion de activacion para el agente Selina (la estilista),
+    Se usa como condicion de activacion para el agente Designer (la estilista),
     que solo interviene en proyectos que tienen una capa visual.
 
     Args:
@@ -1234,7 +1237,7 @@ def _normalize_loaded_config(parsed: Dict[str, Any]) -> Dict[str, Any]:
             known = set(get_optional_agent_names())
             normalized["agentes_opcionales"] = {
                 name: bool(value)
-                for name, value in raw_value.items()
+                for name, value in normalize_optional_agent_flags(raw_value).items()
                 if name in known
             }
             continue

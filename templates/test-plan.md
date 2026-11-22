@@ -1,109 +1,109 @@
-# Plan de testing: {{nombre_feature}}
+# План тестирования: {{nombre_feature}}
 
-**Fecha:** {{fecha}}
-**Autor:** qa-engineer
-**Versión:** {{version}}
+**Дата:** {{fecha}}
+**Автор:** qa-engineer
+**Версия:** {{version}}
 
-## Alcance
+## Объём
 
 {{alcance_del_testing}}
 
-## Estrategia
+## Стратегия
 
-| Tipo | Cobertura | Herramienta |
-|------|-----------|-------------|
-| Unitarios | {{cobertura_unit}} | {{herramienta_unit}} |
-| Integración | {{cobertura_int}} | {{herramienta_int}} |
+| Тип | Покрытие | Инструмент |
+|-----|----------|------------|
+| Модульные | {{cobertura_unit}} | {{herramienta_unit}} |
+| Интеграционные | {{cobertura_int}} | {{herramienta_int}} |
 | E2E | {{cobertura_e2e}} | {{herramienta_e2e}} |
 
-## Escenarios críticos (prioridad alta)
+## Критические сценарии (высокий приоритет)
 
 {{escenarios_criticos}}
 
-## Escenarios principales (prioridad media)
+## Основные сценарии (средний приоритет)
 
 {{escenarios_principales}}
 
-## Edge cases (prioridad baja)
+## Edge cases (низкий приоритет)
 
 {{edge_cases}}
 
-## Escenarios negativos
+## Негативные сценарии
 
 {{escenarios_negativos}}
 
-## Datos de prueba
+## Тестовые данные
 
 {{datos_de_prueba}}
 
-## Criterios de paso
+## Критерии прохождения
 
-- [ ] Todos los tests críticos pasan
-- [ ] Cobertura mínima: {{porcentaje_cobertura}}%
-- [ ] Sin regresiones detectadas
-- [ ] Security review aprobado
+- [ ] Все критические тесты проходят
+- [ ] Минимальное покрытие: {{porcentaje_cobertura}}%
+- [ ] Регрессий не обнаружено
+- [ ] Security review одобрен
 
-<!-- EJEMPLO COMPLETADO ─────────────────────────────────────────────────
+<!-- ЗАПОЛНЕННЫЙ ПРИМЕР ─────────────────────────────────────────────────
 
-# Plan de testing: memoria persistente
+# План тестирования: постоянная память
 
-**Fecha:** 2026-02-21
-**Autor:** qa-engineer
-**Version:** 0.2.0
+**Дата:** 2026-02-21
+**Автор:** qa-engineer
+**Версия:** 0.2.0
 
-## Alcance
+## Объём
 
-Cubrir el modulo core/memory.py (MemoryDB), los hooks de captura automatica
-(memory-capture.py, commit-capture.py) y el servidor MCP (memory_server.py).
+Покрыть модуль core/memory.py (MemoryDB), hooks автоматического сбора
+(memory-capture.py, commit-capture.py) и MCP-сервер (memory_server.py).
 
-## Estrategia
+## Стратегия
 
-| Tipo | Cobertura | Herramienta |
-|------|-----------|-------------|
-| Unitarios | 90% de MemoryDB | pytest + unittest |
-| Integracion | Hooks + DB real | pytest con tempfile |
-| E2E | MCP stdio completo | pytest + subprocess |
+| Тип | Покрытие | Инструмент |
+|-----|----------|------------|
+| Модульные | 90% MemoryDB | pytest + unittest |
+| Интеграционные | Hooks + реальная БД | pytest с tempfile |
+| E2E | Полный MCP stdio | pytest + subprocess |
 
-## Escenarios criticos (prioridad alta)
+## Критические сценарии (высокий приоритет)
 
-- Crear iteracion, registrar decision, buscar por texto: resultado correcto.
-- sanitize_content() detecta y reemplaza todos los patrones de secretos.
-- Permisos del fichero DB son 0600 tras creacion.
-- Migracion de esquema v1 a v3 sin perdida de datos.
-- FTS5 fallback a LIKE cuando no esta disponible.
+- Создать итерацию, зарегистрировать решение, найти по тексту: результат верный.
+- sanitize_content() обнаруживает и заменяет все шаблоны секретов.
+- Права файла БД равны 0600 после создания.
+- Миграция схемы v1 на v3 без потери данных.
+- Откат FTS5 на LIKE, когда он недоступен.
 
-## Escenarios principales (prioridad media)
+## Основные сценарии (средний приоритет)
 
-- Busqueda con filtros temporales (since/until) devuelve solo resultados
-  dentro del rango.
-- Importar historial git crea commits con SHA, autor y ficheros.
-- Exportar decisiones genera Markdown con formato ADR.
-- check_health() detecta permisos incorrectos y FTS desincronizado.
+- Поиск с временными фильтрами (since/until) возвращает только результаты
+  внутри диапазона.
+- Импорт истории git создаёт коммиты с SHA, автором и файлами.
+- Экспорт решений формирует Markdown в формате ADR.
+- check_health() обнаруживает неверные права и рассинхронизированный FTS.
 
-## Edge cases (prioridad baja)
+## Edge cases (низкий приоритет)
 
-- DB con 10.000 decisiones: busqueda en < 1 segundo.
-- Query con caracteres especiales FTS5 (comillas, asteriscos).
-- Iteracion sin decisiones ni commits (vacia pero valida).
-- Dos sesiones simultaneas escribiendo en la misma DB (WAL).
+- БД с 10.000 решений: поиск менее чем за 1 секунду.
+- Запрос со спецсимволами FTS5 (кавычки, звёздочки).
+- Итерация без решений и коммитов (пустая, но валидная).
+- Две одновременные сессии пишут в одну БД (WAL).
 
-## Escenarios negativos
+## Негативные сценарии
 
-- JSON invalido en stdin del hook: exit 0 sin crash.
-- DB corrupta: error descriptivo, no traceback.
-- Memoria deshabilitada en config: hooks salen sin efecto.
+- Невалидный JSON в stdin hook: exit 0 без падения.
+- Повреждённая БД: понятная ошибка, а не traceback.
+- Память отключена в конфиге: hooks завершаются без эффекта.
 
-## Datos de prueba
+## Тестовые данные
 
-- Decisiones con titulos que contienen tildes y caracteres especiales.
-- Commits con mensajes multilinea.
-- Patrones de secretos reales (AKIA..., sk-..., ghp_...).
+- Решения с заголовками, содержащими диакритику и спецсимволы.
+- Коммиты с многострочными сообщениями.
+- Реальные шаблоны секретов (AKIA..., sk-..., ghp_...).
 
-## Criterios de paso
+## Критерии прохождения
 
-- [x] Todos los tests criticos pasan
-- [x] Cobertura minima: 80%
-- [x] Sin regresiones detectadas
-- [x] Security review aprobado
+- [x] Все критические тесты проходят
+- [x] Минимальное покрытие: 80%
+- [x] Регрессий не обнаружено
+- [x] Security review одобрен
 
-──────────────────────────────────────────────── FIN DEL EJEMPLO -->
+──────────────────────────────────────────────── КОНЕЦ ПРИМЕРА -->

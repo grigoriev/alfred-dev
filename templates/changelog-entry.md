@@ -18,31 +18,29 @@
 ### Security
 {{security}}
 
-<!-- EJEMPLO COMPLETADO ─────────────────────────────────────────────────
+<!-- ЗАПОЛНЕННЫЙ ПРИМЕР ─────────────────────────────────────────────────
 
 ## [0.2.0] - 2026-02-20
 
 ### Added
-- **Memoria persistente**: base de datos SQLite local por proyecto para
-  almacenar decisiones, commits e iteraciones entre sesiones.
-- **El Bibliotecario**: agente opcional que responde consultas historicas
-  citando fuentes con formato [D#id], [C#sha], [I#id].
-- **Servidor MCP**: 15 herramientas para buscar, registrar y consultar
-  la memoria desde cualquier agente.
-- **Hooks de captura automatica**: memory-capture.py y commit-capture.py
-  registran eventos y commits sin intervencion del usuario.
+- **Постоянная память**: локальная база данных SQLite на проект для
+  хранения решений, коммитов и итераций между сессиями.
+- **MCP-сервер**: 15 инструментов для поиска, записи и запроса
+  памяти из любого агента.
+- **Hooks автоматического сбора**: memory-capture.py и commit-capture.py
+  фиксируют события и коммиты без участия пользователя.
 
 ### Changed
-- session-start.sh ahora inyecta las decisiones de la iteracion activa
-  en el contexto de la sesion.
+- session-start.sh теперь внедряет решения активной итерации
+  в контекст сессии.
 
 ### Fixed
-- Corregido race condition en escritura concurrente al fichero de estado
-  cuando dos hooks PostToolUse se ejecutan en paralelo.
+- Исправлена race condition при параллельной записи в файл состояния,
+  когда два hooks PostToolUse выполняются одновременно.
 
 ### Security
-- sanitize_content() aplica 14 patrones regex para detectar y redactar
-  secretos antes de persistirlos en la base de datos.
-- Permisos 0600 en el fichero de base de datos (solo propietario).
+- sanitize_content() применяет 14 регулярных выражений, чтобы обнаруживать и скрывать
+  секреты перед сохранением в базу данных.
+- Права 0600 на файл базы данных (только владелец).
 
-──────────────────────────────────────────────── FIN DEL EJEMPLO -->
+──────────────────────────────────────────────── КОНЕЦ ПРИМЕРА -->

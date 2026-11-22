@@ -3,7 +3,7 @@
 # Alfred Dev -- script de instalacion para Claude Code
 #
 # Uso:
-#   curl -fsSL https://raw.githubusercontent.com/686f6c61/alfred-dev/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash
 #   bash ./install.sh
 #
 # Que hace:
@@ -20,7 +20,7 @@
 
 set -euo pipefail
 
-REPO="686f6c61/alfred-dev"
+REPO="grigoriev/alfred-dev"
 PLUGIN_NAME="alfred-dev"
 VERSION="0.7.0"
 

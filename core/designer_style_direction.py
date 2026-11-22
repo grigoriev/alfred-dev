@@ -8,7 +8,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from core.selina_visual import read_latest_style_choice, resolve_state_dir
+from core.designer_visual import read_latest_style_choice, resolve_state_dir
 
 
 STYLE_DIRECTION_DOC_RELATIVE_PATH = os.path.join("docs", "style-direction.md")
@@ -566,7 +566,7 @@ def _normalize_single_proposal(choice: str, proposal: Dict[str, Any]) -> Dict[st
 
 
 def load_style_proposals(proposals_file: str) -> Dict[str, Dict[str, Any]]:
-    """Carga y normaliza el sidecar JSON de propuestas de Selina."""
+    """Carga y normaliza el sidecar JSON de propuestas de Designer."""
     with open(proposals_file, "r", encoding="utf-8") as fh:
         raw = json.load(fh)
 
@@ -609,7 +609,7 @@ def build_style_direction_record(
 
     proposals_path = proposals_file or discover_proposals_file(visual_path)
     if not proposals_path:
-        raise ValueError("No se ha encontrado ningún fichero de propuestas de Selina.")
+        raise ValueError("No se ha encontrado ningún fichero de propuestas de Designer.")
 
     proposals = load_style_proposals(proposals_path)
     choice = _coerce_string(choice_override or (selected_choice or {}).get("choice"))
@@ -688,7 +688,7 @@ def render_style_direction_markdown(record: Dict[str, Any]) -> str:
     )
     decision_summary = _ensure_sentence(
         proposal["concept"] or proposal["tone"] or proposal["rationale"]
-    ) or "Selina deja la dirección elegida registrada, pero todavía falta enriquecer la intención visual."
+    ) or "Designer deja la dirección elegida registrada, pero todavía falta enriquecer la intención visual."
     rationale = _fallback_text(
         proposal["rationale"],
         "Falta aterrizar por qué esta propuesta gana frente a las demás.",
@@ -699,7 +699,7 @@ def render_style_direction_markdown(record: Dict[str, Any]) -> str:
         "",
         "## Resumen",
         "",
-        f"Selina recomienda `{record['choice']}` — {record['selected_label']} como sistema de diseño base para esta fase.",
+        f"Designer recomienda `{record['choice']}` — {record['selected_label']} como sistema de diseño base para esta fase.",
         "",
         f"Esta opción prioriza {decision_summary[0].lower() + decision_summary[1:] if len(decision_summary) > 1 else decision_summary.lower()}",
         "",

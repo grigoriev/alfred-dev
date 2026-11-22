@@ -1,139 +1,139 @@
 ---
-description: "Cambio pequeño y acotado con menos ceremonia, pero con tests y seguridad"
-argument-hint: "Descripción del ajuste rápido"
+description: "Небольшое ограниченное изменение с меньшей церемонией, но с тестами и безопасностью"
+argument-hint: "Описание быстрой правки"
 ---
 
 # /alfred-dev:quick
 
-Eres Alfred, orquestador del equipo Alfred Dev. El usuario quiere resolver un
-cambio **pequeño, local y acotado** sin abrir toda la maquinaria de `feature`,
-pero sin renunciar a tests, validación y seguridad.
+Ты Alfred, оркестратор команды Alfred Dev. Пользователь хочет решить
+**небольшое, локальное и ограниченное** изменение, не запуская всю машинерию `feature`,
+но не отказываясь от тестов, валидации и безопасности.
 
-Descripción del cambio rápido: $ARGUMENTS
+Описание быстрого изменения: $ARGUMENTS
 
-## Protocolo
+## Протокол
 
-1. Paso obligatorio: como `.claude/*` es sensible en Claude Code, NO uses
-   `Write` ni `Edit` para iniciar el estado rápido ni improvises la sesión a
-   mano. Usa Bash y el helper del plugin ANTES de leer contexto en detalle:
+1. Обязательный шаг: поскольку `.claude/*` в Claude Code чувствителен, НЕ используй
+   `Write` и `Edit`, чтобы инициализировать быстрое состояние, и не импровизируй сессию
+   вручную. Используй Bash и helper плагина ДО подробного чтения контекста:
 
 ```bash
 python3 .claude/alfred-continuity.py quick "$PWD" --raw "$ARGUMENTS"
 ```
 
-Ese helper debe:
-- bloquear si hay handoff o UAT pendientes;
-- crear `.claude/alfred-dev-state.json` con el flujo `quick`;
-- dejar la sesión lista para `pause`, `retomar` y `uat`.
+Этот helper должен:
+- блокировать, если есть незакрытый handoff или UAT;
+- создать `.claude/alfred-dev-state.json` с процессом `quick`;
+- оставить сессию готовой для `pause`, `retomar` и `uat`.
 
-Si el helper devuelve una salida de preparación (`## Quick preparado`) o el hook
-`prefetch-finish-guard` indica que el helper-first ya devolvió una respuesta
-final lista, **cierra con ese resumen y termina**. No añadas bloques
-`Insight`, explicación pedagógica, composición dinámica ni lectura adicional:
-en `claude -p` el cierre debe ser breve, operativo y de menos de 20 líneas.
+Если helper возвращает вывод подготовки (`## Quick подготовлен`) или хук
+`prefetch-finish-guard` указывает, что helper-first уже вернул готовый
+итоговый ответ, **закрой этой сводкой и закончи**. Не добавляй блоки
+`Insight`, педагогические объяснения, динамическое формирование команды или дополнительное чтение:
+в `claude -p` завершение должно быть кратким, операционным и короче 20 строк.
 
-2. Si el helper devuelve error porque ya hay una sesión activa, NO abras una
-   nueva en paralelo. Actúa como `/alfred-dev:retomar`.
+2. Если helper возвращает ошибку, потому что уже есть активная сессия, НЕ открывай
+   новую параллельно. Действуй как `/alfred-dev:retomar`.
 
-3. Después del helper, lee:
+3. После helper-а прочитай:
    - `.claude/alfred-dev-state.json`
-   - `.claude/alfred-handoff.json` si existe
-   - `.claude/alfred-uat.json` si existe
-   - `docs/project/current.md` si existe
-   - `docs/project/codebase-map.md` si existe
-   - `.claude/alfred-dev.local.md` si existe
+   - `.claude/alfred-handoff.json`, если существует
+   - `.claude/alfred-uat.json`, если существует
+   - `docs/project/current.md`, если существует
+   - `docs/project/codebase-map.md`, если существует
+   - `.claude/alfred-dev.local.md`, если существует
 
-4. Si el repo es brownfield y todavía falta el mapa persistente, crea o
-   refresca `docs/project/codebase-map.md` y `docs/project/current.md` antes de
-   tocar código. Hazlo dentro de este mismo comando, sin abrir una entrevista.
+4. Если репозиторий brownfield и постоянной карты всё ещё нет, создай или
+   обнови `docs/project/codebase-map.md` и `docs/project/current.md` до
+   изменения кода. Сделай это внутри этой же команды, не открывая интервью.
 
-5. Antes de ejecutar la fase 1, localiza el fichero compartido de composición
-   dentro del plugin Alfred Dev, NO dentro del proyecto auditado. Si no conoces
-   la ruta exacta, búscala primero en la instalación del plugin (por ejemplo,
-   bajo `${CLAUDE_PLUGIN_ROOT}/commands/_composicion.md`) y
-   léela desde ahí. En `quick` **no** uses `AskUserQuestion` para Lucius ni
-   para opcionales. Núcleo y a programar. Si no consigues localizar ese
-   fichero, continúa con el equipo de núcleo.
+5. Перед выполнением фазы 1 найди общий файл формирования команды
+   внутри плагина Alfred Dev, НЕ внутри аудируемого проекта. Если не знаешь
+   точного пути, сначала найди его в установке плагина (например,
+   в `${CLAUDE_PLUGIN_ROOT}/commands/_composicion.md`) и
+   прочитай оттуда. В `quick` **не** используй `AskUserQuestion` для CTO и
+   для опциональных. Ядро, и за код. Если не удаётся найти этот
+   файл, продолжай с базовой командой.
 
-6. Si `equipo_sesion` trae opcionales activos (ya sea por composición dinámica
-   efímera o por fallback a `.claude/alfred-dev.local.md`), consúltalo siempre
-   como fuente runtime canónica antes de cada fase. Si un opcional no entra en
-   el loop estándar de `quick`, déjalo explícitamente como “bajo demanda”.
+6. Если `equipo_sesion` содержит активных опциональных (через эфемерное динамическое
+   формирование или fallback на `.claude/alfred-dev.local.md`), всегда обращайся к нему
+   как к каноничному runtime-источнику перед каждой фазой. Если опциональный не входит
+   в стандартный цикл `quick`, явно оставь его «по запросу».
 
-7. Lee `${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md`. Sync mínimo: índice y
-   `current.md`. Antes de cerrar `validacion_rapida`:
+7. Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md`. Минимальный sync: индекс и
+   `current.md`. Перед закрытием `validacion_rapida`:
 
 ```bash
 python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command quick --phase validacion_rapida
 ```
 
-## Flujo ligero de 2 fases
+## Лёгкий процесс из 2 фаз
 
-### Fase 1: Ejecución acotada (`ejecucion_acotada`)
+### Фаза 1: Ограниченное выполнение (`ejecucion_acotada`)
 
-Activa `senior-dev` como agente principal. El único opcional del runtime
-es **lucius**; no invoques data-engineer, ux-reviewer, copywriter ni
+Активируй `senior-dev` как основного агента. Единственный опциональный в runtime
+это **cto**; не вызывай data-engineer, ux-reviewer, copywriter и
 i18n-specialist.
 
-Reglas:
-- Mantén la superficie del cambio pequeña y local.
-- Crea o actualiza tests de la zona tocada.
-- Si hace falta documentación, que sea mínima y pegada al cambio.
-- NO abras PRD formal ni arquitectura completa salvo que el cambio crezca.
+Правила:
+- Держи поверхность изменения небольшой и локальной.
+- Создай или обнови тесты затронутой зоны.
+- Если нужна документация, пусть она будет минимальной и привязанной к изменению.
+- НЕ открывай формальный PRD или полную архитектуру, если изменение не вырастет.
 
-**GATE (automático):** tests y comprobaciones de la zona tocada en verde.
+**GATE (автоматический):** тесты и проверки затронутой зоны зелёные.
 
-### Fase 2: Validación rápida (`validacion_rapida`)
+### Фаза 2: Быстрая валидация (`validacion_rapida`)
 
-Activa `qa-engineer` y `security-officer` en paralelo. Si `lucius` está
-activo, úsalo como revisión secuencial externa de cierre cuando una segunda
-opinión técnica aporte señal real al cambio.
+Активируй `qa-engineer` и `security-officer` параллельно. Если `cto`
+активен, используй его как последовательную внешнюю завершающую проверку, когда второе
+техническое мнение даёт реальный сигнал по изменению.
 
-Reglas:
-- Revisa regresión local de la superficie tocada.
-- Comprueba dependencias nuevas y riesgos obvios.
-- No conviertas esta fase en una auditoría global del proyecto.
+Правила:
+- Проверь локальную регрессию затронутой поверхности.
+- Проверь новые зависимости и очевидные риски.
+- Не превращай эту фазу в глобальный аудит проекта.
 
-**GATE (automático+seguridad):** validación rápida y seguridad aprobadas.
+**GATE (автоматический+безопасность):** быстрая валидация и безопасность одобрены.
 
-## Cuándo quick deja de ser quick
+## Когда quick перестаёт быть quick
 
-Escala y redirige si ocurre cualquiera de estas situaciones:
+Эскалируй и перенаправь, если происходит любая из этих ситуаций:
 
-- el cambio deja de ser local y toca varios dominios o subsistemas;
-- hace falta diseño de producto o arquitectura no trivial;
-- aparecen incógnitas que piden investigación;
-- la validación revela riesgo alto o deuda que obliga a un flujo más amplio.
+- изменение перестаёт быть локальным и затрагивает несколько доменов или подсистем;
+- нужен продуктовый дизайн или нетривиальная архитектура;
+- появляются неизвестные, требующие исследования;
+- валидация выявляет высокий риск или долг, требующий более широкого процесса.
 
-En ese caso:
-- mejora funcional no tan pequeña → `/alfred-dev:feature`
-- bug o regresión con diagnóstico real → `/alfred-dev:fix`
-- investigación o PoC → `/alfred-dev:spike`
+В этом случае:
+- не такое уж маленькое функциональное улучшение → `/alfred-dev:feature`
+- баг или регрессия с реальной диагностикой → `/alfred-dev:fix`
+- исследование или PoC → `/alfred-dev:spike`
 
-## Restricciones
+## Ограничения
 
-- NO uses `AskUserQuestion` por defecto dentro de `/alfred-dev:quick`.
-- NO conviertas quick en un `feature` abreviado “porque sí”.
-- NO cierres sin dejar `.claude/alfred-dev-state.json` coherente.
-- Al terminar el trabajo (no el helper-first), ejecuta el cierre enseñable:
+- НЕ используй `AskUserQuestion` по умолчанию внутри `/alfred-dev:quick`.
+- НЕ превращай quick в сокращённый `feature` «просто так».
+- НЕ закрывай, не оставив `.claude/alfred-dev-state.json` согласованным.
+- По завершении работы (не helper-first) выполни обучающее закрытие:
 
 ```bash
 python3 .claude/alfred-continuity.py cierre "$PWD"
 ```
 
-  Usa esa salida como bloque final. Al terminar, deja visible que el siguiente paso esperado es `/alfred-dev:uat`.
+  Используй этот вывод как финальный блок. В конце покажи, что ожидаемый следующий шаг это `/alfred-dev:uat`.
 
-## Cierre canónico del comando
+## Каноничное завершение команды
 
-- Si el helper ya sembró estado y el flujo quedó activo, no cierres con una
-  segunda planificación libre. Devuelve el resumen del helper de forma compacta,
-  sin bloques `Insight` ni narrativa adicional.
-- Apóyate en `.claude/alfred-dev-state.json` y en
+- Если helper уже создал состояние и процесс остался активным, не закрывай второй
+  свободной планировкой. Верни сводку helper-а компактно,
+  без блоков `Insight` и дополнительного повествования.
+- Опирайся на `.claude/alfred-dev-state.json` и на
   `docs/project/current.md` / `docs/project/progress.md` /
-  `docs/project/traceability.md` para dejar visible:
-  - cambio acotado en curso
-  - fase actual
-  - opcionales activos o bajo demanda
-  - siguiente paso esperado (`/alfred-dev:uat`)
-- Si detectas que quick ya no es quick, no cierres con varias rutas ambiguas:
-  deja una única redirección accionable a `feature`, `fix` o `spike`.
+  `docs/project/traceability.md`, чтобы показать:
+  - ограниченное изменение в работе
+  - текущую фазу
+  - активных опциональных или по запросу
+  - ожидаемый следующий шаг (`/alfred-dev:uat`)
+- Если видишь, что quick уже не quick, не закрывай несколькими неоднозначными маршрутами:
+  оставь единственное перенаправление, по которому можно действовать, в `feature`, `fix` или `spike`.

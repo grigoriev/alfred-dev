@@ -1,52 +1,52 @@
 ---
 name: sync-project-docs
-description: "Usar para sincronizar la documentación viva del proyecto después de una fase. También: actualizar docs/project, índice, architecture.md, compliance.md, threat-model."
+description: "Использовать для синхронизации живой документации проекта после фазы. Также: обновить docs/project, индекс, architecture.md, compliance.md, threat-model."
 ---
 
-# Sincronizar documentación viva
+# Синхронизация живой документации
 
-## Resumen
+## Резюме
 
-Tras una fase, actualiza solo lo que ha cambiado. El helper crea esqueletos
-y comprueba la gate. Tú escribes el contenido.
+После фазы обновляй только то, что изменилось. Helper создаёт скелеты
+и проверяет gate. Содержимое пишешь ты.
 
-## Proceso
+## Процесс
 
-1. Esqueleto e índice:
+1. Скелет и индекс:
 
    ```bash
    python3 .claude/alfred-continuity.py sync-project-docs "$PWD"
    ```
 
-2. Lee `docs/project/README.md` y el protocolo `commands/_docs_vivas.md`.
+2. Прочитай `docs/project/README.md` и протокол `commands/_docs_vivas.md`.
 
-3. Actualiza únicamente los ficheros de la fase. Si no hubo API nueva, no
-   toques una guía de API. Si no hubo decisión, no inventes un ADR.
+3. Обновляй только файлы этой фазы. Если нового API не было, не
+   трогай руководство по API. Если решения не было, не выдумывай ADR.
 
-4. Cuando un esqueleto tenga contenido real, deja `<!-- alfred-doc:filled -->`
-   y quita `<!-- alfred-doc:scaffold -->`.
+4. Когда в скелете появилось реальное содержимое, оставь `<!-- alfred-doc:filled -->`
+   и убери `<!-- alfred-doc:scaffold -->`.
 
-5. Comprueba la gate:
+5. Проверь gate:
 
    ```bash
    python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command <comando> --phase <fase>
    ```
 
-6. Si el helper falla, no declares la fase cerrada.
+6. Если helper падает, не объявляй фазу закрытой.
 
-## En quick y fix
+## В quick и fix
 
-Sync mínimo: índice + `docs/project/current.md`. ADR solo si el cambio mueve
-un límite (auth, persistencia, integración).
+Минимальная синхронизация: индекс + `docs/project/current.md`. ADR только если изменение сдвигает
+границу (auth, хранение данных, интеграция).
 
-## Criterios de éxito
+## Критерии успеха
 
-- El índice refleja el estado real (`scaffold` o `filled`).
-- No hay prosa inventada sobre código que no se ha tocado.
-- `check-project-docs` sale 0 antes de cerrar la gate.
+- Индекс отражает реальное состояние (`scaffold` или `filled`).
+- Нет выдуманного текста о коде, которого не касались.
+- `check-project-docs` завершается с кодом 0 до закрытия gate.
 
-## Qué NO hacer
+## Чего НЕ делать
 
-- No reescribas todo `docs/` en cada fase.
-- No copies el chat al Markdown.
-- No marques `filled` si siguen los `_(pendiente)_`.
+- Не переписывай весь `docs/` в каждой фазе.
+- Не копируй чат в Markdown.
+- Не ставь `filled`, пока остаются `_(pendiente)_`.

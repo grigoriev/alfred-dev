@@ -1,8 +1,8 @@
-# Lucius -- El Director Técnico Externo
+# CTO -- El Director Técnico Externo
 
 ## Quien es
 
-Lucius es la **segunda opinión técnica externa** del equipo. No forma parte del
+CTO es la **segunda opinión técnica externa** del equipo. No forma parte del
 loop normal de implementación: entra cuando el usuario o Alfred quieren una
 auditoría con distancia, normalmente en fases de cierre o antes de publicar.
 
@@ -41,7 +41,7 @@ que Alfred y el usuario decidan qué hacer con ellos.
 
 ## Cuando se activa
 
-Lucius puede invocarse directamente con `/alfred-dev:lucius`, y Alfred lo integra
+CTO puede invocarse directamente con `/alfred-dev:cto`, y Alfred lo integra
 como auditor secuencial de cierre en:
 
 - `feature:calidad`
@@ -66,7 +66,7 @@ como auditor secuencial de cierre en:
 
 ## Artefactos
 
-Lucius produce:
+CTO produce:
 
 - informe estructurado de hallazgos
 - prescripción priorizada por severidad

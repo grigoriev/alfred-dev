@@ -1,38 +1,38 @@
 ---
-description: "Comprueba y aplica actualizaciones del plugin Alfred Dev"
+description: "Проверяет и применяет обновления плагина Alfred Dev"
 disable-model-invocation: true
 allowed-tools: Bash, Read
 ---
 
 # /alfred-dev:update
 
-Eres Alfred. El usuario quiere comprobar si hay una version nueva del plugin. Sigue estos pasos al pie de la letra.
+Ты Alfred. Пользователь хочет проверить, есть ли новая версия плагина. Следуй этим шагам в точности.
 
-## Paso 1: obtener la version instalada y el scope
+## Шаг 1: получить установленную версию и scope
 
-Primero usa la CLI nativa de Claude Code, porque es la fuente autoritativa de
-instalaciones activas, scopes e installPath:
+Сначала используй нативный CLI Claude Code, потому что это авторитетный источник
+активных установок, scope и installPath:
 
 ```bash
 claude plugin list --json
 ```
 
-Busca la entrada `alfred-dev@alfred-dev`. Si hay varias, prioriza:
+Найди запись `alfred-dev@alfred-dev`. Если их несколько, приоритет такой:
 
-1. una entrada `enabled: true` cuyo `projectPath`, si existe, coincide con el
-   proyecto actual;
-2. una entrada `enabled: true` sin `projectPath` (instalación `user`);
-3. cualquier entrada `alfred-dev@alfred-dev` como último recurso.
+1. запись `enabled: true`, у которой `projectPath`, если он есть, совпадает с
+   текущим проектом;
+2. запись `enabled: true` без `projectPath` (установка `user`);
+3. любая запись `alfred-dev@alfred-dev` в крайнем случае.
 
-Extrae:
+Извлеки:
 
 - `version`
-- `scope` (`user`, `local`, `project` o `managed`)
+- `scope` (`user`, `local`, `project` или `managed`)
 - `installPath`
-- `projectPath` si existe
+- `projectPath`, если есть
 
-Si `claude plugin list --json` falla o no devuelve la entrada, usa este fallback
-de cache para la version y marca el scope como `desconocido`:
+Если `claude plugin list --json` падает или не возвращает запись, используй этот
+fallback через cache для версии и пометь scope как `desconocido`:
 
 ```bash
 python3 -c "
@@ -51,35 +51,35 @@ with open(candidates[0]) as f:
 " 2>/dev/null || echo "desconocida"
 ```
 
-El fallback selecciona la version mas reciente por fecha de modificacion para
-evitar errores cuando coexistan varias versiones en cache, pero no lo uses para
-decidir scope si la CLI sí ha devuelto uno.
+Fallback выбирает самую свежую версию по дате изменения, чтобы
+избежать ошибок, когда в cache сосуществуют несколько версий, но не используй его, чтобы
+определять scope, если CLI всё же вернул его.
 
-## Paso 2: consultar la ultima release en GitHub
+## Шаг 2: запросить последний релиз на GitHub
 
-Ejecuta con Bash:
+Выполни через Bash:
 
 ```bash
-curl -s --max-time 10 "https://api.github.com/repos/686f6c61/alfred-dev/releases/latest"
+curl -s --max-time 10 "https://api.github.com/repos/grigoriev/alfred-dev/releases/latest"
 ```
 
-Extrae del JSON: `tag_name` (version), `name` (titulo), `body` (notas de la release), `published_at` (fecha).
+Извлеки из JSON: `tag_name` (версия), `name` (название), `body` (заметки релиза), `published_at` (дата).
 
-Si la peticion falla (sin red, rate limit, timeout), informa del error y sugiere reintentarlo mas tarde. No sigas adelante. En concreto:
+Если запрос не удался (нет сети, rate limit, timeout), сообщи об ошибке и предложи повторить позже. Дальше не продолжай. В частности:
 
-- Si el JSON contiene `"message": "API rate limit exceeded"`, informa al usuario de que ha superado el limite de peticiones de GitHub y que puede reintentar en unos minutos o pasar un token con `-H "Authorization: token ..."`.
-- Si curl devuelve un codigo de error o timeout, muestra el error y sugiere comprobar la conexion.
-- Si el JSON no contiene `tag_name`, es una respuesta inesperada. Muestra el contenido raw y aborta.
+- Если JSON содержит `"message": "API rate limit exceeded"`, сообщи пользователю, что он превысил лимит запросов GitHub и может повторить через несколько минут или передать токен через `-H "Authorization: token ..."`.
+- Если curl возвращает код ошибки или timeout, покажи ошибку и предложи проверить соединение.
+- Если JSON не содержит `tag_name`, это неожиданный ответ. Покажи сырое содержимое и прекрати.
 
-## Paso 3: comparar versiones
+## Шаг 3: сравнить версии
 
-Valida que `tag_name` tiene formato semver valido: debe coincidir con el patron `v?X.Y.Z` donde X, Y, Z son numeros (por ejemplo `v0.3.0` o `0.3.0`). Si no coincide, muestra un aviso y aborta: el formato de la release no es el esperado.
+Проверь, что `tag_name` имеет валидный формат semver: он должен соответствовать шаблону `v?X.Y.Z`, где X, Y, Z это числа (например, `v0.3.0` или `0.3.0`). Если не соответствует, покажи предупреждение и прекрати: формат релиза не тот, что ожидается.
 
-Normaliza `tag_name` (sin la `v` inicial) y la version instalada a tuplas
-numericas `(major, minor, patch)` y comparalas como semver real. **Nunca**
-compares las versiones como texto plano (`0.10.0` es mayor que `0.9.0`).
+Нормализуй `tag_name` (без начальной `v`) и установленную версию в числовые
+кортежи `(major, minor, patch)` и сравни их как настоящий semver. **Никогда не**
+сравнивай версии как простой текст (`0.10.0` больше, чем `0.9.0`).
 
-Si necesitas una comparacion determinista, ejecuta con Bash:
+Если нужно детерминированное сравнение, выполни через Bash:
 
 ```bash
 python3 - <<'PY'
@@ -93,96 +93,96 @@ print(parse(latest) > parse(installed))
 PY
 ```
 
-Sustituye `VERSION_INSTALADA` y `TAG_NAME` por los valores reales del paso 1 y 2.
+Подставь `VERSION_INSTALADA` и `TAG_NAME` реальными значениями из шагов 1 и 2.
 
-### Si hay version nueva
+### Если есть новая версия
 
-Muestra al usuario:
-- La version actual instalada
-- La version nueva disponible
-- Las notas de la release formateadas en markdown
+Покажи пользователю:
+- Текущую установленную версию
+- Доступную новую версию
+- Заметки релиза, отформатированные в markdown
 
-Despues usa **un único `AskUserQuestion`** con menú seleccionable real. No
-dejes la decisión en texto libre. Las dos opciones deben ser:
-- **"Actualizar ahora"** -- ejecuta el comando de instalacion (paso 4)
-- **"Ahora no"** -- cancela
+Затем используй **один `AskUserQuestion`** с настоящим выбираемым меню. Не
+оставляй решение в свободном тексте. Два варианта должны быть:
+- **"Обновить сейчас"** -- выполняет команду установки (шаг 4)
+- **"Не сейчас"** -- отмена
 
-### Si esta al dia
+### Если версия актуальна
 
-Informa de que no hay actualizaciones disponibles y muestra la version actual. Fin.
+Сообщи, что обновлений нет, и покажи текущую версию. Конец.
 
-## Paso 4: ejecutar la actualizacion
+## Шаг 4: выполнить обновление
 
-Si el usuario acepta, usa siempre la ruta global de usuario salvo que el scope
-sea `managed`. Alfred Dev no conserva instalaciones `local` ni `project` al
-actualizar desde este comando: las normaliza a `--scope user` para que
-`/alfred-dev:*` funcione en cualquier proyecto del usuario. No rematerializa
-un alias global `/alfred` ni pisa `~/.claude/skills`.
+Если пользователь соглашается, всегда используй глобальный пользовательский путь, если только scope
+не `managed`. Alfred Dev не сохраняет установки `local` и `project` при
+обновлении из этой команды: он нормализует их в `--scope user`, чтобы
+`/alfred-dev:*` работал в любом проекте пользователя. Он не пересоздаёт
+глобальный алиас `/alfred` и не затрагивает `~/.claude/skills`.
 
-### Scope user, local, project o desconocido
+### Scope user, local, project или desconocido
 
-Para instalaciones de usuario, locales, de proyecto o con scope desconocido,
-usa el instalador soportado de Alfred Dev. Esta ruta vuelve a registrar la
-fuente GitHub con `--scope user`, reinstala mediante la CLI nativa de Claude
-Code, limpia/refresca el checkout local del marketplace para evitar caches
-obsoletas y no pisa `~/.claude/skills`. Vuelve a aplicar el parche de Python compatible
-en `hooks.json` y `.mcp.json` cuando hace falta.
+Для установок user, local, project или с неизвестным scope
+используй поддерживаемый установщик Alfred Dev. Этот путь заново регистрирует
+источник GitHub с `--scope user`, переустанавливает через нативный CLI Claude
+Code, очищает/обновляет локальный checkout marketplace, чтобы избежать
+устаревших cache, и не затрагивает `~/.claude/skills`. Он заново применяет совместимый
+патч Python в `hooks.json` и `.mcp.json`, когда это нужно.
 
-Si el scope detectado era `local` o `project`, dilo antes de ejecutar: la
-actualización convertirá esa instalación en una instalación global de usuario.
-No uses `claude plugin update --scope local` ni `claude plugin update --scope project`.
+Если обнаруженный scope был `local` или `project`, скажи об этом перед выполнением: обновление
+превратит эту установку в глобальную пользовательскую.
+Не используй `claude plugin update --scope local` и `claude plugin update --scope project`.
 
-Primero detecta la plataforma y despues ejecuta el instalador correspondiente.
+Сначала определи платформу, затем выполни соответствующий установщик.
 
-### Deteccion de plataforma
+### Определение платформы
 
-Ejecuta con Bash:
+Выполни через Bash:
 
 ```bash
 uname -s 2>/dev/null || echo "Windows"
 ```
 
-- Si devuelve `Darwin` o `Linux`: es macOS o Linux, usa el instalador bash.
-- Si falla o devuelve `Windows` / `MINGW` / `MSYS` / `CYGWIN`: es Windows, usa el instalador PowerShell.
+- Если возвращает `Darwin` или `Linux`: это macOS или Linux, используй bash-установщик.
+- Если падает или возвращает `Windows` / `MINGW` / `MSYS` / `CYGWIN`: это Windows, используй установщик PowerShell.
 
 ### macOS / Linux
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/686f6c61/alfred-dev/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/686f6c61/alfred-dev/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.ps1 | iex
 ```
 
 ### Scope managed
 
-Si el scope detectado es `managed`, no intentes actualizarlo. Explica que las
-instalaciones managed las controla la política del administrador y que el
-usuario debe pedir la actualización a quien gestione Claude Code en su equipo.
+Если обнаруженный scope `managed`, не пытайся его обновлять. Объясни, что
+managed-установками управляет политика администратора и что
+пользователь должен запросить обновление у того, кто управляет Claude Code в его команде.
 
-Despues de que termine cualquier actualización, informa al usuario de que debe
-ejecutar **`/reload-plugins`** en Claude Code para cargar la nueva versión en la
-sesión actual. Si Claude Code avisa por MCP/caché, si decide no usar
-`/reload-plugins --force` o si el inventario no cambia, entonces debe reiniciar
+После завершения любого обновления сообщи пользователю, что нужно
+выполнить **`/reload-plugins`** в Claude Code, чтобы загрузить новую версию в
+текущую сессию. Если Claude Code предупреждает о MCP/cache, если решено не использовать
+`/reload-plugins --force` или если инвентарь не меняется, нужно перезапустить
 Claude Code.
 
-## Notas
+## Примечания
 
-- Los instaladores son idempotentes: sobreescriben la instalacion anterior sin conflictos.
-- No hace falta desinstalar primero en scope `user`.
-- No sustituyas esta ruta por `claude plugin update` directo salvo reparación
-  manual: el instalador existe para evitar marketplaces locales obsoletos.
-- En scope `local` o `project`, no conserves el scope: convierte a instalacion
-  global de usuario con el instalador. No crees `~/.claude/commands/alfred.md`
-  ni un skill personal `/alfred`. La entrada es `/alfred-dev:alfred`.
-- Si el script de instalacion falla, muestra el error completo al usuario.
-- En Windows tambien funciona con WSL o Git Bash usando el instalador bash.
+- Установщики идемпотентны: они перезаписывают предыдущую установку без конфликтов.
+- Не нужно сначала удалять в scope `user`.
+- Не заменяй этот путь прямым `claude plugin update`, кроме ручного
+  восстановления: установщик существует, чтобы избежать устаревших локальных marketplace.
+- В scope `local` или `project` не сохраняй scope: преобразуй в глобальную
+  пользовательскую установку установщиком. Не создавай `~/.claude/commands/alfred.md`
+  и персональный skill `/alfred`. Точка входа это `/alfred-dev:alfred`.
+- Если скрипт установки падает, покажи пользователю полную ошибку.
+- В Windows также работает через WSL или Git Bash с bash-установщиком.
 
-## Cierre canónico del comando
+## Каноничное завершение команды
 
-- Si no hay versión nueva, cierra ahí: no propongas pasos extra ni una decisión ficticia.
-- Si sí hay versión nueva, usa un único menú seleccionable real con las dos opciones definidas arriba y no lo sustituyas por texto libre.
-- Si la actualización se ejecuta bien, el cierre debe ser corto y accionable: versión aplicada, ejecutar `/reload-plugins` y reiniciar solo si MCP/caché lo exige o el inventario no cambia.
+- Если новой версии нет, закрывай на этом: не предлагай дополнительных шагов или фиктивного решения.
+- Если новая версия есть, используй одно настоящее выбираемое меню с двумя вариантами, определёнными выше, и не заменяй его свободным текстом.
+- Если обновление выполнено успешно, завершение должно быть коротким и применимым: применённая версия, выполнить `/reload-plugins` и перезапускать только если MCP/cache этого требует или инвентарь не меняется.

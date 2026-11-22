@@ -763,26 +763,26 @@ def _validate_manual_option_contract_shape(manual_smoke, option_coverage: dict[s
             f"missing={missing_config_options} extra={extra_config_options}"
         )
 
-    expected_lucius_options = {
-        "lucius:default-scope-all",
-        "lucius:scope-all",
-        "lucius:scope-security",
-        "lucius:scope-tests",
-        "lucius:scope-architecture",
-        "lucius:scope-performance",
-        "lucius:target-directory",
-        "lucius:invalid-scope",
+    expected_cto_options = {
+        "cto:default-scope-all",
+        "cto:scope-all",
+        "cto:scope-security",
+        "cto:scope-tests",
+        "cto:scope-architecture",
+        "cto:scope-performance",
+        "cto:target-directory",
+        "cto:invalid-scope",
     }
-    actual_lucius_options = {
+    actual_cto_options = {
         key for key in option_contracts
-        if key.startswith("lucius:")
+        if key.startswith("cto:")
     }
-    missing_lucius_options = sorted(expected_lucius_options - actual_lucius_options)
-    extra_lucius_options = sorted(actual_lucius_options - expected_lucius_options)
-    if missing_lucius_options or extra_lucius_options:
+    missing_cto_options = sorted(expected_cto_options - actual_cto_options)
+    extra_cto_options = sorted(actual_cto_options - expected_cto_options)
+    if missing_cto_options or extra_cto_options:
         problems.append(
-            "OPTION_CONTRACTS de /lucius desalineados: "
-            f"missing={missing_lucius_options} extra={extra_lucius_options}"
+            "OPTION_CONTRACTS de /cto desalineados: "
+            f"missing={missing_cto_options} extra={extra_cto_options}"
         )
 
     expected_human_menu_options = {
@@ -1111,7 +1111,10 @@ def check_command_execution_contracts() -> list[str]:
             problems.append(f"{name}: contiene slash command legacy /alfred:")
         if re.search(r"\bTask\b", text):
             problems.append(f"{name}: contiene nomenclatura obsoleta Task")
-        if re.search(r"\*\*GATE \(libre\):\*\*.*\bSe aprueba siempre\b", text):
+        if re.search(
+            r"\*\*GATE \((?:libre|свободный)\):\*\*.*\b(?:Se aprueba siempre|Всегда одобряется)\b",
+            text,
+        ):
             problems.append(
                 f"{name}: gate libre promete aprobacion incondicional sin evidencia"
             )
@@ -1120,18 +1123,18 @@ def check_command_execution_contracts() -> list[str]:
         "alfred": [
             'consume-prefetch "$PWD" --expected alfred',
             'alfred-continuity.py next "$PWD" --json',
-            "No ofrezcas un menú por defecto",
+            "По умолчанию не предлагай меню",
         ],
         "discuss": [
             'consume-prefetch "$PWD" --expected discuss',
             'alfred-continuity.py discuss "$PWD" --raw "$ARGUMENTS"',
-            "respuesta final",
+            "итогового ответа",
             "commands/_docs_vivas.md",
         ],
         "map-codebase": [
             'consume-prefetch "$PWD" --expected map-codebase',
             'alfred-continuity.py map-codebase "$PWD" --raw "$ARGUMENTS"',
-            "NO inventes stack, entrypoints o riesgos",
+            "НЕ выдумывай стек, точки входа или риски",
             "commands/_docs_vivas.md",
         ],
         "memory-ui": [
@@ -1141,39 +1144,39 @@ def check_command_execution_contracts() -> list[str]:
         ],
         "next": [
             'alfred-continuity.py next "$PWD" --json',
-            "un único `AskUserQuestion` navegable",
+            "один навигируемый `AskUserQuestion`",
         ],
         "pause": [
             'alfred-continuity.py pause "$PWD"',
-            "Primero ejecuta el helper determinista",
-            "No la reenvuelvas con un segundo resumen",
+            "Сначала выполни детерминированный helper",
+            "Не оборачивай его во вторую сводку",
         ],
         "progress": [
             'alfred-continuity.py progress "$PWD"',
-            "úsalo como respuesta final",
-            "NO uses `AskUserQuestion`",
+            "используй её как итоговый ответ",
+            "НЕ используй `AskUserQuestion`",
         ],
         "quick": [
             'alfred-continuity.py quick "$PWD" --raw "$ARGUMENTS"',
-            "`Write` ni `Edit`",
-            "## Cierre canónico del comando",
+            "НЕ используй\n   `Write` и `Edit`",
+            "## Каноничное завершение команды",
         ],
         "search": [
             'alfred-continuity.py search "$PWD" --raw "$ARGUMENTS"',
-            "Si `$ARGUMENTS` está vacío, dilo claramente",
+            "Если `$ARGUMENTS` пуст, скажи об этом ясно",
         ],
         "sync-github": [
             'alfred-continuity.py sync-github "$PWD" --raw "$ARGUMENTS"',
-            "Mantén la verdad local",
+            "Сохраняй локальную истину",
         ],
         "uat": [
             'alfred-continuity.py verify "$PWD" --raw "$ARGUMENTS"',
-            "NO marques una UAT como aprobada sin una indicación explícita",
-            "NO añadas una segunda capa de resumen",
+            "НЕ помечай UAT как одобренную без явного указания",
+            "НЕ добавляй второй слой сводки",
         ],
         "retomar": [
             'alfred-continuity.py resume "$PWD"',
-            "Primero ejecuta el helper determinista",
+            "Сначала выполни детерминированный helper",
         ],
     }
     commands_for_contracts = dict(commands)
@@ -1188,50 +1191,50 @@ def check_command_execution_contracts() -> list[str]:
 
     flow_contracts = {
         "feature": [
-            "Flujo de hasta 7 fases",
+            "Процесс до 7 фаз",
             "## HARD-GATES",
-            "Maximo 5 intentos",
-            "## Cierre canónico del comando",
-            "siguiente paso esperado",
+            "Максимум 5 попыток",
+            "## Каноничное завершение команды",
+            "ожидаемый следующий шаг",
             "commands/_docs_vivas.md",
             "check-project-docs",
         ],
         "fix": [
-            "Flujo de 3 fases",
-            "test que reproduce el bug",
-            "Maximo 5 intentos",
-            "## Cierre canónico del comando",
-            "bug/causa raíz en curso",
+            "Процесс из 3 фаз",
+            "тест, воспроизводящий баг",
+            "Максимум 5 попыток",
+            "## Каноничное завершение команды",
+            "баг/первопричину в работе",
             "commands/_docs_vivas.md",
         ],
         "quick": [
-            "Flujo ligero de 2 fases",
-            "Cuándo quick deja de ser quick",
-            "## Cierre canónico del comando",
+            "Лёгкий процесс из 2 фаз",
+            "Когда quick перестаёт быть quick",
+            "## Каноничное завершение команды",
             "/alfred-dev:uat",
             "commands/_docs_vivas.md",
-            "cierre",
+            "завершение",
         ],
         "spike": [
-            "Flujo de 2 fases",
-            "Los spikes NO generan código de producción",
-            "## Cierre canónico del comando",
+            "Процесс из 2 фаз",
+            "Spike НЕ создают production-код",
+            "## Каноничное завершение команды",
             "ADR",
-            "no implementar todavía",
+            "пока не реализовывать",
         ],
         "ship": [
-            "Flujo de 4 fases",
-            "Gate de despliegue SIEMPRE interactiva",
-            "NUNCA auto-apruebes un despliegue",
-            "## Cierre canónico del comando",
+            "Процесс из 4 фаз",
+            "Gate развёртывания ВСЕГДА интерактивный",
+            "НИКОГДА не утверждай автоматически развёртывание",
+            "## Каноничное завершение команды",
             "commands/_docs_vivas.md",
             "hygiene",
         ],
         "audit": [
-            "Preflight de SonarQube",
-            "Lanza 4 agentes EN PARALELO",
-            "No toca código, solo genera informes",
-            "## Cierre canónico del comando",
+            "Preflight SonarQube",
+            "Запусти 4 агентов ПАРАЛЛЕЛЬНО",
+            "Код не трогай, только генерируй отчёты",
+            "## Каноничное завершение команды",
             "commands/_docs_vivas.md",
         ],
     }
@@ -1273,31 +1276,31 @@ def check_command_execution_contracts() -> list[str]:
 
     interactive_contracts = {
         "ajustes": [
-            "principal navegable",
+            "главное меню",
             "core/config_cli.py",
             "CONFIG_HEADLESS_MENU",
-            "no llames `AskUserQuestion`",
-            "vuelve cancelada",
+            "не вызывай `AskUserQuestion`",
+            "возвращается отменённым",
             "build_config_section_summaries()",
             "build_config_section_menu()",
             "build_config_section_change_preview()",
             "update_config_section()",
         ],
-        "lucius": [
-            "Argumentos del usuario: $ARGUMENTS",
+        "cto": [
+            "Аргументы пользователя: $ARGUMENTS",
             "codex login",
             "scope=all",
-            "No implementes ningún ítem",
-            "siguiente paso verificable",
+            "Не реализуй ни один пункт",
+            "проверяемый следующий шаг",
         ],
         "update": [
-            "semver real",
+            "как настоящий semver",
             "0.10.0",
-            "un único `AskUserQuestion`",
-            "ejecutar **`/reload-plugins`**",
+            "один `AskUserQuestion`",
+            "выполнить **`/reload-plugins`**",
             "`/reload-plugins --force`",
-            "entonces debe reiniciar",
-            "## Cierre canónico del comando",
+            "нужно перезапустить",
+            "## Каноничное завершение команды",
         ],
     }
     for name, needles in interactive_contracts.items():
@@ -1314,7 +1317,7 @@ def check_command_execution_contracts() -> list[str]:
         "18 wrappers helper-first cubiertos",
         "6 flujos principales con cierre canónico",
         "_composicion se carga desde la instalación del plugin",
-        "config/lucius/update con contratos interactivos verificables",
+        "config/cto/update con contratos interactivos verificables",
         "gates libres sin aprobacion incondicional",
         "autopilot por config/estado sin flag publico fantasma",
     ]
@@ -1342,7 +1345,7 @@ def check_public_claims() -> list[str]:
     skills_doc = _read("docs/skills.md")
     help_command = _read("commands/alfred.md")
     alfred_agent = _read("agents/alfred.md")
-    lucius_agent = _read("agents/lucius.md")
+    cto_agent = _read("agents/cto.md")
     agents_readme = _read("docs/agents/README.md")
     has_site = _has_site()
     personality = _read("docs/personality.md")
@@ -1365,11 +1368,11 @@ def check_public_claims() -> list[str]:
 
     required = {
         "README.md": [
-            "10 agentes",
-            "11 skills",
+            "10 агентов",
+            "11 плоских skills",
             "quality gates",
             "https://code.claude.com/docs/en/overview",
-            "Novedades en v0.7.0",
+            "Новое в v0.7.0",
         ],
         "docs/skills.md": [
             "catalogo de 11 skills",
@@ -1395,9 +1398,9 @@ def check_public_claims() -> list[str]:
             "El resultado no se promete determinista",
             "reduce variabilidad",
         ],
-        "agents/lucius.md": [
-            "No fuerces un modelo por tu cuenta",
-            "Codex CLI (configuración local del usuario)",
+        "agents/cto.md": [
+            "Не навязывай модель по собственной инициативе",
+            "Codex CLI (локальная конфигурация пользователя)",
             "codex exec",
             "--sandbox read-only",
             "--ephemeral",
@@ -1440,7 +1443,7 @@ def check_public_claims() -> list[str]:
         "commands/alfred.md": help_command,
         "agents/alfred.md": alfred_agent,
         "docs/agents/README.md": agents_readme,
-        "agents/lucius.md": lucius_agent,
+        "agents/cto.md": cto_agent,
         "CHANGELOG.md": changelog,
     }
     if has_site:
@@ -1474,6 +1477,9 @@ def check_public_claims() -> list[str]:
             "https://docs.anthropic.com/en/docs/claude-code",
             "quality gates infranqueables",
             "No hay excepciones, no hay modo de saltárselas",
+            # Equivalentes rusos: README esta traducido.
+            "quality gates непреодолим",
+            "Исключений нет",
         ],
         "docs/architecture.md": ["Agentes de nucleo** (9)", "se registran igualmente en `plugin.json`"],
         "docs/agents/README.md": [
@@ -1487,8 +1493,11 @@ def check_public_claims() -> list[str]:
             "9 agentes de nucleo + 8 opcionales",
             "reglas infranqueables",
             "NUNCA se pueden saltar",
+            # Equivalentes rusos: agents/ esta traducido.
+            "непреодолим",
+            "НИКОГДА нельзя пропускать",
         ],
-        "agents/lucius.md": ["GPT-5.4", "gpt-5.4"],
+        "agents/cto.md": ["GPT-5.4", "gpt-5.4"],
         "docs/personality.md": ["GPT-5.4"],
         "CHANGELOG.md": [
             "GPT-5.4",
@@ -1535,6 +1544,7 @@ def check_public_claims() -> list[str]:
         ],
         "hooks/session-start.sh": [
             "Las quality gates son infranqueables",
+            "непреодолим",
         ],
         "site/src/components/Footer.astro": ["https://docs.anthropic.com/en/docs/claude-code"],
         "docs/skills.md": [
@@ -1553,6 +1563,10 @@ def check_public_claims() -> list[str]:
             "garantiza que nada con vulnerabilidades conocidas llega a los usuarios",
             "bloqueantes absolutos. Sin excepciones",
             "seguridad infranqueable",
+            # Equivalentes rusos: agents/ esta traducido.
+            "Без исключений",
+            "непреодолим",
+            "ничто с известными уязвимостями",
         ],
     }
     stale_sources = {
@@ -1566,7 +1580,7 @@ def check_public_claims() -> list[str]:
         "commands/alfred.md": help_command,
         "agents/alfred.md": alfred_agent,
         "docs/agents/README.md": agents_readme,
-        "agents/lucius.md": lucius_agent,
+        "agents/cto.md": cto_agent,
         "docs/personality.md": personality,
         "CHANGELOG.md": changelog,
     }
@@ -1626,7 +1640,7 @@ def check_public_claims() -> list[str]:
         surface_message,
         display_name_message,
         "skills delicados mantienen activacion manual explicita",
-        "Lucius no fija modelo obsoleto de Codex CLI",
+        "CTO no fija modelo obsoleto de Codex CLI",
         "prompts runtime sin /alfred legacy",
     ]
 
@@ -1743,8 +1757,8 @@ def check_config_contracts() -> list[str]:
             "bundler": "vite",
         },
         "agentes_opcionales": {
-            "lucius": True,
-            "lucius": True,
+            "cto": True,
+            "cto": True,
         },
         "memoria": {
             "enabled": True,
@@ -1926,10 +1940,22 @@ def check_config_contracts() -> list[str]:
         "integraciones",
         "personalidad",
     ]
+    # commands/ajustes.md esta traducido al ruso; docs/configuration.md sigue en
+    # espanol (upstream). Cada superficie se verifica con sus propias etiquetas.
+    required_command_labels = [
+        "автономность по фазам",
+        "проект",
+        "опциональные агенты",
+        "постоянная память",
+        "compliance",
+        "интеграции",
+        "личность",
+    ]
     missing: list[str] = []
-    for label in required_human_labels:
-        if label not in command_norm:
+    for label in required_command_labels:
+        if _normalize(label) not in command_norm:
             missing.append(f"commands/config.md: {label}")
+    for label in required_human_labels:
         if label not in docs_norm:
             missing.append(f"docs/configuration.md: {label}")
 
@@ -1968,7 +1994,7 @@ def check_config_contracts() -> list[str]:
 
 
 def check_flow_gate_claims() -> list[str]:
-    """Ejercita claims publicos de flujos, Selina, gates y autopilot."""
+    """Ejercita claims publicos de flujos, Designer, gates y autopilot."""
     from core.config_loader import has_frontend
     from core.orchestrator import (
         FLOWS,
@@ -1994,7 +2020,7 @@ def check_flow_gate_claims() -> list[str]:
             "Requiere resultado favorable y evidencia/checklist; no pide aprobacion humana.",
         ),
         "README.md": (
-            "Todos los artefactos están documentados con checklist/evidencia revisable",
+            "Все артефакты задокументированы, есть проверяемый чек-лист/подтверждение",
         ),
     }
     free_gate_sources = {
@@ -2016,6 +2042,7 @@ def check_flow_gate_claims() -> list[str]:
         ),
         "README.md": (
             "Todos los artefactos están documentados |",
+            "Все артефакты задокументированы |",
         ),
     }
     for path, needles in stale_free_gate_claims.items():
@@ -2031,9 +2058,9 @@ def check_flow_gate_claims() -> list[str]:
     }
     public_gate_requirements = {
         "README.md": (
-            "quality gates verificables",
-            "Autopilot solo resuelve gates de usuario configuradas",
-            "no salta tests, seguridad, evidencia ni confirmación humana de despliegue",
+            "проверяемыми по подтверждению quality gates",
+            "Autopilot решает только настроенные пользовательские gates",
+            "не пропускает тесты, безопасность, подтверждение и ручное подтверждение развёртывания",
         ),
         "docs/README.md": ("quality gates verificables con evidencia",),
         "docs/agents/README.md": ("quality gates verificables con evidencia",),
@@ -2053,6 +2080,8 @@ def check_flow_gate_claims() -> list[str]:
         "README.md": (
             "quality gates infranqueables",
             "No hay excepciones, no hay modo de saltárselas",
+            "quality gates непреодолим",
+            "Исключений нет",
         ),
         "docs/README.md": ("quality gates infranqueables",),
         "docs/agents/README.md": ("quality gates infranqueables",),
@@ -2072,7 +2101,7 @@ def check_flow_gate_claims() -> list[str]:
     estilo = feature_phases[1] if len(feature_phases) > 1 else {}
     expected_style_contract = {
         "nombre": "estilo_visual",
-        "agentes": ["selina"],
+        "agentes": ["designer"],
         "gate_tipo": "usuario",
         "condicion": "tiene_frontend",
     }
@@ -2145,8 +2174,8 @@ def check_flow_gate_claims() -> list[str]:
         _fail("Claims de flujos/gates desalineados: " + "; ".join(problems))
 
     return [
-        "feature mantiene 7 fases con Selina condicional",
-        "Selina se ejecuta solo con frontend y se salta con backend",
+        "feature mantiene 7 fases con Designer condicional",
+        "Designer se ejecuta solo con frontend y se salta con backend",
         "gates libres documentadas como evidencia sin aprobacion humana",
         "gates automaticas bloquean tests rojos y seguridad KO",
         "autopilot no salta gates automaticas ni despliegue humano",
@@ -2596,7 +2625,7 @@ def check_packaging_contracts() -> list[str]:
         "paquete sin symlinks publicables fuera del plugin",
         "paquete contiene 18 comandos namespaced, 10 agentes y 11 skills",
         "paquete contiene 8 templates de artefactos",
-        "paquete contiene runtime visual de Selina",
+        "paquete contiene runtime visual de Designer",
     ]
 
 
@@ -2696,18 +2725,18 @@ def check_install_update_contracts() -> list[str]:
         ],
         "commands/update.md": [
             "claude plugin list --json",
-            "semver real",
-            "un único `AskUserQuestion`",
-            "Actualizar ahora",
-            "Ahora no",
-            "normaliza a `--scope user`",
-            "no pisa `~/.claude/skills`",
-            "No uses `claude plugin update --scope local`",
+            "как настоящий semver",
+            "один `AskUserQuestion`",
+            "Обновить сейчас",
+            "Не сейчас",
+            "нормализует их в `--scope user`",
+            "не затрагивает `~/.claude/skills`",
+            "Не используй `claude plugin update --scope local`",
             "`claude plugin update --scope project`",
-            "curl -fsSL https://raw.githubusercontent.com/686f6c61/alfred-dev/main/install.sh | bash",
-            "ejecutar **`/reload-plugins`**",
+            "curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash",
+            "выполнить **`/reload-plugins`**",
             "`/reload-plugins --force`",
-            "entonces debe reiniciar",
+            "нужно перезапустить",
         ],
         "docs/installation.md": [
             "--scope user",
@@ -2795,9 +2824,9 @@ def check_audit_docs() -> list[str]:
 
     required = {
         "README.md": [
-            "Novedades en v0.7.0",
+            "Новое в v0.7.0",
             "docs/release.md",
-            "MCP stdio moderno",
+            "современном MCP stdio",
         ],
         "docs/README.md": [
             "release.md",
@@ -3241,42 +3270,42 @@ def check_human_contracts() -> list[str]:
 
     requirements = {
         "clarifying questions": [
-            ("Solo usa `AskUserQuestion` si de verdad hay dos caminos plausibles", commands["alfred"]),
-            ("una sola pregunta corta", commands["alfred"]),
-            ("único `AskUserQuestion` con menú seleccionable real", commands["alfred"]),
-            ("Si necesitas preguntar por ambigüedad real", commands["next"]),
-            ("un único `AskUserQuestion` navegable", commands["next"]),
-            ("NO uses `AskUserQuestion` por defecto", commands["discuss"]),
-            ("no hace falta el menú", commands["discuss"]),
+            ("Используй `AskUserQuestion` только если действительно есть два правдоподобных пути", commands["alfred"]),
+            ("один короткий вопрос", commands["alfred"]),
+            ("один `AskUserQuestion` с настоящим выбираемым меню", commands["alfred"]),
+            ("Если нужно спросить из-за реальной неоднозначности", commands["next"]),
+            ("один навигируемый `AskUserQuestion`", commands["next"]),
+            ("НЕ используй `AskUserQuestion` по умолчанию", commands["discuss"]),
+            ("меню не нужно", commands["discuss"]),
             ("DISCUSS_ROUTE_MENU_HEADLESS", commands["discuss"]),
-            ("vuelve cancelada", commands["discuss"]),
-            ("principal navegable", commands_norm["ajustes"]),
+            ("возвращается отменённым", commands["discuss"]),
+            ("главное меню", commands["ajustes"]),
             ("config_headless_menu", commands_norm["ajustes"]),
-            ("un único `AskUserQuestion`", commands["update"]),
+            ("один `AskUserQuestion`", commands["update"]),
         ],
         "human gates": [
-            ("Si una gate de usuario queda pendiente, usa un único `AskUserQuestion`", commands["feature"]),
-            ("Si una gate de usuario queda pendiente, usa un único `AskUserQuestion`", commands["fix"]),
-            ("gate de despliegue siempre interactiva", commands_norm["ship"]),
-            ("nunca auto-apruebes un despliegue", commands_norm["ship"]),
-            ("NO marques una UAT como aprobada sin una indicación explícita del usuario", commands["uat"]),
+            ("Если пользовательский gate остаётся в ожидании, используй один навигируемый", commands["feature"]),
+            ("Если пользовательский gate остаётся в ожидании, используй один навигируемый", commands["fix"]),
+            ("Gate развёртывания ВСЕГДА интерактивный", commands["ship"]),
+            ("НИКОГДА не утверждай автоматически развёртывание", commands["ship"]),
+            ("НЕ помечай UAT как одобренную без явного указания пользователя", commands["uat"]),
             ("`/alfred-dev:verify aprobado`", commands["uat"]),
         ],
         "operational honesty": [
-            ("Honestidad operativa y antifingimiento", commands["_composicion"]),
-            ("No digas \"he ejecutado\", \"ha pasado\" o \"está validado\" si solo lo has inferido", commands["_composicion"]),
-            ("Distingue siempre entre \"recomiendo ejecutar X\" y \"he ejecutado X", commands["_composicion"]),
-            ("No finjas evidencia", commands["alfred"]),
-            ("salida de herramienta", commands["alfred"]),
-            ("siguiente paso verificable", commands["alfred"]),
-            ("No finjas evidencia", alfred_agent),
-            ("confirmación explícita del usuario", alfred_agent),
+            ("Операционная честность и запрет имитации", commands["_composicion"]),
+            ("Не говори «я выполнил», «прошло» или «проверено», если ты только предположил это", commands["_composicion"]),
+            ("Всегда различай «рекомендую выполнить X» и «я выполнил X", commands["_composicion"]),
+            ("Не имитируй подтверждение", commands["alfred"]),
+            ("вывод инструмента", commands["alfred"]),
+            ("проверяемый следующий шаг", commands["alfred"]),
+            ("Не имитируй подтвержден", alfred_agent),
+            ("явного подтверждения пользователя", alfred_agent),
         ],
         "grounded fallbacks": [
-            ("NO inventes stack, entrypoints o riesgos", commands["map-codebase"]),
-            ("NO inventes un handoff", commands["pause"]),
-            ("aceptacion manual prematura", commands_norm["uat"]),
-            ("Si `$ARGUMENTS` está vacío, dilo claramente y no inventes una búsqueda", commands["search"]),
+            ("НЕ выдумывай стек, точки входа или риски", commands["map-codebase"]),
+            ("НЕ выдумывай handoff", commands["pause"]),
+            ("преждевременную ручную приёмку", commands["uat"]),
+            ("Если `$ARGUMENTS` пуст, скажи об этом ясно и не выдумывай поиск", commands["search"]),
         ],
     }
     missing: list[str] = []
@@ -3297,14 +3326,16 @@ def check_human_contracts() -> list[str]:
         "sync-github",
         "uat",
     ]
-    final_markers = (
-        "respuesta final",
-        "tal cual",
-        "usala y termina",
-        "usalo como respuesta final",
-        "no sigas explorando",
-        "segunda capa",
-        "no la reenvuelvas",
+    final_markers = tuple(
+        _normalize(marker)
+        for marker in (
+            "итоговый ответ",
+            "итогового ответа",
+            "как есть",
+            "не продолжай исследование",
+            "второй слой",
+            "не оборачивай",
+        )
     )
     for name in helper_wrappers:
         text_norm = commands_norm[name]
@@ -3313,9 +3344,9 @@ def check_human_contracts() -> list[str]:
         if not any(marker in text_norm for marker in final_markers):
             missing.append(f"helper-first {name}: falta regla de salida final sin reenvolver")
 
-    if "No digas" not in commands["_composicion"] or "siguiente paso verificable" not in commands["alfred"]:
+    if "Не говори" not in commands["_composicion"] or "проверяемый следующий шаг" not in commands["alfred"]:
         missing.append("humanidad: falta contrato antifingimiento central")
-    if "No finjas evidencia" not in alfred_agent:
+    if "Не имитируй подтвержден" not in alfred_agent:
         missing.append("humanidad: falta contrato antifingimiento en agente Alfred")
 
     if missing:
@@ -3331,67 +3362,63 @@ def check_human_contracts() -> list[str]:
 
 def check_external_contracts() -> list[str]:
     audit = _read("commands/audit.md")
-    audit_norm = _normalize(audit)
     sonarqube = _read("skills/sonarqube/SKILL.md")
-    sonarqube_norm = _normalize(sonarqube)
     sync = _read("commands/sync-github.md")
     sync_norm = _normalize(sync)
-    lucius_command = _read("commands/lucius.md")
-    lucius_agent = _read("agents/lucius.md")
-    lucius_all = lucius_command + "\n" + lucius_agent
-    lucius_norm = _normalize(lucius_all)
+    cto_command = _read("commands/cto.md")
+    cto_agent = _read("agents/cto.md")
+    cto_all = cto_command + "\n" + cto_agent
     ship = _read("commands/ship.md")
-    ship_norm = _normalize(ship)
 
     requirements = {
         "audit SonarQube preflight": [
             ("docker --version", audit),
             ("docker info", audit),
             ("AskUserQuestion", audit),
-            ("NO intentes instalarlo por tu cuenta", audit),
-            ("NO intentes arrancarlo por tu cuenta", audit),
-            ("incluso si el proyecto esta en modo autopilot", audit_norm),
-            ("sonarqube se omitio por decision explicita del usuario", audit_norm),
+            ("НЕ пытайся установить его сам", audit),
+            ("НЕ пытайся запустить его сам", audit),
+            ("даже если проект в режиме autopilot", audit),
+            ("SonarQube пропущен по явному решению пользователя", audit),
         ],
         "sonarqube skill permission": [
-            ("no instales docker, no abras docker desktop y no arranques el daemon sin aprobacion explicita del usuario.", sonarqube_norm),
-            ("si no existe una autorizacion previa, pidela ahora y espera respuesta.", sonarqube_norm),
-            ("puerto `9000` ya esta en uso", sonarqube_norm),
+            ("Не устанавливай Docker, не открывай Docker Desktop и не запускай демон без явного одобрения пользователя.", sonarqube),
+            ("Если предварительного разрешения нет, запроси его сейчас и жди ответа.", sonarqube),
+            ("Проверь, занят ли порт `9000`", sonarqube),
             ("docker rm -f sonarqube-alfred", sonarqube),
-            ("intenta igualmente la limpieza final del contenedor temporal", sonarqube_norm),
+            ("всё равно попытайся выполнить финальную очистку временного контейнера", sonarqube),
         ],
         "sync-github safe mirror": [
             ('python3 .claude/alfred-continuity.py sync-github "$PWD" --raw "$ARGUMENTS"', sync),
             ("gh --version", sync),
             ("gh auth status", sync),
-            ("NO uses `AskUserQuestion` por defecto", sync),
-            ("No borres issues ajenos a Alfred", sync),
-            ("Mantén la verdad local", sync),
+            ("НЕ используй `AskUserQuestion` по умолчанию", sync),
+            ("Не удаляй issues, не относящиеся к Alfred", sync),
+            ("Сохраняй локальную истину", sync),
         ],
-        "lucius external audit": [
-            ("codex --version", lucius_all),
-            ("codex login", lucius_all),
-            ("confirmación explícita", lucius_all),
-            ("codex exec", lucius_all),
-            ("--sandbox read-only", lucius_all),
-            ("--ephemeral", lucius_all),
-            ("--json", lucius_all),
-            ("--output-last-message", lucius_all),
-            ("codex_report", lucius_all),
-            ("codex_jsonl", lucius_all),
-            ("approval_policy", lucius_all),
-            ("status --porcelain=v1 -z", lucius_all),
-            ("no modifiques ningun fichero", lucius_norm),
-            ("nunca ejecutas codigo del proyecto", lucius_norm),
-            ("no sustituyes a `qa-engineer`, `security-officer` ni `architect`", lucius_norm),
-            ("no reemplaza el sign-off canonico", lucius_norm),
+        "cto external audit": [
+            ("codex --version", cto_all),
+            ("codex login", cto_all),
+            ("явное подтверждение", cto_all),
+            ("codex exec", cto_all),
+            ("--sandbox read-only", cto_all),
+            ("--ephemeral", cto_all),
+            ("--json", cto_all),
+            ("--output-last-message", cto_all),
+            ("codex_report", cto_all),
+            ("codex_jsonl", cto_all),
+            ("approval_policy", cto_all),
+            ("status --porcelain=v1 -z", cto_all),
+            ("НЕ изменяй никакие файлы", cto_all),
+            ("Ты никогда не запускаешь код проекта", cto_all),
+            ("Ты не заменяешь `qa-engineer`, `security-officer` и `architect`", cto_all),
+            ("не заменяет канонический sign-off", cto_all),
         ],
         "ship deploy gate": [
-            ("gate de despliegue", ship_norm),
-            ("siempre interactiva", ship_norm),
-            ("un único `AskUserQuestion`", ship),
-            ("nunca auto-apruebes un despliegue", ship_norm),
-            ("usuario+seguridad", ship),
+            ("Gate развёртывания", ship),
+            ("ВСЕГДА интерактивный", ship),
+            ("одним навигируемым `AskUserQuestion`", ship),
+            ("НИКОГДА не утверждай автоматически развёртывание", ship),
+            ("пользователь+безопасность", ship),
         ],
     }
     missing: list[str] = []
@@ -3405,7 +3432,7 @@ def check_external_contracts() -> list[str]:
     return [
         "Docker/SonarQube pide permiso y documenta omisiones",
         "sync-github mantiene GitHub como espejo seguro",
-        "Lucius confirma coste y no modifica ficheros",
+        "CTO confirma coste y no modifica ficheros",
         "ship mantiene deploy con gate humana",
     ]
 
@@ -3530,8 +3557,8 @@ def check_continuity_smoke() -> list[str]:
             _fail("sync-github deberia fallar sin tareas sincronizables preparadas para GitHub")
         sync_error = sync_fail.stderr + sync_fail.stdout
         if (
-            "No hay tareas con identificador [T-XXX]" not in sync_error
-            and "No hay tareas en docs/project/kanban/" not in sync_error
+            "Нет задач с идентификатором [T-XXX]" not in sync_error
+            and "В docs/project/kanban/ нет задач" not in sync_error
         ):
             _fail(f"sync-github no fallo de forma explicita sin tareas: {sync_error}")
 
@@ -3566,7 +3593,7 @@ def check_continuity_smoke() -> list[str]:
             "--expected",
             "map-codebase",
         )
-        if "## Mapeo brownfield completado" not in consumed:
+        if "## Карта brownfield составлена" not in consumed:
             _fail("consume-prefetch no devolvio la respuesta helper-first esperada")
         if (project / ".claude" / "alfred-prefetch.json").exists():
             _fail("consume-prefetch no limpio el prefetch transitorio")
@@ -3578,7 +3605,7 @@ def check_continuity_smoke() -> list[str]:
             _fail(f"discuss devolvio recomendacion inesperada: {discussed}")
 
         quick = _run_continuity(project, "quick", str(project), "--raw", "cambiar CTA")
-        if "## Quick preparado" not in quick or "/alfred-dev:verify" not in quick:
+        if "## Quick подготовлен" not in quick or "/alfred-dev:verify" not in quick:
             _fail("quick no devolvio resumen humano con siguiente verify")
 
         handoff = json.loads(_run_continuity(project, "write-handoff", str(project)))
@@ -3600,30 +3627,30 @@ def check_continuity_smoke() -> list[str]:
             _fail(f"allow-stop-once no armo bypass valido: {bypass}")
 
         status = _run_continuity(project, "status", str(project))
-        if "## Estado operativo de Alfred Dev" not in status:
+        if "## Рабочее состояние Alfred Dev" not in status:
             _fail("status no devolvio resumen operativo")
 
         pause = _run_continuity(project, "pause", str(project))
-        if "## Sesión pausada" not in pause:
+        if "## Сессия на паузе" not in pause:
             _fail("pause no dejo salida humana de pausa")
 
         resume = _run_continuity(project, "resume", str(project))
-        if "## Sesión reanudada" not in resume:
+        if "## Сессия возобновлена" not in resume:
             _fail("resume no dejo salida humana de reanudacion")
 
         for command, expected in [
-            ("progress", "## Resumen operativo del proyecto"),
-            ("standup", "## Standup diario"),
-            ("blocked", "## Tareas en blocked"),
-            ("in-progress", "## Tareas en in progress"),
-            ("validate", "## Validación operativa"),
+            ("progress", "## Рабочая сводка проекта"),
+            ("standup", "## Ежедневный standup"),
+            ("blocked", "## Задачи в blocked"),
+            ("in-progress", "## Задачи в in progress"),
+            ("validate", "## Рабочая валидация"),
         ]:
             output = _run_continuity(project, command, str(project))
             if expected not in output:
                 _fail(f"{command} no contiene {expected!r}")
 
         search = _run_continuity(project, "search", str(project), "--raw", "login")
-        if "## Resultados para `login`" not in search:
+        if "## Результаты для `login`" not in search:
             _fail("search no devolvio resultados humanos")
 
         kanban = project / "docs" / "project" / "kanban"
@@ -3637,7 +3664,7 @@ def check_continuity_smoke() -> list[str]:
         for lane in ("in-progress", "done", "blocked"):
             (kanban / f"{lane}.md").write_text(f"# {lane.title()}\n", encoding="utf-8")
         normalize = _run_continuity(project, "normalize-kanban", str(project))
-        if "## Normalización de kanban" not in normalize or "Tareas ajustadas" not in normalize:
+        if "## Нормализация kanban" not in normalize or "Исправлено задач" not in normalize:
             _fail("normalize-kanban no devolvio resumen de normalizacion")
 
         memory_started = False
@@ -4011,7 +4038,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--with-syntax", action="store_true", help="Ejecuta bash -n, json.tool y git diff --check.")
     parser.add_argument("--with-continuity", action="store_true", help="Ejecuta smoke operativo de helpers en fixture temporal.")
     parser.add_argument("--with-mcp-tools", action="store_true", help="Invoca las 15 herramientas MCP en una SQLite temporal.")
-    parser.add_argument("--with-external-contracts", action="store_true", help="Verifica prompts seguros para Docker, GitHub, Lucius y deploy.")
+    parser.add_argument("--with-external-contracts", action="store_true", help="Verifica prompts seguros para Docker, GitHub, CTO y deploy.")
     parser.add_argument("--with-human-contracts", action="store_true", help="Verifica trato humano, AskUserQuestion, UAT y antifingimiento.")
     parser.add_argument("--full", action="store_true", help="Activa todos los smokes externos.")
     args = parser.parse_args(argv)

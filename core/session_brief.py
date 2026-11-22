@@ -20,19 +20,19 @@ from core.memory_config import is_memory_enabled
 from core.project_docs import ADR_DIR, list_adr_files
 
 
-CONVERSATION_PROTOCOL = """## Cómo hablarle a Alfred
+CONVERSATION_PROTOCOL = """## Как говорить с Alfred
 
-Si el usuario describe trabajo, un bug, retomar, entregar o preguntar qué toca **sin** un slash command, actúa como `/alfred-dev:alfred`: elige la ruta y ejecútala. No ofrezcas el catálogo.
+Если пользователь описывает работу, баг, просит продолжить, сдать результат или спрашивает, что дальше, **без** slash command, действуй как `/alfred-dev:alfred`: выбери маршрут и выполни его. Не предлагай каталог.
 
-Ruta principal: `/alfred-dev:alfred`. Flujos: `/alfred-dev:feature`, `/alfred-dev:quick`, `/alfred-dev:fix`, `/alfred-dev:spike`, `/alfred-dev:audit`, `/alfred-dev:ship`. Estado: `/alfred-dev:progress`. Continuar: `/alfred-dev:retomar`.
+Основной маршрут: `/alfred-dev:alfred`. Процессы: `/alfred-dev:feature`, `/alfred-dev:quick`, `/alfred-dev:fix`, `/alfred-dev:spike`, `/alfred-dev:audit`, `/alfred-dev:ship`. Статус: `/alfred-dev:progress`. Продолжить: `/alfred-dev:retomar`.
 
-Criterio, no menú:
-- cambio local y acotado → `quick`, no abras un PRD
-- bug o regresión → `fix`
-- decisión de stack, auth o persistencia → ADR, no un comentario
-- UAT pendiente o rechazada → no despliegues
+Суждение, а не меню:
+- локальное и ограниченное изменение → `quick`, не открывай PRD
+- баг или регрессия → `fix`
+- решение о стеке, auth или хранении данных → ADR, а не комментарий
+- UAT в ожидании или отклонена → не развёртывай
 
-Si Agent Teams está activo en esta sesión, úsalo para fases en paralelo; si no, usa la herramienta Agent. No reescribas `.claude/settings.json`.
+Если в этой сессии активен Agent Teams, используй его для параллельных фаз; если нет, используй инструмент Agent. Не переписывай `.claude/settings.json`.
 """
 
 
@@ -72,7 +72,7 @@ def list_accepted_adrs(project_dir: str) -> List[str]:
     titles: List[str] = []
     for name in list_adr_files(project_dir):
         text = _read(os.path.join(project_dir, ADR_DIR, name))
-        if not re.search(r"(?im)^\*\*Estado:\*\*\s*aceptado\b", text):
+        if not re.search(r"(?im)^\*\*(?:Estado|Статус):\*\*\s*(?:aceptado\b|принят)", text):
             continue
         heading = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
         titles.append(heading.group(1).strip() if heading else name)
@@ -128,35 +128,35 @@ def build_session_brief(project_dir: str) -> Dict[str, Any]:
 def render_brief_lines(brief: Dict[str, Any]) -> str:
     lines: List[str] = ["## Briefing"]
     if brief.get("active"):
-        desc = brief.get("description") or "sin descripción"
-        gate = brief.get("pending_gate") or "sin gate"
+        desc = brief.get("description") or "без описания"
+        gate = brief.get("pending_gate") or "нет gate"
         lines.append(
-            f"Sesión activa: `{brief.get('command')}` / `{brief.get('phase')}`. "
+            f"Активная сессия: `{brief.get('command')}` / `{brief.get('phase')}`. "
             f"{desc}. Gate: {gate}."
         )
-        lines.append("Siguiente: `/alfred-dev:retomar`.")
+        lines.append("Дальше: `/alfred-dev:retomar`.")
     elif brief.get("pending_handoff"):
-        lines.append("Hay un handoff pendiente. Siguiente: `/alfred-dev:retomar`.")
+        lines.append("Есть незакрытый handoff. Дальше: `/alfred-dev:retomar`.")
     elif brief.get("uat_status") == "rejected":
-        lines.append("UAT rechazada. No despliegues. Revisa `docs/project/uat.md`.")
+        lines.append("UAT отклонена. Не развёртывай. Проверь `docs/project/uat.md`.")
     elif brief.get("verify_pending") or brief.get("uat_status") == "pending":
-        lines.append("UAT pendiente del último entregable. Siguiente: `/alfred-dev:uat`.")
+        lines.append("UAT последнего результата ещё не пройдена. Дальше: `/alfred-dev:uat`.")
     else:
         lines.append(
-            "No hay sesión abierta. Si el repo ya tiene código y no hay mapa, "
-            "prioriza `/alfred-dev:map-codebase`. Si no, pregunta qué quiere hacer."
+            "Открытой сессии нет. Если в репозитории уже есть код, а карты нет, "
+            "начни с `/alfred-dev:map-codebase`. Иначе спроси, что пользователь хочет сделать."
         )
 
     decisions = brief.get("decisions") or []
     if decisions:
         first = decisions[0]
         chosen = f" → {first['chosen']}" if first.get("chosen") else ""
-        lines.append(f"Última decisión: {first['title']}{chosen}.")
+        lines.append(f"Последнее решение: {first['title']}{chosen}.")
 
     adrs = brief.get("accepted_adrs") or []
     if adrs:
-        lines.append("ADRs aceptados: " + "; ".join(adrs[:3]) + ".")
-        lines.append("Si el trabajo contradice un ADR aceptado, dilo antes de escribir código.")
+        lines.append("Принятые ADR: " + "; ".join(adrs[:3]) + ".")
+        lines.append("Если работа противоречит принятому ADR, скажи об этом до того, как писать код.")
     return "\n".join(lines)
 
 

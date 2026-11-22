@@ -1,119 +1,119 @@
 # PRD: {{nombre_feature}}
 
-**Fecha:** {{fecha}}
-**Autor:** product-owner
-**Estado:** {{estado}}
+**Дата:** {{fecha}}
+**Автор:** product-owner
+**Статус:** {{estado}}
 
-## Problema
+## Проблема
 
 {{descripcion_problema}}
 
-## Contexto
+## Контекст
 
 {{contexto_negocio}}
 
-## Solución propuesta
+## Предлагаемое решение
 
 {{descripcion_solucion}}
 
-## Historias de usuario
+## Пользовательские истории
 
 {{historias_de_usuario}}
 
-## Criterios de aceptación
+## Критерии приёмки
 
 {{criterios_aceptacion}}
 
-## Métricas de éxito
+## Метрики успеха
 
-| Métrica | Valor objetivo | Cómo se mide |
-|---------|---------------|--------------|
+| Метрика | Целевое значение | Как измеряется |
+|---------|------------------|----------------|
 | {{metrica_1}} | {{valor_1}} | {{medicion_1}} |
 
-## Riesgos y mitigaciones
+## Риски и меры по снижению
 
-| Riesgo | Probabilidad | Impacto | Mitigación |
-|--------|-------------|---------|------------|
+| Риск | Вероятность | Влияние | Мера по снижению |
+|------|-------------|---------|------------------|
 | {{riesgo_1}} | {{prob_1}} | {{impacto_1}} | {{mitigacion_1}} |
 
-## Fuera de alcance
+## Вне объёма
 
 {{fuera_de_alcance}}
 
-## Dependencias
+## Зависимости
 
 {{dependencias}}
 
-<!-- EJEMPLO COMPLETADO ─────────────────────────────────────────────────
+<!-- ЗАПОЛНЕННЫЙ ПРИМЕР ─────────────────────────────────────────────────
 
-# PRD: sistema de memoria persistente
+# PRD: система постоянной памяти
 
-**Fecha:** 2026-02-18
-**Autor:** product-owner
-**Estado:** aprobado
+**Дата:** 2026-02-18
+**Автор:** product-owner
+**Статус:** aprobado
 
-## Problema
+## Проблема
 
-Alfred Dev pierde todo el contexto de decisiones y commits al cerrar una sesion
-de Claude Code. Cuando el desarrollador retoma el trabajo, ni Alfred ni los
-agentes recuerdan que se decidio, por que se decidio ni que se ha implementado.
-Esto obliga al usuario a repetir contexto constantemente.
+Alfred Dev теряет весь контекст решений и коммитов при закрытии сессии
+Claude Code. Когда разработчик возвращается к работе, ни Alfred, ни
+агенты не помнят, что было решено, почему это было решено и что было реализовано.
+Это заставляет пользователя постоянно повторять контекст.
 
-## Contexto
+## Контекст
 
-Los plugins de Claude Code no tienen persistencia nativa entre sesiones. La
-unica forma de conservar informacion es escribir en disco. El proyecto ya usa
-SQLite para la memoria persistente, lo que establece un precedente tecnologico.
+У плагинов Claude Code нет встроенной персистентности между сессиями.
+Единственный способ сохранить информацию это писать на диск. Проект уже использует
+SQLite для постоянной памяти, что создаёт технологический прецедент.
 
-## Solucion propuesta
+## Предлагаемое решение
 
-Base de datos SQLite local por proyecto (`.claude/alfred-memory.db`) que
-almacena decisiones, commits, iteraciones y eventos. Captura automatica
-mediante hooks y consulta via agente El Bibliotecario o servidor MCP.
+Локальная база данных SQLite на проект (`.claude/alfred-memory.db`), которая
+хранит решения, коммиты, итерации и события. Автоматический сбор
+через hooks и запросы через MCP-сервер.
 
-## Historias de usuario
+## Пользовательские истории
 
-- Como desarrollador, quiero que Alfred recuerde las decisiones de diseno
-  de sesiones anteriores para no tener que repetirlas.
-- Como arquitecto, quiero poder buscar por que se eligio una tecnologia
-  concreta hace semanas, citando la decision original.
-- Como nuevo miembro del equipo, quiero consultar el historial de decisiones
-  del proyecto para entender el razonamiento detras de la arquitectura actual.
+- Как разработчик, я хочу, чтобы Alfred помнил проектные решения
+  прошлых сессий, чтобы мне не приходилось их повторять.
+- Как архитектор, я хочу иметь возможность найти, почему несколько недель назад
+  была выбрана конкретная технология, со ссылкой на исходное решение.
+- Как новый член команды, я хочу изучить историю решений
+  проекта, чтобы понять логику текущей архитектуры.
 
-## Criterios de aceptacion
+## Критерии приёмки
 
-- Given una sesion nueva, when se inicia Alfred, then las decisiones de la
-  iteracion activa (o las 5 ultimas) se inyectan en el contexto.
-- Given una decision registrada, when se busca por texto, then aparece en
-  los resultados con su justificacion completa.
-- Given un commit capturado, when se consulta, then muestra SHA, autor,
-  mensaje y ficheros afectados.
+- Given новая сессия, when запускается Alfred, then решения
+  активной итерации (или последние 5) внедряются в контекст.
+- Given зарегистрированное решение, when выполняется поиск по тексту, then оно появляется в
+  результатах с полным обоснованием.
+- Given перехваченный коммит, when выполняется запрос, then отображаются SHA, автор,
+  сообщение и затронутые файлы.
 
-## Metricas de exito
+## Метрики успеха
 
-| Metrica | Valor objetivo | Como se mide |
-|---------|---------------|--------------|
-| Repeticion de contexto | < 1 vez por sesion | Feedback del usuario |
-| Tiempo de busqueda | < 500 ms | Benchmark con 500 decisiones |
-| Adopcion | > 50% de usuarios activos | Config con memoria.enabled: true |
+| Метрика | Целевое значение | Как измеряется |
+|---------|------------------|----------------|
+| Повторение контекста | < 1 раза за сессию | Обратная связь пользователя |
+| Время поиска | < 500 мс | Benchmark на 500 решениях |
+| Внедрение | > 50% активных пользователей | Конфиг с memoria.enabled: true |
 
-## Riesgos y mitigaciones
+## Риски и меры по снижению
 
-| Riesgo | Probabilidad | Impacto | Mitigacion |
-|--------|-------------|---------|------------|
-| Fuga de secretos en la DB | Media | Alto | sanitize_content() con patrones regex |
-| DB corrupta por crash | Baja | Alto | WAL mode + backup antes de migraciones |
-| Rendimiento con DB grande | Baja | Medio | FTS5 + limites de retencion |
+| Риск | Вероятность | Влияние | Мера по снижению |
+|------|-------------|---------|------------------|
+| Утечка секретов в БД | Средняя | Высокое | sanitize_content() с regex-шаблонами |
+| Повреждение БД при сбое | Низкая | Высокое | Режим WAL + backup перед миграциями |
+| Производительность на большой БД | Низкая | Среднее | FTS5 + лимиты хранения |
 
-## Fuera de alcance
+## Вне объёма
 
-- Sincronizacion entre maquinas o repositorios.
-- Interfaz grafica para editar decisiones.
-- Versionado de la DB (se usan migraciones de esquema).
+- Синхронизация между машинами или репозиториями.
+- Графический интерфейс для редактирования решений.
+- Версионирование БД (используются миграции схемы).
 
-## Dependencias
+## Зависимости
 
-- SQLite 3.x con FTS5 (incluido en Python 3.10+ stdlib).
-- Hooks PostToolUse para captura automatica.
+- SQLite 3.x с FTS5 (входит в stdlib Python 3.10+).
+- Hooks PostToolUse для автоматического сбора.
 
-──────────────────────────────────────────────── FIN DEL EJEMPLO -->
+──────────────────────────────────────────────── КОНЕЦ ПРИМЕРА -->

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Tests para el catalogo visual canónico de Selina."""
+"""Tests para el catalogo visual canónico de Designer."""
 
 import unittest
 
-from core.selina_style_catalog import (
+from core.designer_style_catalog import (
     DEFAULT_STYLE_ID,
     build_style_catalog_proposal,
     get_palette_modes,
@@ -12,7 +12,7 @@ from core.selina_style_catalog import (
 )
 
 
-class TestSelinaStyleCatalog(unittest.TestCase):
+class TestDesignerStyleCatalog(unittest.TestCase):
     def test_catalog_exposes_nine_trends_plus_free_mode(self):
         catalog = get_style_catalog()
         self.assertEqual(len(catalog), 10)

@@ -9,9 +9,15 @@ from typing import Dict, Optional, Tuple
 
 
 def _fold(text: str) -> str:
-    normalized = unicodedata.normalize("NFKD", text or "")
-    normalized = normalized.encode("ascii", "ignore").decode("ascii")
-    return normalized.lower().strip()
+    composed = unicodedata.normalize("NFC", text or "").lower().replace("ё", "е")
+    out = []
+    for char in composed:
+        if ord(char) < 128 or "\u0400" <= char <= "\u04ff":
+            out.append(char)
+            continue
+        decomposed = unicodedata.normalize("NFKD", char)
+        out.append(decomposed.encode("ascii", "ignore").decode("ascii"))
+    return "".join(out).strip()
 
 
 def _has_slash_command(text: str) -> bool:
@@ -30,6 +36,20 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
             r"donde lo deje",
             r"por donde iba",
             r"\bresume\b",
+            r"\bпродолж\w*",
+            r"\bдальше\b",
+            r"\bвозобнов\w*",
+            r"на чем (мы )?остановил",
+            r"\bвернемся к\b",
+        ),
+    ),
+    (
+        "pause",
+        (
+            r"\bpausa(r)?\b",
+            r"\bпауз\w*",
+            r"\bприостанов\w*",
+            r"\bна сегодня все\b",
         ),
     ),
     (
@@ -40,6 +60,10 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
             r"aprobado por (el )?usuario",
             r"rechazado",
             r"verificar (el )?entregable",
+            r"\bприемк\w*",
+            r"одобрено пользовател\w*",
+            r"\bотклонен\w*",
+            r"провер\w* результат\w*",
         ),
     ),
     (
@@ -49,11 +73,25 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
             r"\ba produccion\b",
             r"\brelease\b",
             r"\bship\b",
+            r"\bрелиз\w*",
+            r"\bдепло\w*",
+            r"\bвыкат\w*",
+            r"\bразверн\w*",
+            r"\bразвертыван\w*",
+            r"\bопубликова\w*|\bопубликуй\w*",
+            r"\b(в|на) прод\b|\bв продакшн\w*",
         ),
     ),
     (
-        "lucius",
-        (r"\blucius\b", r"segunda opinion"),
+        "cto",
+        (
+            r"\bcto\b",
+            r"\bтехническ\w* директор\w*",
+            r"\blucius\b",  # alias legacy
+            r"\bлюциус\w*",  # alias legacy
+            r"segunda opinion",
+            r"второе мнение",
+        ),
     ),
     (
         "audit",
@@ -61,6 +99,8 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
             r"\baudi(t|ta|tar|toria)\b",
             r"\bowasp\b",
             r"seguridad del (repo|proyecto)",
+            r"\bаудит\w*",
+            r"безопасност\w* (репо|репозитория|проекта)",
         ),
     ),
     (
@@ -70,6 +110,8 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
             r"mapa del (repo|codigo|codebase)",
             r"que hay en este repo",
             r"\bbrownfield\b",
+            r"карт\w* (кодовой базы|кода|репо|репозитория)",
+            r"что (есть )?в этом репо",
         ),
     ),
     (
@@ -79,6 +121,12 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
             r"que hay abierto",
             r"\bkanban\b",
             r"estado del (flujo|proyecto)",
+            r"\bстатус\w*",
+            r"\bпрогресс\w*",
+            r"как (идут дела|продвигается|там проект)",
+            r"что (сейчас )?открыто",
+            r"\bканбан\w*",
+            r"состояние (процесса|проекта)",
         ),
     ),
     (
@@ -87,6 +135,9 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
             r"que decidimos",
             r"por que elegimos",
             r"ultima decision",
+            r"что (мы )?решили",
+            r"почему (мы )?выбрали",
+            r"последн\w* решени\w*",
         ),
     ),
     (
@@ -96,6 +147,15 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
             r"no funciona",
             r"\b500\b",
             r"\bexception\b",
+            r"\bбаг\w*",
+            r"\bошибк\w*",
+            r"\bпада\w*",
+            r"\bупал\w*",
+            r"\bсломал\w*",
+            r"\bсломан\w*",
+            r"не работает",
+            r"\bрегресс\w*",
+            r"\bкраш\w*|\bкрэш\w*",
         ),
     ),
     (
@@ -105,6 +165,19 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
             r"que te parece",
             r"\baterrizar\b",
             r"\buna idea\b",
+            r"не знаю,? (как|что|стоит ли|ли)",
+            r"что (ты )?думаешь",
+            r"как тебе",
+            r"\bесть идея\b",
+        ),
+    ),
+    (
+        "spike",
+        (
+            r"\bspike\b",
+            r"\bисследу\w*",
+            r"\bисследова\w*",
+            r"\bсравни\w*",
         ),
     ),
     (
@@ -114,6 +187,10 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
             r"\bfeature\b",
             r"queremos que",
             r"implementar (un|una|el|la)",
+            r"\bфич\w*",
+            r"\bдобав\w*",
+            r"нов\w* функци\w*",
+            r"хотим,? чтобы",
         ),
     ),
     (
@@ -123,21 +200,30 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
             r"\btypo\b",
             r"\bcta\b",
             r"texto del",
+            r"\bпоменя\w*",
+            r"\bизмени(ть)?\b",
+            r"\bпоправ\w*",
+            r"\bподправ\w*",
+            r"\bпереимену\w*",
+            r"\bопечатк\w*",
+            r"текст (кнопки|на)",
         ),
     ),
 )
 
 _COMMAND_HINT = {
     "retomar": "/alfred-dev:retomar",
+    "pause": "/alfred-dev:pause",
     "uat": "/alfred-dev:uat",
     "ship": "/alfred-dev:ship",
-    "lucius": "/alfred-dev:lucius",
+    "cto": "/alfred-dev:cto",
     "audit": "/alfred-dev:audit",
     "map-codebase": "/alfred-dev:map-codebase",
     "progress": "/alfred-dev:progress",
     "memory": "/alfred-dev:alfred",
     "fix": "/alfred-dev:fix",
     "discuss": "/alfred-dev:discuss",
+    "spike": "/alfred-dev:spike",
     "feature": "/alfred-dev:feature",
     "quick": "/alfred-dev:quick",
 }
@@ -164,10 +250,10 @@ def render_route_hint(match: Dict[str, str]) -> str:
     command = match["command"]
     if match["route"] == "memory":
         return (
-            f"Esta petición pregunta por una decisión. Consulta la memoria "
-            f"o `docs/adr/` y actúa como `{command}`. No inventes historial."
+            f"Этот запрос спрашивает о решении. Загляни в память "
+            f"или `docs/adr/` и действуй как `{command}`. Не выдумывай историю."
         )
     return (
-        f"Esta petición, sin slash, encaja con `{command}`. "
-        f"Actúa como ese comando. No pidas que lo escriba."
+        f"Этот запрос без slash подходит под `{command}`. "
+        f"Действуй как эта команда. Не проси пользователя её вводить."
     )

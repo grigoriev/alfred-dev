@@ -3,13 +3,13 @@ name: memory
 description: This skill should be used when the user asks to record a design decision, search past project decisions, inspect the Alfred memory timeline, or work with the alfred-memory MCP server. Use it to call the namespaced MCP tools instead of inventing history.
 ---
 
-# Memoria persistente de Alfred
+# Постоянная память Alfred
 
-Registrar y consultar decisiones del proyecto a través del servidor MCP `alfred-memory`. No inventar historial. Si la herramienta no está disponible, decirlo y no simular resultados.
+Записывать и запрашивать решения проекта через MCP-сервер `alfred-memory`. Не выдумывать историю. Если инструмент недоступен, сказать об этом и не имитировать результаты.
 
-## Nombres reales de las tools
+## Реальные имена tools
 
-Claude Code expone las tools del plugin con prefijo MCP. Usar estos nombres, no los cortos:
+Claude Code экспонирует tools плагина с MCP-префиксом. Использовать эти имена, а не короткие:
 
 - `mcp__plugin_alfred-dev_alfred-memory__memory_search`
 - `mcp__plugin_alfred-dev_alfred-memory__memory_get_decisions`
@@ -21,26 +21,26 @@ Claude Code expone las tools del plugin con prefijo MCP. Usar estos nombres, no 
 - `mcp__plugin_alfred-dev_alfred-memory__memory_link_decisions`
 - `mcp__plugin_alfred-dev_alfred-memory__memory_health`
 
-Si el runtime muestra un prefijo distinto, usar el que aparezca en la lista de tools, siempre del servidor `alfred-memory`.
+Если runtime показывает другой префикс, использовать тот, что есть в списке tools, всегда от сервера `alfred-memory`.
 
-## Qué se escribe y qué no
+## Что записывается, а что нет
 
-Sí: decisiones de diseño, resultado de gates, handoffs, UAT y commits hechos en una sesión de Alfred.
+Да: архитектурные и проектные решения, результаты gates, handoffs, UAT и коммиты, сделанные в сессии Alfred.
 
-No: historial antiguo de Git, cada Read/Glob/Grep, consejos operativos ni kanban vacío.
+Нет: старая история Git, каждый Read/Glob/Grep, операционные советы и пустой kanban.
 
-Llamar a `memory_log_decision` solo cuando haya una elección real de diseño, seguridad o entrega. No registrar cada edit. Si la decisión es de arquitectura o compliance, el Markdown vivo (`docs/adr/`, `docs/project/compliance.md`) es lo que lee un humano; la memoria no lo sustituye.
+Вызывать `memory_log_decision` только при реальном выборе в дизайне, безопасности или поставке. Не регистрировать каждый edit. Если решение касается архитектуры или compliance, то человек читает живой Markdown (`docs/adr/`, `docs/project/compliance.md`); память его не заменяет.
 
-Campos mínimos: título, contexto, alternativas descartadas, justificación, etiquetas.
+Минимальные поля: заголовок, контекст, отброшенные альтернативы, обоснование, теги.
 
-## Consulta
+## Запрос
 
-Para "por qué decidimos X" o "qué hicimos la última vez": `memory_search` o `memory_get_decisions` con el término y, si aplica, rango o tags.
+Для «почему мы решили X» или «что мы делали в прошлый раз»: `memory_search` или `memory_get_decisions` с термином и, если применимо, диапазоном или тегами.
 
-Si no hay filas, responder que no hay registros. No inferir.
+Если записей нет, ответить, что записей нет. Не домысливать.
 
-No existe el agente `librarian`. Esta skill y `/alfred-dev:memory-ui` son la vía de consulta histórica.
+Агента `librarian` не существует. Этот skill и `/alfred-dev:memory-ui` это путь для обращения к истории.
 
 ## UI
 
-La vista gráfica es `/alfred-dev:memory-ui`. Esta skill no arranca el servidor HTTP. Para cerrarla: `/alfred-dev:memory-ui stop`. Al terminar la sesión de Claude se detiene sola.
+Графическое представление: `/alfred-dev:memory-ui`. Этот skill не запускает HTTP-сервер. Чтобы закрыть его: `/alfred-dev:memory-ui stop`. При завершении сессии Claude он останавливается сам.

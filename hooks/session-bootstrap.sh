@@ -34,11 +34,11 @@ sys.path.insert(0, sys.argv[2])
 from core.memory import MemoryDB
 db = MemoryDB(sys.argv[1])
 db.close()
-" "$MEMORY_DB" "$PLUGIN_ROOT" 2>/dev/null || echo "[Alfred Dev] Aviso: no se pudo crear la BD de memoria" >&2
+" "$MEMORY_DB" "$PLUGIN_ROOT" 2>/dev/null || echo "[Alfred Dev] Предупреждение: не удалось создать БД памяти" >&2
 fi
 
 python3 - "$CONTINUITY_WRAPPER" "$PLUGIN_ROOT" <<'PY' 2>/dev/null || \
-  echo "[Alfred Dev] Aviso: no se pudo preparar el wrapper local de continuidad" >&2
+  echo "[Alfred Dev] Предупреждение: не удалось подготовить локальный wrapper непрерывности" >&2
 import os
 import sys
 
@@ -97,7 +97,7 @@ def _resolve_plugin_root():
         resolved = _valid_root(candidate)
         if resolved:
             return resolved
-    sys.stderr.write("[Alfred Dev] No se pudo resolver la instalacion activa del plugin. Ejecuta /reload-plugins o reinstala alfred-dev.\\n")
+    sys.stderr.write("[Alfred Dev] Не удалось найти активную установку плагина. Выполни /reload-plugins или переустанови alfred-dev.\\n")
     raise SystemExit(2)
 
 

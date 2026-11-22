@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generación guiada de tres variantes finales para Selina."""
+"""Generación guiada de tres variantes finales para Designer."""
 
 from __future__ import annotations
 
@@ -7,16 +7,16 @@ import json
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
-from core.selina_style_catalog import (
+from core.designer_style_catalog import (
     build_style_catalog_proposal,
     get_style_trend,
     resolve_font_pairing,
     resolve_palette_mode_meta,
 )
-from core.selina_style_direction import resolve_visual_session_dir
-from core.selina_style_options import write_style_options_html
-from core.selina_style_selector import parse_guided_choice
-from core.selina_visual import read_latest_style_choice
+from core.designer_style_direction import resolve_visual_session_dir
+from core.designer_style_options import write_style_options_html
+from core.designer_style_selector import parse_guided_choice
+from core.designer_visual import read_latest_style_choice
 
 
 STYLE_VARIANTS_JSON_FILENAME = "style-options.json"
@@ -243,7 +243,7 @@ def write_guided_style_options(
         title=f"Elige la versión final de {style['name']}",
         subtitle=(
             f"Base fijada: {font_pairing['label']} + {palette_meta['label']}. "
-            "Ahora sí: Selina te enseña tres versiones finales comparables dentro de esa misma familia."
+            "Ahora sí: Designer te enseña tres versiones finales comparables dentro de esa misma familia."
         ),
     )
 

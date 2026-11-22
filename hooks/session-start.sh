@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SessionStart sincrono y corto. No llama a GitHub. No reescribe permisos.
 # Rutas: /alfred-dev:alfred /alfred-dev:feature /alfred-dev:audit /alfred-dev:progress /alfred-dev:retomar
-# Lucius bajo demanda. Agent Teams solo si ya está activo.
+# CTO bajo demanda. Agent Teams solo si ya está activo.
 
 set -euo pipefail
 
@@ -21,17 +21,17 @@ print(json.dumps({
 "
 }
 
-FALLBACK="## Cómo hablarle a Alfred
+FALLBACK="## Как говорить с Alfred
 
-Si el usuario describe trabajo, un bug, retomar, entregar o preguntar qué toca sin un slash command, actúa como /alfred-dev:alfred: elige la ruta y ejecútala. No ofrezcas el catálogo.
+Если пользователь описывает работу, баг, просит продолжить, сдать результат или спрашивает, что дальше, без slash command, действуй как /alfred-dev:alfred: выбери маршрут и выполни его. Не предлагай каталог.
 
-Ruta principal: /alfred-dev:alfred. Flujos: /alfred-dev:feature, /alfred-dev:quick, /alfred-dev:fix, /alfred-dev:spike, /alfred-dev:audit, /alfred-dev:ship. Estado: /alfred-dev:progress. Continuar: /alfred-dev:retomar.
+Основной маршрут: /alfred-dev:alfred. Процессы: /alfred-dev:feature, /alfred-dev:quick, /alfred-dev:fix, /alfred-dev:spike, /alfred-dev:audit, /alfred-dev:ship. Статус: /alfred-dev:progress. Продолжить: /alfred-dev:retomar.
 
-Si Agent Teams está activo en esta sesión, úsalo para fases en paralelo; si no, usa la herramienta Agent. No reescribas .claude/settings.json.
+Если в этой сессии активен Agent Teams, используй его для параллельных фаз; если нет, используй инструмент Agent. Не переписывай .claude/settings.json.
 
 ## Briefing
 
-No hay sesión abierta. Pregunta qué quiere hacer o mapea el repo si es brownfield.
+Открытой сессии нет. Спроси, что пользователь хочет сделать, или составь карту репозитория, если это brownfield.
 "
 
 CONTEXT=$(

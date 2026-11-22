@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Tests para las pantallas guiadas del selector de Selina."""
+"""Tests para las pantallas guiadas del selector de Designer."""
 
 import os
 import shutil
 import tempfile
 import unittest
 
-from core.selina_style_selector import (
+from core.designer_style_selector import (
     encode_style_brief_choice,
     encode_style_choice,
     parse_guided_choice,
@@ -14,9 +14,9 @@ from core.selina_style_selector import (
 )
 
 
-class TestSelinaStyleSelector(unittest.TestCase):
+class TestDesignerStyleSelector(unittest.TestCase):
     def setUp(self):
-        self.session_dir = tempfile.mkdtemp(prefix="alfred-selina-selector-")
+        self.session_dir = tempfile.mkdtemp(prefix="alfred-designer-selector-")
         self.state_dir = os.path.join(self.session_dir, "state")
         self.content_dir = os.path.join(self.session_dir, "content")
         os.makedirs(self.state_dir, exist_ok=True)

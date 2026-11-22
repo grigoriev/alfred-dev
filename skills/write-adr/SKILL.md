@@ -1,53 +1,53 @@
 ---
 name: write-adr
-description: "Usar para escribir o cerrar un Architecture Decision Record. También: ADR, docs/adr, decisión de stack, persistencia, autenticación o límites de arquitectura."
+description: "Использовать для написания или закрытия Architecture Decision Record. Также: ADR, docs/adr, решение по стеку, хранению данных, аутентификации или границам архитектуры."
 ---
 
-# Escribir un ADR
+# Написание ADR
 
-## Resumen
+## Резюме
 
-Documenta una decisión arquitectónica significativa en `docs/adr/`. Un ADR no
-es un diario: solo se escribe si hay una elección real (stack, persistencia,
-auth, límites, integración).
+Документирует значимое архитектурное решение в `docs/adr/`. ADR это не
+дневник: он пишется только при реальном выборе (стек, хранение данных,
+auth, границы, интеграция).
 
-## Proceso
+## Процесс
 
-1. Crea el esqueleto con el helper. No inventes el número a mano:
+1. Создай скелет через helper. Не придумывай номер вручную:
 
    ```bash
    python3 .claude/alfred-continuity.py next-adr "$PWD" --title "Título corto"
    ```
 
-2. Lee `templates/adr.md` si existe y el fichero recién creado.
+2. Прочитай `templates/adr.md`, если он есть, и только что созданный файл.
 
-3. Rellena, con hechos del repo:
+3. Заполни фактами из репозитория:
 
-   - contexto y restricciones
-   - al menos dos opciones reales, con pros y contras
-   - decisión y por qué
-   - consecuencias y deuda asumida
+   - контекст и ограничения
+   - минимум два реальных варианта, с плюсами и минусами
+   - решение и почему
+   - последствия и принятый долг
 
-4. Estado inicial: `propuesto` hasta que el usuario o la gate de arquitectura
-   lo acepten. Entonces `aceptado`. Si más tarde cambia, crea un ADR nuevo que
-   apunte al anterior; no reescribas el viejo.
+4. Начальный статус: `propuesto`, пока пользователь или gate архитектуры
+   его не примут. Тогда `aceptado`. Если позже решение изменится, создай новый ADR,
+   ссылающийся на прежний; старый не переписывай.
 
-5. Sustituye `<!-- alfred-doc:scaffold -->` por `<!-- alfred-doc:filled -->`.
+5. Замени `<!-- alfred-doc:scaffold -->` на `<!-- alfred-doc:filled -->`.
 
-6. Ejecuta `sync-project-docs` para refrescar el índice.
+6. Выполни `sync-project-docs`, чтобы обновить индекс.
 
-7. Si la decisión es de diseño, regístrala también con `memory_log_decision`.
-   La memoria no sustituye al ADR.
+7. Если решение касается дизайна, зарегистрируй его также через `memory_log_decision`.
+   Память не заменяет ADR.
 
-## Criterios de éxito
+## Критерии успеха
 
-- El fichero está en `docs/adr/ADR-NNN-....md`.
-- Hay al menos dos opciones evaluadas.
-- La decisión y sus consecuencias se pueden leer sin el chat.
-- El marcador es `filled`.
+- Файл находится в `docs/adr/ADR-NNN-....md`.
+- Оценено минимум два варианта.
+- Решение и его последствия можно прочитать без чата.
+- Маркер: `filled`.
 
-## Qué NO hacer
+## Чего НЕ делать
 
-- No abras un ADR por un rename o un ajuste local de `quick`.
-- No dejes `_(pendiente)_` en un ADR que declaras cerrado.
-- No copies un ADR genérico que no menciona el repo.
+- Не открывай ADR из-за переименования или локальной правки в `quick`.
+- Не оставляй `_(pendiente)_` в ADR, который объявляешь закрытым.
+- Не копируй типовой ADR, в котором не упоминается репозиторий.

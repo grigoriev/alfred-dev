@@ -34,7 +34,7 @@ class TestMapCodebaseContract(unittest.TestCase):
         self.assertIn("docs/project/current.md", command)
         self.assertIn('python3 .claude/alfred-continuity.py consume-prefetch "$PWD" --expected map-codebase', command)
         self.assertIn('python3 .claude/alfred-continuity.py map-codebase "$PWD" --raw "$ARGUMENTS"', command)
-        self.assertIn("NO modifiques código de aplicación", command)
+        self.assertIn("НЕ изменяй код приложения", command)
 
 
 class TestNextContract(unittest.TestCase):
@@ -44,13 +44,13 @@ class TestNextContract(unittest.TestCase):
         self.assertIn(".claude/alfred-handoff.json", command)
         self.assertIn(".claude/alfred-uat.json", command)
         self.assertIn("docs/project/discovery.md", command)
-        self.assertIn("actúa como `/alfred-dev:retomar`", command)
-        self.assertIn("actúa como `/alfred-dev:uat`", command)
+        self.assertIn("действуй как `/alfred-dev:retomar`", command)
+        self.assertIn("действуй как `/alfred-dev:uat`", command)
         self.assertNotIn("allow-stop-once", command)
-        self.assertIn("actúa como `/alfred-dev:map-codebase`", command)
-        self.assertIn("fuente es `discovery`", command)
+        self.assertIn("действуй как `/alfred-dev:map-codebase`", command)
+        self.assertIn("источник это `discovery`", command)
         self.assertIn("AskUserQuestion", command)
-        self.assertIn("menú seleccionable real", command)
+        self.assertIn("настоящее выбираемое меню", command)
 
 
 class TestPauseResumeContract(unittest.TestCase):
@@ -61,18 +61,18 @@ class TestPauseResumeContract(unittest.TestCase):
         self.assertIn("paused_at", command)
         self.assertIn('paused_via: "/alfred-dev:pause"', command)
         self.assertIn('python3 .claude/alfred-continuity.py pause "$PWD"', command)
-        self.assertIn("No la reenvuelvas con un segundo resumen", command)
-        self.assertIn("NO marques la sesión como completada", command)
+        self.assertIn("Не оборачивай его во вторую сводку", command)
+        self.assertIn("НЕ помечай сессию как завершённую", command)
 
     def test_resume_uses_state_then_handoff(self):
         command = _read("commands/retomar.md")
         self.assertIn(".claude/alfred-dev-state.json", command)
         self.assertIn(".claude/alfred-handoff.json", command)
-        self.assertIn("Prioridad de reanudación", command)
+        self.assertIn("Приоритет возобновления", command)
         self.assertIn("resumed_at", command)
         self.assertIn('python3 .claude/alfred-continuity.py resume "$PWD"', command)
-        self.assertIn("No la reenvuelvas con un segundo resumen", command)
-        self.assertIn("NO uses `AskUserQuestion` dentro de `/alfred-dev:resume`", command)
+        self.assertIn("Не оборачивай его во вторую сводку", command)
+        self.assertIn("НЕ используй `AskUserQuestion` внутри `/alfred-dev:resume`", command)
         self.assertIn("/alfred-dev:alfred", command)
 
 
@@ -82,17 +82,17 @@ class TestVerifyContract(unittest.TestCase):
         self.assertIn(".claude/alfred-uat.json", command)
         self.assertIn("docs/project/uat.md", command)
         self.assertIn('python3 .claude/alfred-continuity.py verify "$PWD" --raw "$ARGUMENTS"', command)
-        self.assertIn("NO uses `AskUserQuestion` como paso obligatorio", command)
+        self.assertIn("НЕ используй `AskUserQuestion` как обязательный шаг", command)
 
 
 class TestQuickContract(unittest.TestCase):
     def test_quick_uses_light_flow_and_helper(self):
         command = _read("commands/quick.md")
-        self.assertIn("flujo `quick`", command)
+        self.assertIn("процессом `quick`", command)
         self.assertIn("ejecucion_acotada", command)
         self.assertIn("validacion_rapida", command)
         self.assertIn('python3 .claude/alfred-continuity.py quick "$PWD" --raw "$ARGUMENTS"', command)
-        self.assertIn("Al terminar, deja visible que el siguiente paso esperado es `/alfred-dev:uat`", command)
+        self.assertIn("В конце покажи, что ожидаемый следующий шаг это `/alfred-dev:uat`", command)
 
 
 class TestDiscussContract(unittest.TestCase):
@@ -102,7 +102,7 @@ class TestDiscussContract(unittest.TestCase):
         self.assertIn("docs/project/current.md", command)
         self.assertIn('python3 .claude/alfred-continuity.py consume-prefetch "$PWD" --expected discuss', command)
         self.assertIn("product-owner", command)
-        self.assertIn("siguiente comando recomendado", command)
+        self.assertIn("рекомендуемую следующую команду", command)
         self.assertIn('python3 .claude/alfred-continuity.py discuss "$PWD" --raw "$ARGUMENTS"', command)
         self.assertIn("/alfred-dev:feature", command)
         self.assertIn("/alfred-dev:quick", command)

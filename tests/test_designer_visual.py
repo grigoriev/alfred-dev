@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests para la lectura canónica de elecciones visuales de Selina."""
+"""Tests para la lectura canónica de elecciones visuales de Designer."""
 
 import json
 import os
@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import unittest
 
-from core.selina_visual import (
+from core.designer_visual import (
     events_file_for,
     read_latest_style_choice,
     resolve_state_dir,
@@ -23,9 +23,9 @@ READ_CHOICE_SCRIPT = os.path.join(
 )
 
 
-class TestSelinaVisual(unittest.TestCase):
+class TestDesignerVisual(unittest.TestCase):
     def setUp(self):
-        self.session_dir = tempfile.mkdtemp(prefix="alfred-selina-visual-")
+        self.session_dir = tempfile.mkdtemp(prefix="alfred-designer-visual-")
         self.state_dir = os.path.join(self.session_dir, "state")
         os.makedirs(self.state_dir, exist_ok=True)
         self.events_path = os.path.join(self.state_dir, "events")

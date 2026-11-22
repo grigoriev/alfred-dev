@@ -26,7 +26,7 @@ class TestHelpListsPmCommands(unittest.TestCase):
 class TestAlfredRoutingKnowsPmCommands(unittest.TestCase):
     def test_alfred_routes_standup_and_sync_explicitly(self):
         command = _read("commands/alfred.md")
-        self.assertIn("resumen diario", command)
+        self.assertIn("ежедневная сводка", command)
         self.assertIn("/alfred-dev:progress", command)
         self.assertIn("/alfred-dev:sync-github", command)
         self.assertIn("/alfred-dev:progress", command)
@@ -66,22 +66,22 @@ class TestPmCommandWrappers(unittest.TestCase):
     def test_discuss_uses_helper_without_reopening_the_interview(self):
         command = _read("commands/discuss.md")
         self.assertIn('python3 .claude/alfred-continuity.py discuss "$PWD" --raw "$ARGUMENTS"', command)
-        self.assertIn("foco, alcance, riesgo, pregunta abierta clave y", command)
-        self.assertIn("NO lo reenvuelvas con una segunda entrevista", command)
+        self.assertIn("фокус, объём, риск, ключевой открытый вопрос и", command)
+        self.assertIn("НЕ оборачивай это вторым интервью", command)
 
     def test_verify_uses_helper_first_and_does_not_rewrap(self):
         command = _read("commands/uat.md")
         self.assertIn('python3 .claude/alfred-continuity.py verify "$PWD" --raw "$ARGUMENTS"', command)
-        self.assertIn("Si el helper devuelve una respuesta válida, úsala como respuesta final", command)
-        self.assertIn("NO añadas una segunda capa de resumen", command)
+        self.assertIn("Если helper возвращает валидный ответ, используй его как итоговый ответ", command)
+        self.assertIn("НЕ добавляй второй слой сводки", command)
 
     def test_search_uses_helper(self):
         command = _read("commands/search.md")
         self.assertNotIn("allow-stop-once", command)
         self.assertIn('python3 .claude/alfred-continuity.py search "$PWD" --raw "$ARGUMENTS"', command)
-        self.assertIn("incluso", command)
-        self.assertIn("no hay coincidencias", command)
-        self.assertIn("NO uses `AskUserQuestion`", command)
+        self.assertIn("даже", command)
+        self.assertIn("совпадений нет", command)
+        self.assertIn("НЕ используй `AskUserQuestion`", command)
         self.assertIn(".claude/alfred-memory.db", command)
 
     def test_sync_github_uses_helper(self):
@@ -90,7 +90,7 @@ class TestPmCommandWrappers(unittest.TestCase):
         self.assertIn('python3 .claude/alfred-continuity.py sync-github "$PWD" --raw "$ARGUMENTS"', command)
         self.assertIn(".claude/alfred-github-sync.json", command)
         self.assertIn("docs/project/github-sync.md", command)
-        self.assertIn("úsala como respuesta final y termina", command)
+        self.assertIn("используй его как итоговый ответ и закончи", command)
 
 
 class TestPluginManifestIncludesPmCommands(unittest.TestCase):

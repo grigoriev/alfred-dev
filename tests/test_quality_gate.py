@@ -79,7 +79,7 @@ class TestQualityGateMain(unittest.TestCase):
         }
         code, stderr = self._run_main(payload)
         self.assertEqual(code, 0)
-        self.assertNotIn("Rompe-cosas", stderr)
+        self.assertNotIn("Ломатель", stderr)
 
     def test_failing_tests_emits_warning(self):
         """Tests fallidos emiten el aviso de El Rompe-cosas por stderr."""
@@ -89,7 +89,7 @@ class TestQualityGateMain(unittest.TestCase):
         }
         code, stderr = self._run_main(payload)
         self.assertEqual(code, 0)
-        self.assertIn("Rompe-cosas", stderr)
+        self.assertIn("Ломатель", stderr)
 
     def test_nonzero_exit_code_without_output_emits_warning(self):
         """Un exit code no cero tambien debe disparar el aviso."""
@@ -99,7 +99,7 @@ class TestQualityGateMain(unittest.TestCase):
         }
         code, stderr = self._run_main(payload)
         self.assertEqual(code, 0)
-        self.assertIn("Rompe-cosas", stderr)
+        self.assertIn("Ломатель", stderr)
 
     def test_tool_result_payload_is_supported(self):
         """El hook debe tolerar el payload actual con tool_result."""
@@ -109,7 +109,7 @@ class TestQualityGateMain(unittest.TestCase):
         }
         code, stderr = self._run_main(payload)
         self.assertEqual(code, 0)
-        self.assertIn("Rompe-cosas", stderr)
+        self.assertIn("Ломатель", stderr)
 
     def test_invalid_json_exits_0_with_warning(self):
         """Entrada JSON invalida emite aviso pero no bloquea (exit 0)."""

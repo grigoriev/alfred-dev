@@ -7,257 +7,257 @@
 ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝  ╚═╝╚══════╝╚═════╝     ╚═════╝ ╚══════╝  ╚═══╝
 ```
 
-**Plugin de ingeniería de software automatizada para [Claude Code](https://code.claude.com/docs/en/overview).**
+> **Русский форк** [686f6c61/alfred-dev](https://github.com/686f6c61/alfred-dev). Промпты, хуки и вывод ядра переведены на русский. Агенты `selina` и `lucius` переименованы в `designer` и `cto`. Автор оригинального плагина: 686f6c61 (лицензия MIT сохранена). Форк: [grigoriev/alfred-dev](https://github.com/grigoriev/alfred-dev).
 
-10 agentes (8 de núcleo, Selina si hay frontend y Lucius bajo demanda), catálogo de 11 skills de proceso, memoria persistente de decisiones por proyecto, 6 flujos de trabajo con quality gates verificables con evidencia, fase de estilo visual condicional, modo autopilot y compliance europeo (RGPD, NIS2, CRA) integrado desde el diseño.
+**Плагин автоматизированной программной инженерии для [Claude Code](https://code.claude.com/docs/en/overview).**
 
-[Documentación completa](https://alfred-dev.com/) -- [Instalar](#instalación) -- [Equipo](#el-equipo) -- [Comandos](#comandos) -- [Arquitectura](#arquitectura)
+10 агентов (8 базовых, Designer при наличии фронтенда и CTO по запросу), каталог из 11 процессных skills, постоянная память архитектурных решений по проекту, 6 процессов с проверяемыми по подтверждению quality gates, условная фаза визуального стиля, режим autopilot и европейский compliance (GDPR (RGPD), NIS2, CRA), встроенный с этапа проектирования.
+
+[Документация оригинала (на испанском)](https://alfred-dev.com/) -- [Установка](#установка) -- [Команда](#команда) -- [Команды](#команды) -- [Архитектура](#архитектура)
 
 ---
 
-## Qué es Alfred Dev
+## Что такое Alfred Dev
 
-Alfred Dev es un plugin que orquesta el ciclo de desarrollo de software con agentes autónomos. Cada agente tiene un rol concreto, un ámbito delimitado y quality gates que impiden avanzar a la siguiente fase sin evidencia. El sistema está pensado para que ningún artefacto llegue a producción sin haber pasado por producto, arquitectura, desarrollo con TDD, revisión de seguridad, QA y documentación.
+Alfred Dev: плагин, который оркестрирует цикл разработки ПО с помощью автономных агентов. У каждого агента своя роль, чёткая зона ответственности и quality gates, не дающие перейти к следующей фазе без подтверждения. Система устроена так, чтобы ни один артефакт не попал в production, не пройдя продукт, архитектуру, разработку с TDD, проверку безопасности, QA и документацию.
 
-El runtime detecta el stack del proyecto con `config_loader.detect_stack()` (Node.js/TypeScript, Python, Rust, Go, Ruby, Elixir, Java/Kotlin, PHP, C#/.NET, Swift) y adapta artefactos al ecosistema real: frameworks, gestores de paquetes, runners de tests y estructura de directorios cuando esos manifiestos existen.
+Рантайм определяет стек проекта через `config_loader.detect_stack()` (Node.js/TypeScript, Python, Rust, Go, Ruby, Elixir, Java/Kotlin, PHP, C#/.NET, Swift) и подстраивает артефакты под реальную экосистему: фреймворки, менеджеры пакетов, раннеры тестов и структуру каталогов, если эти манифесты существуют.
 
-La documentación viva del proyecto auditado vive en `docs/project/` (índice, arquitectura, compliance, threat-model, dependencias, mapa y estado). Los ADRs van a `docs/adr/`. Esos ficheros no son este repositorio: los crea el plugin en el repo donde trabajas.
+Живая документация проверяемого проекта лежит в `docs/project/` (индекс, архитектура, compliance, threat-model, зависимости, карта и состояние). ADR попадают в `docs/adr/`. Эти файлы не относятся к данному репозиторию: их создаёт плагин в репозитории, где ты работаешь.
 
-## El equipo
+## Команда
 
-Alfred Dev no es un agente monolítico que intenta saberlo todo. Es un equipo de **10 especialistas**, cada uno con un rol delimitado, personalidad propia y quality gates verificables con evidencia. Un modelo generalista rinde mejor con un rol concreto e instrucciones focalizadas que cuando se le pide que sea todo a la vez.
+Alfred Dev не монолитный агент, который пытается знать всё. Это команда из **10 специалистов**: у каждого своя роль, свой характер и проверяемые по подтверждению quality gates. Универсальная модель работает лучше с конкретной ролью и сфокусированными инструкциями, чем когда от неё требуют быть всем сразу.
 
-Cada agente se invoca como un subproceso de Claude Code mediante la herramienta **Agent**. Arranca con su propio system prompt, sin heredar sesgos ni ruido de conversaciones anteriores. El resultado no se promete determinista, pero sí más controlable: el mismo rol, las mismas instrucciones y los mismos artefactos reducen la variabilidad y facilitan revisar si cumplió su contrato.
+Каждый агент запускается как подпроцесс Claude Code через инструмент **Agent**. Он стартует со своим system prompt, без предвзятости и шума прошлых разговоров. Результат не обещается детерминированным, но он лучше управляем: та же роль, те же инструкции и те же артефакты снижают вариативность и упрощают проверку выполнения контракта.
 
-Tres principios de diseño:
+Три принципа дизайна:
 
-- **Responsabilidad única.** El Artesano escribe código; El Paranoico audita seguridad. Ninguno invade el territorio del otro.
-- **Herramientas restringidas.** No todos los agentes necesitan el sistema de ficheros o la terminal. Limitar herramientas reduce la superficie de error.
-- **Quality gates entre fases.** Ningún artefacto pasa de fase sin un punto de control. Las gates pueden ser automáticas (tests verdes), manuales (aprobación del usuario) o combinadas (automático + seguridad).
+- **Единая ответственность.** Senior Dev пишет код; Security Officer проверяет безопасность. Никто не вторгается на чужую территорию.
+- **Ограниченные инструменты.** Не всем агентам нужны файловая система или терминал. Ограничение инструментов уменьшает поверхность ошибок.
+- **Quality gates между фазами.** Ни один артефакт не переходит в следующую фазу без контрольной точки. Gates бывают автоматическими (зелёные тесты), ручными (одобрение пользователя) или комбинированными (автоматика + безопасность).
 
-Frontera del núcleo:
+Граница базового ядра:
 
-- **`product-owner`** decide **qué** problema se resuelve y **por qué**.
-- **`architect`** decide **cómo** se implementa técnicamente.
-- **`alfred`** decide **cuándo** interviene cada uno, en qué orden y con qué gate.
+- **`product-owner`** решает, **какую** проблему решаем и **зачем**.
+- **`architect`** решает, **как** это реализуется технически.
+- **`alfred`** решает, **когда** вмешивается каждый, в каком порядке и с какой gate.
 
-Si esas tres responsabilidades se mezclan, el flujo deja de ser previsible. Alfred coordina; no redefine alcance ni diseño por su cuenta.
+Если смешать эти три ответственности, процесс перестаёт быть предсказуемым. Alfred координирует; он не переопределяет объём и дизайн по своей инициативе.
 
-### Flujo feature: cronología de fases
+### Процесс feature: хронология фаз
 
-El flujo `feature` es el más completo: hasta siete fases secuenciales. La fase `estilo_visual` solo aparece si el proyecto tiene frontend. El `security-officer` interviene en arquitectura, calidad y entrega: la seguridad no es un paso final.
+Процесс `feature` самый полный: до семи последовательных фаз. Фаза `estilo_visual` появляется только если у проекта есть фронтенд. `security-officer` участвует в архитектуре, качестве и поставке: безопасность не последний шаг.
 
 ```mermaid
 timeline
-    title Flujo feature - fases y agentes
-    producto
+    title Процесс feature - фазы и агенты
+    продукт
         : product-owner
-        : Análisis de requisitos
-        : Gate - aprobación del usuario
-    estilo visual
-        : selina
-        : Dirección de estilo visual (solo con frontend)
-        : Gate - elección del usuario
-    arquitectura
+        : Анализ требований
+        : Gate - одобрение пользователя
+    визуальный стиль
+        : designer
+        : Направление визуального стиля (только с фронтендом)
+        : Gate - выбор пользователя
+    архитектура
         : architect + security-officer
-        : Diseño técnico y threat model
-        : Gate - aprobación del usuario
-    desarrollo
+        : Техническое проектирование и threat model
+        : Gate - одобрение пользователя
+    разработка
         : senior-dev
-        : Implementación TDD
-        : Gate - tests verdes (automático)
-    calidad
+        : Реализация по TDD
+        : Gate - зелёные тесты (автоматически)
+    качество
         : qa-engineer + security-officer
-        : Tests y auditoría de seguridad
-        : Gate - automático + seguridad
-    documentación
+        : Тесты и аудит безопасности
+        : Gate - автоматика + безопасность
+    документация
         : tech-writer
-        : Documentación técnica y de usuario
-        : Gate - libre (sin bloqueo)
-    entrega
+        : Техническая и пользовательская документация
+        : Gate - свободная (без блокировки)
+    поставка
         : devops-engineer + security-officer
-        : Changelog y validación final
-        : Gate - usuario + seguridad
+        : Changelog и финальная проверка
+        : Gate - пользователь + безопасность
 ```
 
-El `security-officer` valida el threat model en arquitectura, audita el código en calidad y da el visto bueno en entrega. Detectar un problema de seguridad pronto sale más barato que detectarlo en producción.
+`security-officer` проверяет threat model на архитектуре, аудирует код на качестве и даёт добро на поставке. Найти проблему безопасности рано дешевле, чем найти её в production.
 
-## Instalación
+## Установка
 
-Una sola línea. El script verifica el entorno, registra en Claude Code una
-fuente GitHub global para Alfred Dev e instala el plugin con la CLI nativa de Claude Code.
-No pisa `~/.claude/skills` ni crea `~/.claude/skills/alfred/SKILL.md` ni
-`~/.claude/commands/alfred.md`. La entrada es `/alfred-dev:alfred`.
-Parchea hooks y `.mcp.json` si el `python3` por defecto no es compatible.
+Одна строка. Скрипт проверяет окружение, регистрирует в Claude Code глобальный источник GitHub для Alfred Dev и ставит плагин через нативный CLI Claude Code.
+Он не трогает `~/.claude/skills`, не создаёт `~/.claude/skills/alfred/SKILL.md` и
+`~/.claude/commands/alfred.md`. Точка входа: `/alfred-dev:alfred`.
+Он патчит хуки и `.mcp.json`, если `python3` по умолчанию несовместим.
 
-Antes de instalar, limpia el checkout local del marketplace
-(`~/.claude/plugins/marketplaces/alfred-dev`) y lo vuelve a registrar, para no
-materializar una caché antigua. La instalación soportada es siempre global de
-usuario: si existían rastros `local` o `project` del propio Alfred Dev, el
-instalador los normaliza y reinstala con `--scope user`. No usa un marketplace
-oficial de Anthropic: usa la CLI nativa para registrar una fuente propia no oficial.
+Перед установкой скрипт очищает локальный checkout маркетплейса
+(`~/.claude/plugins/marketplaces/alfred-dev`) и регистрирует его заново, чтобы
+не использовать устаревший кэш. Поддерживается только глобальная установка
+на уровне пользователя: если остались следы `local` или `project` самого Alfred Dev, установщик
+нормализует их и переустанавливает с `--scope user`. Официальный маркетплейс Anthropic не используется: нативный CLI регистрирует собственный неофициальный источник.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/686f6c61/alfred-dev/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash
 ```
 
-Si ya tienes este repo clonado localmente, también puedes invocarlo así:
+Если репозиторий уже клонирован локально, можно запустить так:
 
 ```bash
 bash ./install.sh
 ```
 
-Después de instalar, en una sesión abierta ejecuta `/reload-plugins` para cargar
-Alfred Dev sin reiniciar. Si Claude Code avisa por coste/caché de MCP o el
-plugin no aparece, reinicia Claude Code. Verifica con:
+После установки в открытой сессии выполни `/reload-plugins`, чтобы загрузить
+Alfred Dev без перезапуска. Если Claude Code предупреждает о стоимости/кэше MCP или
+плагин не появился, перезапусти Claude Code. Проверка:
 
 ```bash
 /alfred-dev:alfred
 ```
 
-En Windows (PowerShell):
+В Windows (PowerShell):
 
 ```powershell
-irm https://raw.githubusercontent.com/686f6c61/alfred-dev/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.ps1 | iex
 ```
 
-Requisitos:
+Требования:
 
-- [Claude Code](https://code.claude.com/docs/en/overview) instalado, configurado y actualizado. Alfred Dev 0.7.0 requiere una CLI con plugins, skills, hooks y MCP.
-- Python 3.10+ (para hooks, core y MCP en macOS, Linux y Windows).
+- Установленный, настроенный и обновлённый [Claude Code](https://code.claude.com/docs/en/overview). Alfred Dev 0.7.0 требует CLI с плагинами, skills, хуками и MCP.
+- Python 3.10+ (для хуков, ядра и MCP в macOS, Linux и Windows).
 
-Para desinstalar:
+Удаление:
 
 ```bash
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/686f6c61/alfred-dev/main/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.sh | bash
 ```
 
 ```bash
-# macOS / Linux, desde el repo clonado
+# macOS / Linux, из клонированного репозитория
 bash ./uninstall.sh
 ```
 
 ```powershell
 # Windows
-irm https://raw.githubusercontent.com/686f6c61/alfred-dev/main/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.ps1 | iex
 ```
 
-El desinstalador retira el plugin y la fuente del marketplace en scope `user`.
-Si queda un alias global `/alfred` de instalaciones 0.6, también lo limpia.
-No borra `.claude/` del proyecto (config, memoria SQLite, handoff).
+Деинсталлятор удаляет плагин и источник маркетплейса в scope `user`.
+Если остался глобальный алиас `/alfred` от установок 0.6, он тоже очищается.
+Каталог `.claude/` проекта (конфиг, память SQLite, handoff) не удаляется.
 
-`/alfred-dev:update` compara la versión instalada con el último GitHub Release
-y guía la actualización. Añadir el marketplace `686f6c61/alfred-dev` instala
-lo que haya en la rama por defecto `main`.
+`/alfred-dev:update` сравнивает установленную версию с последним GitHub Release
+и ведёт через обновление. Добавление маркетплейса `grigoriev/alfred-dev` ставит
+то, что лежит в ветке по умолчанию `ru` (русская версия; `main` повторяет upstream).
 
-## Inicio rápido
+## Быстрый старт
 
-Una vez instalado, habla en castellano. No hace falta memorizar slash commands.
+После установки говори по-русски. Запоминать slash-команды не нужно.
 
 ```text
-sigue donde lo dejé
-el login peta con eñes
-cambia el texto del botón
+продолжай с того места, где остановились
+логин падает с кириллицей в имени
+поменяй текст кнопки
 ```
 
-El hook `prompt-route.py` sugiere la ruta si el texto no trae slash. `/alfred-dev:alfred`
-decide si toca mapear, discutir, retomar, abrir UAT o arrancar un flujo.
-Si quieres el flujo largo:
+Хук `prompt-route.py` предлагает маршрут, если в тексте нет slash. Русские фразы маршрутизируются этим хуком; испанские по-прежнему работают тоже. `/alfred-dev:alfred`
+решает, что нужно: картировать, обсудить, продолжить, открыть UAT или запустить процесс.
+Если нужен длинный процесс:
 
 ```text
-/alfred-dev:feature sistema de login con email y password
+/alfred-dev:feature система входа по email и паролю
 ```
 
-`/alfred-dev:ajustes` cambia autonomía y Lucius. `/alfred-dev:feature` recorre
-hasta 7 fases (producto, estilo visual, arquitectura, desarrollo, calidad,
-documentación, entrega). Autopilot solo resuelve gates de usuario configuradas;
-no salta tests, seguridad, evidencia ni confirmación humana de despliegue.
-La fase de estilo visual se activa solo si hay interfaz.
+`/alfred-dev:ajustes` меняет автономность и CTO. `/alfred-dev:feature` проходит
+до 7 фаз (продукт, визуальный стиль, архитектура, разработка, качество,
+документация, поставка). Autopilot решает только настроенные пользовательские gates;
+он не пропускает тесты, безопасность, подтверждение и ручное подтверждение развёртывания.
+Фаза визуального стиля включается только при наличии интерфейса.
 
-## Novedades en v0.7.0
+## Новое в v0.7.0
 
-Recorte alineado con el SDK de Claude Code: 10 agentes (`inherit`), 11 skills planas, 18 comandos publicados. La entrada es `/alfred-dev:alfred`. Continuidad pública: `alfred`, `progress` y `retomar`. Sin alias global `/alfred`, sin stop-hook Ralph y sin reescribir `settings.json`. El servidor de memoria usa MCP stdio moderno y arranca `mcp/memory_server.py` con FastMCP si el paquete `mcp` está instalado. Secret-guard cubre Write, Edit, Bash y tools MCP de escritura. Agent Teams solo si el usuario ya lo tiene activo. La auditoría viva está en [docs/release.md](docs/release.md). El histórico de 0.6.x está en el [changelog](CHANGELOG.md).
+Сокращение под SDK Claude Code: 10 агентов (`inherit`), 11 плоских skills, 18 опубликованных команд. Точка входа: `/alfred-dev:alfred`. Публичная непрерывность: `alfred`, `progress` и `retomar`. Без глобального алиаса `/alfred`, без stop-hook Ralph и без перезаписи `settings.json`. Сервер памяти использует современный MCP stdio и запускает `mcp/memory_server.py` с FastMCP, если установлен пакет `mcp`. Secret-guard покрывает Write, Edit, Bash и MCP-инструменты записи. Agent Teams только если пользователь уже включил их. Живой аудит: [docs/release.md](docs/release.md). История 0.6.x: [changelog](CHANGELOG.md).
 
-## Comandos
+## Команды
 
-Toda la interfaz se controla desde la línea de comandos de Claude Code. La entrada principal es `/alfred-dev:alfred`. El resto usa el mismo prefijo `/alfred-dev:`. No hay alias global `/alfred`. `plugin.json` publica 18 comandos. En `commands/` quedan helpers internos que no se listan como slash: `next`, `search`, `_composicion.md` y `_docs_vivas.md`.
+Весь интерфейс управляется из командной строки Claude Code. Главная точка входа: `/alfred-dev:alfred`. Остальные используют тот же префикс `/alfred-dev:`. Глобального алиаса `/alfred` нет. `plugin.json` публикует 18 команд. В `commands/` остаются внутренние хелперы, которые не перечислены как slash: `next`, `search`, `_composicion.md` и `_docs_vivas.md`.
 
 ### Core
 
-| Comando | Descripción |
-|---------|-------------|
-| `/alfred-dev:alfred` | Entrada contextual: decide si toca mapear, discutir, retomar, abrir UAT o arrancar un flujo multiagente. |
-| `/alfred-dev:feature <desc>` | Ciclo completo de hasta 7 fases. Alfred pregunta desde qué fase arrancar. |
-| `/alfred-dev:quick <desc>` | Flujo ligero para cambios pequeños con menos ceremonia que `feature`. |
-| `/alfred-dev:fix <desc>` | Corrección de bugs en 3 fases: diagnóstico, corrección TDD, validación. |
-| `/alfred-dev:spike <tema>` | Investigación técnica sin compromiso: prototipos, benchmarks, hallazgos. |
-| `/alfred-dev:discuss <desc>` | Refina una idea o fase y deja `docs/project/discovery.md` antes de abrir `feature`. |
-| `/alfred-dev:map-codebase` | Analiza un repo existente y deja `docs/project/codebase-map.md` y `docs/project/current.md`. |
-| `/alfred-dev:progress` | Resume kanban, bloqueos, trazabilidad, UAT y estado operativo. |
-| `/alfred-dev:uat` | Crea o cierra la validación humana, separada de los tests automáticos. |
-| `/alfred-dev:audit` | Auditoría con 4 agentes en paralelo: calidad, seguridad, arquitectura, documentación. |
-| `/alfred-dev:ship` | Release: auditoría final, changelog, versionado semántico, despliegue. |
-| `/alfred-dev:memory-ui` | Abre o cierra la UI local de la memoria SQLite. |
-| `/alfred-dev:ajustes` | Configurar autonomía, stack, Lucius, memoria y personalidad. |
+| Команда | Описание |
+|---------|----------|
+| `/alfred-dev:alfred` | Контекстный вход: решает, что нужно: картировать, обсудить, продолжить, открыть UAT или запустить мультиагентный процесс. |
+| `/alfred-dev:feature <desc>` | Полный цикл до 7 фаз. Alfred спрашивает, с какой фазы начать. |
+| `/alfred-dev:quick <desc>` | Лёгкий процесс для небольших изменений, меньше церемоний, чем в `feature`. |
+| `/alfred-dev:fix <desc>` | Исправление багов в 3 фазы: диагностика, исправление по TDD, валидация. |
+| `/alfred-dev:spike <тема>` | Техническое исследование без обязательств: прототипы, бенчмарки, выводы. |
+| `/alfred-dev:discuss <desc>` | Уточняет идею или фазу и оставляет `docs/project/discovery.md` перед запуском `feature`. |
+| `/alfred-dev:map-codebase` | Анализирует существующий репозиторий и создаёт `docs/project/codebase-map.md` и `docs/project/current.md`. |
+| `/alfred-dev:progress` | Сводка по kanban, блокировкам, трассируемости, UAT и операционному состоянию. |
+| `/alfred-dev:uat` | Создаёт или закрывает ручную валидацию, отдельную от автоматических тестов. |
+| `/alfred-dev:audit` | Аудит четырьмя агентами параллельно: качество, безопасность, архитектура, документация. |
+| `/alfred-dev:ship` | Релиз: финальный аудит, changelog, семантическое версионирование, развёртывание. |
+| `/alfred-dev:memory-ui` | Открывает или закрывает локальный UI памяти SQLite. |
+| `/alfred-dev:ajustes` | Настройка автономности, стека, CTO, памяти и личности. |
 
-### Operativos
+### Операционные
 
-| Comando | Descripción |
-|---------|-------------|
-| `/alfred-dev:retomar` | Retoma una sesión pausada usando el handoff y el estado guardado. |
-| `/alfred-dev:pause` | Pausa el trabajo en curso y genera handoff persistente. |
-| `/alfred-dev:sync-github [owner/repo]` | Refleja el tablero local en GitHub Issues usando `gh`. |
-| `/alfred-dev:lucius [dir] [--scope X]` | Segunda opinión técnica vía Codex CLI. |
-| `/alfred-dev:update` | Comprueba si hay versión nueva (GitHub Releases) y actualiza el plugin. |
+| Команда | Описание |
+|---------|----------|
+| `/alfred-dev:retomar` | Продолжает приостановленную сессию по handoff и сохранённому состоянию. |
+| `/alfred-dev:pause` | Приостанавливает текущую работу и создаёт постоянный handoff. |
+| `/alfred-dev:sync-github [owner/repo]` | Отражает локальную доску в GitHub Issues через `gh`. |
+| `/alfred-dev:cto [dir] [--scope X]` | Техническое второе мнение через Codex CLI. |
+| `/alfred-dev:update` | Проверяет наличие новой версии (GitHub Releases) и обновляет плагин. |
 
-### Ejemplo de uso
+### Пример использования
 
 ```
-> /alfred-dev:feature sistema de autenticación con OAuth2
+> /alfred-dev:feature система аутентификации с OAuth2
 
-Alfred activa el flujo de hasta 7 fases:
-  1. Producto        -- PRD con historias de usuario y criterios de aceptación
-  2. Estilo visual   -- Tres propuestas en navegador (solo si hay UI)
-  3. Arquitectura    -- Diseño de componentes, ADRs, threat model en paralelo
-  4. Desarrollo      -- Implementación TDD (rojo-verde-refactor)
-  5. Calidad         -- Code review + OWASP + compliance + SBOM
-  6. Documentación   -- API docs, guía de usuario, changelog
-  7. Entrega         -- Pipeline CI/CD, Docker, deploy
+Alfred запускает процесс до 7 фаз:
+  1. Продукт          -- PRD с пользовательскими историями и критериями приёмки
+  2. Визуальный стиль -- Три варианта в браузере (только если есть UI)
+  3. Архитектура      -- Дизайн компонентов, ADR, threat model параллельно
+  4. Разработка       -- Реализация по TDD (красный-зелёный-рефакторинг)
+  5. Качество         -- Code review + OWASP + compliance + SBOM
+  6. Документация     -- API docs, руководство пользователя, changelog
+  7. Поставка         -- Пайплайн CI/CD, Docker, deploy
 
-Cada transición entre fases requiere superar la quality gate correspondiente.
+Каждый переход между фазами требует прохождения соответствующей quality gate.
 ```
 
-Los 6 flujos del orquestador son `feature` (hasta 7 fases), `fix` (3), `spike` (2),
-`ship` (4), `audit` (1) y `quick` (2).
+6 процессов оркестратора: `feature` (до 7 фаз), `fix` (3), `spike` (2),
+`ship` (4), `audit` (1) и `quick` (2).
 
-## Arquitectura
+## Архитектура
 
-### Agentes de núcleo (8 + Selina)
+### Базовые агенты (8 + Designer)
 
-El plugin publica 10 agentes: 8 de núcleo, Selina si hay frontend y Lucius bajo demanda. La configuración del proyecto no desactiva el núcleo, pero Alfred no los invoca todos a la vez: cada flujo activa el rol de la fase, las señales del proyecto y las gates pendientes. El kanban y la trazabilidad los escribe el runtime, no un agente de project manager.
+Плагин публикует 10 агентов: 8 базовых, Designer при наличии фронтенда и CTO по запросу. Конфигурация проекта не отключает ядро, но Alfred не вызывает всех сразу: каждый процесс активирует роль фазы, учитывая сигналы проекта и ожидающие gates. Kanban и трассируемость пишет рантайм, а не агент-проджект-менеджер.
 
-| Agente | Rol | Modelo | Responsabilidad |
-|--------|-----|--------|-----------------|
-| **Alfred** | Orquestador | inherit | Coordina flujos, activa agentes, evalúa gates entre fases |
-| **El Buscador de Problemas** | Product Owner | inherit | PRDs, historias de usuario, criterios de aceptación, análisis competitivo |
-| **Selina** | Dirección visual | inherit | Tres propuestas en navegador, artefacto `docs/style-direction.md`, gate de estilo |
-| **El Dibujante de Cajas** | Arquitecto | inherit | Diseño de sistemas, ADRs, diagramas Mermaid, matrices de decisión |
-| **El Artesano** | Senior Dev | inherit | Implementación TDD, refactoring, commits atómicos |
-| **El Paranoico** | Security Officer | inherit | OWASP Top 10, threat modeling STRIDE, SBOM, compliance RGPD/NIS2/CRA |
-| **El Rompe-cosas** | QA Engineer | inherit | Test plans, code review, exploratorio, integración, E2E, regresión |
-| **El Fontanero** | DevOps Engineer | inherit | Docker multi-stage, CI/CD, deploy, monitoring, observabilidad |
-| **El Escriba** | Tech Writer | inherit | Sync corto por fase (cabeceras, docstrings, `docs/project/`); en documentación: API docs, arquitectura, guías, changelogs |
+| Агент | Роль | Модель | Ответственность |
+|-------|------|--------|-----------------|
+| **Alfred** | Оркестратор | inherit | Координирует процессы, активирует агентов, оценивает gates между фазами |
+| **Product Owner** | Продукт | inherit | PRD, пользовательские истории, критерии приёмки, конкурентный анализ |
+| **Designer** | Визуальное направление | inherit | Три варианта в браузере, артефакт `docs/style-direction.md`, gate стиля |
+| **Architect** | Архитектура | inherit | Проектирование систем, ADR, диаграммы Mermaid, матрицы решений |
+| **Senior Dev** | Разработка | inherit | Реализация по TDD, рефакторинг, атомарные коммиты |
+| **Security Officer** | Безопасность | inherit | OWASP Top 10, threat modeling STRIDE, SBOM, compliance GDPR (RGPD)/NIS2/CRA |
+| **QA Engineer** | Качество | inherit | Test plans, code review, исследовательское тестирование, интеграция, E2E, регрессия |
+| **DevOps Engineer** | Поставка | inherit | Docker multi-stage, CI/CD, deploy, monitoring, observability |
+| **Tech Writer** | Документация | inherit | Короткий sync по фазе (заголовки, docstrings, `docs/project/`); в фазе документации: API docs, архитектура, руководства, changelogs |
 
-Los 10 agentes declaran `model: inherit` y usan el modelo de la sesión. Selina ocupa la fase condicional entre producto y arquitectura. Solo se activa si `has_frontend(stack)` es verdadero.
+Все 10 агентов объявляют `model: inherit` и используют модель сессии. Designer занимает условную фазу между продуктом и архитектурой. Активируется только если `has_frontend(stack)` истинно.
 
-### Agente opcional (Lucius)
+### Опциональный агент (CTO)
 
-El único opcional del runtime es **Lucius**, segunda opinión vía Codex CLI. Se activa con `/alfred-dev:ajustes` o al pedir una auditoría externa. No hay data-engineer, ux-reviewer, github-manager, librarian ni el resto del catálogo 0.6. Más detalles en la [documentación de configuración](docs/configuration.md#composicion-dinamica-de-equipo).
+Единственный опциональный агент рантайма: **CTO**, техническое второе мнение через Codex CLI. Включается через `/alfred-dev:ajustes` или при запросе внешнего аудита. Нет data-engineer, ux-reviewer, github-manager и остального каталога 0.6. Подробнее в [документации по конфигурации](docs/configuration.md#composicion-dinamica-de-equipo).
 
 ### Skills (11)
 
-Cada skill es una habilidad plana en `skills/*/SKILL.md`. El catálogo publicado es:
+Каждый skill: плоская способность в `skills/*/SKILL.md`. Опубликованный каталог:
 
 ```
 skills/
@@ -274,157 +274,157 @@ skills/
   write-adr/
 ```
 
-Los skills con side effects (`style-direction`, `sonarqube`, `incident-response`, `pr-workflow`) declaran `disable-model-invocation: true`.
+Skills с побочными эффектами (`style-direction`, `sonarqube`, `incident-response`, `pr-workflow`) объявляют `disable-model-invocation: true`.
 
-### Hooks (10)
+### Хуки (10)
 
-Los hooks interceptan eventos del ciclo de vida de Claude Code. Este plugin registra 10 scripts en `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse` y `PostToolUse`. `activity-capture.py` está en tres matchers (12 registros en total). No registra Stop, UserPromptExpansion ni PreCompact.
+Хуки перехватывают события жизненного цикла Claude Code. Плагин регистрирует 10 скриптов на `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse` и `PostToolUse`. `activity-capture.py` стоит в трёх matcher (всего 12 регистраций). Stop, UserPromptExpansion и PreCompact не регистрируются.
 
-| Hook | Evento | Función |
-|------|--------|---------|
-| `session-bootstrap.sh` | `SessionStart` | Bootstrap síncrono: config local, memoria, permisos y wrapper de continuidad |
-| `session-start.sh` | `SessionStart` | Briefing de sesión, protocolo de hablar sin slash y contexto de continuidad |
-| `session-end.py` | `SessionEnd` | Detiene Memory UI y escribe el cierre de sesión (fail-open) |
-| `prompt-route.py` | `UserPromptSubmit` | Si el texto no trae slash, sugiere fix/quick/retomar según la petición |
-| `secret-guard.py` | `PreToolUse` (Write/Edit/Bash/MCP) | Bloquea escritura de secretos |
-| `dangerous-command-guard.py` | `PreToolUse` (Bash) | Bloquea comandos destructivos (`rm -rf /`, force push, DROP DATABASE) |
-| `sensitive-read-guard.py` | `PreToolUse` (Read) | Avisa al leer ficheros sensibles (claves privadas, `.env`, credenciales) |
-| `quality-gate.py` | `PostToolUse` (Bash) | Avisa cuando un runner de tests falla, usando salida y exit code |
-| `evidence-guard.py` | `PostToolUse` (Bash) | Registra evidencia de ejecución de tests para verificación de gates |
-| `activity-capture.py` | `PostToolUse` + `UserPromptSubmit` | Captura automática de actividad, commits e iteraciones |
+| Хук | Событие | Функция |
+|-----|---------|---------|
+| `session-bootstrap.sh` | `SessionStart` | Синхронный bootstrap: локальный конфиг, память, права и обёртка непрерывности |
+| `session-start.sh` | `SessionStart` | Брифинг сессии, протокол общения без slash и контекст непрерывности |
+| `session-end.py` | `SessionEnd` | Останавливает Memory UI и записывает закрытие сессии (fail-open) |
+| `prompt-route.py` | `UserPromptSubmit` | Если в тексте нет slash, предлагает fix/quick/retomar по запросу |
+| `secret-guard.py` | `PreToolUse` (Write/Edit/Bash/MCP) | Блокирует запись секретов |
+| `dangerous-command-guard.py` | `PreToolUse` (Bash) | Блокирует разрушительные команды (`rm -rf /`, force push, DROP DATABASE) |
+| `sensitive-read-guard.py` | `PreToolUse` (Read) | Предупреждает при чтении чувствительных файлов (приватные ключи, `.env`, учётные данные) |
+| `quality-gate.py` | `PostToolUse` (Bash) | Предупреждает, когда раннер тестов падает, по выводу и exit code |
+| `evidence-guard.py` | `PostToolUse` (Bash) | Фиксирует подтверждение запуска тестов для проверки gates |
+| `activity-capture.py` | `PostToolUse` + `UserPromptSubmit` | Автоматический захват активности, коммитов и итераций |
 
-### Templates (8)
+### Шаблоны (8)
 
-Plantillas que los agentes usan para generar artefactos con estructura estable:
+Шаблоны, по которым агенты создают артефакты со стабильной структурой:
 
 - `prd.md` -- Product Requirements Document
 - `adr.md` -- Architecture Decision Record
-- `test-plan.md` -- Plan de testing por riesgo
-- `threat-model.md` -- Modelado de amenazas STRIDE
+- `test-plan.md` -- План тестирования по рискам
+- `threat-model.md` -- Моделирование угроз STRIDE
 - `sbom.md` -- Software Bill of Materials
-- `changelog-entry.md` -- Entrada de changelog (Keep a Changelog)
-- `release-notes.md` -- Notas de release con resumen ejecutivo
-- `compliance.md` -- Checklist de cumplimiento del proyecto
+- `changelog-entry.md` -- Запись changelog (Keep a Changelog)
+- `release-notes.md` -- Заметки о релизе с кратким резюме
+- `compliance.md` -- Чек-лист соответствия проекта
 
 ### Core Python
 
-El núcleo del plugin está implementado en Python con tests unitarios. Los
-módulos se agrupan por responsabilidad para no prometer un contador fijo
-que quede obsoleto cuando crece el runtime:
+Ядро плагина написано на Python с юнит-тестами. Модули сгруппированы по
+ответственности, чтобы не обещать фиксированное число, которое устареет
+при росте рантайма:
 
-| Familia | Módulos principales | Función |
-|---------|---------------------|---------|
-| Orquestación | `orchestrator.py` | Máquina de estados de 6 flujos, sesiones, gates, autopilot, loop iterativo |
-| Personalidad | `personality.py` | Frases, tono, anuncios y formato de veredicto |
-| Configuración | `config_loader.py`, `optional_agents.py`, `config_cli.py` | Carga de config, detección de stack, menús de `/alfred-dev:ajustes` y Lucius |
-| Continuidad | `continuity.py`, `session_report.py`, `session_brief.py`, `hygiene.py` | Helpers, pausa/reanudación, briefing, higiene de ship y UAT |
-| Docs vivas | `project_docs.py` | Esqueleto y comprobación de `docs/project/` y `docs/adr/` |
-| Enrutado | `prompt_route.py` | Clasifica prompts sin slash (fix, quick, retomar, map-codebase) |
-| Memoria | `memory.py`, `memory_config.py`, `memory_sync.py`, `memory_ui_server.py` | SQLite local, sync Markdown y UI local GET |
-| Seguridad | `secrets.py` | Sanitización y detección de secretos reutilizada por memoria, empaquetado y guards |
-| Selina visual | `selina_visual.py`, `selina_style_*.py` | Dirección visual condicional, catálogo, opciones y selector |
+| Семейство | Основные модули | Функция |
+|-----------|-----------------|---------|
+| Оркестрация | `orchestrator.py` | Конечный автомат 6 процессов, сессии, gates, autopilot, итеративный цикл |
+| Личность | `personality.py` | Фразы, тон, анонсы и формат вердикта |
+| Конфигурация | `config_loader.py`, `optional_agents.py`, `config_cli.py` | Загрузка конфига, определение стека, меню `/alfred-dev:ajustes` и CTO |
+| Непрерывность | `continuity.py`, `session_report.py`, `session_brief.py`, `hygiene.py` | Хелперы, пауза/возобновление, брифинг, гигиена ship и UAT |
+| Живые доки | `project_docs.py` | Каркас и проверка `docs/project/` и `docs/adr/` |
+| Маршрутизация | `prompt_route.py` | Классифицирует промпты без slash (fix, quick, retomar, map-codebase) |
+| Память | `memory.py`, `memory_config.py`, `memory_sync.py`, `memory_ui_server.py` | Локальный SQLite, sync Markdown и локальный GET UI |
+| Безопасность | `secrets.py` | Санитизация и обнаружение секретов, используется памятью, упаковкой и guards |
+| Визуал Designer | `selina_visual.py`, `selina_style_*.py` | Условное визуальное направление, каталог, варианты и селектор |
 
 ```bash
-# Ejecutar tests
+# Запуск тестов
 python3 -m pytest tests/ -v
 ```
 
 ## Quality gates
 
-Las quality gates son puntos de control verificables entre fases. Si las condiciones de una gate no se cumplen, el flujo se detiene o queda pendiente con una siguiente acción clara. Autopilot solo resuelve gates de usuario configuradas; no salta tests, seguridad, evidencia ni confirmación humana de despliegue.
+Quality gates: проверяемые контрольные точки между фазами. Если условия gate не выполнены, процесс останавливается или остаётся в ожидании с понятным следующим действием. Autopilot решает только настроенные пользовательские gates; он не пропускает тесты, безопасность, подтверждение и ручное подтверждение развёртывания.
 
-El orquestador define 5 tipos: `libre`, `usuario`, `automatico`, `usuario+seguridad` y `automatico+seguridad`.
+Оркестратор определяет 5 типов: `libre`, `usuario`, `automatico`, `usuario+seguridad` и `automatico+seguridad`.
 
-| Gate | Condición |
-|------|-----------|
-| PRD aprobado | El usuario valida el PRD antes de pasar a arquitectura |
-| Diseño aprobado | El usuario aprueba el diseño Y el security officer lo valida |
-| Tests en verde | Todos los tests pasan antes de pasar a calidad |
-| Evidencia verificada | Las afirmaciones de tests deben estar respaldadas por salida real registrada por `evidence-guard.py` |
-| Loop iterativo | Si una gate falla, se reintenta hasta 5 veces con feedback antes de escalar al usuario |
-| QA + seguridad | El QA engineer y el security officer aprueban en paralelo |
-| Documentación completa | Todos los artefactos están documentados con checklist/evidencia revisable |
-| Pipeline verde | CI/CD verde, sin usuario root en contenedor, sin secretos en imagen |
+| Gate | Условие |
+|------|---------|
+| PRD одобрен | Пользователь утверждает PRD перед переходом к архитектуре |
+| Дизайн одобрен | Пользователь одобряет дизайн И security officer его валидирует |
+| Тесты зелёные | Все тесты проходят перед переходом к качеству |
+| Подтверждение проверено | Утверждения о тестах должны опираться на реальный вывод, записанный `evidence-guard.py` |
+| Итеративный цикл | Если gate не пройдена, повтор до 5 раз с обратной связью, затем эскалация пользователю |
+| QA + безопасность | QA engineer и security officer одобряют параллельно |
+| Документация полная | Все артефакты задокументированы, есть проверяемый чек-лист/подтверждение |
+| Пайплайн зелёный | CI/CD зелёный, без root-пользователя в контейнере, без секретов в образе |
 
-Cada gate produce un veredicto formal: **APROBADO**, **APROBADO CON CONDICIONES** o **RECHAZADO**, con hallazgos bloqueantes y próxima acción recomendada.
+Каждая gate выдаёт формальный вердикт: **APROBADO**, **APROBADO CON CONDICIONES** или **RECHAZADO**, с блокирующими находками и рекомендуемым следующим действием.
 
 ## Compliance
 
-El plugin integra verificaciones de compliance europeo en el flujo de desarrollo:
+Плагин встраивает проверки европейского compliance в процесс разработки:
 
-- **RGPD** -- Protección de datos desde el diseño. Verificación de base legal, minimización de datos, derechos de los interesados.
-- **NIS2** -- Directiva de ciberseguridad para operadores esenciales. Gestión de riesgos, notificación de incidentes, cadena de suministro.
-- **CRA** -- Cyber Resilience Act. Requisitos de ciber-resiliencia para productos digitales con componentes conectados.
-- **OWASP Top 10** -- Verificación sistemática de las 10 vulnerabilidades más explotadas en cada revisión de seguridad.
-- **SBOM** -- Generación automática del Software Bill of Materials con inventario de dependencias, licencias y CVEs conocidos.
+- **GDPR (RGPD)** -- Защита данных с этапа проектирования. Проверка правового основания, минимизация данных, права субъектов.
+- **NIS2** -- Директива по кибербезопасности для основных операторов. Управление рисками, уведомление об инцидентах, цепочка поставок.
+- **CRA** -- Cyber Resilience Act. Требования киберустойчивости для цифровых продуктов с подключёнными компонентами.
+- **OWASP Top 10** -- Системная проверка 10 наиболее эксплуатируемых уязвимостей при каждом ревью безопасности.
+- **SBOM** -- Автоматическая генерация Software Bill of Materials с перечнем зависимостей, лицензий и известных CVE.
 
-## Detección de stack
+## Определение стека
 
-`core/config_loader.py` (`detect_stack()`) analiza el directorio del proyecto al cargar la configuración. El bootstrap de `SessionStart` materializa `.claude/alfred-dev.local.md` con ese resultado. No lo hace `session-start.sh`: ese hook inyecta el briefing y el protocolo de hablar sin slash.
+`core/config_loader.py` (`detect_stack()`) анализирует каталог проекта при загрузке конфигурации. Bootstrap `SessionStart` создаёт `.claude/alfred-dev.local.md` с этим результатом. `session-start.sh` этого не делает: этот хук вставляет брифинг и протокол общения без slash.
 
-| Lenguaje | Señales | Qué detecta además |
-|----------|---------|-------------------|
-| Node.js / TypeScript | `package.json` (+ `tsconfig.json` eleva a TypeScript) | Frameworks: Next, Nuxt, Astro, Remix, Gatsby, Svelte, Solid, Qwik, Vue, React, Angular, Hono, Express, Fastify, Koa, Nest. ORM, runner y bundler si están en dependencias. |
-| Python | `pyproject.toml`, `setup.py`, `requirements.txt` | FastAPI, Django, Flask, Starlette, Litestar, Sanic, Tornado, aiohttp. ORM y runner si aparecen en manifiestos. |
-| Rust | `Cargo.toml` | Runtime y lenguaje. No infiere framework. |
-| Go | `go.mod` | Runtime y lenguaje. No infiere framework. |
-| Ruby | `Gemfile` | Runtime y lenguaje. No infiere framework. |
-| Elixir | `mix.exs` | Runtime y lenguaje. No infiere framework. |
-| Java / Kotlin | `pom.xml`, `build.gradle`, `build.gradle.kts` | Spring Boot, Quarkus, Micronaut. Kotlin si hay `.kt` o Gradle Kotlin. |
+| Язык | Сигналы | Что определяется дополнительно |
+|------|---------|-------------------------------|
+| Node.js / TypeScript | `package.json` (+ `tsconfig.json` повышает до TypeScript) | Фреймворки: Next, Nuxt, Astro, Remix, Gatsby, Svelte, Solid, Qwik, Vue, React, Angular, Hono, Express, Fastify, Koa, Nest. ORM, раннер и бандлер, если есть в зависимостях. |
+| Python | `pyproject.toml`, `setup.py`, `requirements.txt` | FastAPI, Django, Flask, Starlette, Litestar, Sanic, Tornado, aiohttp. ORM и раннер, если есть в манифестах. |
+| Rust | `Cargo.toml` | Рантайм и язык. Фреймворк не выводится. |
+| Go | `go.mod` | Рантайм и язык. Фреймворк не выводится. |
+| Ruby | `Gemfile` | Рантайм и язык. Фреймворк не выводится. |
+| Elixir | `mix.exs` | Рантайм и язык. Фреймворк не выводится. |
+| Java / Kotlin | `pom.xml`, `build.gradle`, `build.gradle.kts` | Spring Boot, Quarkus, Micronaut. Kotlin, если есть `.kt` или Gradle Kotlin. |
 | PHP | `composer.json` | Laravel, Symfony, Slim. |
-| C# / .NET | `*.csproj`, `*.sln` | ASP.NET o Blazor. |
-| Swift | `Package.swift` | Vapor si aparece en el manifiesto. |
+| C# / .NET | `*.csproj`, `*.sln` | ASP.NET или Blazor. |
+| Swift | `Package.swift` | Vapor, если указан в манифесте. |
 
-Selina solo entra si el framework detectado está en el conjunto frontend (Next, Nuxt, Astro, Remix, Gatsby, Svelte, Solid, Qwik, Vue, React, Angular).
+Designer подключается только если определённый фреймворк входит во фронтенд-набор (Next, Nuxt, Astro, Remix, Gatsby, Svelte, Solid, Qwik, Vue, React, Angular).
 
-## Memoria persistente
+## Постоянная память
 
-Alfred Dev recuerda decisiones, commits e iteraciones entre sesiones. La memoria se almacena en SQLite local (`.claude/alfred-memory.db`) dentro de cada proyecto, sin servicios remotos.
+Alfred Dev помнит решения, коммиты и итерации между сессиями. Память хранится в локальном SQLite (`.claude/alfred-memory.db`) внутри каждого проекта, без удалённых сервисов.
 
-`load_config()` parte de `memoria.enabled: false` si no hay fichero local. En la primera sesión, `session-bootstrap.sh` siembra `.claude/alfred-dev.local.md` con memoria activa. A partir de ahí, `/alfred-dev:ajustes` puede desactivarla. Si está apagada, los flujos siguen; las sesiones futuras no tendrán histórico.
+`load_config()` начинает с `memoria.enabled: false`, если локального файла нет. В первой сессии `session-bootstrap.sh` создаёт `.claude/alfred-dev.local.md` с включённой памятью. После этого `/alfred-dev:ajustes` может её отключить. Если память выключена, процессы продолжают работать; у будущих сессий не будет истории.
 
-Con la memoria activa, `activity-capture.py` registra eventos en `UserPromptSubmit` y `PostToolUse` (Write, Edit, Bash): iteraciones, fases, commits (SHA, autor, ficheros) y actividad de la sesión. Las decisiones se consultan con el servidor MCP y `/alfred-dev:memory-ui`. No hay agente Bibliotecario.
+При включённой памяти `activity-capture.py` записывает события на `UserPromptSubmit` и `PostToolUse` (Write, Edit, Bash): итерации, фазы, коммиты (SHA, автор, файлы) и активность сессии. Решения запрашиваются через MCP-сервер и `/alfred-dev:memory-ui`.
 
-Funcionalidades principales:
+Основные возможности:
 
-- **Trazabilidad**: problema, decisión, commit y validación enlazados con IDs.
-- **Búsqueda**: texto completo con FTS5, filtros `since`/`until`, etiquetas y estado (`active`/`superseded`/`deprecated`).
-- **Servidor MCP** (`alfred-memory`): 15 herramientas (buscar, registrar, consultar, estadísticas, iteraciones, ciclo de vida de decisiones, integridad, export/import). Habla MCP stdio moderno (JSON por línea) y mantiene lectura compatible con el framing `Content-Length` antiguo.
-- **Memory UI**: visor local GET en loopback sobre `.claude/alfred-memory.db`. No importa el historial de Git al abrir. `POST` no está implementado. `/alfred-dev:memory-ui stop` y `SessionEnd` detienen el servidor.
-- **Importación MCP**: la tool `memory_import` sí puede cargar commits de Git o ADRs de `docs/adr/` cuando un agente la invoca; eso no ocurre al abrir la UI.
-- **Contexto de sesión**: `session-start.sh` inyecta un briefing de estado, última decisión y ADRs aceptados.
-- **Exportación**: `memory_export` escribe decisiones a Markdown con formato ADR.
-- **Seguridad**: sanitización de secretos con los mismos patrones que `secret-guard.py`, permisos `0600` en la base de datos.
-- **Migración**: el esquema se actualiza con backup previo al abrir bases antiguas.
+- **Трассируемость**: проблема, решение, коммит и валидация связаны по ID.
+- **Поиск**: полнотекстовый через FTS5, фильтры `since`/`until`, теги и статус (`active`/`superseded`/`deprecated`).
+- **MCP-сервер** (`alfred-memory`): 15 инструментов (поиск, запись, запрос, статистика, итерации, жизненный цикл решений, целостность, export/import). Говорит на современном MCP stdio (JSON по строке) и сохраняет совместимое чтение старого фрейминга `Content-Length`.
+- **Memory UI**: локальный GET-просмотрщик на loopback поверх `.claude/alfred-memory.db`. История Git при открытии не импортируется. `POST` не реализован. `/alfred-dev:memory-ui stop` и `SessionEnd` останавливают сервер.
+- **Импорт MCP**: инструмент `memory_import` может загрузить коммиты Git или ADR из `docs/adr/`, когда его вызывает агент; при открытии UI этого не происходит.
+- **Контекст сессии**: `session-start.sh` вставляет брифинг состояния, последнее решение и принятые ADR.
+- **Экспорт**: `memory_export` записывает решения в Markdown в формате ADR.
+- **Безопасность**: санитизация секретов по тем же шаблонам, что у `secret-guard.py`, права `0600` на базе данных.
+- **Миграция**: схема обновляется с предварительным бэкапом при открытии старых баз.
 
-## Estructura del proyecto
+## Структура проекта
 
 ```
 alfred-dev/
   .claude-plugin/
-    plugin.json           # Manifiesto del plugin (version, 18 comandos)
-    marketplace.json      # Metadatos de la fuente no oficial
-  .mcp.json               # Servidor MCP alfred-memory (stdio)
-  agents/                 # 10 agentes (8 de núcleo + Selina + Lucius)
-  commands/               # 18 comandos publicados + helpers internos
-  skills/                 # Catálogo publicado de 11 skills planas
-  hooks/                  # 10 scripts + hooks.json
-  core/                   # Motor de orquestación, memoria e informes (Python)
-  mcp/                    # Servidor MCP stdio (memoria persistente)
-  templates/              # 8 plantillas de artefactos
-  visual/                 # Companion local de Selina (servidor y HTML)
-  tests/                  # Tests y contratos de release (pytest)
-  docs/                   # Documentación técnica del plugin
-  scripts/                # Auditoría de release y smokes
+    plugin.json           # Манифест плагина (version, 18 команд)
+    marketplace.json      # Метаданные неофициального источника
+  .mcp.json               # MCP-сервер alfred-memory (stdio)
+  agents/                 # 10 агентов (8 базовых + Designer + CTO)
+  commands/               # 18 опубликованных команд + внутренние хелперы
+  skills/                 # Опубликованный каталог из 11 плоских skills
+  hooks/                  # 10 скриптов + hooks.json
+  core/                   # Движок оркестрации, памяти и отчётов (Python)
+  mcp/                    # MCP stdio-сервер (постоянная память)
+  templates/              # 8 шаблонов артефактов
+  visual/                 # Локальный companion Designer (сервер и HTML)
+  tests/                  # Тесты и контракты релиза (pytest)
+  docs/                   # Техническая документация плагина
+  scripts/                # Аудит релиза и smoke-проверки
   install.sh / install.ps1
   uninstall.sh / uninstall.ps1
 ```
 
-La landing pública se mantiene en la rama `Alfred-Astro` y se despliega desde Coolify sobre el VPS. La rama `main` contiene solo el plugin, su runtime y sus tests.
+Публичный лендинг оригинала ведётся в ветке `Alfred-Astro` апстрима и разворачивается из Coolify на VPS. Ветка `main` содержит только плагин, его рантайм и тесты.
 
-## Configuracion
+## Конфигурация
 
-El plugin se configura por proyecto con `.claude/alfred-dev.local.md` en la raíz del proyecto. En la primera sesión, `SessionStart` lo crea si falta con autonomía por fases en `autonomo` y memoria activa; después `/alfred-dev:ajustes` permite cambiarlo a `interactivo` o `semi-autonomo`. El único opcional es Lucius:
+Плагин настраивается по проекту через `.claude/alfred-dev.local.md` в корне проекта. В первой сессии `SessionStart` создаёт его, если файла нет, с автономностью по фазам `autonomo` и включённой памятью; затем `/alfred-dev:ajustes` позволяет переключить на `interactivo` или `semi-autonomo`. Единственный опциональный агент: CTO:
 
 ```yaml
 ---
@@ -437,7 +437,7 @@ autonomia:
   entrega: autonomo
 
 agentes_opcionales:
-  lucius: false
+  cto: false
 
 memoria:
   enabled: true
@@ -455,25 +455,25 @@ personalidad:
   insultar_malas_practicas: true
 ---
 
-Notas adicionales del proyecto que Alfred debe tener en cuenta.
+Дополнительные заметки по проекту, которые Alfred должен учитывать.
 ```
 
-Los tres niveles de autonomía por fase son `interactivo` (pide confirmación), `semi-autonomo` y `autonomo`. Autopilot no salta tests, seguridad, evidencia ni el deploy.
+Три уровня автономности по фазам: `interactivo` (запрашивает подтверждение), `semi-autonomo` и `autonomo`. Autopilot не пропускает тесты, безопасность, подтверждение и deploy.
 
-## Descargo de responsabilidad
+## Отказ от ответственности
 
-**Alfred Dev** es un proyecto independiente de código abierto. No está afiliado, patrocinado ni respaldado por **Anthropic** ni por el equipo de **Claude Code**.
+**Alfred Dev** (включая этот форк) независимый проект с открытым исходным кодом. Он не связан с **Anthropic** и командой **Claude Code**, не спонсируется и не одобряется ими.
 
-El software se entrega en su estado actual, sin garantías de ningún tipo, expresas o implícitas, incluidas las de comerciabilidad, adecuación a un fin concreto y ausencia de infracción. En ningún caso los autores o titulares de los derechos de autor serán responsables de reclamaciones, daños u otras responsabilidades derivadas del uso del software.
+Программное обеспечение предоставляется «как есть», без гарантий любого рода, явных или подразумеваемых, включая гарантии товарной пригодности, пригодности для конкретной цели и ненарушения прав. Ни при каких обстоятельствах авторы или правообладатели не несут ответственности по искам, за ущерб или иные обязательства, возникшие из использования программного обеспечения.
 
-Alfred Dev ejecuta agentes que pueden crear, modificar y eliminar ficheros, ejecutar comandos en terminal e interactuar con servicios externos (GitHub, Docker, etc.). El usuario es responsable de revisar y aprobar las acciones que el plugin propone antes de su ejecución.
+Alfred Dev запускает агентов, которые могут создавать, изменять и удалять файлы, выполнять команды в терминале и взаимодействовать с внешними сервисами (GitHub, Docker и т. д.). Пользователь отвечает за проверку и одобрение действий, которые предлагает плагин, до их выполнения.
 
-Los agentes utilizan modelos de lenguaje que pueden generar contenido incorrecto, incompleto o inadecuado. Las salidas del plugin son sugerencias que requieren revisión humana, no resultados definitivos.
+Агенты используют языковые модели, которые могут генерировать неверный, неполный или неподходящий контент. Выводы плагина: предложения, требующие проверки человеком, а не окончательные результаты.
 
-## Licencia
+## Лицензия
 
 MIT
 
 ---
 
-[Documentación completa](https://alfred-dev.com/) | [Código fuente](https://github.com/686f6c61/alfred-dev)
+[Документация оригинала (на испанском)](https://alfred-dev.com/) | [Исходный код форка](https://github.com/grigoriev/alfred-dev) | [Оригинал](https://github.com/686f6c61/alfred-dev)

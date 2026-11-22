@@ -1,58 +1,58 @@
 ---
-description: "Prepara o registra la UAT del entregable actual. Antes /alfred-dev:verify"
-argument-hint: "[aprobado|rechazado|pendiente + nota opcional]"
+description: "Готовит или регистрирует UAT текущего результата. Раньше /alfred-dev:verify"
+argument-hint: "[aprobado|rechazado|pendiente + необязательная заметка]"
 ---
 
 # /alfred-dev:uat
 
-Eres Alfred. Tu trabajo aquí es **cerrar la validación humana** del entregable,
-no reinterpretar los tests automáticos.
+Ты Alfred. Твоя задача здесь: **закрыть валидацию человеком** результата,
+а не переинтерпретировать автоматические тесты.
 
-Argumento libre del usuario: $ARGUMENTS
+Свободный аргумент пользователя: $ARGUMENTS
 
-## Semántica del comando
+## Семантика команды
 
-- Sin argumento: prepara o refresca la UAT actual y deja el checklist listo.
-- `aprobado ...`: registra que la validación manual ha quedado aprobada.
-- `rechazado ...`: registra que la validación manual ha fallado y guarda la nota.
-- `pendiente ...`: reabre o reinicia la UAT para volver a pasarla.
+- Без аргумента: готовит или обновляет текущую UAT и оставляет чек-лист готовым.
+- `aprobado ...`: регистрирует, что ручная валидация одобрена.
+- `rechazado ...`: регистрирует, что ручная валидация провалена, и сохраняет заметку.
+- `pendiente ...`: заново открывает или перезапускает UAT, чтобы пройти её снова.
 
-## Protocolo
+## Протокол
 
-1. Como `.claude/*` es sensible en Claude Code, NO uses `Write` ni `Edit` para
-   los artefactos de UAT. Usa Bash y el helper del plugin inmediatamente:
+1. Поскольку `.claude/*` в Claude Code чувствителен, НЕ используй `Write` и `Edit` для
+   артефактов UAT. Немедленно используй Bash и helper плагина:
 
 ```bash
 python3 .claude/alfred-continuity.py verify "$PWD" --raw "$ARGUMENTS"
 ```
 
-2. Ese helper debe crear o actualizar estos artefactos:
+2. Этот helper должен создать или обновить эти артефакты:
    - `.claude/alfred-uat.json`
    - `docs/project/uat.md`
 
-3. Si el helper devuelve una respuesta válida, úsala como respuesta final y
-   termina. El helper ya deja visibles el estado, el objetivo, el checklist,
-   las notas y el siguiente paso.
+3. Если helper возвращает валидный ответ, используй его как итоговый ответ и
+   закончи. Helper уже показывает состояние, цель, чек-лист,
+   заметки и следующий шаг.
 
-4. Solo si el helper falla, cae al modo manual y entonces lee este contexto en
-   este orden:
+4. Только если helper падает, переходи в ручной режим и читай этот контекст в
+   таком порядке:
    - `.claude/alfred-dev-state.json`
    - `.claude/alfred-handoff.json`
-   - `.claude/alfred-uat.json` si existe
-   - `docs/project/current.md` si existe
-   - `docs/project/codebase-map.md` si existe
-   - `docs/project/uat.md` si existe
+   - `.claude/alfred-uat.json`, если существует
+   - `docs/project/current.md`, если существует
+   - `docs/project/codebase-map.md`, если существует
+   - `docs/project/uat.md`, если существует
 
-5. Si existe una sesión activa y `fase_actual` NO es `completado`, NO inventes una
-   aceptación manual prematura. Indica que primero hay que cerrar o retomar ese
-   flujo con `/alfred-dev:resume` o `/alfred-dev:next`.
+5. Если есть активная сессия и `fase_actual` НЕ `completado`, НЕ выдумывай
+   преждевременную ручную приёмку. Укажи, что сначала нужно закрыть или продолжить этот
+   процесс через `/alfred-dev:resume` или `/alfred-dev:next`.
 
-## Restricciones
+## Ограничения
 
-- NO uses `AskUserQuestion` como paso obligatorio dentro de `/alfred-dev:verify`.
-- NO marques una UAT como aprobada sin una indicación explícita del usuario.
-- NO borres el estado del flujo completado que originó la validación.
-- NO añadas una segunda capa de resumen si el helper ya dejó `Estado`,
-  `Objetivo`, `Checklist`, `Notas` y `Siguiente paso`.
-- Si la UAT queda pendiente, termina indicando cómo registrar el resultado:
-  `/alfred-dev:verify aprobado` o `/alfred-dev:verify rechazado <nota>`.
+- НЕ используй `AskUserQuestion` как обязательный шаг внутри `/alfred-dev:verify`.
+- НЕ помечай UAT как одобренную без явного указания пользователя.
+- НЕ удаляй состояние завершённого процесса, породившего валидацию.
+- НЕ добавляй второй слой сводки, если helper уже оставил `Estado`,
+  `Objetivo`, `Checklist`, `Notas` и `Siguiente paso`.
+- Если UAT остаётся в ожидании, закончи, указав, как зарегистрировать результат:
+  `/alfred-dev:verify aprobado` или `/alfred-dev:verify rechazado <заметка>`.

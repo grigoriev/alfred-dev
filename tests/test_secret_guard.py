@@ -56,7 +56,7 @@ class TestSecretGuard(unittest.TestCase):
         })
 
         self.assertEqual(result.returncode, 2)
-        self.assertIn("ALERTA DE SEGURIDAD", result.stderr)
+        self.assertIn("ТРЕВОГА БЕЗОПАСНОСТИ", result.stderr)
 
     def test_edit_new_string_blocks_secret(self):
         """Edit usa new_string y debe bloquear igual que Write."""
@@ -67,7 +67,7 @@ class TestSecretGuard(unittest.TestCase):
         })
 
         self.assertEqual(result.returncode, 2)
-        self.assertIn("prefijo sk-", result.stderr)
+        self.assertIn("префиксом sk-", result.stderr)
 
     def test_short_connection_string_with_credentials_is_blocked(self):
         """Las DSN con user:pass cortos tambien deben bloquearse."""
@@ -89,7 +89,7 @@ class TestSecretGuard(unittest.TestCase):
         })
 
         self.assertEqual(result.returncode, 2)
-        self.assertIn("Clave privada", result.stderr)
+        self.assertIn("Приватный ключ", result.stderr)
         self.assertNotIn("grep:", result.stderr)
 
     def test_bash_command_blocks_secret(self):
@@ -99,7 +99,7 @@ class TestSecretGuard(unittest.TestCase):
             "tool_input": {"command": f'echo "{fake_key}" > /tmp/key.txt'},
         }))
         self.assertEqual(result.returncode, 2, result.stderr)
-        self.assertIn("ALERTA DE SEGURIDAD", result.stderr)
+        self.assertIn("ТРЕВОГА БЕЗОПАСНОСТИ", result.stderr)
 
     def test_mcp_write_payload_blocks_secret(self):
         fake_key = "sk-ant-" + "f" * 24
@@ -108,14 +108,14 @@ class TestSecretGuard(unittest.TestCase):
             "tool_input": {"content": fake_key},
         }))
         self.assertEqual(result.returncode, 2, result.stderr)
-        self.assertIn("ALERTA DE SEGURIDAD", result.stderr)
+        self.assertIn("ТРЕВОГА БЕЗОПАСНОСТИ", result.stderr)
 
     def test_invalid_json_blocks_fail_closed(self):
         """Si no puede parsear la entrada debe bloquear por precaucion."""
         result = self._run_hook(raw_input="{esto no es json")
 
         self.assertEqual(result.returncode, 2)
-        self.assertIn("Operación bloqueada por precaución", result.stderr)
+        self.assertIn("Операция заблокирована из предосторожности", result.stderr)
 
 
 if __name__ == "__main__":

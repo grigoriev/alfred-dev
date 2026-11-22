@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import unittest
 
-from core.selina_style_options import (
+from core.designer_style_options import (
     build_style_options_payload,
     render_style_options_html,
     write_style_options_html,
@@ -23,9 +23,9 @@ WRITE_STYLE_OPTIONS_SCRIPT = os.path.join(
 )
 
 
-class TestSelinaStyleOptions(unittest.TestCase):
+class TestDesignerStyleOptions(unittest.TestCase):
     def setUp(self):
-        self.project_dir = tempfile.mkdtemp(prefix="alfred-selina-options-")
+        self.project_dir = tempfile.mkdtemp(prefix="alfred-designer-options-")
         self.session_dir = os.path.join(self.project_dir, ".alfred-dev", "visual", "session-1")
         self.state_dir = os.path.join(self.session_dir, "state")
         self.content_dir = os.path.join(self.session_dir, "content")

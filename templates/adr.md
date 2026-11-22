@@ -1,151 +1,151 @@
 # ADR-{{numero}}: {{titulo}}
 
-**Fecha:** {{fecha}}
-**Estado:** {{estado}} (propuesto | aceptado | rechazado | obsoleto)
-**Autor:** architect
+**Дата:** {{fecha}}
+**Статус:** {{estado}} (propuesto | aceptado | rechazado | obsoleto)
+**Автор:** architect
 
-## Contexto
+## Контекст
 
 {{contexto_del_problema}}
 
-## Opciones evaluadas
+## Рассмотренные варианты
 
-### Opción 1: {{nombre_opcion_1}}
+### Вариант 1: {{nombre_opcion_1}}
 
 {{descripcion_opcion_1}}
 
-**Ventajas:**
+**Преимущества:**
 {{ventajas_1}}
 
-**Desventajas:**
+**Недостатки:**
 {{desventajas_1}}
 
-### Opción 2: {{nombre_opcion_2}}
+### Вариант 2: {{nombre_opcion_2}}
 
 {{descripcion_opcion_2}}
 
-**Ventajas:**
+**Преимущества:**
 {{ventajas_2}}
 
-**Desventajas:**
+**Недостатки:**
 {{desventajas_2}}
 
-### Opción 3: {{nombre_opcion_3}}
+### Вариант 3: {{nombre_opcion_3}}
 
 {{descripcion_opcion_3}}
 
-**Ventajas:**
+**Преимущества:**
 {{ventajas_3}}
 
-**Desventajas:**
+**Недостатки:**
 {{desventajas_3}}
 
-## Decisión
+## Решение
 
 {{decision_tomada}}
 
-## Justificación
+## Обоснование
 
 {{razonamiento}}
 
-## Consecuencias
+## Последствия
 
-### Positivas
+### Положительные
 {{consecuencias_positivas}}
 
-### Negativas
+### Отрицательные
 {{consecuencias_negativas}}
 
-## Referencias
+## Ссылки
 
 {{referencias}}
 
-<!-- EJEMPLO COMPLETADO ─────────────────────────────────────────────────
+<!-- ЗАПОЛНЕННЫЙ ПРИМЕР ─────────────────────────────────────────────────
 
-# ADR-003: base de datos para memoria persistente
+# ADR-003: база данных для постоянной памяти
 
-**Fecha:** 2026-02-20
-**Estado:** aceptado
-**Autor:** architect
+**Дата:** 2026-02-20
+**Статус:** aceptado
+**Автор:** architect
 
-## Contexto
+## Контекст
 
-Alfred Dev necesita almacenar decisiones, commits e iteraciones entre sesiones
-de forma local, sin dependencias externas ni servicios remotos. Los datos son
-estructurados (relaciones entre entidades) y el volumen es bajo (cientos de
-registros por proyecto, no millones).
+Alfred Dev должен хранить решения, коммиты и итерации между сессиями
+локально, без внешних зависимостей и удалённых сервисов. Данные
+структурированы (связи между сущностями), а объём небольшой (сотни
+записей на проект, а не миллионы).
 
-## Opciones evaluadas
+## Рассмотренные варианты
 
-### Opcion 1: SQLite
+### Вариант 1: SQLite
 
-Base de datos relacional embebida. Fichero unico, sin servidor, con SQL
-completo, soporte para FTS5 (busqueda de texto) y WAL (lecturas concurrentes).
+Встраиваемая реляционная база данных. Один файл, без сервера, с полным SQL,
+поддержкой FTS5 (текстовый поиск) и WAL (параллельное чтение).
 
-**Ventajas:**
-- Cero dependencias: sqlite3 viene en la stdlib de Python.
-- Transacciones ACID con WAL.
-- FTS5 para busqueda de texto completo.
-- Un unico fichero facil de respaldar y migrar.
+**Преимущества:**
+- Ноль зависимостей: sqlite3 входит в stdlib Python.
+- ACID-транзакции с WAL.
+- FTS5 для полнотекстового поиска.
+- Один файл, который легко копировать и переносить.
 
-**Desventajas:**
-- No escala a escrituras concurrentes masivas (irrelevante para este caso).
-- Las migraciones de esquema requieren logica manual.
+**Недостатки:**
+- Не масштабируется на массовую параллельную запись (для этого случая неважно).
+- Миграции схемы требуют ручной логики.
 
-### Opcion 2: JSON plano
+### Вариант 2: простой JSON
 
-Un fichero JSON por proyecto con toda la informacion serializada.
+Один JSON-файл на проект со всей сериализованной информацией.
 
-**Ventajas:**
-- Maxima simplicidad: leer, modificar, escribir.
-- Sin schema: flexible ante cambios.
+**Преимущества:**
+- Максимальная простота: прочитать, изменить, записать.
+- Без схемы: гибко при изменениях.
 
-**Desventajas:**
-- Sin transacciones: riesgo de corrupcion si el proceso se interrumpe.
-- Sin busqueda eficiente: hay que cargar todo en memoria.
-- Sin relaciones: desnormalizacion obligatoria.
+**Недостатки:**
+- Без транзакций: риск повреждения при прерывании процесса.
+- Без эффективного поиска: нужно загружать всё в память.
+- Без связей: денормализация обязательна.
 
-### Opcion 3: TinyDB
+### Вариант 3: TinyDB
 
-Base de datos documental embebida en Python, almacenada en JSON.
+Встраиваемая документная база данных на Python, хранящаяся в JSON.
 
-**Ventajas:**
-- API Pythonica sencilla.
-- Sin dependencias nativas (puro Python).
+**Преимущества:**
+- Простой Pythonic API.
+- Без нативных зависимостей (чистый Python).
 
-**Desventajas:**
-- Dependencia externa (viola la politica de cero deps).
-- Sin FTS5 ni SQL.
-- Rendimiento limitado con volumen medio.
+**Недостатки:**
+- Внешняя зависимость (нарушает политику нуля зависимостей).
+- Без FTS5 и SQL.
+- Ограниченная производительность при среднем объёме.
 
-## Decision
+## Решение
 
-SQLite con FTS5 y WAL.
+SQLite с FTS5 и WAL.
 
-## Justificacion
+## Обоснование
 
-El caso de uso es estructurado (decisiones, commits, iteraciones con
-relaciones entre ellos), de volumen bajo y requiere busqueda textual.
-SQLite cubre todos los requisitos sin anadir dependencias. La stdlib de
-Python incluye sqlite3, y FTS5 esta disponible en la mayoria de builds.
-El modo WAL permite lecturas concurrentes mientras los hooks escriben.
+Сценарий использования структурирован (решения, коммиты, итерации со
+связями между ними), объём небольшой и требуется текстовый поиск.
+SQLite закрывает все требования без добавления зависимостей. Stdlib
+Python включает sqlite3, а FTS5 доступен в большинстве сборок.
+Режим WAL позволяет параллельное чтение, пока hooks пишут.
 
-## Consecuencias
+## Последствия
 
-### Positivas
-- Cero dependencias externas mantenidas.
-- Busqueda textual rapida con FTS5.
-- Backup trivial: copiar un fichero.
-- Migraciones controladas con versionado de esquema.
+### Положительные
+- Ноль поддерживаемых внешних зависимостей.
+- Быстрый текстовый поиск с FTS5.
+- Тривиальный backup: скопировать один файл.
+- Контролируемые миграции с версионированием схемы.
 
-### Negativas
-- Las migraciones requieren SQL manual y logica de versionado.
-- Si FTS5 no esta disponible en algun build de Python, se usa LIKE como
-  fallback (mas lento pero funcional).
+### Отрицательные
+- Миграции требуют ручного SQL и логики версионирования.
+- Если FTS5 недоступен в какой-то сборке Python, используется LIKE как
+  запасной вариант (медленнее, но работает).
 
-## Referencias
+## Ссылки
 
 - https://www.sqlite.org/wal.html
 - https://www.sqlite.org/fts5.html
 
-──────────────────────────────────────────────── FIN DEL EJEMPLO -->
+──────────────────────────────────────────────── КОНЕЦ ПРИМЕРА -->

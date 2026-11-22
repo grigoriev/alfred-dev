@@ -1,97 +1,97 @@
 # Software Bill of Materials (SBOM)
 
-**Proyecto:** {{nombre_proyecto}}
-**Fecha:** {{fecha}}
-**Autor:** security-officer
-**Formato:** CycloneDX (simplificado)
+**Проект:** {{nombre_proyecto}}
+**Дата:** {{fecha}}
+**Автор:** security-officer
+**Формат:** CycloneDX (упрощённый)
 
-## Componente principal
+## Основной компонент
 
-- **Nombre:** {{nombre_proyecto}}
-- **Versión:** {{version}}
-- **Licencia:** {{licencia}}
+- **Название:** {{nombre_proyecto}}
+- **Версия:** {{version}}
+- **Лицензия:** {{licencia}}
 
-## Dependencias directas
+## Прямые зависимости
 
-| Componente | Versión | Licencia | Proveedor | Hash |
-|------------|---------|----------|-----------|------|
+| Компонент | Версия | Лицензия | Поставщик | Хеш |
+|-----------|--------|----------|-----------|-----|
 | {{dep_1}} | {{ver_1}} | {{lic_1}} | {{prov_1}} | {{hash_1}} |
 
-## Dependencias transitivas
+## Транзитивные зависимости
 
-| Componente | Versión | Licencia | Requerido por |
-|------------|---------|----------|---------------|
+| Компонент | Версия | Лицензия | Требуется для |
+|-----------|--------|----------|---------------|
 | {{tdep_1}} | {{tver_1}} | {{tlic_1}} | {{treq_1}} |
 
-## Vulnerabilidades conocidas
+## Известные уязвимости
 
-| CVE | Componente | Severidad | Estado |
-|-----|------------|-----------|--------|
+| CVE | Компонент | Серьёзность | Статус |
+|-----|-----------|-------------|--------|
 | {{cve_1}} | {{comp_1}} | {{sev_1}} | {{estado_1}} |
 
-## Licencias
+## Лицензии
 
-| Licencia | Componentes | Compatible |
-|----------|-------------|------------|
+| Лицензия | Компоненты | Совместима |
+|----------|------------|------------|
 | {{lic_tipo_1}} | {{lic_count_1}} | {{lic_ok_1}} |
 
-## Conformidad CRA
+## Соответствие CRA
 
-- [ ] Todos los componentes identificados
-- [ ] Versiones actualizadas
-- [ ] Sin vulnerabilidades críticas pendientes
-- [ ] Licencias compatibles verificadas
+- [ ] Все компоненты определены
+- [ ] Версии актуальны
+- [ ] Нет неустранённых критических уязвимостей
+- [ ] Проверена совместимость лицензий
 
-<!-- EJEMPLO COMPLETADO ─────────────────────────────────────────────────
+<!-- ЗАПОЛНЕННЫЙ ПРИМЕР ─────────────────────────────────────────────────
 
 # Software Bill of Materials (SBOM)
 
-**Proyecto:** alfred-dev
-**Fecha:** 2026-03-10
-**Autor:** security-officer
-**Formato:** CycloneDX (simplificado)
+**Проект:** alfred-dev
+**Дата:** 2026-03-10
+**Автор:** security-officer
+**Формат:** CycloneDX (упрощённый)
 
-## Componente principal
+## Основной компонент
 
-- **Nombre:** alfred-dev
-- **Version:** 0.3.6
-- **Licencia:** MIT
+- **Название:** alfred-dev
+- **Версия:** 0.3.6
+- **Лицензия:** MIT
 
-## Dependencias directas
+## Прямые зависимости
 
-| Componente | Version | Licencia | Proveedor | Hash |
-|------------|---------|----------|-----------|------|
+| Компонент | Версия | Лицензия | Поставщик | Хеш |
+|-----------|--------|----------|-----------|-----|
 | Python stdlib (sqlite3) | 3.10+ | PSF | Python Software Foundation | N/A (stdlib) |
 | Python stdlib (json) | 3.10+ | PSF | Python Software Foundation | N/A (stdlib) |
 | Python stdlib (re) | 3.10+ | PSF | Python Software Foundation | N/A (stdlib) |
 
-Nota: Alfred Dev no tiene dependencias externas. Todo el codigo usa
-exclusivamente la biblioteca estandar de Python.
+Примечание: у Alfred Dev нет внешних зависимостей. Весь код использует
+исключительно стандартную библиотеку Python.
 
-## Dependencias transitivas
+## Транзитивные зависимости
 
-| Componente | Version | Licencia | Requerido por |
-|------------|---------|----------|---------------|
-| (ninguna) | - | - | - |
+| Компонент | Версия | Лицензия | Требуется для |
+|-----------|--------|----------|---------------|
+| (нет) | - | - | - |
 
-## Vulnerabilidades conocidas
+## Известные уязвимости
 
-| CVE | Componente | Severidad | Estado |
-|-----|------------|-----------|--------|
-| (ninguna detectada) | - | - | - |
+| CVE | Компонент | Серьёзность | Статус |
+|-----|-----------|-------------|--------|
+| (не обнаружено) | - | - | - |
 
-## Licencias
+## Лицензии
 
-| Licencia | Componentes | Compatible |
-|----------|-------------|------------|
-| MIT | 1 (alfred-dev) | Si |
-| PSF | stdlib | Si |
+| Лицензия | Компоненты | Совместима |
+|----------|------------|------------|
+| MIT | 1 (alfred-dev) | Да |
+| PSF | stdlib | Да |
 
-## Conformidad CRA
+## Соответствие CRA
 
-- [x] Todos los componentes identificados
-- [x] Versiones actualizadas
-- [x] Sin vulnerabilidades criticas pendientes
-- [x] Licencias compatibles verificadas
+- [x] Все компоненты определены
+- [x] Версии актуальны
+- [x] Нет неустранённых критических уязвимостей
+- [x] Проверена совместимость лицензий
 
-──────────────────────────────────────────────── FIN DEL EJEMPLO -->
+──────────────────────────────────────────────── КОНЕЦ ПРИМЕРА -->

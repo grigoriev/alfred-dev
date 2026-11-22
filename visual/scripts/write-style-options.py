@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera style-options.html a partir del sidecar de propuestas de Selina."""
+"""Genera style-options.html a partir del sidecar de propuestas de Designer."""
 
 from __future__ import annotations
 
@@ -11,11 +11,11 @@ import sys
 if __package__ in {None, ""}:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from core.selina_style_options import write_style_options_html
+from core.designer_style_options import write_style_options_html
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Generar style-options.html desde el sidecar de Selina")
+    parser = argparse.ArgumentParser(description="Generar style-options.html desde el sidecar de Designer")
     parser.add_argument("--visual-path", required=True, help="Ruta a session_dir o state_dir del servidor visual")
     parser.add_argument(
         "--proposals-file",
