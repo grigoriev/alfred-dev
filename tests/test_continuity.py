@@ -1583,6 +1583,67 @@ class TestContinuityHelpers(unittest.TestCase):
         self.assertEqual(result["stack"]["runtime"], "jvm")
         self.assertEqual(result["stack"]["framework"], "spring-boot")
 
+    def test_write_codebase_map_files_describes_spring_boot_project(self):
+        files = {
+            "pom.xml": (
+                "<project><dependencies>"
+                "<dependency><artifactId>spring-boot-starter-web</artifactId></dependency>"
+                "<dependency><artifactId>junit-jupiter</artifactId></dependency>"
+                "<dependency><artifactId>testcontainers-postgresql</artifactId></dependency>"
+                "</dependencies><build><plugins>"
+                "<plugin><artifactId>frontend-maven-plugin</artifactId></plugin>"
+                "</plugins></build></project>"
+            ),
+            "mvnw": "#!/bin/sh\n",
+            "package.json": json.dumps(
+                {"name": "shop-frontend", "scripts": {"build": "tailwindcss -i in.css -o out.css"}}
+            ),
+            "README.md": (
+                "# shop\n\n"
+                "[![CI](https://example.com/ci.svg)](https://example.com/ci)\n"
+                "[![License](https://example.com/l.svg)](LICENSE)\n\n"
+                "Shop: a small web app that sells books.\n"
+            ),
+            "src/main/java/com/acme/shop/ShopApplication.java": (
+                "package com.acme.shop;\n\n@SpringBootApplication\npublic class ShopApplication {\n"
+                "    public static void main(String[] args) {}\n}\n"
+            ),
+            "src/main/java/com/acme/shop/order/OrderService.java": "package com.acme.shop.order;\nclass OrderService {}\n",
+            "src/main/java/com/acme/shop/web/OrderController.java": (
+                "package com.acme.shop.web;\n\n@Controller\nclass OrderController {}\n"
+            ),
+            "src/main/resources/db/migration/V1__baseline.sql": "create table orders(id int);\n",
+            "src/main/resources/db/migration/V2__items.sql": "create table items(id int);\n",
+            "src/test/java/com/acme/shop/order/OrderServiceTest.java": "class OrderServiceTest {}\n",
+        }
+        with tempfile.TemporaryDirectory() as parent:
+            tmpdir = os.path.join(parent, "shop")
+            for relative, content in files.items():
+                path = os.path.join(tmpdir, relative)
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(content)
+
+            write_codebase_map_files(tmpdir)
+
+            with open(os.path.join(tmpdir, CODEBASE_MAP_RELATIVE_PATH), "r", encoding="utf-8") as fh:
+                content = fh.read()
+
+        self.assertIn("Shop: a small web app that sells books.", content)
+        self.assertNotIn("[![CI]", content)
+        self.assertIn("src/main/java/com/acme/shop/ShopApplication.java", content)
+        self.assertIn("src/main/java/com/acme/shop/web/OrderController.java", content)
+        self.assertIn("src/main/java/com/acme/shop/order/", content)
+        self.assertIn("src/main/java/com/acme/shop/web/", content)
+        self.assertIn("`./mvnw package`", content)
+        self.assertIn("`./mvnw verify`", content)
+        self.assertIn("`./mvnw spring-boot:run`", content)
+        self.assertIn("Testcontainers", content)
+        self.assertIn("src/test/", content)
+        self.assertIn("frontend-maven-plugin", content)
+        self.assertIn("src/main/resources/db/migration/", content)
+        self.assertIn("`pom.xml`", content)
+
     def test_write_codebase_map_files_blocks_active_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, ".claude"), exist_ok=True)
