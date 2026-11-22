@@ -62,6 +62,17 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "pr",
+        (
+            r"\bpr\b",
+            r"\bpull request\w*",
+            r"\bпулл?[- ]?реквест\w*",
+            r"\bсмерж\w*",
+            r"\bвмерж\w*",
+            r"\bмерж\w*",
+        ),
+    ),
+    (
         "ship",
         (
             r"\brelease\b",
@@ -190,6 +201,7 @@ _COMMAND_HINT = {
     "resume": "/alfred-dev:resume",
     "pause": "/alfred-dev:pause",
     "uat": "/alfred-dev:uat",
+    "pr": "/alfred-dev:pr",
     "ship": "/alfred-dev:ship",
     "cto": "/alfred-dev:cto",
     "audit": "/alfred-dev:audit",

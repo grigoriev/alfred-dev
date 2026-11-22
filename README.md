@@ -177,11 +177,11 @@ irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.ps1 | ie
 
 ## Новое в v0.7.0
 
-Сокращение под SDK Claude Code: 10 агентов (`inherit`), 11 плоских skills, 18 опубликованных команд. Точка входа: `/alfred-dev:alfred`. Публичная непрерывность: `alfred`, `progress` и `resume`. Без глобального алиаса `/alfred`, без stop-hook Ralph и без перезаписи `settings.json`. Сервер памяти использует современный MCP stdio и запускает `mcp/memory_server.py` с FastMCP, если установлен пакет `mcp`. Secret-guard покрывает Write, Edit, Bash и MCP-инструменты записи. Agent Teams только если пользователь уже включил их. Живой аудит: [docs/release.md](docs/release.md). История 0.6.x: [changelog](CHANGELOG.md).
+Сокращение под SDK Claude Code: 10 агентов (`inherit`), 11 плоских skills, 19 опубликованных команд. Точка входа: `/alfred-dev:alfred`. Публичная непрерывность: `alfred`, `progress` и `resume`. Без глобального алиаса `/alfred`, без stop-hook Ralph и без перезаписи `settings.json`. Сервер памяти использует современный MCP stdio и запускает `mcp/memory_server.py` с FastMCP, если установлен пакет `mcp`. Secret-guard покрывает Write, Edit, Bash и MCP-инструменты записи. Agent Teams только если пользователь уже включил их. Живой аудит: [docs/release.md](docs/release.md). История 0.6.x: [changelog](CHANGELOG.md).
 
 ## Команды
 
-Весь интерфейс управляется из командной строки Claude Code. Главная точка входа: `/alfred-dev:alfred`. Остальные используют тот же префикс `/alfred-dev:`. Глобального алиаса `/alfred` нет. `plugin.json` публикует 18 команд. В `commands/` остаются внутренние хелперы, которые не перечислены как slash: `next`, `search`, `_composition.md` и `_living_docs.md`.
+Весь интерфейс управляется из командной строки Claude Code. Главная точка входа: `/alfred-dev:alfred`. Остальные используют тот же префикс `/alfred-dev:`. Глобального алиаса `/alfred` нет. `plugin.json` публикует 19 команд. В `commands/` остаются внутренние хелперы, которые не перечислены как slash: `next`, `search`, `_composition.md`, `_living_docs.md` и `_pr_loop.md`.
 
 ### Core
 
@@ -209,6 +209,7 @@ irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.ps1 | ie
 | `/alfred-dev:pause` | Приостанавливает текущую работу и создаёт постоянный handoff. |
 | `/alfred-dev:sync-github [owner/repo]` | Отражает локальную доску в GitHub Issues через `gh`. |
 | `/alfred-dev:cto [dir] [--scope X]` | Внешнее ревью готовой фичи через Greptile CLI. |
+| `/alfred-dev:pr [номер]` | Доводит PR до мержа: замечания, Greptile, SonarCloud, конфликты, автоматический мерж по зелёному. |
 | `/alfred-dev:update` | Проверяет наличие новой версии (GitHub Releases) и обновляет плагин. |
 
 ### Пример использования
@@ -402,11 +403,11 @@ Alfred Dev помнит решения, коммиты и итерации ме�
 ```
 alfred-dev/
   .claude-plugin/
-    plugin.json           # Манифест плагина (version, 18 команд)
+    plugin.json           # Манифест плагина (version, 19 команд)
     marketplace.json      # Метаданные неофициального источника
   .mcp.json               # MCP-сервер alfred-memory (stdio)
   agents/                 # 10 агентов (8 базовых + Designer + CTO)
-  commands/               # 18 опубликованных команд + внутренние хелперы
+  commands/               # 19 опубликованных команд + внутренние хелперы
   skills/                 # Опубликованный каталог из 11 плоских skills
   hooks/                  # 10 скриптов + hooks.json
   core/                   # Движок оркестрации, памяти и отчётов (Python)

@@ -288,6 +288,7 @@ _KNOWN_ALFRED_COMMANDS = frozenset({
     "help",
     "memory-ui",
     "cto",
+    "pr",
 })
 
 
@@ -7633,6 +7634,14 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Free-form argument from /alfred-dev:quick",
     )
 
+    pr_status_parser = subparsers.add_parser(
+        "pr-status",
+        help="Collect the review state of a pull request and decide the next step",
+    )
+    pr_status_parser.add_argument("project_dir", nargs="?", default=".")
+    pr_status_parser.add_argument("--pr", default="", help="PR number; empty means the PR of the current branch")
+    pr_status_parser.add_argument("--json", action="store_true", dest="as_json")
+
     cto_parser = subparsers.add_parser(
         "cto",
         help="Prepare a CTO review without running Greptile CLI",
@@ -7916,6 +7925,16 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(json.dumps(result, ensure_ascii=False))
         else:
             print(render_quick_setup_summary(result))
+        return 0
+
+    if args.command == "pr-status":
+        from core.pr_status import pr_status, render_pr_status
+
+        result = pr_status(project_dir, args.pr or None)
+        if args.as_json:
+            print(json.dumps(result, ensure_ascii=False))
+        else:
+            print(render_pr_status(result), end="")
         return 0
 
     if args.command == "cto":

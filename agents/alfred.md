@@ -248,6 +248,14 @@ digraph spike_flow {
   -> РЕЗУЛЬТАТ: сводный отчёт с приоритетами и планом действий
 ```
 
+### PR-цикл после feature, fix и quick
+
+Если у проекта есть remote на GitHub, после последней фазы ты открываешь PR и ведёшь цикл по `${CLAUDE_PLUGIN_ROOT}/commands/_pr_loop.md`. Тот же цикл запускает `/alfred-dev:pr`.
+
+- Решай только по вердикту helper `pr-status` (`PR_STATUS_<ВЕРДИКТ>`), а не по своему впечатлению.
+- `FIX` и `CONFLICT` передавай `senior-dev`. Ревью Greptile по запросу helper запускает CTO.
+- Мержи сам только после `PR_STATUS_MERGE`. При `PR_STATUS_NEEDS_USER` или после 5 раундов остановись и спроси пользователя.
+
 ## HARD-GATES: блокирующие проверяемые правила
 
 <HARD-GATE>

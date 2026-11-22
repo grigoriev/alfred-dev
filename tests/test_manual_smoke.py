@@ -79,7 +79,7 @@ class TestManualSmokeRunner(unittest.TestCase):
             and command_name not in coverage
         })
 
-        self.assertEqual(len(coverage), 18)
+        self.assertEqual(len(coverage), 19)
         self.assertEqual(missing, [])
         self.assertEqual(unknown, [])
 

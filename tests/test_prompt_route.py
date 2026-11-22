@@ -67,6 +67,35 @@ class TestPromptRoute(unittest.TestCase):
             self.assertEqual(match["route"], "cto", prompt)
             self.assertEqual(match["command"], "/alfred-dev:cto", prompt)
 
+    def test_pr_route_keywords(self):
+        for prompt in (
+            "доведи PR до мержа",
+            "смержи PR",
+            "смержи, когда всё зелёное",
+            "ревью PR от Greptile",
+            "открой пулл-реквест",
+            "посмотри пул реквест",
+            "в PR упал SonarCloud, поправь",
+            "в PR конфликт после релиза",
+            "PR падает на CI",
+            "merge pull request",
+        ):
+            match = classify_prompt(prompt)
+            self.assertIsNotNone(match, prompt)
+            self.assertEqual(match["route"], "pr", prompt)
+            self.assertEqual(match["command"], "/alfred-dev:pr", prompt)
+
+    def test_pr_route_does_not_capture_other_words(self):
+        for prompt, route in (
+            ("приёмка результата", "uat"),
+            ("выкати релиз", "ship"),
+            ("проверь продакшн после деплоя", "ship"),
+            ("исправь опечатку в заголовке", "quick"),
+        ):
+            match = classify_prompt(prompt)
+            self.assertIsNotNone(match, prompt)
+            self.assertEqual(match["route"], route, prompt)
+
     def test_russian_routes_map_to_commands(self):
         self.assertEqual(classify_prompt("пауза")["command"], "/alfred-dev:pause")
         self.assertEqual(classify_prompt("исследуй это")["command"], "/alfred-dev:spike")

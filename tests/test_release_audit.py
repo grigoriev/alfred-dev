@@ -64,7 +64,7 @@ class TestReleaseAuditScript(unittest.TestCase):
 
         result = release_audit.check_inventory()
 
-        self.assertIn("18 namespaced commands published", result)
+        self.assertIn("19 namespaced commands published", result)
         self.assertIn("commands/alfred.md published as contextual entry", result)
         self.assertIn("commands/_composition.md internal", result)
         self.assertIn("human displayName aligned between manifest and marketplace", result)
@@ -689,7 +689,7 @@ class TestReleaseAuditScript(unittest.TestCase):
 
         result = release_audit.check_command_catalog()
 
-        self.assertIn("18 namespaced commands aligned between plugin.json and architecture", result)
+        self.assertIn("19 namespaced commands aligned between plugin.json and architecture", result)
         self.assertIn("commands/alfred.md published as contextual entry", result)
         self.assertIn("command frontmatter compatible with current Claude Code", result)
         self.assertIn("command model validated against current Claude Code", result)
@@ -821,8 +821,8 @@ class TestReleaseAuditScript(unittest.TestCase):
 
         result = release_audit.check_command_execution_contracts()
 
-        self.assertIn("18 namespaced commands keep arguments, prefix and current naming", result)
-        self.assertIn("18 helper-first wrappers covered", result)
+        self.assertIn("19 namespaced commands keep arguments, prefix and current naming", result)
+        self.assertIn("19 helper-first wrappers covered", result)
         self.assertIn("6 main flows with canonical closing", result)
         self.assertIn("_composition loads from the plugin install", result)
         self.assertIn("free gates without unconditional approval", result)
@@ -858,7 +858,7 @@ class TestReleaseAuditScript(unittest.TestCase):
 
         result = release_audit.check_public_claims()
 
-        self.assertIn("public inventory 10/11/18 verified", result)
+        self.assertIn("public inventory 10/11/19 verified", result)
         self.assertIn("README, architecture, help and agents without old counters", result)
         self.assertIn("human displayName reflected in README and changelog", result)
         self.assertIn("sensitive skills keep explicit manual activation", result)
@@ -1363,7 +1363,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("package without local caches or tests", result)
         self.assertIn("package without .claude/.crupier or manual evidence", result)
         self.assertIn("package without publishable symlinks outside the plugin", result)
-        self.assertIn("package contains 18 namespaced commands, 10 agents and 11 skills", result)
+        self.assertIn("package contains 19 namespaced commands, 10 agents and 11 skills", result)
         self.assertIn("package contains 8 artifact templates", result)
         self.assertIn("package contains the Designer visual runtime", result)
 
@@ -1544,9 +1544,9 @@ class TestReleaseAuditScript(unittest.TestCase):
 
         result = release_audit.check_audit_docs()
 
-        self.assertIn("manual matrix covers 18 public routes", result)
+        self.assertIn("manual matrix covers 19 public routes", result)
         self.assertIn("commands/ documented as supported flat skills", result)
-        self.assertIn("manual matrix covers 40 public options", result)
+        self.assertIn("manual matrix covers 42 public options", result)
         self.assertIn("manual matrix validates option IDs against public commands", result)
         self.assertIn("manual review report shows weak or repeated human notes", result)
         self.assertIn("manual review gate requires a current preflight before approval", result)
@@ -1841,6 +1841,7 @@ class TestReleaseAuditScript(unittest.TestCase):
                 "spike",
                 "sync-github",
                 "uat",
+                "pr",
                 "memory-ui",
             },
         )

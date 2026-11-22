@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-VERSION = "0.8.1"
+VERSION = "0.9.0"
 OLD_VERSION = "0.5" + ".3"
 INSTALLED_PLUGIN_DIR = Path.home() / ".claude" / "plugins" / "cache" / "alfred-dev" / "alfred-dev" / VERSION
 GLOBAL_ALFRED_ALIAS_FILE = Path.home() / ".claude" / "skills" / "alfred" / "SKILL.md"
@@ -471,6 +471,7 @@ def check_inventory() -> list[str]:
     if set(_rel(path) for path in extra_command_files) != {
         "commands/_composition.md",
         "commands/_living_docs.md",
+        "commands/_pr_loop.md",
         "commands/next.md",
         "commands/search.md",
     }:
@@ -659,7 +660,7 @@ def check_inventory() -> list[str]:
         )
 
     expected = {
-        "commands": (len(plugin["commands"]), 18),
+        "commands": (len(plugin["commands"]), 19),
         "agents": (len(agent_files), 10),
         "nested_agents": (len(nested_agent_files), 0),
         "skills": (len(skill_files), 11),
@@ -679,7 +680,7 @@ def check_inventory() -> list[str]:
         _fail("plugin.json must publish ./commands/alfred.md")
 
     return [
-        "18 namespaced commands published",
+        "19 namespaced commands published",
         "commands/alfred.md published as contextual entry",
         "commands/_composition.md internal",
         "10 agents in root agents/",
@@ -940,7 +941,7 @@ def check_command_catalog() -> list[str]:
     architecture = _read("docs/architecture.md")
     alfred_text = _read("commands/alfred.md")
 
-    unpublished = {"_composition", "_living_docs", "next", "search"}
+    unpublished = {"_composition", "_living_docs", "_pr_loop", "next", "search"}
     disk_names = {
         path.stem
         for path in (ROOT / "commands").glob("*.md")
@@ -957,8 +958,8 @@ def check_command_catalog() -> list[str]:
         problems.append("public command alfred is missing")
     if "/alfred-dev:alfred" not in alfred_text and "/alfred" not in alfred_text:
         problems.append("commands/alfred.md must describe the contextual entry")
-    if "18 команд" not in architecture and "/alfred-dev:alfred" not in architecture:
-        problems.append("docs/architecture.md must mention 18 commands or /alfred-dev:alfred")
+    if "19 команд" not in architecture and "/alfred-dev:alfred" not in architecture:
+        problems.append("docs/architecture.md must mention 19 commands or /alfred-dev:alfred")
 
     for relative_path, name in zip(plugin["commands"], manifest_names):
         text = _read(relative_path.lstrip("./"))
@@ -998,7 +999,7 @@ def check_command_catalog() -> list[str]:
         _fail("Command catalog out of sync: " + "; ".join(problems))
 
     return [
-        "18 namespaced commands aligned between plugin.json and architecture",
+        "19 namespaced commands aligned between plugin.json and architecture",
         "commands/alfred.md published as contextual entry",
         "command frontmatter with description",
         "command frontmatter compatible with current Claude Code",
@@ -1193,8 +1194,24 @@ def check_command_execution_contracts() -> list[str]:
             'alfred-continuity.py resume "$PWD"',
             "Сначала выполни детерминированный helper",
         ],
+        "pr": [
+            "Аргументы пользователя: $ARGUMENTS",
+            "${CLAUDE_PLUGIN_ROOT}/commands/_pr_loop.md",
+            'alfred-continuity.py pr-status "$PWD" --pr',
+            "PR_STATUS_<ВЕРДИКТ>",
+            "## Каноничное завершение команды",
+            "Мерж только после `PR_STATUS_MERGE`",
+        ],
+        "_pr_loop": [
+            'alfred-continuity.py pr-status "$PWD" --pr',
+            "Не мержи, пока helper не вернул `PR_STATUS_MERGE`",
+            "Не используй `--force`, `--admin` и `--no-verify`",
+            "100% покрытия нового кода",
+            "Предел: 5 раундов",
+        ],
     }
     commands_for_contracts = dict(commands)
+    commands_for_contracts["_pr_loop"] = _read("commands/_pr_loop.md")
     commands_for_contracts["alfred"] = _read("commands/alfred.md")
     commands_for_contracts["next"] = _read("commands/next.md")
     commands_for_contracts["search"] = _read("commands/search.md")
@@ -1213,6 +1230,8 @@ def check_command_execution_contracts() -> list[str]:
             "ожидаемый следующий шаг",
             "commands/_living_docs.md",
             "check-project-docs",
+            "${CLAUDE_PLUGIN_ROOT}/commands/_pr_loop.md",
+            "/alfred-dev:pr",
         ],
         "fix": [
             "Процесс из 3 фаз",
@@ -1221,6 +1240,8 @@ def check_command_execution_contracts() -> list[str]:
             "## Каноничное завершение команды",
             "баг/первопричину в работе",
             "commands/_living_docs.md",
+            "${CLAUDE_PLUGIN_ROOT}/commands/_pr_loop.md",
+            "/alfred-dev:pr",
         ],
         "quick": [
             "Лёгкий процесс из 2 фаз",
@@ -1229,6 +1250,8 @@ def check_command_execution_contracts() -> list[str]:
             "/alfred-dev:uat",
             "commands/_living_docs.md",
             "завершение",
+            "${CLAUDE_PLUGIN_ROOT}/commands/_pr_loop.md",
+            "/alfred-dev:pr",
         ],
         "spike": [
             "Процесс из 2 фаз",
@@ -1328,8 +1351,8 @@ def check_command_execution_contracts() -> list[str]:
         _fail("Command execution contracts incomplete: " + "; ".join(problems))
 
     return [
-        "18 namespaced commands keep arguments, prefix and current naming",
-        "18 helper-first wrappers covered",
+        "19 namespaced commands keep arguments, prefix and current naming",
+        "19 helper-first wrappers covered",
         "6 main flows with canonical closing",
         "_composition loads from the plugin install",
         "config/cto/update with verifiable interactive contracts",
@@ -1373,7 +1396,7 @@ def check_public_claims() -> list[str]:
     expected_counts = {
         "agents": (agent_count, 10),
         "skills": (skill_count, 11),
-        "commands": (command_count, 18),
+        "commands": (command_count, 19),
         "hooks": (hook_script_count, hook_script_count),
     }
     for label, (actual, expected) in expected_counts.items():
@@ -1395,7 +1418,7 @@ def check_public_claims() -> list[str]:
             "style-direction",
         ],
         "docs/architecture.md": [
-            "18 команд",
+            "19 команд",
             "Манифест не объявляет ключ `agents`",
         ],
         "commands/alfred.md": [
@@ -1519,7 +1542,7 @@ def check_public_claims() -> list[str]:
         _fail(f"Runtime prompts with legacy slash command: {legacy_runtime}")
 
     return [
-        "public inventory 10/11/18 verified",
+        "public inventory 10/11/19 verified",
         "README, architecture, help and agents without old counters",
         "human displayName reflected in README and changelog",
         "sensitive skills keep explicit manual activation",
@@ -2460,7 +2483,7 @@ def check_packaging_contracts() -> list[str]:
         path for path in packed_paths
         if path.startswith("templates/") and path.endswith(".md")
     ]
-    if len(public_command_paths) != 18 or len(agent_paths) != 10 or len(skill_paths) != 11:
+    if len(public_command_paths) != 19 or len(agent_paths) != 10 or len(skill_paths) != 11:
         _fail(
             "npm pack out of sync with the public inventory: "
             f"commands={len(public_command_paths)} agents={len(agent_paths)} skills={len(skill_paths)}"
@@ -2476,7 +2499,7 @@ def check_packaging_contracts() -> list[str]:
         "package without local caches or tests",
         "package without .claude/.crupier or manual evidence",
         "package without publishable symlinks outside the plugin",
-        "package contains 18 namespaced commands, 10 agents and 11 skills",
+        "package contains 19 namespaced commands, 10 agents and 11 skills",
         "package contains 8 artifact templates",
         "package contains the Designer visual runtime",
     ]
@@ -2681,7 +2704,7 @@ def check_audit_docs() -> list[str]:
         "docs/README.md": [
             "release.md",
             "11 skills",
-            "18 команд",
+            "19 команд",
         ],
         "docs/installation.md": [
             "plugin:alfred-dev:alfred-memory",
@@ -2702,7 +2725,7 @@ def check_audit_docs() -> list[str]:
             "и ручную, и автоматическую",
         ],
         "docs/release.md": [
-            "18 команд",
+            "19 команд",
             "10 агентов",
             "11 skills",
             "10 хуков",
@@ -2722,8 +2745,8 @@ def check_audit_docs() -> list[str]:
             "npm run release:audit:manual",
             "npm run release:audit:manual:evidence",
             "npm run release:audit:prepublish",
-            "18 публичных маршрутов",
-            "40 публичных опций",
+            "19 публичных маршрутов",
+            "42 публичных опций",
             "4 runtime-контракта",
             "--auth-preflight",
             "core/secrets.py",
@@ -3010,8 +3033,8 @@ def check_audit_docs() -> list[str]:
     _validate_manual_case_contract_links(manual_smoke)
     coverage = manual_smoke._case_command_coverage()
     missing = [name for name, case_ids in coverage.items() if not case_ids]
-    if len(coverage) != 18 or missing:
-        _fail(f"The manual matrix does not cover the 18 public routes: missing={missing}")
+    if len(coverage) != 19 or missing:
+        _fail(f"The manual matrix does not cover the 19 public routes: missing={missing}")
     option_coverage = manual_smoke._case_option_coverage()
     missing_options = [
         name for name, case_ids in option_coverage.items()
@@ -3057,7 +3080,7 @@ def check_audit_docs() -> list[str]:
         "docs/release.md is the living audit page",
         "project-scope MCP note documented",
         "commands/ documented as supported flat skills",
-        "manual matrix covers 18 public routes",
+        "manual matrix covers 19 public routes",
         f"manual matrix covers {expected_option_contracts} public options",
         "manual matrix validates option IDs against public commands",
         "manual matrix links contracts to the correct command",

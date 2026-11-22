@@ -37,6 +37,7 @@ allowed-tools: Bash(python3 .claude/alfred-continuity.py *), Read, Write, Edit, 
 - `/alfred-dev:ship`
 - `/alfred-dev:audit`
 - `/alfred-dev:cto`
+- `/alfred-dev:pr`
 - `/alfred-dev:update`
 
 `next` и `search` это внутренние helper-ы runtime. Не представляй их как slash-команды.
@@ -113,11 +114,12 @@ python3 .claude/alfred-continuity.py next "$PWD" --json
 - синхронизировать GitHub, issues, удалённую доску, «sync GitHub» → действуй как `/alfred-dev:sync-github`
 - обсудить, уточнить, конкретизировать, прояснить объём, зафиксировать UX/API до разработки → действуй как `/alfred-dev:discuss`
 - настроить Alfred, изменить автономность или агентов → действуй как `/alfred-dev:config`
-- справка или список команд → ответь сам картой из 18 команд; не выдумывай `/alfred-dev:help`
+- справка или список команд → ответь сам картой из 19 команд; не выдумывай `/alfred-dev:help`
 - подготовить релиз, опубликовать или развернуть → действуй как `/alfred-dev:ship`
 - аудит безопасности/качества/compliance → действуй как `/alfred-dev:audit`
 - сделать небольшое, точечное, ограниченное или «быстрое» изменение без всей церемонии → действуй как `/alfred-dev:quick`
 - внешнее техническое второе мнение, «хочу, чтобы CTO это проверил», внешнее ревью готовой фичи через Greptile CLI → действуй как `/alfred-dev:cto`
+- «доведи PR», «смержи PR», «PR», замечания в pull request, Greptile или SonarCloud по PR → действуй как `/alfred-dev:pr`
 - обновить Alfred Dev, проверить новую версию плагина, обновить установку → действуй как `/alfred-dev:update`
 
 ### 2. Continuity и brownfield имеют приоритет
@@ -184,6 +186,8 @@ helper `discuss` или действуй как эта команда и ост�
   полный мультиагентный процесс.
 - `cto` это специализированная внешняя проверка. Она не заменяет каноничный
   sign-off QA, безопасности или архитектуры.
+- `pr` доводит pull request до мержа по протоколу `commands/_pr_loop.md` и мержит
+  только по вердикту helper `pr-status`.
 - `discuss` это лёгкое уточнение: сначала пытайся решить его сам Alfred и обращайся к
   агентам, только если они дают реальную пользу.
 - `feature`, `quick`, `fix`, `spike`, `audit` и `ship` это процессы работы, в которых
