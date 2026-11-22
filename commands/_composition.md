@@ -11,21 +11,21 @@ description: "Внутренний общий протокол динамиче�
 ## Шаг 0 -- Начальная настройка проекта
 
 Прежде всего проверь, настроен ли в проекте режим автономности. Прочитай
-`.claude/alfred-dev.local.md` и найди секцию `autonomia:` во frontmatter YAML.
+`.claude/alfred-dev.local.md` и найди секцию `autonomy:` во frontmatter YAML.
 
-**Если секции `autonomia:` НЕТ** (Alfred используется в этом проекте впервые):
+**Если секции `autonomy:` НЕТ** (Alfred используется в этом проекте впервые):
 
 1. Напрямую запиши конфигурацию по умолчанию, совместимую с Claude Code
    CLI, в `.claude/alfred-dev.local.md`:
 
    ```yaml
-   autonomia:
-     producto: autonomo
-     arquitectura: autonomo
-     desarrollo: autonomo
-     calidad: autonomo
-     documentacion: autonomo
-     entrega: autonomo
+   autonomy:
+     product: autonomous
+     architecture: autonomous
+     development: autonomous
+     quality: autonomous
+     documentation: autonomous
+     delivery: autonomous
    ```
 
 2. НЕ используй `AskUserQuestion` в этом начальном bootstrap. Цель в том, чтобы
@@ -35,11 +35,11 @@ description: "Внутренний общий протокол динамиче�
 
 3. Покажи короткое сообщение: Alfred включил режим autopilot по умолчанию,
    чтобы не блокировать процесс в первой сессии, а пользователь может изменить
-   его позже через `/alfred-dev:ajustes`.
+   его позже через `/alfred-dev:config`.
 
-**Если секция `autonomia:` УЖЕ существует:** пропусти этот шаг и сразу продолжай.
+**Если секция `autonomy:` УЖЕ существует:** пропусти этот шаг и сразу продолжай.
 
-**Примечание:** пользователь может сменить режим в любой момент через `/alfred-dev:ajustes`.
+**Примечание:** пользователь может сменить режим в любой момент через `/alfred-dev:config`.
 
 ## Шаг 1 -- Контекст проекта
 
@@ -62,7 +62,7 @@ copywriter и i18n-specialist.
 
 | Агент | Специализация | Когда полезен |
 |-------|---------------|---------------|
-| **cto** | Внешнее ревью готовой фичи через Greptile CLI, только чтение. Включён по умолчанию | Только закрытие качества `feature` (`calidad`) и финальный аудит `ship` (`auditoria_final`) |
+| **cto** | Внешнее ревью готовой фичи через Greptile CLI, только чтение. Включён по умолчанию | Только закрытие качества `feature` (`quality`) и финальный аудит `ship` (`final_audit`) |
 
 ### Критерии решения
 
@@ -74,9 +74,8 @@ copywriter и i18n-specialist.
 
 Прежде чем задавать вопросы пользователю, проверь, активен ли режим autopilot:
 
-1. Прочитай `.claude/alfred-dev.local.md` и проверь, что все фазы автономности имеют значение `autonomo`.
-2. Прочитай `.claude/alfred-dev-state.json` и проверь, есть ли `"autopilot": true`
-   или, для совместимости со старыми сессиями, `"modo": "autopilot"`.
+1. Прочитай `.claude/alfred-dev.local.md` и проверь, что все фазы автономности имеют значение `autonomous`.
+2. Прочитай `.claude/alfred-dev-state.json` и проверь, есть ли `"autopilot": true`.
 
 **Если команда `quick`, `fix`, `spike` или `audit`:** переходи к шагу 4. Не спрашивай про CTO и не открывай меню опциональных агентов. Ядра достаточно. CTO не участвует в фазах этих процессов, даже если он включён. Если пользователь хочет внешнее ревью, предложи `/alfred-dev:cto` как отдельный шаг.
 
@@ -122,7 +121,7 @@ copywriter и i18n-specialist.
 > DevOps. Kanban пишет runtime, а не отдельный агент.
 
 CTO включён по умолчанию. Если в `.claude/alfred-dev.local.md` уже есть
-`agentes_opcionales.cto`, используй это значение и не спрашивай. Иначе считай CTO
+`optional_agents.cto`, используй это значение и не спрашивай. Иначе считай CTO
 активным для `feature` и `ship`.
 
 Используй `AskUserQuestion` с **одним меню** группы `Аудит`, только если
@@ -176,22 +175,22 @@ AskUserQuestion({
 Пользователь может выбрать, отменить выбор или добавить любую комбинацию. Решает
 его выбор, независимо от твоих рекомендаций.
 
-## Шаг 4 -- Построение equipo_sesion
+## Шаг 4 -- Построение session_team
 
-По ответу пользователя построй словарь `equipo_sesion`:
+По ответу пользователя построй словарь `session_team`:
 
 ```
-equipo_sesion = {
-    "opcionales_activos": {
+session_team = {
+    "active_optionals": {
         "cto": True/False,
     },
     "infra": {
-        "memoria": True/False,
+        "memory": True/False,
     },
-    "fuente": "composicion_dinamica",
+    "source": "dynamic_composition",
 }
 ```
 
-Передай `equipo_sesion` внутри процесса. С этого момента каждая фаза обращается к
-`equipo_sesion` вместо постоянной конфигурации, чтобы решить, какие опциональные
+Передай `session_team` внутри процесса. С этого момента каждая фаза обращается к
+`session_team` вместо постоянной конфигурации, чтобы решить, какие опциональные
 агенты участвуют.

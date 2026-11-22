@@ -22,12 +22,12 @@ Alfred Dev: плагин для Claude Code, который реализует �
 |---------|------|------------|
 | `/alfred-dev:alfred` | `alfred.md` | Контекстный вход: решает, какой шаг следующий |
 | `/alfred-dev:progress` | `progress.md` | Операционное состояние, kanban и трассируемость |
-| `/alfred-dev:retomar` | `retomar.md` | Продолжает приостановленную сессию |
+| `/alfred-dev:resume` | `resume.md` | Продолжает приостановленную сессию |
 | `/alfred-dev:pause` | `pause.md` | Ставит работу на паузу и оставляет handoff |
 | `/alfred-dev:map-codebase` | `map-codebase.md` | Brownfield-картирование репозитория |
 | `/alfred-dev:discuss` | `discuss.md` | Предварительное уточнение и постоянный discovery |
 | `/alfred-dev:memory-ui` | `memory-ui.md` | Локальный UI памяти SQLite |
-| `/alfred-dev:ajustes` | `ajustes.md` | Настройка плагина |
+| `/alfred-dev:config` | `config.md` | Настройка плагина |
 | `/alfred-dev:uat` | `uat.md` | Ручная валидация |
 | `/alfred-dev:sync-github` | `sync-github.md` | Зеркало локальной доски в GitHub Issues |
 | `/alfred-dev:quick` | `quick.md` | Лёгкий процесс |
@@ -47,7 +47,7 @@ Alfred Dev: плагин для Claude Code, который реализует �
 
 Агенты: специализированные system prompts, которые Claude Code запускает как субагенты через инструмент Agent. У каждого агента своя роль в виртуальной команде, инструменты, ограниченные его зоной действия, и собственная личность, которая подстраивается под уровень сарказма, заданный пользователем.
 
-Ключевое различие в этом слое: разделение между ядром и единственным опциональным агентом. 8 агентов ядра и Designer (если есть фронтенд) участвуют в процессах: когда `feature.md` говорит «активируй агента product-owner», Claude Code создаёт субагента Agent, чей system prompt равен содержимому `agents/product-owner.md`. CTO включён по умолчанию, но в процессах подключается только на закрытии готовой фичи: в фазе `calidad` процесса `feature` и в фазе `auditoria_final` процесса `ship`. Вручную его запускает `/alfred-dev:cto`.
+Ключевое различие в этом слое: разделение между ядром и единственным опциональным агентом. 8 агентов ядра и Designer (если есть фронтенд) участвуют в процессах: когда `feature.md` говорит «активируй агента product-owner», Claude Code создаёт субагента Agent, чей system prompt равен содержимому `agents/product-owner.md`. CTO включён по умолчанию, но в процессах подключается только на закрытии готовой фичи: в фазе `quality` процесса `feature` и в фазе `final_audit` процесса `ship`. Вручную его запускает `/alfred-dev:cto`.
 
 **Агенты ядра** (8 + Designer):
 
@@ -75,14 +75,14 @@ Alfred Dev: плагин для Claude Code, который реализует �
 
 Слой core не один большой модуль, а семейство специализированных модулей. Самые важные на сегодня:
 
-- **`orchestrator.py`** -- Конечный автомат, который определяет 6 процессов работы (feature, fix, spike, ship, audit, quick), у каждого свои последовательные фазы и quality gates. Оркестратор управляет созданием сессий, оценкой gates и переходом между фазами. Состояние хранится в плоском JSON-файле (`.claude/alfred-dev-state.json`). С v0.3.6 `run_flow()` может внедрить временную команду (`equipo_sesion`), созданную динамическим составом. Если явная команда не передана, он автоматически берёт сохранённую команду проекта из `.claude/alfred-dev.local.md`, чтобы runtime и конфигурация не расходились (см. [configuration.md](configuration.md#динамический-состав-команды)).
+- **`orchestrator.py`** -- Конечный автомат, который определяет 6 процессов работы (feature, fix, spike, ship, audit, quick), у каждого свои последовательные фазы и quality gates. Оркестратор управляет созданием сессий, оценкой gates и переходом между фазами. Состояние хранится в плоском JSON-файле (`.claude/alfred-dev-state.json`). С v0.3.6 `run_flow()` может внедрить временную команду (`session_team`), созданную динамическим составом. Если явная команда не передана, он автоматически берёт сохранённую команду проекта из `.claude/alfred-dev.local.md`, чтобы runtime и конфигурация не расходились (см. [configuration.md](configuration.md#динамический-состав-команды)).
 
-- **`config_loader.py`** -- Загрузчик конфигурации. Он читает настройки пользователя из файла `.local.md` с YAML frontmatter и автоматически определяет технологический stack проекта (runtime, язык, framework, ORM, раннер тестов, bundler). Содержит простой YAML-парсер как запасной вариант для окружений без PyYAML. Его вывод объединяется с `suggest_optional_agents()` и каноническим каталогом из `optional_agents.py`, чтобы рекомендовать специалистов по реальным признакам проекта без дублирования списков между runtime и динамическим составом. Также он предоставляет канонические builders сохранённой `equipo_sesion`, чтобы `run_flow()` и хелперы вроде `quick` стартовали с одной и той же рабочей командой, и даёт структурированный UX `/alfred-dev:ajustes` через `build_config_section_summaries()`, `build_config_section_menu()`, `apply_config_section_update()`, `build_config_section_change_preview()`, `update_config_section()` и `update_project_config_section()`.
-- **`optional_agents.py`** -- Канонический каталог единственного опционального агента (`cto`). Централизует группу `Аудит`, видимые labels, специализацию и интеграцию по фазам, а также builders меню (`build_optional_agent_group_menu()` / `build_optional_agent_group_menus()`), чтобы `ajustes` и динамический состав не зависели от списков, написанных вручную.
+- **`config_loader.py`** -- Загрузчик конфигурации. Он читает настройки пользователя из файла `.local.md` с YAML frontmatter и автоматически определяет технологический stack проекта (runtime, язык, framework, ORM, раннер тестов, bundler). Содержит простой YAML-парсер как запасной вариант для окружений без PyYAML. Его вывод объединяется с `suggest_optional_agents()` и каноническим каталогом из `optional_agents.py`, чтобы рекомендовать специалистов по реальным признакам проекта без дублирования списков между runtime и динамическим составом. Также он предоставляет канонические builders сохранённой `session_team`, чтобы `run_flow()` и хелперы вроде `quick` стартовали с одной и той же рабочей командой, и даёт структурированный UX `/alfred-dev:config` через `build_config_section_summaries()`, `build_config_section_menu()`, `apply_config_section_update()`, `build_config_section_change_preview()`, `update_config_section()` и `update_project_config_section()`.
+- **`optional_agents.py`** -- Канонический каталог единственного опционального агента (`cto`). Централизует группу `Аудит`, видимые labels, специализацию и интеграцию по фазам, а также builders меню (`build_optional_agent_group_menu()` / `build_optional_agent_group_menus()`), чтобы `config` и динамический состав не зависели от списков, написанных вручную.
 
-- **`continuity.py`** -- Детерминированный слой операционной непрерывности. Публичная поверхность использует `map-codebase`, `discuss`, `pause`, `progress`, `retomar`, `uat` и `sync-github`. Внутренние хелперы `next` и `search` не публикуются. Runtime также реализует resume/verify/standup/validate для этих хелперов и для `progress`. Сохраняет `current.md`, `handoff.md`, `uat.md` и `github-sync.md`. Как внутренний хелпер обслуживания он также предоставляет `normalize-kanban` для унаследованных досок.
+- **`continuity.py`** -- Детерминированный слой операционной непрерывности. Публичная поверхность использует `map-codebase`, `discuss`, `pause`, `progress`, `resume`, `uat` и `sync-github`. Внутренние хелперы `next` и `search` не публикуются. Runtime также реализует resume/verify/standup/validate для этих хелперов и для `progress`. Сохраняет `current.md`, `handoff.md`, `uat.md` и `github-sync.md`. Как внутренний хелпер обслуживания он также предоставляет `normalize-kanban` для унаследованных досок.
 - **`memory.py`, `memory_sync.py`, `memory_ui_server.py`** -- Подсистема постоянной памяти: SQLite, поиск, санитизация, sync в нативные памяти и локальный UI.
-- **`memory_config.py`** -- Лёгкий парсер секции `memoria` локального frontmatter. Позволяет хукам, sync и серверу MCP применять одну и ту же эффективную конфигурацию без дублирования логики.
+- **`memory_config.py`** -- Лёгкий парсер секции `memory` локального frontmatter. Позволяет хукам, sync и серверу MCP применять одну и ту же эффективную конфигурацию без дублирования логики.
 - **`personality.py`** -- Движок личности, который задаёт идентичность, голос и характерные фразы каждого агента. Тон подстраивается под настраиваемый уровень сарказма (1 = профессиональный, 5 = едкий). На высоких уровнях в репертуар каждого агента добавляются колкие фразы.
 - **`session_report.py`** -- Создание отчётов сессии в `docs/alfred-reports/` при закрытии или прерывании процессов.
 - **`selina_*`** -- Визуальный runtime Designer: каталог стилей, пошаговый селектор, итоговое направление, варианты и поддержка рендеринга.
@@ -100,7 +100,7 @@ Alfred Dev: плагин для Claude Code, который реализует �
 | `session-bootstrap.sh` | SessionStart | startup, resume, clear, compact, fork | Синхронный bootstrap проекта до первого промпта |
 | `session-start.sh` | SessionStart | startup, resume, clear, compact, fork | Внедряет контекст проекта в начале сессии |
 | `session-end.py` | SessionEnd | (нет) | Закрывает Memory UI и записывает закрытие сессии |
-| `prompt-route.py` | UserPromptSubmit | (нет) | Предлагает fix/quick/retomar, если в тексте нет slash |
+| `prompt-route.py` | UserPromptSubmit | (нет) | Предлагает fix/quick/resume, если в тексте нет slash |
 | `secret-guard.py` | PreToolUse | Write, Edit, Bash, mcp__.* | Блокирует запись секретов |
 | `dangerous-command-guard.py` | PreToolUse | Bash | Блокирует разрушительные команды |
 | `sensitive-read-guard.py` | PreToolUse | Read | Предупреждает при чтении файлов с учётными данными |
@@ -213,14 +213,14 @@ sequenceDiagram
     Note over ORC: Фаза 1: Продукт
 
     CMD->>ORC: create_session("feature", описание)
-    ORC-->>CMD: Начальное состояние (фаза: producto)
+    ORC-->>CMD: Начальное состояние (фаза: product)
     CMD->>PO: Agent: анализ требований, PRD
     PO-->>CMD: PRD с пользовательскими историями
     CMD->>U: Показывает PRD
     U->>CMD: Одобряет / просит изменений
-    CMD->>ORC: check_gate(resultado="aprobado")
+    CMD->>ORC: check_gate(result="approved")
     ORC-->>CMD: Пользовательская gate пройдена
-    CMD->>ORC: advance_phase() -> arquitectura
+    CMD->>ORC: advance_phase() -> architecture
     HK->>MCP: activity-capture.py регистрирует событие
 
     Note over ORC: Фаза 2: Архитектура
@@ -233,9 +233,9 @@ sequenceDiagram
     SO-->>CMD: Отчёт по безопасности
     CMD->>U: Показывает проект + threat model
     U->>CMD: Одобряет
-    CMD->>ORC: check_gate(resultado="aprobado")
+    CMD->>ORC: check_gate(result="approved")
     ORC-->>CMD: Пользовательская gate пройдена
-    CMD->>ORC: advance_phase() -> desarrollo
+    CMD->>ORC: advance_phase() -> development
 
     Note over ORC: Фаза 3: Разработка
 
@@ -245,7 +245,7 @@ sequenceDiagram
     HK->>HK: quality-gate.py следит за тестами
     CMD->>ORC: check_gate(tests_ok=true)
     ORC-->>CMD: Автоматическая gate пройдена
-    CMD->>ORC: advance_phase() -> calidad
+    CMD->>ORC: advance_phase() -> quality
 
     Note over ORC: Фаза 4: Качество
 
@@ -257,15 +257,15 @@ sequenceDiagram
     SO-->>CMD: Отчёт по безопасности
     CMD->>ORC: check_gate(tests_ok=true, security_ok=true)
     ORC-->>CMD: Gate автоматика+безопасность пройдена
-    CMD->>ORC: advance_phase() -> documentación
+    CMD->>ORC: advance_phase() -> documentation
 
     Note over ORC: Фаза 5: Документация
 
     CMD->>TW: Agent: документация API, архитектура, руководства
     TW-->>CMD: Документация создана
-    CMD->>ORC: check_gate(resultado="aprobado")
+    CMD->>ORC: check_gate(result="approved")
     ORC-->>CMD: Свободная gate пройдена
-    CMD->>ORC: advance_phase() -> entrega
+    CMD->>ORC: advance_phase() -> delivery
 
     Note over ORC: Фаза 6: Поставка
 
@@ -275,9 +275,9 @@ sequenceDiagram
     SO-->>CMD: Финальное одобрение
     CMD->>U: Запрашивает финальное одобрение
     U->>CMD: Одобряет
-    CMD->>ORC: check_gate(resultado="aprobado", security_ok=true)
+    CMD->>ORC: check_gate(result="approved", security_ok=true)
     ORC-->>CMD: Gate пользователь+безопасность пройдена
-    CMD->>ORC: advance_phase() -> completado
+    CMD->>ORC: advance_phase() -> completed
     HK->>MCP: Регистрирует завершение процесса
 
     CMD->>U: Процесс завершён. Артефакт готов.
@@ -311,7 +311,7 @@ SQLite: полноценная реляционная база данных, к�
 
 Агенты ядра (alfred, product-owner, designer, architect, senior-dev, security-officer, qa-engineer, devops-engineer и tech-writer) вызываются программно из commands через инструмент Agent в Claude Code. Манифест не объявляет ключ `agents`: Claude Code находит агентов в каталоге `agents/`, и именно этот формат корректно загружается в текущем CLI.
 
-Единственный опциональный агент: cto. Он лежит в том же каталоге `agents/` и включается или выключается через `/alfred-dev:ajustes`. Kanban и трассируемость записывает runtime, а не агент `project-manager`.
+Единственный опциональный агент: cto. Он лежит в том же каталоге `agents/` и включается или выключается через `/alfred-dev:config`. Kanban и трассируемость записывает runtime, а не агент `project-manager`.
 
 ### Паттерн состояния
 
@@ -347,11 +347,11 @@ SQLite: полноценная реляционная база данных, к�
 
 | Тип gate | Условия |
 |----------|---------|
-| `libre` | Проходит с результатом «aprobado». Без дополнительных проверок. |
-| `usuario` | Требует явного одобрения пользователя. |
-| `automático` | Требует положительного результата и прохождения тестов. |
-| `usuario+seguridad` | Требует одобрения пользователя и согласия security-officer. |
-| `automático+seguridad` | Требует зелёных тестов, OK по безопасности и положительного результата. |
+| `free` | Проходит с результатом `approved`. Без дополнительных проверок. |
+| `user` | Требует явного одобрения пользователя. |
+| `automatic` | Требует положительного результата и прохождения тестов. |
+| `user+security` | Требует одобрения пользователя и согласия security-officer. |
+| `automatic+security` | Требует зелёных тестов, OK по безопасности и положительного результата. |
 
 Диаграмма ниже показывает конечный автомат процесса **feature**, самого полного в системе. Остальные процессы (fix, spike, ship, audit) следуют тому же паттерну с другим числом фаз и агентов.
 
@@ -359,51 +359,51 @@ SQLite: полноценная реляционная база данных, к�
 stateDiagram-v2
     direction LR
 
-    [*] --> producto: create_session("feature")
+    [*] --> product: create_session("feature")
 
-    state "Фаза 1: Продукт" as producto
-    state "Фаза 1b: Визуальный стиль" as estilo_visual
-    state "Фаза 2: Архитектура" as arquitectura
-    state "Фаза 3: Разработка" as desarrollo
-    state "Фаза 4: Качество" as calidad
-    state "Фаза 5: Документация" as documentación
-    state "Фаза 6: Поставка" as entrega
+    state "Фаза 1: Продукт" as product
+    state "Фаза 1b: Визуальный стиль" as visual_style
+    state "Фаза 2: Архитектура" as architecture
+    state "Фаза 3: Разработка" as development
+    state "Фаза 4: Качество" as quality
+    state "Фаза 5: Документация" as documentation
+    state "Фаза 6: Поставка" as delivery
 
-    producto --> estilo_visual: gate_producto [usuario + фронтенд]
-    producto --> arquitectura: gate_producto [без фронтенда]
-    estilo_visual --> arquitectura: gate_estilo [usuario]
-    arquitectura --> desarrollo: gate_arquitectura [usuario+seguridad]
-    desarrollo --> calidad: gate_desarrollo [automático]
-    calidad --> documentación: gate_calidad [automático+seguridad]
-    documentación --> entrega: gate_documentacion [libre]
-    entrega --> [*]: gate_entrega [usuario+seguridad]
+    product --> visual_style: gate_product [user + фронтенд]
+    product --> architecture: gate_product [без фронтенда]
+    visual_style --> architecture: gate_style [user]
+    architecture --> development: gate_architecture [user+security]
+    development --> quality: gate_development [automatic]
+    quality --> documentation: gate_quality [automatic+security]
+    documentation --> delivery: gate_documentation [free]
+    delivery --> [*]: gate_delivery [user+security]
 
-    note right of producto
+    note right of product
         Агенты: product-owner
         Создаёт PRD с пользовательскими историями
     end note
 
-    note right of arquitectura
+    note right of architecture
         Агенты: architect + security-officer (параллельно)
         Техническое проектирование + threat model
     end note
 
-    note right of desarrollo
+    note right of development
         Агенты: senior-dev
         Реализация по TDD красный-зелёный-рефакторинг
     end note
 
-    note right of calidad
+    note right of quality
         Агенты: qa-engineer + security-officer (параллельно)
         Code review + OWASP + SBOM
     end note
 
-    note right of documentación
+    note right of documentation
         Агенты: tech-writer
         API docs + руководства + архитектура
     end note
 
-    note right of entrega
+    note right of delivery
         Агенты: devops-engineer + security-officer
         CI/CD + упаковка + финальная валидация
     end note

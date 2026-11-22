@@ -69,7 +69,7 @@ class TestMemoryUI(unittest.TestCase):
         )
         db.log_event(
             event_type="phase_completed",
-            phase="arquitectura",
+            phase="architecture",
             summary="Architecture completed",
             content="ADR approved for OAuth and local persistence.",
             iteration_id=iteration_id,
@@ -275,11 +275,11 @@ class TestMemoryUI(unittest.TestCase):
         ) as fh:
             json.dump(
                 {
-                    "comando": "feature",
-                    "descripcion": "New checkout",
-                    "fase_actual": "completado",
+                    "command": "feature",
+                    "description": "New checkout",
+                    "current_phase": "completed",
                     "objetivo": "New checkout",
-                    "fases_completadas": ["producto", "arquitectura", "desarrollo"],
+                    "completed_phases": ["product", "architecture", "development"],
                 },
                 fh,
                 ensure_ascii=False,
@@ -319,17 +319,17 @@ class TestMemoryUI(unittest.TestCase):
         ) as fh:
             json.dump(
                 {
-                    "comando": "spike",
-                    "descripcion": "Broken checkout",
-                    "fase_actual": "exploracion",
-                    "fase_numero": 0,
-                    "fases_completadas": [],
-                    "equipo_sesion": {
-                        "opcionales_activos": {
+                    "command": "spike",
+                    "description": "Broken checkout",
+                    "current_phase": "exploration",
+                    "phase_number": 0,
+                    "completed_phases": [],
+                    "session_team": {
+                        "active_optionals": {
                             "cto": True,
                         },
-                        "infra": {"memoria": False},
-                        "fuente": "config_persistida",
+                        "infra": {"memory": False},
+                        "source": "persisted_config",
                     },
                 },
                 fh,
@@ -750,9 +750,9 @@ class TestMemoryUI(unittest.TestCase):
 
     def test_stop_request_tokens_and_cli_raw_stop(self):
         self.assertTrue(is_memory_ui_stop_request("stop"))
-        self.assertTrue(is_memory_ui_stop_request("cerrar ahora"))
+        self.assertTrue(is_memory_ui_stop_request("закрыть сейчас"))
         self.assertFalse(is_memory_ui_stop_request(""))
-        self.assertFalse(is_memory_ui_stop_request("abrir"))
+        self.assertFalse(is_memory_ui_stop_request("open"))
 
         launched = launch_memory_ui(
             self.tmpdir,
@@ -773,7 +773,7 @@ class TestMemoryUI(unittest.TestCase):
                 self.tmpdir,
                 "--json",
                 "--raw",
-                "cerrar",
+                "стоп",
             ],
             capture_output=True,
             text=True,
@@ -794,7 +794,7 @@ class TestMemoryUI(unittest.TestCase):
                 break
             time.sleep(0.05)
         else:
-            self.fail("The Memory UI still responded after /memory-ui cerrar.")
+            self.fail("The Memory UI still responded after /memory-ui стоп.")
 
     def test_snapshot_endpoint_is_exposed(self):
         result = launch_memory_ui(

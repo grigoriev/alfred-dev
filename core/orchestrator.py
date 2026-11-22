@@ -17,10 +17,10 @@ The orchestrator:
 
 Gate architecture:
     Gates are checkpoints between phases. Their behavior depends on the
-    type set in each phase: "usuario" gates require explicit approval;
-    "automatico" gates check objective metrics such as green tests or
+    type set in each phase: "user" gates require explicit approval;
+    "automatic" gates check objective metrics such as green tests or
     a passing pipeline; combined gates (for example
-    "automatico+seguridad") require both conditions.
+    "automatic+security") require both conditions.
 
 Iterative loop (v0.4.0):
     Inside each phase, agents can iterate until the deliverables are
@@ -31,7 +31,7 @@ Iterative loop (v0.4.0):
 
 Autopilot mode (v0.4.0):
     When ``autopilot=True``, the flow runs through all phases and does
-    not ask the user for approval at "usuario" gates. Automatic and
+    not ask the user for approval at "user" gates. Automatic and
     security gates are still evaluated as usual. The flow stops only
     when an automatic or security gate fails.
 """
@@ -51,15 +51,15 @@ from core.optional_agents import (
 # --- Gate type constants ----------------------------------------------------
 # Constants prevent duplicate literals and keep validation in one place.
 
-GATE_USUARIO = "usuario"
-GATE_AUTOMATICO = "automatico"
-GATE_LIBRE = "libre"
-GATE_USUARIO_SEGURIDAD = "usuario+seguridad"
-GATE_AUTOMATICO_SEGURIDAD = "automatico+seguridad"
+GATE_USER = "user"
+GATE_AUTOMATIC = "automatic"
+GATE_FREE = "free"
+GATE_USER_SECURITY = "user+security"
+GATE_AUTOMATIC_SECURITY = "automatic+security"
 
 _KNOWN_GATE_TYPES = {
-    GATE_LIBRE, GATE_USUARIO, GATE_AUTOMATICO,
-    GATE_USUARIO_SEGURIDAD, GATE_AUTOMATICO_SEGURIDAD,
+    GATE_FREE, GATE_USER, GATE_AUTOMATIC,
+    GATE_USER_SECURITY, GATE_AUTOMATIC_SECURITY,
 }
 
 # --- Known optional agents ---------------------------------------------------
@@ -67,9 +67,9 @@ _KNOWN_GATE_TYPES = {
 # structure of the session team in dynamic composition.
 
 _KNOWN_OPTIONAL_AGENTS = frozenset(get_optional_agent_names())
-_KNOWN_EQUIPO_SESSION_SOURCES = frozenset({
-    "composicion_dinamica",
-    "config_persistida",
+_KNOWN_SESSION_TEAM_SOURCES = frozenset({
+    "dynamic_composition",
+    "persisted_config",
 })
 
 # --- Flow definitions --------------------------------------------------------
@@ -78,82 +78,82 @@ _KNOWN_EQUIPO_SESSION_SOURCES = frozenset({
 
 FLOWS: Dict[str, Dict[str, Any]] = {
         "feature": {
-        "nombre": "feature",
-        "fases": [
+        "name": "feature",
+        "phases": [
             {
-                "nombre": "producto",
-                "agentes": ["product-owner"],
-                "paralelo": False,
-                "gate": "gate_producto",
-                "gate_tipo": GATE_USUARIO,
-                "descripcion": (
+                "name": "product",
+                "agents": ["product-owner"],
+                "parallel": False,
+                "gate": "gate_product",
+                "gate_type": GATE_USER,
+                "description": (
                     "Анализ требований и определение функционального "
                     "объёма новой feature."
                 ),
             },
             {
-                "nombre": "estilo_visual",
-                "agentes": ["designer"],
-                "paralelo": False,
-                "gate": "gate_estilo",
-                "gate_tipo": GATE_USUARIO,
-                "condicion": "tiene_frontend",
-                "descripcion": (
+                "name": "visual_style",
+                "agents": ["designer"],
+                "parallel": False,
+                "gate": "gate_style",
+                "gate_type": GATE_USER,
+                "condition": "has_frontend",
+                "description": (
                     "Определение направления визуального стиля "
                     "продукта на основе трёх сопоставимых предложений."
                 ),
             },
             {
-                "nombre": "arquitectura",
-                "agentes": ["architect", "security-officer"],
-                "paralelo": True,
-                "gate": "gate_arquitectura",
-                "gate_tipo": GATE_USUARIO_SEGURIDAD,
-                "descripcion": (
+                "name": "architecture",
+                "agents": ["architect", "security-officer"],
+                "parallel": True,
+                "gate": "gate_architecture",
+                "gate_type": GATE_USER_SECURITY,
+                "description": (
                     "Техническое проектирование, выбор паттернов и проверка "
                     "архитектурного решения с threat model."
                 ),
             },
             {
-                "nombre": "desarrollo",
-                "agentes": ["senior-dev"],
-                "paralelo": False,
-                "gate": "gate_desarrollo",
-                "gate_tipo": GATE_AUTOMATICO,
-                "descripcion": (
+                "name": "development",
+                "agents": ["senior-dev"],
+                "parallel": False,
+                "gate": "gate_development",
+                "gate_type": GATE_AUTOMATIC,
+                "description": (
                     "Реализация кода по строгому TDD "
                     "с циклами red-green-refactor."
                 ),
             },
             {
-                "nombre": "calidad",
-                "agentes": ["qa-engineer", "security-officer"],
-                "paralelo": True,
-                "gate": "gate_calidad",
-                "gate_tipo": GATE_AUTOMATICO_SEGURIDAD,
-                "descripcion": (
+                "name": "quality",
+                "agents": ["qa-engineer", "security-officer"],
+                "parallel": True,
+                "gate": "gate_quality",
+                "gate_type": GATE_AUTOMATIC_SECURITY,
+                "description": (
                     "Проверка качества, запуск тестов и "
                     "аудит безопасности параллельно."
                 ),
             },
             {
-                "nombre": "documentacion",
-                "agentes": ["tech-writer"],
-                "paralelo": False,
-                "gate": "gate_documentacion",
-                "gate_tipo": GATE_LIBRE,
-                "descripcion": (
+                "name": "documentation",
+                "agents": ["tech-writer"],
+                "parallel": False,
+                "gate": "gate_documentation",
+                "gate_type": GATE_FREE,
+                "description": (
                     "Создание технической и пользовательской "
                     "документации для сообщества."
                 ),
             },
             {
-                "nombre": "entrega",
-                "agentes": ["devops-engineer", "security-officer"],
-                "paralelo": False,
-                "gate": "gate_entrega",
-                "gate_tipo": GATE_USUARIO_SEGURIDAD,
-                "descripcion": (
+                "name": "delivery",
+                "agents": ["devops-engineer", "security-officer"],
+                "parallel": False,
+                "gate": "gate_delivery",
+                "gate_type": GATE_USER_SECURITY,
+                "description": (
                     "Подготовка поставки, changelog и "
                     "финальная проверка перед merge."
                 ),
@@ -161,37 +161,37 @@ FLOWS: Dict[str, Dict[str, Any]] = {
         ],
     },
     "fix": {
-        "nombre": "fix",
-        "fases": [
+        "name": "fix",
+        "phases": [
             {
-                "nombre": "diagnostico",
-                "agentes": ["senior-dev"],
-                "paralelo": False,
-                "gate": "gate_diagnostico",
-                "gate_tipo": GATE_USUARIO,
-                "descripcion": (
+                "name": "diagnosis",
+                "agents": ["senior-dev"],
+                "parallel": False,
+                "gate": "gate_diagnosis",
+                "gate_type": GATE_USER,
+                "description": (
                     "Поиск первопричины бага "
                     "через анализ логов, трассировок и воспроизведение."
                 ),
             },
             {
-                "nombre": "correccion",
-                "agentes": ["senior-dev"],
-                "paralelo": False,
-                "gate": "gate_correccion",
-                "gate_tipo": GATE_AUTOMATICO,
-                "descripcion": (
+                "name": "correction",
+                "agents": ["senior-dev"],
+                "parallel": False,
+                "gate": "gate_correction",
+                "gate_type": GATE_AUTOMATIC,
+                "description": (
                     "Применение fix с регрессионным тестом, "
                     "который доказывает, что баг устранён."
                 ),
             },
             {
-                "nombre": "validacion",
-                "agentes": ["qa-engineer", "security-officer"],
-                "paralelo": True,
-                "gate": "gate_validacion",
-                "gate_tipo": GATE_AUTOMATICO_SEGURIDAD,
-                "descripcion": (
+                "name": "validation",
+                "agents": ["qa-engineer", "security-officer"],
+                "parallel": True,
+                "gate": "gate_validation",
+                "gate_type": GATE_AUTOMATIC_SECURITY,
+                "description": (
                     "Полная проверка: регрессионные тесты, "
                     "существующий набор тестов и проверка безопасности."
                 ),
@@ -199,26 +199,26 @@ FLOWS: Dict[str, Dict[str, Any]] = {
         ],
     },
     "quick": {
-        "nombre": "quick",
-        "fases": [
+        "name": "quick",
+        "phases": [
             {
-                "nombre": "ejecucion_acotada",
-                "agentes": ["senior-dev"],
-                "paralelo": False,
-                "gate": "gate_ejecucion_acotada",
-                "gate_tipo": GATE_AUTOMATICO,
-                "descripcion": (
+                "name": "scoped_execution",
+                "agents": ["senior-dev"],
+                "parallel": False,
+                "gate": "gate_scoped_execution",
+                "gate_type": GATE_AUTOMATIC,
+                "description": (
                     "Ограниченная реализация для небольших, "
                     "локальных изменений с низким риском и автоматической проверкой."
                 ),
             },
             {
-                "nombre": "validacion_rapida",
-                "agentes": ["qa-engineer", "security-officer"],
-                "paralelo": True,
-                "gate": "gate_validacion_rapida",
-                "gate_tipo": GATE_AUTOMATICO_SEGURIDAD,
-                "descripcion": (
+                "name": "quick_validation",
+                "agents": ["qa-engineer", "security-officer"],
+                "parallel": True,
+                "gate": "gate_quick_validation",
+                "gate_type": GATE_AUTOMATIC_SECURITY,
+                "description": (
                     "Быстрая проверка изменения на затронутой области: "
                     "локальная регрессия, тесты и проверка безопасности."
                 ),
@@ -226,26 +226,26 @@ FLOWS: Dict[str, Dict[str, Any]] = {
         ],
     },
     "spike": {
-        "nombre": "spike",
-        "fases": [
+        "name": "spike",
+        "phases": [
             {
-                "nombre": "exploracion",
-                "agentes": ["architect", "senior-dev"],
-                "paralelo": True,
-                "gate": "gate_exploracion",
-                "gate_tipo": GATE_LIBRE,
-                "descripcion": (
+                "name": "exploration",
+                "agents": ["architect", "senior-dev"],
+                "parallel": True,
+                "gate": "gate_exploration",
+                "gate_type": GATE_FREE,
+                "description": (
                     "Исследование: proof of concept, "
                     "бенчмарки и оценка альтернатив."
                 ),
             },
             {
-                "nombre": "conclusiones",
-                "agentes": ["architect"],
-                "paralelo": False,
-                "gate": "gate_conclusiones",
-                "gate_tipo": GATE_USUARIO,
-                "descripcion": (
+                "name": "conclusions",
+                "agents": ["architect"],
+                "parallel": False,
+                "gate": "gate_conclusions",
+                "gate_type": GATE_USER,
+                "description": (
                     "Сведение находок в отчёт "
                     "с практическими рекомендациями."
                 ),
@@ -253,49 +253,49 @@ FLOWS: Dict[str, Dict[str, Any]] = {
         ],
     },
     "ship": {
-        "nombre": "ship",
-        "fases": [
+        "name": "ship",
+        "phases": [
             {
-                "nombre": "auditoria_final",
-                "agentes": ["qa-engineer", "security-officer"],
-                "paralelo": True,
-                "gate": "gate_auditoria_final",
-                "gate_tipo": GATE_AUTOMATICO_SEGURIDAD,
-                "descripcion": (
+                "name": "final_audit",
+                "agents": ["qa-engineer", "security-officer"],
+                "parallel": True,
+                "gate": "gate_final_audit",
+                "gate_type": GATE_AUTOMATIC_SECURITY,
+                "description": (
                     "Полный аудит качества и безопасности "
                     "перед релизом."
                 ),
             },
             {
-                "nombre": "documentacion",
-                "agentes": ["tech-writer"],
-                "paralelo": False,
-                "gate": "gate_documentacion_ship",
-                "gate_tipo": GATE_LIBRE,
-                "descripcion": (
+                "name": "documentation",
+                "agents": ["tech-writer"],
+                "parallel": False,
+                "gate": "gate_documentation_ship",
+                "gate_type": GATE_FREE,
+                "description": (
                     "Обновление документации релиза, "
                     "changelog и руководств по миграции."
                 ),
             },
             {
-                "nombre": "empaquetado",
-                "agentes": ["devops-engineer", "security-officer"],
-                "paralelo": False,
-                "gate": "gate_empaquetado",
-                "gate_tipo": GATE_AUTOMATICO_SEGURIDAD,
-                "descripcion": (
+                "name": "packaging",
+                "agents": ["devops-engineer", "security-officer"],
+                "parallel": False,
+                "gate": "gate_packaging",
+                "gate_type": GATE_AUTOMATIC_SECURITY,
+                "description": (
                     "Сборка артефакта релиза, "
                     "семантическое версионирование и тегирование."
                 ),
             },
             {
-                "nombre": "despliegue",
-                "agentes": ["devops-engineer"],
-                "paralelo": False,
-                "gate": "gate_despliegue",
-                "gate_tipo": GATE_USUARIO_SEGURIDAD,
+                "name": "deployment",
+                "agents": ["devops-engineer"],
+                "parallel": False,
+                "gate": "gate_deployment",
+                "gate_type": GATE_USER_SECURITY,
                 "autopilot_force_user_confirmation": True,
-                "descripcion": (
+                "description": (
                     "Развёртывание в production с проверкой "
                     "после deploy и подготовленным rollback."
                 ),
@@ -303,20 +303,20 @@ FLOWS: Dict[str, Dict[str, Any]] = {
         ],
     },
     "audit": {
-        "nombre": "audit",
-        "fases": [
+        "name": "audit",
+        "phases": [
             {
-                "nombre": "auditoria_paralela",
-                "agentes": [
+                "name": "parallel_audit",
+                "agents": [
                     "qa-engineer",
                     "security-officer",
                     "architect",
                     "tech-writer",
                 ],
-                "paralelo": True,
-                "gate": "gate_auditoria",
-                "gate_tipo": GATE_AUTOMATICO_SEGURIDAD,
-                "descripcion": (
+                "parallel": True,
+                "gate": "gate_audit",
+                "gate_type": GATE_AUTOMATIC_SECURITY,
+                "description": (
                     "Полный параллельный аудит кода: "
                     "качество, безопасность, архитектура "
                     "и документация."
@@ -351,58 +351,58 @@ def _get_phase_conditions() -> Dict[str, Any]:
     global _PHASE_CONDITIONS
     if _PHASE_CONDITIONS is None:
         from core.config_loader import has_frontend  # noqa: PLC0415
-        # "tiene_frontend" calls config_loader.has_frontend(stack) to decide
-        # if the estilo_visual phase must run. The import is lazy to prevent
+        # "has_frontend" calls config_loader.has_frontend(stack) to decide
+        # if the visual_style phase must run. The import is lazy to prevent
         # circular imports between orchestrator and config_loader.
         _PHASE_CONDITIONS = {
-            "tiene_frontend": has_frontend,
+            "has_frontend": has_frontend,
         }
     return _PHASE_CONDITIONS
 
 
 def _advance_skipping_phases(
     session: Dict[str, Any],
-    fases: List[Dict[str, Any]],
-    siguiente: int,
+    phases: List[Dict[str, Any]],
+    following: int,
     conditions: Dict[str, Any],
 ) -> int:
     """Advance the index and skip phases whose condition is not met.
 
-    Records each skipped phase in ``session["fases_completadas"]`` with
-    result ``"saltada"``. Stops at the first runnable phase (no condition
+    Records each skipped phase in ``session["completed_phases"]`` with
+    result ``"skipped"``. Stops at the first runnable phase (no condition
     or condition met) or when no stack is available to evaluate the
     condition.
 
     Args:
         session: session state (mutated to record skipped phases).
-        fases: list of flow phases.
-        siguiente: start index for the search.
+        phases: list of flow phases.
+        following: start index for the search.
         conditions: map from condition name to evaluator function.
 
     Returns:
         Index of the next runnable phase.
     """
     stack = session.get("stack")
-    while siguiente < len(fases):
-        fase_siguiente = fases[siguiente]
-        condicion = fase_siguiente.get("condicion")
-        if not condicion or condicion not in conditions:
+    while following < len(phases):
+        next_phase = phases[following]
+        condition_name = next_phase.get("condition")
+        if not condition_name or condition_name not in conditions:
             break
         if stack is None:
             # Without a stack the condition cannot be evaluated: run the phase
             break
-        if conditions[condicion](stack):
+        if conditions[condition_name](stack):
             break
         # Condition not met: record the skipped phase and continue
-        session["fases_completadas"].append({
-            "nombre": fase_siguiente["nombre"],
-            "resultado": "saltada",
-            "artefactos": [],
-            "completada_en": datetime.now(timezone.utc).isoformat(),
-            "iteraciones": 0,
+        session["completed_phases"].append({
+            "name": next_phase["name"],
+            "result": "skipped",
+            "artifacts": [],
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "iterations": 0,
         })
-        siguiente += 1
-    return siguiente
+        following += 1
+    return following
 
 
 def get_effective_agents(
@@ -416,78 +416,78 @@ def get_effective_agents(
     sequential agents so that commands know how to launch them.
 
     Args:
-        phase_name: phase name (for example "arquitectura", "calidad").
+        phase_name: phase name (for example "architecture", "quality").
         active_optionals: dict of active optional agents.
             Key = agent name, value = True if active.
             If None, no optional agents are added.
 
     Returns:
         Dict with two keys:
-        - "paralelo": optional agents that run in parallel with the
+        - "parallel": optional agents that run in parallel with the
           core agents.
-        - "secuencial": optional agents that run after the core agents.
+        - "sequential": optional agents that run after the core agents.
 
     Example:
-        >>> get_effective_agents("calidad", {"ux-reviewer": True, "performance-engineer": True})
-        {"paralelo": ["ux-reviewer", "performance-engineer"], "secuencial": []}
+        >>> get_effective_agents("quality", {"ux-reviewer": True, "performance-engineer": True})
+        {"parallel": ["ux-reviewer", "performance-engineer"], "sequential": []}
     """
     if active_optionals is None:
-        return {"paralelo": [], "secuencial": []}
+        return {"parallel": [], "sequential": []}
 
-    paralelo: List[str] = []
-    secuencial: List[str] = []
+    parallel: List[str] = []
+    sequential: List[str] = []
 
     for agent_name, config in OPTIONAL_INTEGRATIONS.items():
         if not active_optionals.get(agent_name, False):
             continue
-        if phase_name not in config.get("fases", []):
+        if phase_name not in config.get("phases", []):
             continue
 
-        posicion = config.get("posicion", "paralelo")
-        if posicion == "secuencial":
-            secuencial.append(agent_name)
-        elif posicion == "paralelo":
-            paralelo.append(agent_name)
+        position = config.get("position", "parallel")
+        if position == "sequential":
+            sequential.append(agent_name)
+        elif position == "parallel":
+            parallel.append(agent_name)
 
-    return {"paralelo": paralelo, "secuencial": secuencial}
+    return {"parallel": parallel, "sequential": sequential}
 
 
 def _resolve_current_phase(session: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], str]:
     """Resolve and validate the current phase of a session."""
-    comando = session.get("comando")
-    if comando not in FLOWS:
-        return None, f"Процесс '{comando}' не определён в FLOWS."
+    command = session.get("command")
+    if command not in FLOWS:
+        return None, f"Процесс '{command}' не определён в FLOWS."
 
-    fase_actual = session.get("fase_actual")
-    if fase_actual == "completado":
+    current_phase = session.get("current_phase")
+    if current_phase == "completed":
         return None, "Сессия завершена. Ожидающего gate нет."
 
-    fase_numero = session.get("fase_numero")
-    if not isinstance(fase_numero, int):
+    phase_number = session.get("phase_number")
+    if not isinstance(phase_number, int):
         return None, "Индекс фазы не является допустимым целым числом."
-    if fase_numero < 0:
-        return None, f"Индекс фазы не может быть отрицательным: {fase_numero}."
+    if phase_number < 0:
+        return None, f"Индекс фазы не может быть отрицательным: {phase_number}."
 
-    fases = FLOWS[comando]["fases"]
-    if fase_numero >= len(fases):
+    phases = FLOWS[command]["phases"]
+    if phase_number >= len(phases):
         return None, (
-            f"Индекс фазы {fase_numero} вне диапазона для процесса "
-            f"'{comando}' (фаз: {len(fases)})."
+            f"Индекс фазы {phase_number} вне диапазона для процесса "
+            f"'{command}' (фаз: {len(phases)})."
         )
 
-    fase = fases[fase_numero]
-    expected_name = fase["nombre"]
-    if fase_actual != expected_name:
+    phase = phases[phase_number]
+    expected_name = phase["name"]
+    if current_phase != expected_name:
         return None, (
             "Состояние сессии противоречиво: "
-            f"fase_actual='{fase_actual}' не совпадает с fase_numero={fase_numero} "
+            f"current_phase='{current_phase}' не совпадает с phase_number={phase_number} "
             f"('{expected_name}')."
         )
 
-    return fase, ""
+    return phase, ""
 
 
-def _validate_equipo_sesion(equipo_sesion: Any) -> bool:
+def _validate_session_team(session_team: Any) -> bool:
     """Validate the session team structure built by dynamic composition.
 
     Checks that the dict has the expected keys at each level and that the
@@ -497,89 +497,89 @@ def _validate_equipo_sesion(equipo_sesion: Any) -> bool:
 
     Validation rules per level:
 
-        - **Top level**: requires exactly the keys ``"opcionales_activos"``,
-          ``"infra"`` and ``"fuente"``. Extra or missing keys cause rejection.
-        - **``opcionales_activos``**: requires at least the keys of
+        - **Top level**: requires exactly the keys ``"active_optionals"``,
+          ``"infra"`` and ``"source"``. Extra or missing keys cause rejection.
+        - **``active_optionals``**: requires at least the keys of
           ``_KNOWN_OPTIONAL_AGENTS``. Accepts extra keys with a warning to
           stderr (tolerance for future extensions) but does not validate
           them. All values must be ``bool``.
-        - **``infra``**: requires exactly ``"memoria"``, of type ``bool``.
-        - **``fuente``**: must be one of the known runtime sources
-          (currently ``"composicion_dinamica"`` or ``"config_persistida"``).
+        - **``infra``**: requires exactly ``"memory"``, of type ``bool``.
+        - **``source``**: must be one of the known runtime sources
+          (currently ``"dynamic_composition"`` or ``"persisted_config"``).
 
     Args:
-        equipo_sesion: value to validate. Expected: a dict with the keys
-            ``"opcionales_activos"``, ``"infra"`` and ``"fuente"``.
+        session_team: value to validate. Expected: a dict with the keys
+            ``"active_optionals"``, ``"infra"`` and ``"source"``.
 
     Returns:
         True if the structure is valid, False otherwise.
 
     Example:
-        >>> _validate_equipo_sesion({"opcionales_activos": {...}, "infra": {...}, "fuente": "composicion_dinamica"})
+        >>> _validate_session_team({"active_optionals": {...}, "infra": {...}, "source": "dynamic_composition"})
         True
     """
     # --- 1. Must be a dict ---
-    if not isinstance(equipo_sesion, dict):
+    if not isinstance(session_team, dict):
         print(
-            "[Alfred Dev] Предупреждение: equipo_sesion не является словарём.",
+            "[Alfred Dev] Предупреждение: session_team не является словарём.",
             file=sys.stderr,
         )
         return False
 
     # --- 2. Top-level keys ---
-    expected_top_keys = {"opcionales_activos", "infra", "fuente"}
-    if set(equipo_sesion.keys()) != expected_top_keys:
+    expected_top_keys = {"active_optionals", "infra", "source"}
+    if set(session_team.keys()) != expected_top_keys:
         print(
-            f"[Alfred Dev] Предупреждение: в equipo_sesion неожиданные ключи. "
+            f"[Alfred Dev] Предупреждение: в session_team неожиданные ключи. "
             f"Ожидались: {sorted(expected_top_keys)}, "
-            f"получены: {sorted(equipo_sesion.keys())}.",
+            f"получены: {sorted(session_team.keys())}.",
             file=sys.stderr,
         )
         return False
 
-    # --- 3. opcionales_activos: dict with at least the known keys, bool values ---
-    opcionales = equipo_sesion["opcionales_activos"]
-    if not isinstance(opcionales, dict):
+    # --- 3. active_optionals: dict with at least the known keys, bool values ---
+    optionals = session_team["active_optionals"]
+    if not isinstance(optionals, dict):
         print(
-            "[Alfred Dev] Предупреждение: opcionales_activos не является словарём.",
+            "[Alfred Dev] Предупреждение: active_optionals не является словарём.",
             file=sys.stderr,
         )
         return False
 
     # Old states can use legacy names (for example "lucius").
-    opcionales = normalize_optional_agent_flags(opcionales)
-    equipo_sesion["opcionales_activos"] = opcionales
+    optionals = normalize_optional_agent_flags(optionals)
+    session_team["active_optionals"] = optionals
 
     # The known keys must be present. Extra keys are accepted with a
     # warning (tolerance for future extensions).
-    missing = _KNOWN_OPTIONAL_AGENTS - set(opcionales.keys())
+    missing = _KNOWN_OPTIONAL_AGENTS - set(optionals.keys())
     if missing:
         print(
-            f"[Alfred Dev] Предупреждение: в opcionales_activos нет "
+            f"[Alfred Dev] Предупреждение: в active_optionals нет "
             f"обязательных агентов: {sorted(missing)}.",
             file=sys.stderr,
         )
         return False
 
-    extra = set(opcionales.keys()) - _KNOWN_OPTIONAL_AGENTS
+    extra = set(optionals.keys()) - _KNOWN_OPTIONAL_AGENTS
     if extra:
         print(
-            f"[Alfred Dev] Предупреждение: в opcionales_activos есть "
+            f"[Alfred Dev] Предупреждение: в active_optionals есть "
             f"неизвестные агенты, они будут проигнорированы: {sorted(extra)}.",
             file=sys.stderr,
         )
 
-    for agent_name, value in opcionales.items():
+    for agent_name, value in optionals.items():
         if not isinstance(value, bool):
             print(
-                f"[Alfred Dev] Предупреждение: opcionales_activos['{agent_name}'] не bool "
+                f"[Alfred Dev] Предупреждение: active_optionals['{agent_name}'] не bool "
                 f"(тип: {type(value).__name__}, значение: {value!r}).",
                 file=sys.stderr,
             )
             return False
 
-    # --- 4. infra: dict with exactly "memoria", bool value ---
-    infra = equipo_sesion["infra"]
+    # --- 4. infra: dict with exactly "memory", bool value ---
+    infra = session_team["infra"]
     if not isinstance(infra, dict):
         print(
             "[Alfred Dev] Предупреждение: infra не является словарём.",
@@ -587,7 +587,7 @@ def _validate_equipo_sesion(equipo_sesion: Any) -> bool:
         )
         return False
 
-    expected_infra_keys = {"memoria"}
+    expected_infra_keys = {"memory"}
     actual_keys = set(infra.keys())
     # Accept "gui" for compatibility with states from older sessions
     accepted_keys = actual_keys - {"gui"}
@@ -611,12 +611,12 @@ def _validate_equipo_sesion(equipo_sesion: Any) -> bool:
             )
             return False
 
-    # --- 5. fuente: must be a known runtime source ---
-    if equipo_sesion["fuente"] not in _KNOWN_EQUIPO_SESSION_SOURCES:
+    # --- 5. source: must be a known runtime source ---
+    if session_team["source"] not in _KNOWN_SESSION_TEAM_SOURCES:
         print(
-            f"[Alfred Dev] Предупреждение: fuente должен быть одним из "
-            f"{sorted(_KNOWN_EQUIPO_SESSION_SOURCES)}, "
-            f"получено: {equipo_sesion['fuente']!r}.",
+            f"[Alfred Dev] Предупреждение: source должен быть одним из "
+            f"{sorted(_KNOWN_SESSION_TEAM_SOURCES)}, "
+            f"получено: {session_team['source']!r}.",
             file=sys.stderr,
         )
         return False
@@ -624,14 +624,14 @@ def _validate_equipo_sesion(equipo_sesion: Any) -> bool:
     return True
 
 
-def _load_persisted_equipo_sesion(
+def _load_persisted_session_team(
     project_dir: str,
 ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     """Load the runtime team derived from the persisted configuration."""
     try:
-        from core.config_loader import build_project_equipo_sesion  # noqa: PLC0415
+        from core.config_loader import build_project_session_team  # noqa: PLC0415
 
-        equipo_sesion = build_project_equipo_sesion(project_dir)
+        session_team = build_project_session_team(project_dir)
     except Exception as exc:
         print(
             "[Alfred Dev] Предупреждение: не удалось загрузить сохранённую команду "
@@ -643,10 +643,10 @@ def _load_persisted_equipo_sesion(
             "сессия продолжится без опциональных агентов."
         )
 
-    if equipo_sesion is None:
+    if session_team is None:
         return None, None
 
-    if not _validate_equipo_sesion(equipo_sesion):
+    if not _validate_session_team(session_team):
         print(
             "[Alfred Dev] Предупреждение: команда из сохранённой "
             "конфигурации не прошла проверку и будет проигнорирована.",
@@ -657,13 +657,13 @@ def _load_persisted_equipo_sesion(
             "сессии и была отброшена."
         )
 
-    return equipo_sesion, None
+    return session_team, None
 
 
 def run_flow(
     command: str,
     description: str,
-    equipo_sesion: Optional[Dict[str, Any]] = None,
+    session_team: Optional[Dict[str, Any]] = None,
     project_dir: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Create a flow session with an optional dynamically composed team.
@@ -671,7 +671,7 @@ def run_flow(
     Combines the standard session creation with the injection of the
     session team built by dynamic composition. If the given team fails
     validation, it is discarded with a warning to stderr, and the reason
-    is stored in ``session["equipo_sesion_error"]`` so that downstream
+    is stored in ``session["session_team_error"]`` so that downstream
     consumers can inform the user.
 
     This is the main entry point to start a flow when you know which
@@ -680,25 +680,25 @@ def run_flow(
     Args:
         command: flow identifier (feature, fix, quick, spike, ship, audit).
         description: natural language description of the task.
-        equipo_sesion: dict with the team composition built by the dynamic
+        session_team: dict with the team composition built by the dynamic
             composition module. If None, the session has no team. If
             invalid, it is discarded with a warning and the reason is
-            stored in "equipo_sesion_error".
+            stored in "session_team_error".
         project_dir: path of the project used to detect the stack and load
             the persisted configuration. Defaults to the current working
             directory.
 
     Returns:
         Dict with the session state, including the keys:
-        - "equipo_sesion" (valid dict or None).
-        - "equipo_sesion_error" (str or None): reason for the discard.
+        - "session_team" (valid dict or None).
+        - "session_team_error" (str or None): reason for the discard.
 
     Raises:
         ValueError: if the command does not match a defined flow.
 
     Example:
-        >>> session = run_flow("feature", "Login con OAuth", equipo_sesion={...})
-        >>> session["equipo_sesion"]["opcionales_activos"]["github-manager"]
+        >>> session = run_flow("feature", "Login con OAuth", session_team={...})
+        >>> session["session_team"]["active_optionals"]["github-manager"]
         True
     """
     # --- 1. Validate that the command exists ---
@@ -710,37 +710,37 @@ def run_flow(
 
     resolved_project_dir = os.path.abspath(project_dir or os.getcwd())
 
-    # --- 2. Validate equipo_sesion if given ---
-    equipo_error = None
+    # --- 2. Validate session_team if given ---
+    team_error = None
     explicit_team_discarded = False
-    if equipo_sesion is not None and not _validate_equipo_sesion(equipo_sesion):
+    if session_team is not None and not _validate_session_team(session_team):
         print(
             "[Alfred Dev] Ошибка: команда сессии не прошла проверку. "
             "Сессия будет создана без опциональных агентов. Проверь структуру "
-            "словаря equipo_sesion.",
+            "словаря session_team.",
             file=sys.stderr,
         )
-        equipo_error = (
+        team_error = (
             "Переданная команда сессии не прошла проверку "
             "и была отброшена."
         )
-        equipo_sesion = None
+        session_team = None
         explicit_team_discarded = True
 
-    if equipo_sesion is None:
-        persisted_team, persisted_error = _load_persisted_equipo_sesion(resolved_project_dir)
+    if session_team is None:
+        persisted_team, persisted_error = _load_persisted_session_team(resolved_project_dir)
         if persisted_team is not None:
-            equipo_sesion = persisted_team
+            session_team = persisted_team
             if explicit_team_discarded:
-                equipo_error = (
-                    f"{equipo_error} Применена сохранённая конфигурация "
+                team_error = (
+                    f"{team_error} Применена сохранённая конфигурация "
                     "опциональных агентов проекта."
                 )
         elif persisted_error:
             if explicit_team_discarded:
-                equipo_error = f"{equipo_error} {persisted_error}"
+                team_error = f"{team_error} {persisted_error}"
             else:
-                equipo_error = persisted_error
+                team_error = persisted_error
 
     # --- 3. Detect the project stack for conditional phases ---
     stack = None
@@ -756,9 +756,9 @@ def run_flow(
     # --- 4. Create the base session ---
     session = create_session(command, description, stack=stack)
 
-    # --- 5. Inject equipo_sesion and the diagnostic ---
-    session["equipo_sesion"] = equipo_sesion
-    session["equipo_sesion_error"] = equipo_error
+    # --- 5. Inject session_team and the diagnostic ---
+    session["session_team"] = session_team
+    session["session_team_error"] = team_error
 
     return session
 
@@ -778,7 +778,7 @@ def create_session(
         command: flow identifier (feature, fix, quick, spike, ship, audit).
         description: natural language description of the task.
         stack: detected project metadata. If given, conditional phases
-            such as ``estilo_visual`` can be evaluated.
+            such as ``visual_style`` can be evaluated.
 
     Returns:
         Dict with the initial session state.
@@ -793,17 +793,17 @@ def create_session(
         )
 
     flow = FLOWS[command]
-    primera_fase = flow["fases"][0]["nombre"]
+    first_phase = flow["phases"][0]["name"]
 
     session = {
-        "comando": command,
-        "descripcion": description,
-        "fase_actual": primera_fase,
-        "fase_numero": 0,
-        "fases_completadas": [],
-        "artefactos": [],
-        "creado_en": datetime.now(timezone.utc).isoformat(),
-        "actualizado_en": datetime.now(timezone.utc).isoformat(),
+        "command": command,
+        "description": description,
+        "current_phase": first_phase,
+        "phase_number": 0,
+        "completed_phases": [],
+        "artifacts": [],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     if stack is not None:
         session["stack"] = stack
@@ -812,7 +812,7 @@ def create_session(
 
 def check_gate(
     session: Dict[str, Any],
-    resultado: str = "",
+    result: str = "",
     security_ok: bool = True,
     tests_ok: bool = True,
 ) -> Dict[str, Any]:
@@ -820,52 +820,52 @@ def check_gate(
     Evaluate the gate of the current phase to decide if the flow can advance.
 
     The logic depends on the gate type defined in the phase:
-    - "usuario": requires result "aprobado".
-    - "automatico": requires result "aprobado" and green tests.
-    - "usuario+seguridad": requires user approval and a passing security check.
-    - "automatico+seguridad": requires tests, security and a passing result.
-    - "libre": passes when the result is "aprobado".
+    - "user": requires result "approved".
+    - "automatic": requires result "approved" and green tests.
+    - "user+security": requires user approval and a passing security check.
+    - "automatic+security": requires tests, security and a passing result.
+    - "free": passes when the result is "approved".
 
     Args:
         session: current session state.
-        resultado: reported result (usually "aprobado" or "rechazado").
+        result: reported result (usually "approved" or "rejected").
         security_ok: True if the security audit passed.
         tests_ok: True if the tests pass.
 
     Returns:
         Dict with the keys "passed" (bool) and "reason" (str).
     """
-    comando = session["comando"]
-    if comando not in FLOWS:
-        return {"passed": False, "reason": f"Процесс '{comando}' не определён в FLOWS."}
+    command = session["command"]
+    if command not in FLOWS:
+        return {"passed": False, "reason": f"Процесс '{command}' не определён в FLOWS."}
 
     # Session complete: no gate to evaluate.
-    if session.get("fase_actual") == "completado":
+    if session.get("current_phase") == "completed":
         return {"passed": True, "reason": "Сессия завершена. Ожидающего gate нет."}
 
-    fase, phase_error = _resolve_current_phase(session)
-    if fase is None:
+    phase, phase_error = _resolve_current_phase(session)
+    if phase is None:
         return {"passed": False, "reason": phase_error}
 
-    gate_tipo = fase["gate_tipo"]
+    gate_type = phase["gate_type"]
 
     # Collect the conditions the gate must meet.
     # The check order sets which error is reported first.
     failures = []
 
-    requires_tests = "automatico" in gate_tipo
-    requires_security = "seguridad" in gate_tipo
-    requires_approval = gate_tipo in (GATE_USUARIO, GATE_USUARIO_SEGURIDAD)
-    is_known = gate_tipo in _KNOWN_GATE_TYPES
+    requires_tests = "automatic" in gate_type
+    requires_security = "security" in gate_type
+    requires_approval = gate_type in (GATE_USER, GATE_USER_SECURITY)
+    is_known = gate_type in _KNOWN_GATE_TYPES
 
     if not is_known:
-        return {"passed": False, "reason": f"Неизвестный тип gate: {gate_tipo}"}
+        return {"passed": False, "reason": f"Неизвестный тип gate: {gate_type}"}
 
     if requires_tests and not tests_ok:
         failures.append("Тесты не проходят.")
     if requires_security and not security_ok:
         failures.append("Аудит безопасности не пройден.")
-    if resultado != "aprobado":
+    if result != "approved":
         if requires_approval:
             failures.append("Требуется одобрение пользователя.")
         else:
@@ -879,8 +879,8 @@ def check_gate(
 
 def advance_phase(
     session: Dict[str, Any],
-    resultado: str = "aprobado",
-    artefactos: Optional[List[str]] = None,
+    result: str = "approved",
+    artifacts: Optional[List[str]] = None,
     security_ok: bool = True,
     tests_ok: bool = True,
 ) -> Dict[str, Any]:
@@ -889,12 +889,12 @@ def advance_phase(
 
     First evaluates the gate of the current phase. If the gate passes,
     records the phase as complete and moves the pointer to the next one.
-    If no phases remain, marks the session as "completado".
+    If no phases remain, marks the session as "completed".
 
     Args:
         session: current session state.
-        resultado: result to evaluate at the gate (default "aprobado").
-        artefactos: optional list of artifacts produced in the phase.
+        result: result to evaluate at the gate (default "approved").
+        artifacts: optional list of artifacts produced in the phase.
         security_ok: True if the security audit passed.
         tests_ok: True if the tests pass.
 
@@ -904,23 +904,23 @@ def advance_phase(
     Raises:
         RuntimeError: if the gate of the current phase does not pass.
     """
-    if artefactos is None:
-        artefactos = []
+    if artifacts is None:
+        artifacts = []
 
-    comando = session["comando"]
-    if comando not in FLOWS:
-        raise RuntimeError(f"Процесс '{comando}' не определён в FLOWS.")
+    command = session["command"]
+    if command not in FLOWS:
+        raise RuntimeError(f"Процесс '{command}' не определён в FLOWS.")
 
-    flow = FLOWS[comando]
-    fases = flow["fases"]
+    flow = FLOWS[command]
+    phases = flow["phases"]
 
     # If already complete, return without changes
-    if session["fase_actual"] == "completado":
+    if session["current_phase"] == "completed":
         return session
 
     # Evaluate the gate of the current phase with all parameters
     gate_result = check_gate(
-        session, resultado=resultado, security_ok=security_ok, tests_ok=tests_ok
+        session, result=result, security_ok=security_ok, tests_ok=tests_ok
     )
     if not gate_result["passed"]:
         raise RuntimeError(
@@ -929,35 +929,35 @@ def advance_phase(
 
     # Record the completed phase. Keep the iteration counter so that
     # session reports can show how many cycles the phase needed.
-    fase_completada = {
-        "nombre": fases[session["fase_numero"]]["nombre"],
-        "resultado": resultado,
-        "artefactos": artefactos,
-        "completada_en": datetime.now(timezone.utc).isoformat(),
-        "iteraciones": session.get("iteraciones_fase", 0),
+    completed_phase = {
+        "name": phases[session["phase_number"]]["name"],
+        "result": result,
+        "artifacts": artifacts,
+        "completed_at": datetime.now(timezone.utc).isoformat(),
+        "iterations": session.get("phase_iterations", 0),
     }
-    session["fases_completadas"].append(fase_completada)
+    session["completed_phases"].append(completed_phase)
 
     # Add the artifacts to the global session record
-    session["artefactos"].extend(artefactos)
+    session["artifacts"].extend(artifacts)
 
     # Move to the next index and skip phases whose condition is not met
-    siguiente = _advance_skipping_phases(
-        session, fases, session["fase_numero"] + 1, _get_phase_conditions()
+    following = _advance_skipping_phases(
+        session, phases, session["phase_number"] + 1, _get_phase_conditions()
     )
 
-    if siguiente < len(fases):
-        session["fase_numero"] = siguiente
-        session["fase_actual"] = fases[siguiente]["nombre"]
+    if following < len(phases):
+        session["phase_number"] = following
+        session["current_phase"] = phases[following]["name"]
     else:
         # No phases remain: the flow is complete
-        session["fase_actual"] = "completado"
-        session["fase_numero"] = siguiente
+        session["current_phase"] = "completed"
+        session["phase_number"] = following
 
     # Reset the internal iteration counter for the new phase
-    session["iteraciones_fase"] = 0
+    session["phase_iterations"] = 0
 
-    session["actualizado_en"] = datetime.now(timezone.utc).isoformat()
+    session["updated_at"] = datetime.now(timezone.utc).isoformat()
     return session
 
 
@@ -1046,7 +1046,7 @@ def save_state(session: Dict[str, Any], state_path: str) -> None:
 
 
 # Minimum keys of a valid session state
-_REQUIRED_STATE_KEYS = {"comando", "fase_actual", "fase_numero"}
+_REQUIRED_STATE_KEYS = {"command", "current_phase", "phase_number"}
 
 
 def load_state(state_path: str) -> Optional[Dict[str, Any]]:
@@ -1095,27 +1095,27 @@ def load_state(state_path: str) -> Optional[Dict[str, Any]]:
         return None
 
     # Validate the types of the required keys to prevent TypeError
-    # in later comparisons (for example fase_numero >= len(fases))
-    if not isinstance(data.get("comando"), str):
+    # in later comparisons (for example phase_number >= len(phases))
+    if not isinstance(data.get("command"), str):
         print(
             f"[Alfred Dev] Предупреждение: 'comando' не строка в '{state_path}'. Файл будет проигнорирован.",
             file=sys.stderr,
         )
         return None
-    if not isinstance(data.get("fase_actual"), str):
+    if not isinstance(data.get("current_phase"), str):
         print(
-            f"[Alfred Dev] Предупреждение: 'fase_actual' не строка в '{state_path}'. Файл будет проигнорирован.",
+            f"[Alfred Dev] Предупреждение: 'current_phase' не строка в '{state_path}'. Файл будет проигнорирован.",
             file=sys.stderr,
         )
         return None
-    if not isinstance(data.get("fase_numero"), int):
+    if not isinstance(data.get("phase_number"), int):
         print(
-            f"[Alfred Dev] Предупреждение: 'fase_numero' не целое число в '{state_path}'. Файл будет проигнорирован.",
+            f"[Alfred Dev] Предупреждение: 'phase_number' не целое число в '{state_path}'. Файл будет проигнорирован.",
             file=sys.stderr,
         )
         return None
 
-    command = data["comando"]
+    command = data["command"]
     if command not in FLOWS:
         print(
             f"[Alfred Dev] Предупреждение: 'comando' не соответствует известному процессу в '{state_path}'. "
@@ -1124,39 +1124,39 @@ def load_state(state_path: str) -> Optional[Dict[str, Any]]:
         )
         return None
 
-    phase_index = data["fase_numero"]
+    phase_index = data["phase_number"]
     if phase_index < 0:
         print(
-            f"[Alfred Dev] Предупреждение: 'fase_numero' не может быть отрицательным в '{state_path}'. "
+            f"[Alfred Dev] Предупреждение: 'phase_number' не может быть отрицательным в '{state_path}'. "
             f"Файл будет проигнорирован.",
             file=sys.stderr,
         )
         return None
 
-    fases = FLOWS[command]["fases"]
-    phase_name = data["fase_actual"]
-    if phase_name == "completado":
-        if phase_index != len(fases):
+    phases = FLOWS[command]["phases"]
+    phase_name = data["current_phase"]
+    if phase_name == "completed":
+        if phase_index != len(phases):
             print(
                 f"[Alfred Dev] Предупреждение: противоречивое завершённое состояние в '{state_path}' "
-                f"(fase_numero={phase_index}, ожидалось={len(fases)}). Файл будет проигнорирован.",
+                f"(phase_number={phase_index}, ожидалось={len(phases)}). Файл будет проигнорирован.",
                 file=sys.stderr,
             )
             return None
         return data
 
-    if phase_index >= len(fases):
+    if phase_index >= len(phases):
         print(
-            f"[Alfred Dev] Предупреждение: 'fase_numero' вне диапазона в '{state_path}'. "
+            f"[Alfred Dev] Предупреждение: 'phase_number' вне диапазона в '{state_path}'. "
             f"Файл будет проигнорирован.",
             file=sys.stderr,
         )
         return None
 
-    expected_phase_name = fases[phase_index]["nombre"]
+    expected_phase_name = phases[phase_index]["name"]
     if phase_name != expected_phase_name:
         print(
-            f"[Alfred Dev] Предупреждение: fase_actual и fase_numero не совпадают в '{state_path}' "
+            f"[Alfred Dev] Предупреждение: current_phase и phase_number не совпадают в '{state_path}' "
             f"('{phase_name}' != '{expected_phase_name}'). Файл будет проигнорирован.",
             file=sys.stderr,
         )
@@ -1176,7 +1176,7 @@ MAX_PHASE_ITERATIONS = 5
 
 def should_retry_phase(
     session: Dict[str, Any],
-    resultado: str = "",
+    result: str = "",
     security_ok: bool = True,
     tests_ok: bool = True,
 ) -> Dict[str, Any]:
@@ -1187,11 +1187,11 @@ def should_retry_phase(
     retry instructions. If none remain, returns instructions to escalate
     to the user.
 
-    The iteration counter is stored in ``session["iteraciones_fase"]``.
+    The iteration counter is stored in ``session["phase_iterations"]``.
 
     Args:
         session: current session state.
-        resultado: reported result for the gate.
+        result: reported result for the gate.
         security_ok: True if the security audit passed.
         tests_ok: True if the tests pass.
 
@@ -1205,7 +1205,7 @@ def should_retry_phase(
     """
     # Defensive check: if the session is complete or the index is out of
     # range, a retry makes no sense.
-    if session.get("fase_actual") == "completado":
+    if session.get("current_phase") == "completed":
         return {
             "action": "advance",
             "reason": "Сессия завершена. Проверять gate не нужно.",
@@ -1215,8 +1215,8 @@ def should_retry_phase(
 
     _, phase_error = _resolve_current_phase(session)
     if phase_error:
-        iteration = session.get("iteraciones_fase", 0)
-        max_iter = session.get("max_iteraciones_fase", MAX_PHASE_ITERATIONS)
+        iteration = session.get("phase_iterations", 0)
+        max_iter = session.get("max_phase_iterations", MAX_PHASE_ITERATIONS)
         return {
             "action": "escalate",
             "reason": f"Недопустимое состояние сессии: {phase_error}",
@@ -1226,13 +1226,13 @@ def should_retry_phase(
 
     gate_result = check_gate(
         session,
-        resultado=resultado,
+        result=result,
         security_ok=security_ok,
         tests_ok=tests_ok,
     )
 
-    iteration = session.get("iteraciones_fase", 0)
-    max_iter = session.get("max_iteraciones_fase", MAX_PHASE_ITERATIONS)
+    iteration = session.get("phase_iterations", 0)
+    max_iter = session.get("max_phase_iterations", MAX_PHASE_ITERATIONS)
 
     if gate_result["passed"]:
         return {
@@ -1244,8 +1244,8 @@ def should_retry_phase(
 
     if iteration < max_iter:
         # Increment the counter
-        session["iteraciones_fase"] = iteration + 1
-        session["actualizado_en"] = datetime.now(timezone.utc).isoformat()
+        session["phase_iterations"] = iteration + 1
+        session["updated_at"] = datetime.now(timezone.utc).isoformat()
 
         return {
             "action": "retry",
@@ -1279,11 +1279,11 @@ def reset_phase_iterations(session: Dict[str, Any]) -> None:
     Args:
         session: session state to modify in place.
     """
-    session["iteraciones_fase"] = 0
+    session["phase_iterations"] = 0
 
 
 # --- Autopilot mode (v0.4.0) ------------------------------------------------
-# Runs a full flow without human interruption. "usuario" gates are
+# Runs a full flow without human interruption. "user" gates are
 # approved automatically. Automatic and security gates are evaluated
 # as usual.
 
@@ -1294,8 +1294,8 @@ def is_autopilot_gate_passable(
 ) -> Dict[str, Any]:
     """Evaluate if a gate can pass in autopilot mode.
 
-    In autopilot, "usuario" gates are approved automatically.
-    "automatico" and "seguridad" gates are evaluated with the given
+    In autopilot, "user" gates are approved automatically.
+    "automatic" and "security" gates are evaluated with the given
     parameters.
 
     Args:
@@ -1306,21 +1306,21 @@ def is_autopilot_gate_passable(
     Returns:
         Dict with ``"passed"`` (bool) and ``"reason"`` (str).
     """
-    comando = session["comando"]
-    if comando not in FLOWS:
-        return {"passed": False, "reason": f"Процесс '{comando}' не определён."}
+    command = session["command"]
+    if command not in FLOWS:
+        return {"passed": False, "reason": f"Процесс '{command}' не определён."}
 
     # Session complete: no gate to evaluate.
-    if session.get("fase_actual") == "completado":
+    if session.get("current_phase") == "completed":
         return {"passed": True, "reason": "Сессия завершена (autopilot)."}
 
-    fase, phase_error = _resolve_current_phase(session)
-    if fase is None:
+    phase, phase_error = _resolve_current_phase(session)
+    if phase is None:
         return {"passed": False, "reason": phase_error}
 
-    gate_tipo = fase["gate_tipo"]
+    gate_type = phase["gate_type"]
 
-    if fase.get("autopilot_force_user_confirmation"):
+    if phase.get("autopilot_force_user_confirmation"):
         return {
             "passed": False,
             "reason": (
@@ -1329,13 +1329,13 @@ def is_autopilot_gate_passable(
         }
 
     # In autopilot, user gates are approved automatically
-    if gate_tipo == GATE_USUARIO:
+    if gate_type == GATE_USER:
         return {"passed": True, "reason": "Автоматическое одобрение (autopilot)."}
 
-    # The rest is evaluated as usual with result "aprobado"
+    # The rest is evaluated as usual with result "approved"
     return check_gate(
         session,
-        resultado="aprobado",
+        result="approved",
         security_ok=security_ok,
         tests_ok=tests_ok,
     )
@@ -1344,7 +1344,7 @@ def is_autopilot_gate_passable(
 def run_flow_autopilot(
     command: str,
     description: str,
-    equipo_sesion: Optional[Dict[str, Any]] = None,
+    session_team: Optional[Dict[str, Any]] = None,
     project_dir: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Create a flow session in autopilot mode.
@@ -1355,7 +1355,7 @@ def run_flow_autopilot(
     Args:
         command: flow identifier.
         description: task description.
-        equipo_sesion: optional team composition.
+        session_team: optional team composition.
         project_dir: project path used to resolve the stack and the
             persisted configuration.
 
@@ -1368,10 +1368,10 @@ def run_flow_autopilot(
     session = run_flow(
         command,
         description,
-        equipo_sesion=equipo_sesion,
+        session_team=session_team,
         project_dir=project_dir,
     )
     session["autopilot"] = True
-    session["iteraciones_fase"] = 0
-    session["max_iteraciones_fase"] = MAX_PHASE_ITERATIONS
+    session["phase_iterations"] = 0
+    session["max_phase_iterations"] = MAX_PHASE_ITERATIONS
     return session

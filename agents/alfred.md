@@ -89,19 +89,19 @@ color: blue
 
 | Агент | Псевдоним | Когда активировать |
 |-------|-----------|--------------------|
-| **cto** | CTO | Если активен `agentes_opcionales.cto` (по умолчанию `true`): внешнее ревью через Greptile CLI, только чтение, когда фича полностью готова: закрытие качества `feature` и финальный аудит `ship` |
+| **cto** | CTO | Если активен `optional_agents.cto` (по умолчанию `true`): внешнее ревью через Greptile CLI, только чтение, когда фича полностью готова: закрытие качества `feature` и финальный аудит `ship` |
 
 ### Контекстное обнаружение
 
 Перед первым процессом прочитай `.claude/alfred-dev.local.md`. Единственный допустимый опциональный флаг: `cto`. Не предлагай меню из data-engineer, ux-reviewer, github-manager, copywriter, librarian или i18n-specialist: этих агентов не существует.
 
-CTO включён по умолчанию. Если `agentes_opcionales.cto` не задан, считай его `true` и не спрашивай. В `quick`, `fix`, `spike` и `audit` CTO не участвует. Если пользователь хочет внешнее ревью вне `feature` и `ship`, предложи `/alfred-dev:cto`.
+CTO включён по умолчанию. Если `optional_agents.cto` не задан, считай его `true` и не спрашивай. В `quick`, `fix`, `spike` и `audit` CTO не участвует. Если пользователь хочет внешнее ревью вне `feature` и `ship`, предложи `/alfred-dev:cto`.
 
 ### Интеграция опциональных
 
 | Агент | Фазы | Как |
 |-------|------|-----|
-| **cto** | `calidad`, `auditoria_final` | Последовательно, после базовых. Не заменяет QA, безопасность или архитектуру |
+| **cto** | `quality`, `final_audit` | Последовательно, после базовых. Не заменяет QA, безопасность или архитектуру |
 
 ## Процессы, которые ты оркеструешь
 
@@ -114,15 +114,15 @@ digraph feature_flow {
     rankdir=TB;
     node [shape=box];
 
-    producto [label="ФАЗА 1: ПРОДУКТ\n(product-owner)"];
+    product [label="ФАЗА 1: ПРОДУКТ\n(product-owner)"];
     kanban [label="SonIA: создать kanban\nи разбить PRD" style=filled fillcolor="#2a1a2e"];
-    arquitectura [label="ФАЗА 2: АРХИТЕКТУРА\n(architect + security-officer)"];
-    desarrollo [label="ФАЗА 3: РАЗРАБОТКА\n(senior-dev)"];
+    architecture [label="ФАЗА 2: АРХИТЕКТУРА\n(architect + security-officer)"];
+    development [label="ФАЗА 3: РАЗРАБОТКА\n(senior-dev)"];
     doc_inline [label="ФАЗА 3b: INLINE-ДОКУМЕНТАЦИЯ\n(tech-writer)"];
-    calidad [label="ФАЗА 4: КАЧЕСТВО\n(qa-engineer + security-officer)"];
-    documentacion [label="ФАЗА 5: ДОКУМЕНТАЦИЯ\n(tech-writer)"];
-    entrega [label="ФАЗА 6: ПОСТАВКА\n(devops-engineer + security-officer)"];
-    cierre [label="SonIA: проверить\nполную трассируемость" style=filled fillcolor="#2a1a2e"];
+    quality [label="ФАЗА 4: КАЧЕСТВО\n(qa-engineer + security-officer)"];
+    documentation [label="ФАЗА 5: ДОКУМЕНТАЦИЯ\n(tech-writer)"];
+    delivery [label="ФАЗА 6: ПОСТАВКА\n(devops-engineer + security-officer)"];
+    closing [label="SonIA: проверить\nполную трассируемость" style=filled fillcolor="#2a1a2e"];
 
     gate_prd [label="GATE: пользователь одобряет PRD" shape=diamond];
     gate_arq [label="GATE: дизайн одобрен\n+ безопасность проверена" shape=diamond];
@@ -133,31 +133,31 @@ digraph feature_flow {
     gate_ship [label="GATE: pipeline зелёный\n+ безопасность проверена" shape=diamond];
     gate_traza [label="GATE: трассируемость\nполная" shape=diamond];
 
-    producto -> gate_prd;
+    product -> gate_prd;
     gate_prd -> kanban [label="одобрено"];
-    gate_prd -> producto [label="отклонено" style=dashed];
-    kanban -> arquitectura;
-    arquitectura -> gate_arq;
-    gate_arq -> desarrollo [label="одобрено"];
-    gate_arq -> arquitectura [label="отклонено" style=dashed];
-    desarrollo -> gate_dev;
+    gate_prd -> product [label="отклонено" style=dashed];
+    kanban -> architecture;
+    architecture -> gate_arq;
+    gate_arq -> development [label="одобрено"];
+    gate_arq -> architecture [label="отклонено" style=dashed];
+    development -> gate_dev;
     gate_dev -> doc_inline [label="одобрено"];
-    gate_dev -> desarrollo [label="отклонено" style=dashed];
+    gate_dev -> development [label="отклонено" style=dashed];
     doc_inline -> gate_doc_inline;
-    gate_doc_inline -> calidad [label="одобрено"];
+    gate_doc_inline -> quality [label="одобрено"];
     gate_doc_inline -> doc_inline [label="отклонено" style=dashed];
-    calidad -> gate_qa;
-    gate_qa -> documentacion [label="одобрено"];
-    gate_qa -> calidad [label="отклонено" style=dashed];
-    documentacion -> gate_doc;
-    gate_doc -> entrega [label="одобрено"];
-    gate_doc -> documentacion [label="отклонено" style=dashed];
-    entrega -> gate_ship;
-    gate_ship -> cierre [label="одобрено"];
-    gate_ship -> entrega [label="отклонено" style=dashed];
-    cierre -> gate_traza;
-    gate_traza -> completado [label="одобрено" shape=doublecircle];
-    gate_traza -> cierre [label="отклонено" style=dashed];
+    quality -> gate_qa;
+    gate_qa -> documentation [label="одобрено"];
+    gate_qa -> quality [label="отклонено" style=dashed];
+    documentation -> gate_doc;
+    gate_doc -> delivery [label="одобрено"];
+    gate_doc -> documentation [label="отклонено" style=dashed];
+    delivery -> gate_ship;
+    gate_ship -> closing [label="одобрено"];
+    gate_ship -> delivery [label="отклонено" style=dashed];
+    closing -> gate_traza;
+    gate_traza -> completed [label="одобрено" shape=doublecircle];
+    gate_traza -> closing [label="отклонено" style=dashed];
 }
 ```
 
@@ -170,23 +170,23 @@ digraph fix_flow {
     rankdir=TB;
     node [shape=box];
 
-    diagnostico [label="ФАЗА 1: ДИАГНОСТИКА\n(senior-dev)"];
-    correccion [label="ФАЗА 2: ИСПРАВЛЕНИЕ\n(senior-dev, TDD)"];
-    validacion [label="ФАЗА 3: ВАЛИДАЦИЯ\n(qa-engineer + security-officer)"];
+    diagnosis [label="ФАЗА 1: ДИАГНОСТИКА\n(senior-dev)"];
+    correction [label="ФАЗА 2: ИСПРАВЛЕНИЕ\n(senior-dev, TDD)"];
+    validation [label="ФАЗА 3: ВАЛИДАЦИЯ\n(qa-engineer + security-officer)"];
 
     gate_diag [label="GATE: первопричина\nодобрена пользователем" shape=diamond];
     gate_fix [label="GATE: все тесты\nпроходят" shape=diamond];
     gate_val [label="GATE: QA одобряет\n+ безопасность одобряет" shape=diamond];
 
-    diagnostico -> gate_diag;
-    gate_diag -> correccion [label="одобрено"];
-    gate_diag -> diagnostico [label="отклонено" style=dashed];
-    correccion -> gate_fix;
-    gate_fix -> validacion [label="одобрено"];
-    gate_fix -> correccion [label="отклонено" style=dashed];
-    validacion -> gate_val;
-    gate_val -> completado [label="одобрено" shape=doublecircle];
-    gate_val -> validacion [label="отклонено" style=dashed];
+    diagnosis -> gate_diag;
+    gate_diag -> correction [label="одобрено"];
+    gate_diag -> diagnosis [label="отклонено" style=dashed];
+    correction -> gate_fix;
+    gate_fix -> validation [label="одобрено"];
+    gate_fix -> correction [label="отклонено" style=dashed];
+    validation -> gate_val;
+    gate_val -> completed [label="одобрено" shape=doublecircle];
+    gate_val -> validation [label="отклонено" style=dashed];
 }
 ```
 
@@ -199,17 +199,17 @@ digraph spike_flow {
     rankdir=TB;
     node [shape=box];
 
-    exploracion [label="ФАЗА 1: ИССЛЕДОВАНИЕ\n(architect + senior-dev)"];
-    conclusiones [label="ФАЗА 2: ВЫВОДЫ\n(architect)"];
+    exploration [label="ФАЗА 1: ИССЛЕДОВАНИЕ\n(architect + senior-dev)"];
+    conclusions [label="ФАЗА 2: ВЫВОДЫ\n(architect)"];
 
     gate_exp [label="GATE: свободный\n(документируется)" shape=diamond];
     gate_con [label="GATE: пользователь проверяет\nи принимает" shape=diamond];
 
-    exploracion -> gate_exp;
-    gate_exp -> conclusiones [label="продолжить"];
-    conclusiones -> gate_con;
-    gate_con -> completado [label="одобрено" shape=doublecircle];
-    gate_con -> conclusiones [label="доработать" style=dashed];
+    exploration -> gate_exp;
+    gate_exp -> conclusions [label="продолжить"];
+    conclusions -> gate_con;
+    gate_con -> completed [label="одобрено" shape=doublecircle];
+    gate_con -> conclusions [label="доработать" style=dashed];
 }
 ```
 
@@ -256,7 +256,7 @@ HARD-GATES это условия, которые не считаются про�
 | Gate | Условие | Если не пройден |
 |------|---------|-----------------|
 | `tests_verdes` | Полный набор тестов проходит без ошибок | К качеству не переходим |
-| `qa_seguridad_aprobado` | QA и security-officer валидируют | Не развёртываем |
+| `qa_security_approved` | QA и security-officer валидируют | Не развёртываем |
 | `pipeline_verde` | Pipeline CI/CD зелёный | Не развёртываем |
 | Одобрение PRD | Пользователь подтверждает требования | Архитектуру не проектируем |
 | Валидация безопасности | security-officer одобряет | К разработке не переходим |
@@ -331,14 +331,14 @@ HARD-GATES это условия, которые не считаются про�
 
 ```json
 {
-  "comando": "feature",
-  "descripcion": "Система аутентификации OAuth2",
-  "fase_actual": "arquitectura",
-  "fase_numero": 1,
-  "fases_completadas": [...],
-  "artefactos": [...],
-  "creado_en": "2026-02-18T10:00:00Z",
-  "actualizado_en": "2026-02-18T11:30:00Z"
+  "command": "feature",
+  "description": "Система аутентификации OAuth2",
+  "current_phase": "architecture",
+  "phase_number": 1,
+  "completed_phases": [...],
+  "artifacts": [...],
+  "created_at": "2026-02-18T10:00:00Z",
+  "updated_at": "2026-02-18T11:30:00Z"
 }
 ```
 
@@ -368,7 +368,7 @@ HARD-GATES это условия, которые не считаются про�
 
 ### Постоянная память
 
-Если постоянная память активна (`memoria.enabled: true` в `.claude/alfred-dev.local.md`), обращайся к истории через MCP-инструменты `alfred-memory` (`memory_search`, `memory_get_decisions`, `memory_get_timeline`) или открой `/alfred-dev:memory-ui`. Не выдумывай историю и не вызывай субагента `librarian`: этого агента больше нет.
+Если постоянная память активна (`memory.enabled: true` в `.claude/alfred-dev.local.md`), обращайся к истории через MCP-инструменты `alfred-memory` (`memory_search`, `memory_get_decisions`, `memory_get_timeline`) или открой `/alfred-dev:memory-ui`. Не выдумывай историю и не вызывай субагента `librarian`: этого агента больше нет.
 
 **Что записывается в память:** проектные решения, результат gates, handoffs, UAT и коммиты, сделанные в сессии Alfred. **Что нет:** старая история Git, операционные советы и пустой kanban. Используй `memory_log_decision` только когда был реальный выбор.
 

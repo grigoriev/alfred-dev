@@ -1,28 +1,28 @@
-# План тестирования: {{nombre_feature}}
+# План тестирования: {{feature_name}}
 
-**Дата:** {{fecha}}
+**Дата:** {{date}}
 **Автор:** qa-engineer
 **Версия:** {{version}}
 
 ## Объём
 
-{{alcance_del_testing}}
+{{testing_scope}}
 
 ## Стратегия
 
 | Тип | Покрытие | Инструмент |
 |-----|----------|------------|
-| Модульные | {{cobertura_unit}} | {{herramienta_unit}} |
-| Интеграционные | {{cobertura_int}} | {{herramienta_int}} |
-| E2E | {{cobertura_e2e}} | {{herramienta_e2e}} |
+| Модульные | {{unit_coverage}} | {{unit_tool}} |
+| Интеграционные | {{integration_coverage}} | {{integration_tool}} |
+| E2E | {{e2e_coverage}} | {{e2e_tool}} |
 
 ## Критические сценарии (высокий приоритет)
 
-{{escenarios_criticos}}
+{{critical_scenarios}}
 
 ## Основные сценарии (средний приоритет)
 
-{{escenarios_principales}}
+{{main_scenarios}}
 
 ## Edge cases (низкий приоритет)
 
@@ -30,16 +30,16 @@
 
 ## Негативные сценарии
 
-{{escenarios_negativos}}
+{{negative_scenarios}}
 
 ## Тестовые данные
 
-{{datos_de_prueba}}
+{{test_data}}
 
 ## Критерии прохождения
 
 - [ ] Все критические тесты проходят
-- [ ] Минимальное покрытие: {{porcentaje_cobertura}}%
+- [ ] Минимальное покрытие: {{coverage_percent}}%
 - [ ] Регрессий не обнаружено
 - [ ] Security review одобрен
 

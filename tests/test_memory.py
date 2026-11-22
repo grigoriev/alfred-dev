@@ -328,7 +328,7 @@ class TestDecisions(unittest.TestCase):
             alternatives=["Django", "Flask"],
             rationale="Better performance and typing",
             impact="high",
-            phase="arquitectura",
+            phase="architecture",
         )
         decisions = self.db.get_decisions()
         d = decisions[0]
@@ -336,7 +336,7 @@ class TestDecisions(unittest.TestCase):
         self.assertEqual(d["title"], "Framework web")
         self.assertEqual(d["chosen"], "FastAPI")
         self.assertEqual(d["impact"], "high")
-        self.assertEqual(d["phase"], "arquitectura")
+        self.assertEqual(d["phase"], "architecture")
 
         # Alternatives are stored as JSON
         alts = json.loads(d["alternatives"])
@@ -794,7 +794,7 @@ class TestEvents(unittest.TestCase):
         iter_id = self.db.start_iteration("feature", "Test")
         event_id = self.db.log_event(
             event_type="phase_completed",
-            phase="producto",
+            phase="product",
             iteration_id=iter_id,
         )
         self.assertIsInstance(event_id, int)
@@ -805,7 +805,7 @@ class TestEvents(unittest.TestCase):
         iter_id = self.db.start_iteration("feature", "Test")
         self.db.log_event(
             event_type="gate_passed",
-            phase="desarrollo",
+            phase="development",
             payload={"tests_ok": True, "duration_s": 12.5},
             iteration_id=iter_id,
         )
@@ -822,7 +822,7 @@ class TestEvents(unittest.TestCase):
         fake_sk = "sk-" + "c" * 25
         self.db.log_event(
             event_type="gate_passed",
-            phase="desarrollo",
+            phase="development",
             payload={
                 "nested": {"token": fake_sk},
                 "items": ["ok", {"secret": fake_sk}],
@@ -839,7 +839,7 @@ class TestEvents(unittest.TestCase):
     def test_event_auto_links_to_active_iteration(self):
         """Without iteration_id, the event links to the active iteration."""
         iter_id = self.db.start_iteration("feature", "Auto-link")
-        self.db.log_event(event_type="phase_completed", phase="producto")
+        self.db.log_event(event_type="phase_completed", phase="product")
 
         timeline = self.db.get_timeline(iter_id)
         self.assertEqual(len(timeline), 1)
@@ -850,23 +850,23 @@ class TestEvents(unittest.TestCase):
         iter_id = self.db.start_iteration("feature", "Timeline")
 
         self.db.log_event(
-            event_type="phase_completed", phase="producto",
+            event_type="phase_completed", phase="product",
             iteration_id=iter_id,
         )
         self.db.log_event(
-            event_type="phase_completed", phase="arquitectura",
+            event_type="phase_completed", phase="architecture",
             iteration_id=iter_id,
         )
         self.db.log_event(
-            event_type="phase_completed", phase="desarrollo",
+            event_type="phase_completed", phase="development",
             iteration_id=iter_id,
         )
 
         timeline = self.db.get_timeline(iter_id)
         self.assertEqual(len(timeline), 3)
-        self.assertEqual(timeline[0]["phase"], "producto")
-        self.assertEqual(timeline[1]["phase"], "arquitectura")
-        self.assertEqual(timeline[2]["phase"], "desarrollo")
+        self.assertEqual(timeline[0]["phase"], "product")
+        self.assertEqual(timeline[1]["phase"], "architecture")
+        self.assertEqual(timeline[2]["phase"], "development")
 
     def test_get_timeline_empty_for_nonexistent_iteration(self):
         """get_timeline for a missing iteration returns an empty list."""
@@ -882,7 +882,7 @@ class TestEvents(unittest.TestCase):
         conn = sqlite3.connect(self._db_path)
         conn.execute(
             "INSERT INTO events (iteration_id, event_type, phase, created_at) "
-            "VALUES (?, 'phase_completed', 'producto', '2020-01-01T00:00:00+00:00')",
+            "VALUES (?, 'phase_completed', 'product', '2020-01-01T00:00:00+00:00')",
             (iter_id,),
         )
         conn.commit()
@@ -890,7 +890,7 @@ class TestEvents(unittest.TestCase):
 
         # Insert a recent event through the API
         self.db.log_event(
-            event_type="phase_completed", phase="desarrollo",
+            event_type="phase_completed", phase="development",
             iteration_id=iter_id,
         )
 
@@ -900,13 +900,13 @@ class TestEvents(unittest.TestCase):
 
         timeline = self.db.get_timeline(iter_id)
         self.assertEqual(len(timeline), 1)
-        self.assertEqual(timeline[0]["phase"], "desarrollo")
+        self.assertEqual(timeline[0]["phase"], "development")
 
     def test_purge_does_not_delete_recent_events(self):
         """purge_old_events does not delete recent events."""
         iter_id = self.db.start_iteration("feature", "Recent")
         self.db.log_event(
-            event_type="phase_completed", phase="producto",
+            event_type="phase_completed", phase="product",
             iteration_id=iter_id,
         )
 
@@ -964,7 +964,7 @@ class TestStats(unittest.TestCase):
         self.db.log_decision(title="Dec 1", chosen="A")
         self.db.log_decision(title="Dec 2", chosen="B")
         self.db.log_commit(sha="stats_sha_1", message="commit 1")
-        self.db.log_event(event_type="phase_completed", phase="producto")
+        self.db.log_event(event_type="phase_completed", phase="product")
 
         stats = self.db.get_stats()
 

@@ -19,13 +19,13 @@ class TestPromptRoute(unittest.TestCase):
 
     def test_classifies_common_spanish_phrases(self):
         cases = {
-            "sigue donde lo dejé": "retomar",
+            "sigue donde lo dejé": "resume",
             "el login peta con eñes": "fix",
             "cambia el texto del botón": "quick",
             "esto va a producción": "ship",
             "qué decidimos de auth": "memory",
             "mapea este repo": "map-codebase",
-            "audita la seguridad": "audit",
+            "audita la security": "audit",
         }
         for prompt, route in cases.items():
             match = classify_prompt(prompt)
@@ -34,10 +34,10 @@ class TestPromptRoute(unittest.TestCase):
 
     def test_classifies_common_russian_phrases(self):
         cases = {
-            "продолжай с того места": "retomar",
-            "Продолжить работу": "retomar",
-            "что дальше?": "retomar",
-            "на чём мы остановились": "retomar",
+            "продолжай с того места": "resume",
+            "Продолжить работу": "resume",
+            "что дальше?": "resume",
+            "на чём мы остановились": "resume",
             "поставь на паузу": "pause",
             "Пауза, на сегодня всё": "pause",
             "приёмка результата": "uat",

@@ -30,7 +30,7 @@ def _has_slash_command(text: str) -> bool:
 # Order matters: the first match wins.
 _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     (
-        "retomar",
+        "resume",
         (
             r"\b(sigue|seguir|continua|continuar|retoma|retomar)\b",
             r"donde lo deje",
@@ -58,7 +58,7 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
             r"\buat\b",
             r"aceptacion (manual|humana)",
             r"aprobado por (el )?usuario",
-            r"rechazado",
+            r"rejected",
             r"verificar (el )?entregable",
             r"\bприемк\w*",
             r"одобрено пользовател\w*",
@@ -212,7 +212,7 @@ _RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
 )
 
 _COMMAND_HINT = {
-    "retomar": "/alfred-dev:retomar",
+    "resume": "/alfred-dev:resume",
     "pause": "/alfred-dev:pause",
     "uat": "/alfred-dev:uat",
     "ship": "/alfred-dev:ship",

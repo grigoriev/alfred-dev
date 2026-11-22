@@ -46,13 +46,13 @@ python3 .claude/alfred-continuity.py next "$PWD" --json
 
 Затем решай так:
 
-1. **Если есть активная сессия** и `fase_actual` не `completado`:
-   - действуй как `/alfred-dev:retomar`
+1. **Если есть активная сессия** и `current_phase` не `completed`:
+   - действуй как `/alfred-dev:resume`
    - кратко опиши процесс, текущую фазу, ожидающий gate и первый конкретный шаг
    - НЕ пытайся пройти ожидающий gate и не используй `AskUserQuestion` внутри этого helper-а
 
 2. **Если активной сессии нет, но есть незакрытый handoff**:
-   - действуй как `/alfred-dev:retomar`
+   - действуй как `/alfred-dev:resume`
    - используй handoff как основной контекст
    - НЕ используй здесь `AskUserQuestion`
 

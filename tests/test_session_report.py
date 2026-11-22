@@ -27,46 +27,46 @@ class TestSectionPhases(unittest.TestCase):
     """Check the generation of the phases section."""
 
     def test_no_phases(self):
-        session = {"fases_completadas": []}
+        session = {"completed_phases": []}
         result = _section_phases(session)
         self.assertIn("не завершено ни одной фазы", result)
 
     def test_with_phases(self):
         session = {
-            "fases_completadas": [
-                {"nombre": "producto", "resultado": "aprobado", "artefactos": ["prd.md"]},
-                {"nombre": "arquitectura", "resultado": "aprobado", "artefactos": []},
+            "completed_phases": [
+                {"name": "product", "result": "approved", "artifacts": ["prd.md"]},
+                {"name": "architecture", "result": "approved", "artifacts": []},
             ],
-            "fase_actual": "desarrollo",
+            "current_phase": "development",
         }
         result = _section_phases(session)
-        self.assertIn("producto", result)
-        self.assertIn("arquitectura", result)
+        self.assertIn("product", result)
+        self.assertIn("architecture", result)
         self.assertIn("prd.md", result)
-        self.assertIn("остановлен в фазе **desarrollo**", result)
+        self.assertIn("остановлен в фазе **development**", result)
 
     def test_completed_flow(self):
         session = {
-            "fases_completadas": [{"nombre": "single", "resultado": "aprobado"}],
-            "fase_actual": "completado",
+            "completed_phases": [{"name": "single", "result": "approved"}],
+            "current_phase": "completed",
         }
         result = _section_phases(session)
         self.assertIn("процесс завершён", result)
 
     def test_escapes_markdown_table_cells(self):
         session = {
-            "fases_completadas": [
+            "completed_phases": [
                 {
-                    "nombre": "producto | visual\nfinal",
-                    "resultado": "aprobado\nwith caveat",
-                    "artefactos": ["docs/style|direction.md", "docs/\nbrief.md"],
+                    "name": "product | visual\nfinal",
+                    "result": "approved\nwith caveat",
+                    "artifacts": ["docs/style|direction.md", "docs/\nbrief.md"],
                 }
             ],
-            "fase_actual": "desarrollo",
+            "current_phase": "development",
         }
         result = _section_phases(session)
-        self.assertIn("producto \\| visual final", result)
-        self.assertIn("aprobado with caveat", result)
+        self.assertIn("product \\| visual final", result)
+        self.assertIn("approved with caveat", result)
         self.assertIn("docs/style\\|direction.md, docs/ brief.md", result)
 
 
@@ -135,10 +135,10 @@ class TestSectionTeam(unittest.TestCase):
 
     def test_with_optionals(self):
         session = {
-            "comando": "fix",
-            "equipo_sesion": {
-                "fuente": "config_persistida",
-                "opcionales_activos": {
+            "command": "fix",
+            "session_team": {
+                "source": "persisted_config",
+                "active_optionals": {
                     "data-engineer": True,
                     "github-manager": True,
                     "librarian": True,
@@ -163,16 +163,16 @@ class TestSectionArtifacts(unittest.TestCase):
     """Check the generation of the artifacts section."""
 
     def test_no_artifacts(self):
-        result = _section_artifacts({"artefactos": []})
+        result = _section_artifacts({"artifacts": []})
         self.assertEqual(result, "")
 
     def test_with_artifacts(self):
-        result = _section_artifacts({"artefactos": ["prd.md", "adr-001.md"]})
+        result = _section_artifacts({"artifacts": ["prd.md", "adr-001.md"]})
         self.assertIn("prd.md", result)
         self.assertIn("adr-001.md", result)
 
     def test_normalizes_artifact_paths(self):
-        result = _section_artifacts({"artefactos": ["docs/\nstyle`direction`.md"]})
+        result = _section_artifacts({"artifacts": ["docs/\nstyle`direction`.md"]})
         self.assertIn("`docs/ style'direction'.md`", result)
 
 
@@ -185,32 +185,32 @@ class TestEstimateDuration(unittest.TestCase):
 
     def test_short_duration(self):
         session = {
-            "creado_en": "2026-03-13T10:00:00+00:00",
-            "actualizado_en": "2026-03-13T10:00:30+00:00",
+            "created_at": "2026-03-13T10:00:00+00:00",
+            "updated_at": "2026-03-13T10:00:30+00:00",
         }
         result = _estimate_duration(session)
         self.assertIn("30 сек.", result)
 
     def test_minutes_duration(self):
         session = {
-            "creado_en": "2026-03-13T10:00:00+00:00",
-            "actualizado_en": "2026-03-13T10:15:00+00:00",
+            "created_at": "2026-03-13T10:00:00+00:00",
+            "updated_at": "2026-03-13T10:15:00+00:00",
         }
         result = _estimate_duration(session)
         self.assertIn("15 мин.", result)
 
     def test_hours_duration(self):
         session = {
-            "creado_en": "2026-03-13T10:00:00+00:00",
-            "actualizado_en": "2026-03-13T12:30:00+00:00",
+            "created_at": "2026-03-13T10:00:00+00:00",
+            "updated_at": "2026-03-13T12:30:00+00:00",
         }
         result = _estimate_duration(session)
         self.assertIn("2 ч 30 мин.", result)
 
     def test_negative_duration_returns_unavailable(self):
         session = {
-            "creado_en": "2026-03-13T10:05:00+00:00",
-            "actualizado_en": "2026-03-13T10:00:00+00:00",
+            "created_at": "2026-03-13T10:05:00+00:00",
+            "updated_at": "2026-03-13T10:00:00+00:00",
         }
         result = _estimate_duration(session)
         self.assertEqual(result, "нет данных")
@@ -228,15 +228,15 @@ class TestGenerateReport(unittest.TestCase):
 
     def test_generates_file(self):
         session = {
-            "comando": "feature",
-            "descripcion": "Login with OAuth",
-            "fase_actual": "completado",
-            "fases_completadas": [
-                {"nombre": "producto", "resultado": "aprobado"},
+            "command": "feature",
+            "description": "Login with OAuth",
+            "current_phase": "completed",
+            "completed_phases": [
+                {"name": "product", "result": "approved"},
             ],
-            "artefactos": ["prd.md"],
-            "creado_en": "2026-03-13T10:00:00+00:00",
-            "actualizado_en": "2026-03-13T10:30:00+00:00",
+            "artifacts": ["prd.md"],
+            "created_at": "2026-03-13T10:00:00+00:00",
+            "updated_at": "2026-03-13T10:30:00+00:00",
         }
         report_path = generate_report(session, project_dir=self.tmpdir)
         self.assertTrue(os.path.isfile(report_path))
@@ -246,18 +246,18 @@ class TestGenerateReport(unittest.TestCase):
 
         self.assertIn("feature", content)
         self.assertIn("Login with OAuth", content)
-        self.assertIn("producto", content)
+        self.assertIn("product", content)
         self.assertIn("prd.md", content)
 
     def test_report_in_correct_directory(self):
         session = {
-            "comando": "fix",
-            "descripcion": "Critical bug",
-            "fase_actual": "completado",
-            "fases_completadas": [],
-            "artefactos": [],
-            "creado_en": "2026-03-13T10:00:00+00:00",
-            "actualizado_en": "2026-03-13T10:05:00+00:00",
+            "command": "fix",
+            "description": "Critical bug",
+            "current_phase": "completed",
+            "completed_phases": [],
+            "artifacts": [],
+            "created_at": "2026-03-13T10:00:00+00:00",
+            "updated_at": "2026-03-13T10:05:00+00:00",
         }
         report_path = generate_report(session, project_dir=self.tmpdir)
         self.assertIn("docs/alfred-reports", report_path)
@@ -277,13 +277,13 @@ class TestFilenameSanitization(unittest.TestCase):
     def test_path_traversal_sanitized(self):
         """A command with path traversal characters does not escape the directory."""
         session = {
-            "comando": "../../etc/passwd",
-            "descripcion": "Path traversal attempt",
-            "fase_actual": "completado",
-            "fases_completadas": [],
-            "artefactos": [],
-            "creado_en": "2026-03-13T10:00:00+00:00",
-            "actualizado_en": "2026-03-13T10:05:00+00:00",
+            "command": "../../etc/passwd",
+            "description": "Path traversal attempt",
+            "current_phase": "completed",
+            "completed_phases": [],
+            "artifacts": [],
+            "created_at": "2026-03-13T10:00:00+00:00",
+            "updated_at": "2026-03-13T10:05:00+00:00",
         }
         report_path = generate_report(session, project_dir=self.tmpdir)
         # The file must be inside docs/alfred-reports/
@@ -296,13 +296,13 @@ class TestFilenameSanitization(unittest.TestCase):
     def test_special_chars_sanitized(self):
         """Special characters in the command are replaced with _."""
         session = {
-            "comando": "feat/login & rm -rf",
-            "descripcion": "Command with odd chars",
-            "fase_actual": "completado",
-            "fases_completadas": [],
-            "artefactos": [],
-            "creado_en": "2026-03-13T10:00:00+00:00",
-            "actualizado_en": "2026-03-13T10:05:00+00:00",
+            "command": "feat/login & rm -rf",
+            "description": "Command with odd chars",
+            "current_phase": "completed",
+            "completed_phases": [],
+            "artifacts": [],
+            "created_at": "2026-03-13T10:00:00+00:00",
+            "updated_at": "2026-03-13T10:05:00+00:00",
         }
         report_path = generate_report(session, project_dir=self.tmpdir)
         filename = os.path.basename(report_path)
@@ -330,19 +330,19 @@ class TestSectionIterations(unittest.TestCase):
 
     def test_with_iterations(self):
         session = {
-            "fases_completadas": [
-                {"nombre": "producto", "resultado": "aprobado", "iteraciones": 0},
-                {"nombre": "desarrollo", "resultado": "aprobado", "iteraciones": 3},
+            "completed_phases": [
+                {"name": "product", "result": "approved", "iterations": 0},
+                {"name": "development", "result": "approved", "iterations": 3},
             ],
         }
         result = _section_iterations(session)
-        self.assertIn("desarrollo", result)
+        self.assertIn("development", result)
         self.assertIn("3", result)
 
     def test_without_iterations(self):
         session = {
-            "fases_completadas": [
-                {"nombre": "producto", "resultado": "aprobado", "iteraciones": 0},
+            "completed_phases": [
+                {"name": "product", "result": "approved", "iterations": 0},
             ],
         }
         result = _section_iterations(session)
@@ -350,12 +350,12 @@ class TestSectionIterations(unittest.TestCase):
 
     def test_escapes_phase_names(self):
         session = {
-            "fases_completadas": [
-                {"nombre": "calidad | uat\nfinal", "resultado": "aprobado", "iteraciones": 2},
+            "completed_phases": [
+                {"name": "quality | uat\nfinal", "result": "approved", "iterations": 2},
             ],
         }
         result = _section_iterations(session)
-        self.assertIn("calidad \\| uat final", result)
+        self.assertIn("quality \\| uat final", result)
 
 
 class TestGenerateReportExtended(unittest.TestCase):
@@ -378,13 +378,13 @@ class TestGenerateReportExtended(unittest.TestCase):
             expected_version = _json.load(pf)["version"]
 
         session = {
-            "comando": "feature",
-            "descripcion": "Test version",
-            "fase_actual": "completado",
-            "fases_completadas": [],
-            "artefactos": [],
-            "creado_en": "2026-03-14T10:00:00+00:00",
-            "actualizado_en": "2026-03-14T10:05:00+00:00",
+            "command": "feature",
+            "description": "Test version",
+            "current_phase": "completed",
+            "completed_phases": [],
+            "artifacts": [],
+            "created_at": "2026-03-14T10:00:00+00:00",
+            "updated_at": "2026-03-14T10:05:00+00:00",
         }
         report_path = generate_report(session, project_dir=self.tmpdir)
         with open(report_path) as f:
@@ -393,30 +393,30 @@ class TestGenerateReportExtended(unittest.TestCase):
 
     def test_interrupted_report(self):
         session = {
-            "comando": "feature",
-            "descripcion": "Interrupted test",
-            "fase_actual": "desarrollo",
-            "fases_completadas": [],
-            "artefactos": [],
-            "creado_en": "2026-03-14T10:00:00+00:00",
-            "actualizado_en": "2026-03-14T10:15:00+00:00",
+            "command": "feature",
+            "description": "Interrupted test",
+            "current_phase": "development",
+            "completed_phases": [],
+            "artifacts": [],
+            "created_at": "2026-03-14T10:00:00+00:00",
+            "updated_at": "2026-03-14T10:15:00+00:00",
         }
         report_path = generate_report(session, project_dir=self.tmpdir, completed=False)
         with open(report_path) as f:
             content = f.read()
         self.assertIn("прервана", content.lower())
         self.assertIn("## Краткое резюме", content)
-        self.assertIn("Команда: `/alfred-dev:retomar`", content)
+        self.assertIn("Команда: `/alfred-dev:resume`", content)
 
     def test_header_fields_are_single_line(self):
         session = {
-            "comando": "feature\nwith noise",
-            "descripcion": "Line 1\n\nLine 2",
-            "fase_actual": "completado",
-            "fases_completadas": [],
-            "artefactos": [],
-            "creado_en": "2026-03-14T10:00:00+00:00",
-            "actualizado_en": "2026-03-14T10:15:00+00:00",
+            "command": "feature\nwith noise",
+            "description": "Line 1\n\nLine 2",
+            "current_phase": "completed",
+            "completed_phases": [],
+            "artifacts": [],
+            "created_at": "2026-03-14T10:00:00+00:00",
+            "updated_at": "2026-03-14T10:15:00+00:00",
         }
         report_path = generate_report(session, project_dir=self.tmpdir)
         with open(report_path, encoding="utf-8") as f:
@@ -439,13 +439,13 @@ class TestGenerateReportExtended(unittest.TestCase):
                 return value if tz is None else value.astimezone(tz)
 
         session = {
-            "comando": "feature",
-            "descripcion": "collision",
-            "fase_actual": "completado",
-            "fases_completadas": [],
-            "artefactos": [],
-            "creado_en": "2026-03-14T10:00:00+00:00",
-            "actualizado_en": "2026-03-14T10:15:00+00:00",
+            "command": "feature",
+            "description": "collision",
+            "current_phase": "completed",
+            "completed_phases": [],
+            "artifacts": [],
+            "created_at": "2026-03-14T10:00:00+00:00",
+            "updated_at": "2026-03-14T10:15:00+00:00",
         }
         with patch("core.session_report.datetime", SequencedDateTime):
             report_a = generate_report(session, project_dir=self.tmpdir)
@@ -457,26 +457,26 @@ class TestGenerateReportExtended(unittest.TestCase):
 
     def test_completed_report_without_uat_recommends_verify(self):
         session = {
-            "comando": "feature",
-            "descripcion": "Login with OAuth",
-            "fase_actual": "completado",
-            "fases_completadas": [
+            "command": "feature",
+            "description": "Login with OAuth",
+            "current_phase": "completed",
+            "completed_phases": [
                 {
-                    "nombre": "producto",
-                    "resultado": "aprobado",
-                    "iteraciones": 1,
-                    "completada_en": "2026-03-14T10:10:00+00:00",
+                    "name": "product",
+                    "result": "approved",
+                    "iterations": 1,
+                    "completed_at": "2026-03-14T10:10:00+00:00",
                 },
                 {
-                    "nombre": "estilo_visual",
-                    "resultado": "saltada",
-                    "iteraciones": 0,
-                    "completada_en": "2026-03-14T10:12:00+00:00",
+                    "name": "visual_style",
+                    "result": "skipped",
+                    "iterations": 0,
+                    "completed_at": "2026-03-14T10:12:00+00:00",
                 },
             ],
-            "artefactos": ["prd.md", "docs/style-direction.md"],
-            "creado_en": "2026-03-14T10:00:00+00:00",
-            "actualizado_en": "2026-03-14T10:15:00+00:00",
+            "artifacts": ["prd.md", "docs/style-direction.md"],
+            "created_at": "2026-03-14T10:00:00+00:00",
+            "updated_at": "2026-03-14T10:15:00+00:00",
         }
         report_path = generate_report(session, project_dir=self.tmpdir)
         with open(report_path, encoding="utf-8") as f:
@@ -491,19 +491,19 @@ class TestGenerateReportExtended(unittest.TestCase):
     def test_completed_report_reflects_approved_uat(self):
         os.makedirs(os.path.join(self.tmpdir, ".claude"), exist_ok=True)
         session = {
-            "comando": "feature",
-            "descripcion": "Login with OAuth",
-            "fase_actual": "completado",
-            "fases_completadas": [
+            "command": "feature",
+            "description": "Login with OAuth",
+            "current_phase": "completed",
+            "completed_phases": [
                 {
-                    "nombre": "calidad",
-                    "resultado": "aprobado",
-                    "completada_en": "2026-03-14T10:15:00+00:00",
+                    "name": "quality",
+                    "result": "approved",
+                    "completed_at": "2026-03-14T10:15:00+00:00",
                 },
             ],
-            "artefactos": ["prd.md"],
-            "creado_en": "2026-03-14T10:00:00+00:00",
-            "actualizado_en": "2026-03-14T10:15:00+00:00",
+            "artifacts": ["prd.md"],
+            "created_at": "2026-03-14T10:00:00+00:00",
+            "updated_at": "2026-03-14T10:15:00+00:00",
         }
         uat = {
             "target_id": "session:feature:2026-03-14T10:15:00+00:00",
@@ -528,19 +528,19 @@ class TestGenerateReportExtended(unittest.TestCase):
     def test_completed_report_reflects_rejected_uat(self):
         os.makedirs(os.path.join(self.tmpdir, ".claude"), exist_ok=True)
         session = {
-            "comando": "fix",
-            "descripcion": "Fix checkout",
-            "fase_actual": "completado",
-            "fases_completadas": [
+            "command": "fix",
+            "description": "Fix checkout",
+            "current_phase": "completed",
+            "completed_phases": [
                 {
-                    "nombre": "calidad",
-                    "resultado": "aprobado",
-                    "completada_en": "2026-03-14T10:25:00+00:00",
+                    "name": "quality",
+                    "result": "approved",
+                    "completed_at": "2026-03-14T10:25:00+00:00",
                 },
             ],
-            "artefactos": [],
-            "creado_en": "2026-03-14T10:00:00+00:00",
-            "actualizado_en": "2026-03-14T10:25:00+00:00",
+            "artifacts": [],
+            "created_at": "2026-03-14T10:00:00+00:00",
+            "updated_at": "2026-03-14T10:25:00+00:00",
         }
         uat = {
             "target_id": "session:fix:2026-03-14T10:25:00+00:00",
@@ -563,13 +563,13 @@ class TestGenerateReportExtended(unittest.TestCase):
 
     def test_interrupted_report_uses_structured_resume_guidance(self):
         session = {
-            "comando": "feature",
-            "descripcion": "New checkout",
-            "fase_actual": "arquitectura",
-            "fases_completadas": [],
-            "artefactos": [],
-            "creado_en": "2026-03-14T10:00:00+00:00",
-            "actualizado_en": "2026-03-14T10:05:00+00:00",
+            "command": "feature",
+            "description": "New checkout",
+            "current_phase": "architecture",
+            "completed_phases": [],
+            "artifacts": [],
+            "created_at": "2026-03-14T10:00:00+00:00",
+            "updated_at": "2026-03-14T10:05:00+00:00",
         }
 
         report_path = generate_report(session, project_dir=self.tmpdir, completed=False)
@@ -578,7 +578,7 @@ class TestGenerateReportExtended(unittest.TestCase):
 
         self.assertIn("- Фокус: Продолжить текущую сессию", content)
         self.assertIn("- Источник: активная сессия (`state`)", content)
-        self.assertIn("Команда: `/alfred-dev:retomar`", content)
+        self.assertIn("Команда: `/alfred-dev:resume`", content)
         self.assertIn("Что делать сейчас: Продолжи сессию с места остановки", content)
 
     def test_completed_report_includes_matching_memory_decisions(self):
@@ -592,7 +592,7 @@ class TestGenerateReportExtended(unittest.TestCase):
             chosen="Must not appear",
             rationale="Belongs to another session",
             iteration_id=other_iteration,
-            phase="producto",
+            phase="product",
         )
         db.complete_iteration(other_iteration)
 
@@ -602,32 +602,32 @@ class TestGenerateReportExtended(unittest.TestCase):
             chosen="Reuse the corporate provider",
             rationale="Reduces risk and speeds up release",
             iteration_id=iteration_id,
-            phase="arquitectura",
+            phase="architecture",
         )
         db.log_decision(
             title="Close the old visual fallback",
             chosen="Remove the legacy login button",
             rationale="Avoids dead paths in the UI",
             iteration_id=iteration_id,
-            phase="desarrollo",
+            phase="development",
         )
         db.complete_iteration(iteration_id)
         db.close()
 
         session = {
-            "comando": "feature",
-            "descripcion": "Login with OAuth",
-            "fase_actual": "completado",
-            "fases_completadas": [
+            "command": "feature",
+            "description": "Login with OAuth",
+            "current_phase": "completed",
+            "completed_phases": [
                 {
-                    "nombre": "calidad",
-                    "resultado": "aprobado",
-                    "completada_en": "2026-03-14T10:25:00+00:00",
+                    "name": "quality",
+                    "result": "approved",
+                    "completed_at": "2026-03-14T10:25:00+00:00",
                 },
             ],
-            "artefactos": ["prd.md"],
-            "creado_en": "2026-03-14T10:00:00+00:00",
-            "actualizado_en": "2026-03-14T10:25:00+00:00",
+            "artifacts": ["prd.md"],
+            "created_at": "2026-03-14T10:00:00+00:00",
+            "updated_at": "2026-03-14T10:25:00+00:00",
         }
 
         report_path = generate_report(session, project_dir=self.tmpdir)

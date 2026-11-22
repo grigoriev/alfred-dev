@@ -22,12 +22,12 @@ allowed-tools: Bash(python3 .claude/alfred-continuity.py *), Read, Write, Edit, 
 
 - `/alfred-dev:alfred` (эта точка входа)
 - `/alfred-dev:progress`
-- `/alfred-dev:retomar`
+- `/alfred-dev:resume`
 - `/alfred-dev:pause`
 - `/alfred-dev:map-codebase`
 - `/alfred-dev:discuss`
 - `/alfred-dev:memory-ui`
-- `/alfred-dev:ajustes`
+- `/alfred-dev:config`
 - `/alfred-dev:uat`
 - `/alfred-dev:sync-github`
 - `/alfred-dev:quick`
@@ -95,7 +95,7 @@ python3 .claude/alfred-continuity.py next "$PWD" --json
 `/alfred-dev:alfred`, не выполняй её и не представляй как перенаправление. Этот сигнал
 лишь означает, что ещё не выбран конкретный маршрут. Продолжай с классификацией
 намерения этой команды и выбери другое место назначения; если пользователь спрашивает
-«что сейчас делать», «продолжить» или эквивалент, действуй как `/alfred-dev:retomar`.
+«что сейчас делать», «продолжить» или эквивалент, действуй как `/alfred-dev:resume`.
 
 ## Правила решения
 
@@ -104,7 +104,7 @@ python3 .claude/alfred-continuity.py next "$PWD" --json
 Если пользователь чётко просит об одном из этих действий, выполняй без интервью:
 
 - посмотреть статус, «что открыто», «как дела», «status», standup, «daily», «ежедневная сводка», блокеры, текущая работа, проверить доску → действуй как `/alfred-dev:progress`
-- продолжить, возобновить, «что сейчас делать», «используй Alfred и продолжай» → действуй как `/alfred-dev:retomar`
+- продолжить, возобновить, «что сейчас делать», «используй Alfred и продолжай» → действуй как `/alfred-dev:resume`
 - поставить на паузу, отложить, заморозить сессию → действуй как `/alfred-dev:pause`
 - проверить, UAT, ручная приёмка, валидировать результат → действуй как `/alfred-dev:uat`
 - прогресс, backlog, kanban, блокеры, трассируемость, «как дела по проекту» → действуй как `/alfred-dev:progress`
@@ -112,7 +112,7 @@ python3 .claude/alfred-continuity.py next "$PWD" --json
 - искать в SonIA, памяти или трассируемости → действуй как `/alfred-dev:progress` и, если нужно, используй внутренний helper `search`, не представляя его как slash-команду
 - синхронизировать GitHub, issues, удалённую доску, «sync GitHub» → действуй как `/alfred-dev:sync-github`
 - обсудить, уточнить, конкретизировать, прояснить объём, зафиксировать UX/API до разработки → действуй как `/alfred-dev:discuss`
-- настроить Alfred, изменить автономность или агентов → действуй как `/alfred-dev:ajustes`
+- настроить Alfred, изменить автономность или агентов → действуй как `/alfred-dev:config`
 - справка или список команд → ответь сам картой из 18 команд; не выдумывай `/alfred-dev:help`
 - подготовить релиз, опубликовать или развернуть → действуй как `/alfred-dev:ship`
 - аудит безопасности/качества/compliance → действуй как `/alfred-dev:audit`
@@ -124,8 +124,8 @@ python3 .claude/alfred-continuity.py next "$PWD" --json
 
 Если явной операционной инструкции НЕТ, но живой контекст существует:
 
-- если helper возвращает `resume` и есть активная сессия (`fase_actual` отличается от `completado`) → действуй как `/alfred-dev:retomar`
-- если helper возвращает `resume`, активной сессии нет, но есть незакрытый handoff (`resolved != true`) → действуй как `/alfred-dev:retomar`
+- если helper возвращает `resume` и есть активная сессия (`current_phase` отличается от `completed`) → действуй как `/alfred-dev:resume`
+- если helper возвращает `resume`, активной сессии нет, но есть незакрытый handoff (`resolved != true`) → действуй как `/alfred-dev:resume`
 - если helper возвращает `verify` → действуй как `/alfred-dev:uat`
 - если helper возвращает `map-codebase` → действуй как `/alfred-dev:map-codebase`
 
@@ -177,7 +177,7 @@ helper `discuss` или действуй как эта команда и ост�
 - НЕ показывай таблицу команд, если пользователь её не просил.
 - НЕ предлагай общее меню, если следующий шаг очевиден.
 - НЕ используй старые названия плагина без префикса `-dev`; всегда используй `/alfred-dev:...`.
-- Публичная continuity: `alfred`, `progress` и `retomar`. `pause`, `map-codebase`,
+- Публичная continuity: `alfred`, `progress` и `resume`. `pause`, `map-codebase`,
   `memory-ui`, `sync-github` и `update` операционные и не запускают полную
   мультиагентную команду.
 - `uat` это операционная команда человеческой приёмки. Сама по себе она не открывает

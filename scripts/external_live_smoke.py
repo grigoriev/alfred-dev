@@ -178,7 +178,7 @@ def _docker_sonarqube_preflight() -> dict[str, Any]:
     preflight = _build_audit_sonarqube_preflight()
     return {
         "status": preflight.get("status", "unknown"),
-        "sonarqube_autorizado": bool(preflight.get("sonarqube_autorizado", False)),
+        "sonarqube_authorized": bool(preflight.get("sonarqube_authorized", False)),
         "live_attempted": False,
         "reason": preflight.get("summary", ""),
         "detail": _safe_preview(preflight.get("detail", "")),

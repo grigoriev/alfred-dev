@@ -2124,8 +2124,8 @@ class MemoryDB:
 
         Walks the ``*.md`` files of the given directory and extracts from
         each one the title (first ``#`` heading), the context (section
-        ``## Context``, ``## Contexto`` or ``## Контекст``) and the decision
-        (section ``## Decision``, ``## Decisión`` or ``## Решение``). Each
+        ``## Context`` or ``## Контекст``) and the decision
+        (section ``## Decision`` or ``## Решение``). Each
         file is recorded as a new decision with the ``imported-adr`` tag.
 
         Args:
@@ -2144,10 +2144,10 @@ class MemoryDB:
             content = md_file.read_text(encoding="utf-8")
             title = self._extract_heading(content)
             context = self._extract_section(
-                content, ["## Context", "## Contexto", "## Контекст"]
+                content, ["## Context", "## Контекст"]
             )
             chosen = self._extract_section(
-                content, ["## Decision", u"## Decisi\u00f3n", "## Решение"]
+                content, ["## Decision", "## Решение"]
             )
 
             if title and chosen:
@@ -2190,7 +2190,7 @@ class MemoryDB:
         Args:
             content: full Markdown text of the file.
             headers: list of headings to look for (e.g.
-                ``["## Context", "## Contexto"]``).
+                ``["## Context", "## Контекст"]``).
 
         Returns:
             Section text without the heading, or None if none of the

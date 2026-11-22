@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Short synchronous SessionStart. Does not call GitHub. Does not rewrite permissions.
-# Routes: /alfred-dev:alfred /alfred-dev:feature /alfred-dev:audit /alfred-dev:progress /alfred-dev:retomar
+# Routes: /alfred-dev:alfred /alfred-dev:feature /alfred-dev:audit /alfred-dev:progress /alfred-dev:resume
 # CTO reviews finished features. Agent Teams only if it is already active.
 
 set -euo pipefail
@@ -25,7 +25,7 @@ FALLBACK="## Как говорить с Alfred
 
 Если пользователь описывает работу, баг, просит продолжить, сдать результат или спрашивает, что дальше, без slash command, действуй как /alfred-dev:alfred: выбери маршрут и выполни его. Не предлагай каталог.
 
-Основной маршрут: /alfred-dev:alfred. Процессы: /alfred-dev:feature, /alfred-dev:quick, /alfred-dev:fix, /alfred-dev:spike, /alfred-dev:audit, /alfred-dev:ship. Статус: /alfred-dev:progress. Продолжить: /alfred-dev:retomar.
+Основной маршрут: /alfred-dev:alfred. Процессы: /alfred-dev:feature, /alfred-dev:quick, /alfred-dev:fix, /alfred-dev:spike, /alfred-dev:audit, /alfred-dev:ship. Статус: /alfred-dev:progress. Продолжить: /alfred-dev:resume.
 
 Если в этой сессии активен Agent Teams, используй его для параллельных фаз; если нет, используй инструмент Agent. Не переписывай .claude/settings.json.
 

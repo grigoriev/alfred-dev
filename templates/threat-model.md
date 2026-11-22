@@ -1,48 +1,48 @@
-# Модель угроз: {{nombre_componente}}
+# Модель угроз: {{component_name}}
 
-**Дата:** {{fecha}}
+**Дата:** {{date}}
 **Автор:** security-officer
 **Методология:** STRIDE
 
 ## Поверхность атаки
 
-{{superficie_de_ataque}}
+{{attack_surface}}
 
 ## Защищаемые активы
 
 | Актив | Классификация | Влияние компрометации |
 |-------|---------------|-----------------------|
-| {{activo_1}} | {{clasificacion_1}} | {{impacto_1}} |
+| {{asset_1}} | {{classification_1}} | {{impact_1}} |
 
 ## Анализ STRIDE
 
 ### Spoofing (подмена личности)
-{{analisis_spoofing}}
+{{spoofing_analysis}}
 
 ### Tampering (подделка)
-{{analisis_tampering}}
+{{tampering_analysis}}
 
 ### Repudiation (отказ от авторства)
-{{analisis_repudiation}}
+{{repudiation_analysis}}
 
 ### Information Disclosure (утечка информации)
-{{analisis_disclosure}}
+{{disclosure_analysis}}
 
 ### Denial of Service (отказ в обслуживании)
-{{analisis_dos}}
+{{dos_analysis}}
 
 ### Elevation of Privilege (повышение привилегий)
-{{analisis_elevation}}
+{{elevation_analysis}}
 
 ## Матрица рисков
 
 | Угроза | Вероятность | Влияние | Риск | Мера по снижению |
 |--------|-------------|---------|------|------------------|
-| {{amenaza_1}} | {{prob_1}} | {{imp_1}} | {{riesgo_1}} | {{mit_1}} |
+| {{threat_1}} | {{prob_1}} | {{impact_1}} | {{risk_1}} | {{mitigation_1}} |
 
 ## Рекомендации
 
-{{recomendaciones}}
+{{recommendations}}
 
 <!-- ЗАПОЛНЕННЫЙ ПРИМЕР ─────────────────────────────────────────────────
 

@@ -19,11 +19,11 @@ class TestHelpListsContinuityCommands(unittest.TestCase):
         help_md = _read("commands/alfred.md")
         self.assertIn("/alfred-dev:discuss", help_md)
         self.assertIn("/alfred-dev:map-codebase", help_md)
-        self.assertIn("/alfred-dev:retomar", help_md)
+        self.assertIn("/alfred-dev:resume", help_md)
         self.assertIn("/alfred-dev:pause", help_md)
         self.assertIn("/alfred-dev:progress", help_md)
         self.assertIn("/alfred-dev:quick", help_md)
-        self.assertIn("/alfred-dev:retomar", help_md)
+        self.assertIn("/alfred-dev:resume", help_md)
         self.assertIn("/alfred-dev:uat", help_md)
 
 
@@ -44,7 +44,7 @@ class TestNextContract(unittest.TestCase):
         self.assertIn(".claude/alfred-handoff.json", command)
         self.assertIn(".claude/alfred-uat.json", command)
         self.assertIn("docs/project/discovery.md", command)
-        self.assertIn("действуй как `/alfred-dev:retomar`", command)
+        self.assertIn("действуй как `/alfred-dev:resume`", command)
         self.assertIn("действуй как `/alfred-dev:uat`", command)
         self.assertNotIn("allow-stop-once", command)
         self.assertIn("действуй как `/alfred-dev:map-codebase`", command)
@@ -65,14 +65,14 @@ class TestPauseResumeContract(unittest.TestCase):
         self.assertIn("НЕ помечай сессию как завершённую", command)
 
     def test_resume_uses_state_then_handoff(self):
-        command = _read("commands/retomar.md")
+        command = _read("commands/resume.md")
         self.assertIn(".claude/alfred-dev-state.json", command)
         self.assertIn(".claude/alfred-handoff.json", command)
         self.assertIn("Приоритет возобновления", command)
         self.assertIn("resumed_at", command)
         self.assertIn('python3 .claude/alfred-continuity.py resume "$PWD"', command)
         self.assertIn("Не оборачивай его во вторую сводку", command)
-        self.assertIn("НЕ используй `AskUserQuestion` внутри `/alfred-dev:retomar`", command)
+        self.assertIn("НЕ используй `AskUserQuestion` внутри `/alfred-dev:resume`", command)
         self.assertIn("/alfred-dev:alfred", command)
 
 
@@ -89,8 +89,8 @@ class TestQuickContract(unittest.TestCase):
     def test_quick_uses_light_flow_and_helper(self):
         command = _read("commands/quick.md")
         self.assertIn("процессом `quick`", command)
-        self.assertIn("ejecucion_acotada", command)
-        self.assertIn("validacion_rapida", command)
+        self.assertIn("scoped_execution", command)
+        self.assertIn("quick_validation", command)
         self.assertIn('python3 .claude/alfred-continuity.py quick "$PWD" --raw "$ARGUMENTS"', command)
         self.assertIn("В конце покажи, что ожидаемый следующий шаг это `/alfred-dev:uat`", command)
 

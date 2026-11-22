@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-VERSION = "0.7.3"
+VERSION = "0.8.0"
 OLD_VERSION = "0.5" + ".3"
 INSTALLED_PLUGIN_DIR = Path.home() / ".claude" / "plugins" / "cache" / "alfred-dev" / "alfred-dev" / VERSION
 GLOBAL_ALFRED_ALIAS_FILE = Path.home() / ".claude" / "skills" / "alfred" / "SKILL.md"
@@ -253,7 +253,7 @@ def _fail(message: str) -> None:
 def _contains(text: str, needle: str | tuple[str, ...]) -> bool:
     """Return True when text contains the needle or one of its alternatives.
 
-    A tuple holds the legacy Spanish phrase first and accepted translations next.
+    A tuple holds accepted alternatives of the same phrase.
     """
     if isinstance(needle, tuple):
         return any(alternative in text for alternative in needle)
@@ -469,8 +469,8 @@ def check_inventory() -> list[str]:
         if path.resolve() not in public_command_paths
     )
     if set(_rel(path) for path in extra_command_files) != {
-        "commands/_composicion.md",
-        "commands/_docs_vivas.md",
+        "commands/_composition.md",
+        "commands/_living_docs.md",
         "commands/next.md",
         "commands/search.md",
     }:
@@ -681,7 +681,7 @@ def check_inventory() -> list[str]:
     return [
         "18 namespaced commands published",
         "commands/alfred.md published as contextual entry",
-        "commands/_composicion.md internal",
+        "commands/_composition.md internal",
         "10 agents in root agents/",
         "agent frontmatter compatible with plugins",
         "agent tools validated against official Claude Code names",
@@ -940,7 +940,7 @@ def check_command_catalog() -> list[str]:
     architecture = _read("docs/architecture.md")
     alfred_text = _read("commands/alfred.md")
 
-    unpublished = {"_composicion", "_docs_vivas", "next", "search"}
+    unpublished = {"_composition", "_living_docs", "next", "search"}
     disk_names = {
         path.stem
         for path in (ROOT / "commands").glob("*.md")
@@ -1111,7 +1111,7 @@ def check_command_execution_contracts() -> list[str]:
         Path(relative_path).stem: _read(relative_path.lstrip("./"))
         for relative_path in plugin["commands"]
     }
-    composition = _read("commands/_composicion.md")
+    composition = _read("commands/_composition.md")
     problems: list[str] = []
 
     for name, text in commands.items():
@@ -1144,13 +1144,13 @@ def check_command_execution_contracts() -> list[str]:
             'consume-prefetch "$PWD" --expected discuss',
             'alfred-continuity.py discuss "$PWD" --raw "$ARGUMENTS"',
             "итогового ответа",
-            "commands/_docs_vivas.md",
+            "commands/_living_docs.md",
         ],
         "map-codebase": [
             'consume-prefetch "$PWD" --expected map-codebase',
             'alfred-continuity.py map-codebase "$PWD" --raw "$ARGUMENTS"',
             "НЕ выдумывай стек, точки входа или риски",
-            "commands/_docs_vivas.md",
+            "commands/_living_docs.md",
         ],
         "memory-ui": [
             'consume-prefetch "$PWD" --expected memory-ui',
@@ -1189,7 +1189,7 @@ def check_command_execution_contracts() -> list[str]:
             "НЕ помечай UAT как одобренную без явного указания",
             "НЕ добавляй второй слой сводки",
         ],
-        "retomar": [
+        "resume": [
             'alfred-continuity.py resume "$PWD"',
             "Сначала выполни детерминированный helper",
         ],
@@ -1211,7 +1211,7 @@ def check_command_execution_contracts() -> list[str]:
             "Максимум 5 попыток",
             "## Каноничное завершение команды",
             "ожидаемый следующий шаг",
-            "commands/_docs_vivas.md",
+            "commands/_living_docs.md",
             "check-project-docs",
         ],
         "fix": [
@@ -1220,14 +1220,14 @@ def check_command_execution_contracts() -> list[str]:
             "Максимум 5 попыток",
             "## Каноничное завершение команды",
             "баг/первопричину в работе",
-            "commands/_docs_vivas.md",
+            "commands/_living_docs.md",
         ],
         "quick": [
             "Лёгкий процесс из 2 фаз",
             "Когда quick перестаёт быть quick",
             "## Каноничное завершение команды",
             "/alfred-dev:uat",
-            "commands/_docs_vivas.md",
+            "commands/_living_docs.md",
             "завершение",
         ],
         "spike": [
@@ -1242,7 +1242,7 @@ def check_command_execution_contracts() -> list[str]:
             "Gate развёртывания ВСЕГДА интерактивный",
             "НИКОГДА не утверждай автоматически развёртывание",
             "## Каноничное завершение команды",
-            "commands/_docs_vivas.md",
+            "commands/_living_docs.md",
             "hygiene",
         ],
         "audit": [
@@ -1250,7 +1250,7 @@ def check_command_execution_contracts() -> list[str]:
             "Запусти 4 агентов ПАРАЛЛЕЛЬНО",
             "Код не трогай, только генерируй отчёты",
             "## Каноничное завершение команды",
-            "commands/_docs_vivas.md",
+            "commands/_living_docs.md",
         ],
     }
     for name, needles in flow_contracts.items():
@@ -1263,22 +1263,22 @@ def check_command_execution_contracts() -> list[str]:
     for name in composition_reader_contracts:
         text = commands[name]
         for needle in (
-            "${CLAUDE_PLUGIN_ROOT}/commands/_composicion.md",
+            "${CLAUDE_PLUGIN_ROOT}/commands/_composition.md",
         ):
             if needle not in text:
-                problems.append(f"{name}: loads _composicion without plugin contract: {needle!r}")
+                problems.append(f"{name}: loads _composition without plugin contract: {needle!r}")
 
     docs_reader_contracts = ("feature", "fix", "quick", "spike", "ship", "audit")
     for name in docs_reader_contracts:
         text = commands[name]
-        if "${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md" not in text:
+        if "${CLAUDE_PLUGIN_ROOT}/commands/_living_docs.md" not in text:
             problems.append(
-                f"{name}: loads _docs_vivas without plugin contract: "
-                "'${CLAUDE_PLUGIN_ROOT}/commands/_docs_vivas.md'"
+                f"{name}: loads _living_docs without plugin contract: "
+                "'${CLAUDE_PLUGIN_ROOT}/commands/_living_docs.md'"
             )
 
     autopilot_texts = {
-        "_composicion": composition,
+        "_composition": composition,
         "feature": commands["feature"],
         "fix": commands["fix"],
         "ship": commands["ship"],
@@ -1286,11 +1286,11 @@ def check_command_execution_contracts() -> list[str]:
     for name, text in autopilot_texts.items():
         if '"autopilot": true' not in text:
             problems.append(f"{name}: does not recognize the canonical autopilot state flag")
-        if '"modo": "autopilot"' not in text:
-            problems.append(f"{name}: does not keep the legacy autopilot state alias")
+        if '"modo"' in text:
+            problems.append(f"{name}: mentions the removed legacy autopilot state alias")
 
     interactive_contracts = {
-        "ajustes": [
+        "config": [
             "главное меню",
             "core/config_cli.py",
             "CONFIG_HEADLESS_MENU",
@@ -1331,7 +1331,7 @@ def check_command_execution_contracts() -> list[str]:
         "18 namespaced commands keep arguments, prefix and current naming",
         "18 helper-first wrappers covered",
         "6 main flows with canonical closing",
-        "_composicion loads from the plugin install",
+        "_composition loads from the plugin install",
         "config/cto/update with verifiable interactive contracts",
         "free gates without unconditional approval",
         "autopilot via config/state without phantom public flag",
@@ -1658,7 +1658,7 @@ def check_public_claims() -> list[str]:
 
 
 def check_config_contracts() -> list[str]:
-    """Check that /alfred-dev:ajustes exposes the real runtime options."""
+    """Check that /alfred-dev:config exposes the real runtime options."""
     from core import config_loader
     from core import optional_agents
 
@@ -1706,13 +1706,13 @@ def check_config_contracts() -> list[str]:
                 )
 
     expected_sections = (
-        "autonomia",
-        "proyecto",
-        "agentes_opcionales",
-        "memoria",
+        "autonomy",
+        "project",
+        "optional_agents",
+        "memory",
         "compliance",
-        "integraciones",
-        "personalidad",
+        "integrations",
+        "personality",
     )
     if tuple(config_loader._CONFIG_SECTION_ORDER) != expected_sections:
         _fail(
@@ -1731,8 +1731,7 @@ def check_config_contracts() -> list[str]:
 
     menu = config_loader.build_config_section_menu(config_loader.DEFAULT_CONFIG)
     menu_labels = [option["label"] for option in menu["options"]]
-    # core/config_loader.py may still use the Spanish label or a Russian one.
-    if menu_labels[0] != "Выйти без изменений" and not menu_labels[0].startswith("Выйти"):
+    if not menu_labels[0].startswith("Выйти"):
         _fail(f"Config menu has no initial exit option: {menu_labels}")
     missing_labels = [
         labels[section]
@@ -1751,47 +1750,47 @@ def check_config_contracts() -> list[str]:
 
     preview = config_loader.build_config_section_change_preview(
         config_loader.DEFAULT_CONFIG,
-        "memoria",
+        "memory",
         {"enabled": True},
     )
-    if not preview["changed"] or not preview["updated_config"]["memoria"]["enabled"]:
+    if not preview["changed"] or not preview["updated_config"]["memory"]["enabled"]:
         _fail(f"Config preview does not detect the memory change: {preview}")
 
     section_updates = {
-        "autonomia": {
-            "producto": "interactivo",
-            "calidad": "semi-autonomo",
+        "autonomy": {
+            "product": "interactive",
+            "quality": "semi-autonomous",
         },
-        "proyecto": {
+        "project": {
             "runtime": "node",
-            "lenguaje": "typescript",
+            "language": "typescript",
             "framework": "next",
             "test_runner": "vitest",
             "bundler": "vite",
         },
-        "agentes_opcionales": {
+        "optional_agents": {
             "cto": False,
         },
-        "memoria": {
+        "memory": {
             "enabled": True,
             "sync_commits_limit": 3,
             "retention_days": 30,
         },
         "compliance": {
-            "estilo": "strict",
+            "style": "strict",
             "lint": False,
             "format_on_save": False,
         },
-        "integraciones": {
+        "integrations": {
             "git": False,
             "ci": True,
             "deploy": True,
         },
-        "personalidad": {
-            "nivel_sarcasmo": 1,
-            "verbosidad": "alta",
-            "idioma": "es-ES",
-            "celebrar_victorias": False,
+        "personality": {
+            "sarcasm_level": 1,
+            "verbosity": "alta",
+            "language": "es-ES",
+            "celebrate_wins": False,
         },
     }
     if tuple(section_updates) != expected_sections:
@@ -1803,27 +1802,27 @@ def check_config_contracts() -> list[str]:
                 "package.json": json.dumps({"dependencies": {"next": "^15.0.0"}}),
                 "tsconfig.json": "{}",
             },
-            "expected": {"runtime": "node", "lenguaje": "typescript", "framework": "next"},
+            "expected": {"runtime": "node", "language": "typescript", "framework": "next"},
         },
         "python": {
             "files": {"requirements.txt": "fastapi==0.110.0\npytest==8.0.0\n"},
-            "expected": {"runtime": "python", "lenguaje": "python", "framework": "fastapi"},
+            "expected": {"runtime": "python", "language": "python", "framework": "fastapi"},
         },
         "rust": {
             "files": {"Cargo.toml": "[package]\nname = \"demo\"\n"},
-            "expected": {"runtime": "rust", "lenguaje": "rust"},
+            "expected": {"runtime": "rust", "language": "rust"},
         },
         "go": {
             "files": {"go.mod": "module example.com/demo\n"},
-            "expected": {"runtime": "go", "lenguaje": "go"},
+            "expected": {"runtime": "go", "language": "go"},
         },
         "ruby": {
             "files": {"Gemfile": "source 'https://rubygems.org'\n"},
-            "expected": {"runtime": "ruby", "lenguaje": "ruby"},
+            "expected": {"runtime": "ruby", "language": "ruby"},
         },
         "elixir": {
             "files": {"mix.exs": "defmodule Demo.MixProject do\nend\n"},
-            "expected": {"runtime": "elixir", "lenguaje": "elixir"},
+            "expected": {"runtime": "elixir", "language": "elixir"},
         },
         "java": {
             "files": {
@@ -1834,7 +1833,7 @@ def check_config_contracts() -> list[str]:
                     "</dependencies></project>"
                 ),
             },
-            "expected": {"runtime": "jvm", "lenguaje": "java", "framework": "spring-boot"},
+            "expected": {"runtime": "jvm", "language": "java", "framework": "spring-boot"},
         },
         "kotlin": {
             "files": {
@@ -1843,17 +1842,17 @@ def check_config_contracts() -> list[str]:
                     "dependencies { implementation(\"io.quarkus:quarkus-rest\") }\n"
                 ),
             },
-            "expected": {"runtime": "jvm", "lenguaje": "kotlin", "framework": "quarkus"},
+            "expected": {"runtime": "jvm", "language": "kotlin", "framework": "quarkus"},
         },
         "php": {
             "files": {
                 "composer.json": json.dumps({"require": {"laravel/framework": "^11.0"}}),
             },
-            "expected": {"runtime": "php", "lenguaje": "php", "framework": "laravel"},
+            "expected": {"runtime": "php", "language": "php", "framework": "laravel"},
         },
         "dotnet": {
             "files": {"App.csproj": '<Project Sdk="Microsoft.NET.Sdk.Web"></Project>'},
-            "expected": {"runtime": "dotnet", "lenguaje": "csharp", "framework": "aspnet"},
+            "expected": {"runtime": "dotnet", "language": "csharp", "framework": "aspnet"},
         },
         "swift": {
             "files": {
@@ -1862,7 +1861,7 @@ def check_config_contracts() -> list[str]:
                     "dependencies: [.package(url: \"https://github.com/vapor/vapor\", from: \"4.0.0\")])"
                 ),
             },
-            "expected": {"runtime": "swift", "lenguaje": "swift", "framework": "vapor"},
+            "expected": {"runtime": "swift", "language": "swift", "framework": "vapor"},
         },
     }
     with tempfile.TemporaryDirectory(prefix="alfred-stack-audit-") as tmp:
@@ -1890,7 +1889,7 @@ def check_config_contracts() -> list[str]:
             "memoria:\n"
             "  enabled: false\n"
             "---\n\n"
-            "## Notas\n\n"
+            "## Заметки\n\n"
             "Nota estable.\n",
             encoding="utf-8",
         )
@@ -1929,21 +1928,21 @@ def check_config_contracts() -> list[str]:
                         "Config persistence does not keep value "
                         f"{section_name}.{key}: {actual!r} != {value!r}"
                     )
-            if "Nota estable" not in reloaded.get("notas", ""):
+            if "Nota estable" not in reloaded.get("notes", ""):
                 _fail(f"Config persistence loses notes after {section_name}")
 
-    command_norm = _normalize(_read("commands/ajustes.md"))
+    command_norm = _normalize(_read("commands/config.md"))
     docs_norm = _normalize(_read("docs/configuration.md"))
     architecture = _read("docs/architecture.md")
     assert_prompt_examples_use_current_ask_user_question_schema(
-        "commands/ajustes.md",
-        _read("commands/ajustes.md"),
+        "commands/config.md",
+        _read("commands/config.md"),
     )
     assert_prompt_examples_use_current_ask_user_question_schema(
-        "commands/_composicion.md",
-        _read("commands/_composicion.md"),
+        "commands/_composition.md",
+        _read("commands/_composition.md"),
     )
-    # commands/ajustes.md and docs/configuration.md are translated to Russian.
+    # commands/config.md and docs/configuration.md are translated to Russian.
     # Both surfaces use the same labels.
     required_command_labels = [
         "автономность по фазам",
@@ -1971,7 +1970,7 @@ def check_config_contracts() -> list[str]:
         "update_project_config_section()",
     ]
     for helper_name in helper_names:
-        if helper_name not in _read("commands/ajustes.md"):
+        if helper_name not in _read("commands/config.md"):
             missing.append(f"commands/config.md: {helper_name}")
         if helper_name not in _read("docs/configuration.md"):
             missing.append(f"docs/configuration.md: {helper_name}")
@@ -2100,19 +2099,19 @@ def check_flow_gate_claims() -> list[str]:
             if needle in public_gate_sources[path]:
                 problems.append(f"{path}: absolute gate claim without evidence nuance {needle!r}")
 
-    feature_phases = FLOWS["feature"]["fases"]
+    feature_phases = FLOWS["feature"]["phases"]
     if len(feature_phases) != 7:
         problems.append(f"feature must have 7 phases, has {len(feature_phases)}")
-    estilo = feature_phases[1] if len(feature_phases) > 1 else {}
+    style = feature_phases[1] if len(feature_phases) > 1 else {}
     expected_style_contract = {
-        "nombre": "estilo_visual",
-        "agentes": ["designer"],
-        "gate_tipo": "usuario",
-        "condicion": "tiene_frontend",
+        "name": "visual_style",
+        "agents": ["designer"],
+        "gate_type": "user",
+        "condition": "has_frontend",
     }
     for key, expected in expected_style_contract.items():
-        if estilo.get(key) != expected:
-            problems.append(f"estilo_visual.{key}={estilo.get(key)!r} != {expected!r}")
+        if style.get(key) != expected:
+            problems.append(f"visual_style.{key}={style.get(key)!r} != {expected!r}")
 
     if not has_frontend({"framework": "next", "runtime": "node"}):
         problems.append("has_frontend does not recognize Next as frontend")
@@ -2124,59 +2123,56 @@ def check_flow_gate_claims() -> list[str]:
         "Panel with UI",
         stack={"runtime": "node", "framework": "next"},
     )
-    frontend_session = advance_phase(frontend_session, resultado="aprobado")
-    if frontend_session["fase_actual"] != "estilo_visual":
-        problems.append("feature with frontend does not enter estilo_visual after producto")
+    frontend_session = advance_phase(frontend_session, result="approved")
+    if frontend_session["current_phase"] != "visual_style":
+        problems.append("feature with frontend does not enter visual_style after producto")
 
     backend_session = create_session(
         "feature",
         "API without UI",
         stack={"runtime": "python", "framework": "fastapi"},
     )
-    backend_session = advance_phase(backend_session, resultado="aprobado")
+    backend_session = advance_phase(backend_session, result="approved")
     skipped_style = [
         phase
-        for phase in backend_session.get("fases_completadas", [])
-        if phase.get("nombre") == "estilo_visual"
+        for phase in backend_session.get("completed_phases", [])
+        if phase.get("name") == "visual_style"
     ]
-    if backend_session["fase_actual"] != "arquitectura" or not skipped_style:
-        problems.append("feature without frontend does not skip estilo_visual to arquitectura")
-    elif skipped_style[0].get("resultado") != "saltada":
-        problems.append(f"skipped estilo_visual records an unexpected result: {skipped_style[0]}")
+    if backend_session["current_phase"] != "architecture" or not skipped_style:
+        problems.append("feature without frontend does not skip visual_style to arquitectura")
+    elif skipped_style[0].get("result") != "skipped":
+        problems.append(f"skipped visual_style records an unexpected result: {skipped_style[0]}")
 
     gate_session = create_session("feature", "Strict gates")
-    gate_session = advance_phase(gate_session, resultado="aprobado")
-    gate_session = advance_phase(gate_session, resultado="aprobado")
-    gate_session = advance_phase(gate_session, resultado="aprobado")
-    if check_gate(gate_session, resultado="aprobado", tests_ok=False)["passed"]:
+    gate_session = advance_phase(gate_session, result="approved")
+    gate_session = advance_phase(gate_session, result="approved")
+    gate_session = advance_phase(gate_session, result="approved")
+    if check_gate(gate_session, result="approved", tests_ok=False)["passed"]:
         problems.append("automatic development gate does not block red tests")
-    gate_session = advance_phase(gate_session, resultado="aprobado", tests_ok=True)
-    if check_gate(gate_session, resultado="aprobado", security_ok=False)["passed"]:
+    gate_session = advance_phase(gate_session, result="approved", tests_ok=True)
+    if check_gate(gate_session, result="approved", security_ok=False)["passed"]:
         problems.append("automatic+security quality gate does not block failed security")
 
     autopilot_session = create_session("feature", "Autopilot")
     autopilot_session["autopilot"] = True
     if not is_autopilot_gate_passable(autopilot_session)["passed"]:
         problems.append("autopilot approves a user gate")
-    autopilot_session = advance_phase(autopilot_session, resultado="aprobado")
-    autopilot_session = advance_phase(autopilot_session, resultado="aprobado")
-    autopilot_session = advance_phase(autopilot_session, resultado="aprobado")
+    autopilot_session = advance_phase(autopilot_session, result="approved")
+    autopilot_session = advance_phase(autopilot_session, result="approved")
+    autopilot_session = advance_phase(autopilot_session, result="approved")
     if is_autopilot_gate_passable(autopilot_session, tests_ok=False)["passed"]:
         problems.append("autopilot skips an automatic gate with red tests")
 
     ship_session = create_session("ship", "Release autopilot")
     ship_session["autopilot"] = True
-    ship_session = advance_phase(ship_session, resultado="aprobado", tests_ok=True, security_ok=True)
-    ship_session = advance_phase(ship_session, resultado="aprobado")
-    ship_session = advance_phase(ship_session, resultado="aprobado", tests_ok=True, security_ok=True)
+    ship_session = advance_phase(ship_session, result="approved", tests_ok=True, security_ok=True)
+    ship_session = advance_phase(ship_session, result="approved")
+    ship_session = advance_phase(ship_session, result="approved", tests_ok=True, security_ok=True)
     ship_gate = is_autopilot_gate_passable(ship_session, security_ok=True)
-    if ship_session["fase_actual"] != "despliegue":
-        problems.append(f"ship does not reach despliegue in the expected phase: {ship_session['fase_actual']}")
+    if ship_session["current_phase"] != "deployment":
+        problems.append(f"ship does not reach deployment in the expected phase: {ship_session['current_phase']}")
     ship_reason = ship_gate.get("reason", "")
-    # core/orchestrator.py may still return the Spanish reason or a Russian one.
-    explicit_confirmation = "confirmación explícita del usuario" in ship_reason or (
-        "явн" in ship_reason and "подтвержд" in ship_reason
-    )
+    explicit_confirmation = "явн" in ship_reason and "подтвержд" in ship_reason
     if ship_gate["passed"] or not explicit_confirmation:
         problems.append("ship autopilot does not keep human deploy confirmation")
 
@@ -2542,7 +2538,7 @@ def check_packaging_contracts() -> list[str]:
         ".claude-plugin/plugin.json",
         ".claude-plugin/marketplace.json",
         ".mcp.json",
-        "commands/_composicion.md",
+        "commands/_composition.md",
         "commands/alfred.md",
         "agents/alfred.md",
         "hooks/hooks.json",
@@ -2869,8 +2865,8 @@ def check_audit_docs() -> list[str]:
             "displayName: \"Alfred Dev\"",
             "технический namespace: `alfred-dev`",
             "не трогает `~/.claude/skills`",
-            "`_composicion.md`",
-            "`_docs_vivas.md`",
+            "`_composition.md`",
+            "`_living_docs.md`",
             "commands/ как поддерживаемые плоские skills",
             "публичного UX",
             "`/alfred-dev:*`",
@@ -3102,24 +3098,18 @@ def check_audit_docs() -> list[str]:
         "def _iter_secret_findings(",
         "evidence_secret_findings = _iter_secret_findings(evidence, \"evidence\")",
         "review_secret_findings = _iter_secret_findings(review, \"review\")",
-        ("evidence contiene posibles secretos reales", "evidence contains possible real secrets"),
-        ("review contiene posibles secretos reales", "review contains possible real secrets"),
-        (
-            "No se crea plantilla de revisión con evidencia que contiene",
-            "Review template not created: evidence contains",
-        ),
+        "evidence contains possible real secrets",
+        "review contains possible real secrets",
+        "Review template not created: evidence contains",
         "review_path.chmod(0o600)",
         "GENERIC_REVIEW_NOTES",
         "MIN_REVIEW_NOTE_CHARS",
         "MIN_REVIEW_NOTE_WORDS",
         "def _is_low_quality_review_note(",
-        (
-            "review.cases con notes humanas demasiado genericas o cortas",
-            "review.cases has human notes that are too generic or short",
-        ),
-        ("review.cases contiene notes humanas repetidas", "review.cases contains repeated human notes"),
+        "review.cases has human notes that are too generic or short",
+        "review.cases contains repeated human notes",
         "--require-current-auth-preflight",
-        ("preflight actual de Claude CLI no esta ok", "current Claude CLI preflight is not ok"),
+        "current Claude CLI preflight is not ok",
     )
     missing_review_secret_gate = [
         _needle_label(needle)
@@ -3133,27 +3123,18 @@ def check_audit_docs() -> list[str]:
         )
     review_report_note_needles = (
         "def _plugin_surface_flags(",
-        ("## Superficie Del Plugin", "## Plugin Surface"),
-        (
-            "evidence.plugin_surface.roots no coincide con el plugin actual",
-            "evidence.plugin_surface.roots does not match the current plugin",
-        ),
-        (
-            "evidence.plugin_surface.file_count no coincide con el plugin actual",
-            "evidence.plugin_surface.file_count does not match the current plugin",
-        ),
-        (
-            "evidence.plugin_surface.sha256 no coincide con el plugin actual",
-            "evidence.plugin_surface.sha256 does not match the current plugin",
-        ),
+        "## Plugin Surface",
+        "evidence.plugin_surface.roots does not match the current plugin",
+        "evidence.plugin_surface.file_count does not match the current plugin",
+        "evidence.plugin_surface.sha256 does not match the current plugin",
         "def _review_quality_flags(",
         "_manual_review_gate_module()",
-        ("## Calidad De Review Humana", "## Human Review Quality"),
+        "## Human Review Quality",
         "notes_missing",
         "notes_low_quality",
         "notes_repeated",
         "review_secret_findings",
-        ("Sin flags automaticos de notas humanas", "No automatic human note flags"),
+        "No automatic human note flags",
     )
     missing_review_report_notes = [
         _needle_label(needle)
@@ -3166,17 +3147,11 @@ def check_audit_docs() -> list[str]:
             f"{missing_review_report_notes}"
         )
     review_traceability_needles = (
-        ("review.evidence_file es obligatorio", "review.evidence_file is required"),
-        (
-            "review.evidence_file no coincide con el evidence pasado al gate",
-            "review.evidence_file does not match the evidence passed to the gate",
-        ),
-        ("review.evidence_file coincide", "review.evidence_file matches"),
-        ("review.cases desalineados con matriz actual", "review.cases out of sync with the current matrix"),
-        (
-            "review.cases coincide con la matriz manual actual",
-            "review.cases matches the current manual matrix",
-        ),
+        "review.evidence_file is required",
+        "review.evidence_file does not match the evidence passed to the gate",
+        "review.evidence_file matches",
+        "review.cases out of sync with the current matrix",
+        "review.cases matches the current manual matrix",
     )
     missing_review_traceability = [
         _needle_label(needle)
@@ -3277,9 +3252,9 @@ def check_audit_docs() -> list[str]:
 def check_human_contracts() -> list[str]:
     """Check prompt-level contracts for human treatment and operational honesty."""
     command_names = [
-        "_composicion",
+        "_composition",
         "alfred",
-        "ajustes",
+        "config",
         "discuss",
         "feature",
         "fix",
@@ -3289,7 +3264,7 @@ def check_human_contracts() -> list[str]:
         "pause",
         "progress",
         "quick",
-        "retomar",
+        "resume",
         "search",
         "ship",
         "sync-github",
@@ -3312,8 +3287,8 @@ def check_human_contracts() -> list[str]:
             ("меню не нужно", commands["discuss"]),
             ("DISCUSS_ROUTE_MENU_HEADLESS", commands["discuss"]),
             ("возвращается отменённым", commands["discuss"]),
-            ("главное меню", commands["ajustes"]),
-            ("config_headless_menu", commands_norm["ajustes"]),
+            ("главное меню", commands["config"]),
+            ("config_headless_menu", commands_norm["config"]),
             ("один `AskUserQuestion`", commands["update"]),
         ],
         "human gates": [
@@ -3322,12 +3297,12 @@ def check_human_contracts() -> list[str]:
             ("Gate развёртывания ВСЕГДА интерактивный", commands["ship"]),
             ("НИКОГДА не утверждай автоматически развёртывание", commands["ship"]),
             ("НЕ помечай UAT как одобренную без явного указания пользователя", commands["uat"]),
-            ("`/alfred-dev:uat aprobado`", commands["uat"]),
+            ("`/alfred-dev:uat approved`", commands["uat"]),
         ],
         "operational honesty": [
-            ("Операционная честность и запрет имитации", commands["_composicion"]),
-            ("Не говори «я выполнил», «прошло» или «проверено», если ты только предположил это", commands["_composicion"]),
-            ("Всегда различай «рекомендую выполнить X» и «я выполнил X", commands["_composicion"]),
+            ("Операционная честность и запрет имитации", commands["_composition"]),
+            ("Не говори «я выполнил», «прошло» или «проверено», если ты только предположил это", commands["_composition"]),
+            ("Всегда различай «рекомендую выполнить X» и «я выполнил X", commands["_composition"]),
             ("Не имитируй подтверждение", commands["alfred"]),
             ("вывод инструмента", commands["alfred"]),
             ("проверяемый следующий шаг", commands["alfred"]),
@@ -3354,7 +3329,7 @@ def check_human_contracts() -> list[str]:
         "memory-ui",
         "pause",
         "progress",
-        "retomar",
+        "resume",
         "search",
         "sync-github",
         "uat",
@@ -3377,7 +3352,7 @@ def check_human_contracts() -> list[str]:
         if not any(marker in text_norm for marker in final_markers):
             missing.append(f"helper-first {name}: final output rule without rewrapping is missing")
 
-    if "Не говори" not in commands["_composicion"] or "проверяемый следующий шаг" not in commands["alfred"]:
+    if "Не говори" not in commands["_composition"] or "проверяемый следующий шаг" not in commands["alfred"]:
         missing.append("humanity: central anti-pretending contract is missing")
     if "Не имитируй подтвержден" not in alfred_agent:
         missing.append("humanity: anti-pretending contract is missing in the Alfred agent")
@@ -3564,8 +3539,8 @@ def _complete_quick_session(project_dir: Path) -> None:
     from core.orchestrator import advance_phase, create_session, save_state
 
     session = create_session("quick", "Adjust login copy")
-    while session["fase_actual"] != "completado":
-        session = advance_phase(session, resultado="aprobado", artefactos=[])
+    while session["current_phase"] != "completed":
+        session = advance_phase(session, result="approved", artifacts=[])
     save_state(session, str(project_dir / ".claude" / "alfred-dev-state.json"))
 
 
@@ -3611,7 +3586,7 @@ def check_continuity_smoke() -> list[str]:
                 "source_command": "map-codebase",
                 "prefetched_command": "map-codebase",
                 "project_name": "fixture",
-                "stack": {"runtime": "node", "framework": "desconocido"},
+                "stack": {"runtime": "node", "framework": "unknown"},
                 "recommended_command": "discuss",
             },
         )
@@ -3686,8 +3661,8 @@ def check_continuity_smoke() -> list[str]:
         kanban.mkdir(parents=True, exist_ok=True)
         (kanban / "backlog.md").write_text(
             "# Backlog\n\n"
-            "### [T-010] Validar login con /alfred-dev:uat\n\n"
-            "- **Agente:** alfred:verify\n",
+            "### [T-010] Проверить вход через /alfred-dev:uat\n\n"
+            "- **Агент:** alfred:verify\n",
             encoding="utf-8",
         )
         for lane in ("in-progress", "done", "blocked"):
@@ -3718,15 +3693,14 @@ def check_continuity_smoke() -> list[str]:
                 _run_continuity(project, "memory-ui", str(project), "--stop", "--json", timeout=90)
 
         _complete_quick_session(project)
-        verify = _run_continuity(project, "verify", str(project), "--raw", "aprobado")
+        verify = _run_continuity(project, "verify", str(project), "--raw", "approved")
         uat_path = project / ".claude" / "alfred-uat.json"
         uat = json.loads(uat_path.read_text(encoding="utf-8")) if uat_path.exists() else {}
         verify_lower = verify.lower()
-        # core/continuity.py may still render the Spanish heading or the Russian one.
-        has_uat_heading = "Verificación manual / UAT" in verify or "Ручная проверка / UAT" in verify
-        is_approved = "aprobada" in verify_lower or "одобрен" in verify_lower
+        has_uat_heading = "Ручная проверка / UAT" in verify
+        is_approved = "одобрен" in verify_lower
         if not has_uat_heading or not is_approved or uat.get("status") != "approved":
-            _fail("verify aprobado did not record a human UAT")
+            _fail("verify approved did not record a human UAT")
 
     return [
         "next/map-codebase/discuss/quick",
@@ -3819,9 +3793,9 @@ def check_mcp_tools_smoke() -> list[str]:
         adr_dir = project / "docs" / "adr"
         adr_dir.mkdir(parents=True)
         (adr_dir / "0001-cache.md").write_text(
-            "# Usar Redis\n\n"
-            "## Contexto\n\nNecesitamos cachear lecturas frecuentes.\n\n"
-            "## Decisión\n\nUsar Redis para cache compartida.\n",
+            "# Use Redis\n\n"
+            "## Context\n\nWe need to cache frequent reads.\n\n"
+            "## Decision\n\nUse Redis as a shared cache.\n",
             encoding="utf-8",
         )
 
@@ -3915,7 +3889,7 @@ def check_mcp_tools_smoke() -> list[str]:
                 "memory_log_event",
                 {
                     "event_type": "gate_passed",
-                    "phase": "calidad",
+                    "phase": "quality",
                     "summary": "Redis cache validated",
                     "payload": {"note": "redis cache validated"},
                 },
@@ -3924,7 +3898,7 @@ def check_mcp_tools_smoke() -> list[str]:
                 "memory_log_event",
                 {
                     "event_type": "custom",
-                    "phase": "calidad",
+                    "phase": "quality",
                     "summary": "large MCP event",
                     "content": "x" * 9000,
                     "payload": {"blob": "y" * 9000},

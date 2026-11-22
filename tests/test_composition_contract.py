@@ -17,19 +17,19 @@ def _read(relative_path: str) -> str:
 class TestCompositionContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.command = _read("commands/_composicion.md")
+        cls.command = _read("commands/_composition.md")
 
     def test_missing_autonomy_bootstraps_cli_defaults(self):
         self.assertIn("НЕ используй `AskUserQuestion` в этом начальном bootstrap", self.command)
-        self.assertIn("producto: autonomo", self.command)
-        self.assertIn("arquitectura: autonomo", self.command)
-        self.assertIn("desarrollo: autonomo", self.command)
-        self.assertIn("calidad: autonomo", self.command)
-        self.assertIn("documentacion: autonomo", self.command)
-        self.assertIn("entrega: autonomo", self.command)
+        self.assertIn("product: autonomous", self.command)
+        self.assertIn("architecture: autonomous", self.command)
+        self.assertIn("development: autonomous", self.command)
+        self.assertIn("quality: autonomous", self.command)
+        self.assertIn("documentation: autonomous", self.command)
+        self.assertIn("delivery: autonomous", self.command)
 
     def test_bootstrap_points_to_current_config_command(self):
-        self.assertIn("/alfred-dev:ajustes", self.command)
+        self.assertIn("/alfred-dev:config", self.command)
         self.assertIn("/alfred-dev:quick", self.command)
         self.assertNotIn("/alfred config", self.command)
 

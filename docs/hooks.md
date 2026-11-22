@@ -91,7 +91,7 @@ Wrapper лежит в проекте, чтобы Claude Code мог запуск
 **Событие:** `UserPromptSubmit` -- **Matcher:** нет -- **Timeout:** 5 с -- **Асинхронный:** нет
 
 Если пользователь пишет обычным текстом без slash, хук классифицирует запрос
-(`fix`, `quick`, `retomar`, `ship`…) и внедряет `additionalContext`, чтобы
+(`fix`, `quick`, `resume`, `ship`…) и внедряет `additionalContext`, чтобы
 Claude действовал как эта команда. Если `/alfred-dev:` уже есть или сигнала
 нет, хук ничего не говорит. Fail-open.
 
@@ -100,7 +100,7 @@ Claude действовал как эта команда. Если `/alfred-dev:
 **Событие:** `SessionEnd` -- **Асинхронный:** да
 
 Останавливает Memory UI и, если была сессия или доказательства тестов, пишет
-`.claude/alfred-last-cierre.md` с блоком для вставки. Работу не выдумывает.
+`.claude/alfred-last-closing.md` с блоком для вставки. Работу не выдумывает.
 
 ### session-start.sh
 
@@ -233,11 +233,11 @@ Briefing собирается в `core/session_brief.py` (состояние, ha
 | `Bash` | PostToolUse | Выполненная команда: команда, exit code, полные stdout и stderr. Если обнаружен успешный `git commit`, дополнительно сохраняет метаданные коммита (SHA, сообщение, автор, файлы). |
 | `UserPromptSubmit` | Собственное событие | Промпт пользователя: полный текст. |
 
-Память активна, только если пользователь явно включил её в `.claude/alfred-dev.local.md` секцией `memoria: enabled: true`. Хук проверяет эту настройку, прежде чем что-то делать, и если память не включена, сразу завершается.
+Память активна, только если пользователь явно включил её в `.claude/alfred-dev.local.md` секцией `memory: enabled: true`. Хук проверяет эту настройку, прежде чем что-то делать, и если память не включена, сразу завершается.
 
 Хук автоматически исключает файлы из внутренних путей (`.claude/`, `.git/`, `node_modules/`, `__pycache__/`, `.venv/`) и тривиальные команды чтения или навигации (`ls`, `pwd`, `cat` и т. д.), чтобы не засорять историю.
 
-Логика отслеживания итераций и фаз (унаследована от `memory-capture.py`) включается при записи `alfred-dev-state.json`. Она сохраняет три типа событий процесса: `iteration_started` (если нет активной итерации), `phase_completed` (новые фазы, которые ещё не записаны) и `iteration_completed` (когда текущая фаза переходит в `"completado"`).
+Логика отслеживания итераций и фаз (унаследована от `memory-capture.py`) включается при записи `alfred-dev-state.json`. Она сохраняет три типа событий процесса: `iteration_started` (если нет активной итерации), `phase_completed` (новые фазы, которые ещё не записаны) и `iteration_completed` (когда текущая фаза переходит в `"completed"`).
 
 Обнаружение коммитов (унаследовано от `commit-capture.py`) основано на regex `(?:^|&&|\|\||;)\s*git\s+commit\b` и включается, только если exit code равен 0. Хук выполняет `git log -1`, чтобы извлечь SHA, сообщение, автора и файлы, и записывает их через `MemoryDB.log_commit()`, который идемпотентен по SHA.
 
@@ -309,7 +309,7 @@ sequenceDiagram
 | `SessionStart` | `startup\|resume\|clear\|compact\|fork` | `session-start.sh` | 5 с | Да | Нет | Briefing сессии и протокол общения без slash. |
 | `SessionEnd` | _(нет)_ | `session-end.py` | -- | Да | Нет | Останавливает Memory UI и пишет итог сессии. Fail-open. |
 | `UserPromptSubmit` | _(нет)_ | `activity-capture.py` | 10 с | Нет | Нет | Сохраняет промпт. Fail-open. |
-| `UserPromptSubmit` | _(нет)_ | `prompt-route.py` | 5 с | Нет | Нет | Предлагает fix/quick/retomar, если в тексте нет slash. |
+| `UserPromptSubmit` | _(нет)_ | `prompt-route.py` | 5 с | Нет | Нет | Предлагает fix/quick/resume, если в тексте нет slash. |
 | `PreToolUse` | `Write\|Edit\|Bash\|mcp__.*` | `secret-guard.py` | 5 с | Нет | Да | Секреты в файлах, командах и пишущих MCP tools. |
 | `PreToolUse` | `Bash` | `dangerous-command-guard.py` | 5 с | Нет | Да | Разрушительные команды: rm -rf /, force push, DROP DATABASE, docker prune, fork bombs. |
 | `PreToolUse` | `Read` | `sensitive-read-guard.py` | 5 с | Нет | Нет | Чтение чувствительных файлов. Предупреждает без блокировки. |

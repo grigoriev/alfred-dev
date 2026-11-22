@@ -37,7 +37,7 @@ class TestProjectDocs(unittest.TestCase):
     def test_architecture_gate_requires_filled_docs(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             ensure_project_docs(tmpdir)
-            failed = check_project_docs(tmpdir, "feature", "arquitectura")
+            failed = check_project_docs(tmpdir, "feature", "architecture")
             self.assertFalse(failed["passed"])
             self.assertIn("docs/project/architecture.md", failed["empty"])
 
@@ -48,7 +48,7 @@ class TestProjectDocs(unittest.TestCase):
             with open(threat, "w", encoding="utf-8") as handle:
                 handle.write(f"# Model\n\n{FILLED_MARKER}\n\nSTRIDE for login.\n")
 
-            passed = check_project_docs(tmpdir, "feature", "arquitectura")
+            passed = check_project_docs(tmpdir, "feature", "architecture")
             self.assertTrue(passed["passed"], passed)
 
     def test_map_codebase_accepts_architecture_skeleton(self):
@@ -82,11 +82,11 @@ class TestProjectDocs(unittest.TestCase):
             ) as handle:
                 handle.write("# Compliance\n\nGDPR does not apply: CLI with no personal data.\n")
             ensure_project_docs(tmpdir)
-            result = check_project_docs(tmpdir, "feature", "calidad")
+            result = check_project_docs(tmpdir, "feature", "quality")
             self.assertTrue(result["passed"], result)
 
     def test_required_docs_known_for_core_flows(self):
-        self.assertTrue(required_docs("feature", "calidad"))
+        self.assertTrue(required_docs("feature", "quality"))
         self.assertTrue(required_docs("audit"))
         self.assertFalse(required_docs("progress"))
 

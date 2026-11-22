@@ -32,7 +32,7 @@ claude plugin list --json
 - `projectPath`, если есть
 
 Если `claude plugin list --json` падает или не возвращает запись, используй этот
-fallback через cache для версии и пометь scope как `desconocido`:
+fallback через cache для версии и пометь scope как `unknown`:
 
 ```bash
 python3 -c "
@@ -44,11 +44,11 @@ candidates = sorted(
     reverse=True
 )
 if not candidates:
-    print('desconocida')
+    print('unknown')
     sys.exit(0)
 with open(candidates[0]) as f:
-    print(json.load(f).get('version', 'desconocida'))
-" 2>/dev/null || echo "desconocida"
+    print(json.load(f).get('version', 'unknown'))
+" 2>/dev/null || echo "unknown"
 ```
 
 Fallback выбирает самую свежую версию по дате изменения, чтобы
@@ -120,7 +120,7 @@ PY
 `/alfred-dev:*` работал в любом проекте пользователя. Он не пересоздаёт
 глобальный алиас `/alfred` и не затрагивает `~/.claude/skills`.
 
-### Scope user, local, project или desconocido
+### Scope user, local, project или unknown
 
 Для установок user, local, project или с неизвестным scope
 используй поддерживаемый установщик Alfred Dev. Этот путь заново регистрирует

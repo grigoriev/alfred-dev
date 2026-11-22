@@ -36,26 +36,26 @@ class TestSessionBrief(unittest.TestCase):
             with open(os.path.join(claude, "alfred-dev-state.json"), "w", encoding="utf-8") as handle:
                 json.dump(
                     {
-                        "comando": "feature",
-                        "descripcion": "login with email",
-                        "fase_actual": "calidad",
-                        "fase_numero": 4,
+                        "command": "feature",
+                        "description": "login with email",
+                        "current_phase": "quality",
+                        "phase_number": 4,
                     },
                     handle,
                 )
             brief = build_session_brief(tmpdir)
             self.assertTrue(brief["active"])
-            self.assertEqual(brief["next_step"], "/alfred-dev:retomar")
+            self.assertEqual(brief["next_step"], "/alfred-dev:resume")
             text = render_session_start_context(tmpdir)
-            self.assertIn("calidad", text)
-            self.assertIn("/alfred-dev:retomar", text)
+            self.assertIn("quality", text)
+            self.assertIn("/alfred-dev:resume", text)
 
     def test_includes_last_decision_when_memory_enabled(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             claude = os.path.join(tmpdir, ".claude")
             os.makedirs(claude, exist_ok=True)
             with open(os.path.join(claude, "alfred-dev.local.md"), "w", encoding="utf-8") as handle:
-                handle.write("---\nmemoria:\n  enabled: true\n---\n")
+                handle.write("---\nmemory:\n  enabled: true\n---\n")
             db = MemoryDB(os.path.join(claude, "alfred-memory.db"))
             db.start_iteration("feature", "auth")
             db.log_decision(title="Auth with JWT", chosen="JWT, no sessions")

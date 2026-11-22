@@ -151,10 +151,10 @@ _KNOWN_KANBAN_TASK_TYPES = frozenset({"generic", "main", "phase", "verify"})
 
 def _session_optional_agent_flags(session: Dict[str, Any]) -> Dict[str, bool]:
     """Extract the active optional agent flags from a session."""
-    equipo = session.get("equipo_sesion")
-    if not isinstance(equipo, dict):
+    team = session.get("session_team")
+    if not isinstance(team, dict):
         return {}
-    raw_flags = equipo.get("opcionales_activos")
+    raw_flags = team.get("active_optionals")
     if not isinstance(raw_flags, dict):
         return {}
     return {
@@ -166,32 +166,28 @@ def _session_optional_agent_flags(session: Dict[str, Any]) -> Dict[str, bool]:
 
 def _session_team_source_label(session: Dict[str, Any]) -> str:
     """Return a human label for the source of the runtime team."""
-    equipo = session.get("equipo_sesion")
-    if not isinstance(equipo, dict):
+    team = session.get("session_team")
+    if not isinstance(team, dict):
         return ""
 
-    source = str(equipo.get("fuente", "")).strip()
-    if source == "config_persistida":
-        return "configuración persistida"
-    if source == "composicion_dinamica":
-        return "composición dinámica"
+    source = str(team.get("source", "")).strip()
+    if source in {"persisted_config", "dynamic_composition"}:
+        return source
     return ""
 
 
 _PHASE_STATUS_LABELS_RU = {
-    "aprobado": "одобрено",
-    "aprobada": "одобрено",
-    "rechazado": "отклонено",
-    "rechazada": "отклонено",
-    "saltada": "пропущена",
-    "en curso": "в работе",
-    "pendiente": "ожидает",
-    "completado": "завершено",
+    "approved": "одобрено",
+    "rejected": "отклонено",
+    "skipped": "пропущена",
+    "in_progress": "в работе",
+    "pending": "ожидает",
+    "completed": "завершено",
 }
 
 _STACK_VALUE_LABELS_RU = {
-    "desconocido": "не определён",
-    "ninguno": "нет",
+    "unknown": "не определён",
+    "none": "нет",
 }
 
 
@@ -229,12 +225,12 @@ def _format_optional_agent_summary(
 
 def _session_on_demand_optionals_for_flow(session: Dict[str, Any]) -> List[str]:
     """Return active optional agents that no phase of the flow uses."""
-    command = str(session.get("comando", "")).strip()
+    command = str(session.get("command", "")).strip()
     flow = FLOWS.get(command, {})
     flow_phases = {
-        str(phase_def.get("nombre", "")).strip()
-        for phase_def in (flow.get("fases") or [])
-        if str(phase_def.get("nombre", "")).strip()
+        str(phase_def.get("name", "")).strip()
+        for phase_def in (flow.get("phases") or [])
+        if str(phase_def.get("name", "")).strip()
     }
     active_flags = _session_optional_agent_flags(session)
     active_names = [
@@ -248,7 +244,7 @@ def _session_on_demand_optionals_for_flow(session: Dict[str, Any]) -> List[str]:
         integration = OPTIONAL_INTEGRATIONS.get(agent_name, {})
         integrated_phases = {
             str(phase_name).strip()
-            for phase_name in integration.get("fases", [])
+            for phase_name in integration.get("phases", [])
             if str(phase_name).strip()
         }
         if not flow_phases.intersection(integrated_phases):
@@ -308,7 +304,7 @@ def _load_active_session_state(project_dir: str) -> Optional[Dict[str, Any]]:
     state = load_state(_project_path(project_dir, STATE_RELATIVE_PATH))
     if not isinstance(state, dict):
         return None
-    if state.get("fase_actual") == "completado":
+    if state.get("current_phase") == "completed":
         return None
     return state
 
@@ -416,11 +412,9 @@ def _capture_helper_memory(
         db.close()
 
 
-# Internal runtime command keys that are not public slash commands.
+# Internal runtime command keys whose public slash command differs.
 _PUBLIC_COMMAND_NAMES = {
-    "resume": "retomar",
     "verify": "uat",
-    "config": "ajustes",
     "help": "alfred",
     "status": "progress",
     "blocked": "progress",
@@ -429,22 +423,13 @@ _PUBLIC_COMMAND_NAMES = {
     "validate": "progress",
 }
 # Public slash commands whose runtime key differs.
-_INTERNAL_COMMAND_NAMES = {"retomar": "resume", "uat": "verify", "ajustes": "config"}
-_LEGACY_SLASH_COMMAND_RE = re.compile(r"/alfred-dev:(resume|verify)\b")
+_INTERNAL_COMMAND_NAMES = {"uat": "verify"}
 
 
 def _public_command(name: Any) -> str:
     """Return the public slash command name for an internal command key."""
     key = str(name or "").strip()
     return _PUBLIC_COMMAND_NAMES.get(key, key)
-
-
-def _canonical_slash_commands(text: Any) -> str:
-    """Replace legacy slash commands stored in old state files."""
-    return _LEGACY_SLASH_COMMAND_RE.sub(
-        lambda match: f"/alfred-dev:{_PUBLIC_COMMAND_NAMES[match.group(1)]}",
-        str(text or ""),
-    )
 
 
 def load_handoff(project_dir: str) -> Optional[Dict[str, Any]]:
@@ -465,7 +450,6 @@ def load_handoff(project_dir: str) -> Optional[Dict[str, Any]]:
     if not required.issubset(data.keys()):
         return None
 
-    data["resume_command"] = _canonical_slash_commands(data["resume_command"])
     return data
 
 
@@ -517,7 +501,7 @@ def _iter_code_files(project_dir: str, max_depth: int = 2):
 def project_has_codebase(project_dir: str) -> bool:
     """Tell if the directory looks like a brownfield repo with code."""
     stack = detect_stack(project_dir)
-    if stack.get("runtime") != "desconocido":
+    if stack.get("runtime") != "unknown":
         return True
 
     for marker in ("src", "app", "lib", "packages", "services", ".git"):
@@ -562,7 +546,7 @@ def _extract_markdown_list_items(markdown: str) -> List[str]:
         if not content:
             continue
         normalized = _normalize_free_text(content)
-        if normalized in {"ninguna", "ninguno", "none", "sin bloqueos", "sin tareas", "нет", "нет блокеров", "нет задач"}:
+        if normalized in {"none", "нет", "нет блокеров", "нет задач"}:
             continue
         items.append(content)
     return items
@@ -646,17 +630,11 @@ def _parse_kanban_tasks(markdown: str, status: str, relative_path: str) -> List[
         body = "\n".join(body_lines).strip()
         metadata = current.get("metadata", {})
         criteria = _extract_criteria_ids(" ".join([body] + list(metadata.values())))
-        dependencies = (
-            metadata.get("зависимости") or metadata.get("dependencias") or metadata.get("dependencies") or ""
-        )
-        evidence = (
-            metadata.get("подтверждение") or metadata.get("evidencia") or metadata.get("evidence") or ""
-        )
-        agent = metadata.get("агент") or metadata.get("agente") or metadata.get("agent") or ""
-        notes = metadata.get("заметки") or metadata.get("notas") or metadata.get("notes") or ""
-        task_type = _normalize_task_type(
-            metadata.get("тип") or metadata.get("tipo") or metadata.get("type") or ""
-        )
+        dependencies = metadata.get("зависимости") or metadata.get("dependencies") or ""
+        evidence = metadata.get("подтверждение") or metadata.get("evidence") or ""
+        agent = metadata.get("агент") or metadata.get("agent") or ""
+        notes = metadata.get("заметки") or metadata.get("notes") or ""
+        task_type = _normalize_task_type(metadata.get("тип") or metadata.get("type") or "")
 
         current.update(
             {
@@ -780,16 +758,9 @@ def _normalize_task_id(task_id: str) -> str:
 
 def _normalize_task_type(task_type: str) -> str:
     cleaned = _normalize_free_text(task_type).replace("_", "-")
-    if cleaned in {"", "generica", "generico"}:
+    if not cleaned:
         return "generic"
-    aliases = {
-        "principal": "main",
-        "flujo": "main",
-        "fase": "phase",
-        "verificacion": "verify",
-        "validacion": "verify",
-    }
-    normalized = aliases.get(cleaned, cleaned)
+    normalized = "verify" if cleaned == "validation" else cleaned
     if normalized in _KNOWN_KANBAN_TASK_TYPES:
         return normalized
     return "generic"
@@ -803,11 +774,7 @@ def _infer_legacy_task_type(task: Dict[str, Any]) -> str:
     agent_normalized = _normalize_free_text(agent)
 
     if (
-        "con /alfred-dev:verify" in title_normalized
-        or "через /alfred-dev:verify" in title_normalized
-        or "con /alfred-dev:uat" in title_normalized
-        or "через /alfred-dev:uat" in title_normalized
-        or "validacion manual pendiente del flujo" in notes_normalized
+        "через /alfred-dev:uat" in title_normalized
         or "ручная проверка процесса" in notes_normalized
         or agent_normalized == "alfred:verify"
     ):
@@ -818,7 +785,7 @@ def _infer_legacy_task_type(task: Dict[str, Any]) -> str:
         command = match.group("command")
         phase_name = match.group("phase")
         flow = FLOWS.get(command)
-        if flow and any(phase.get("nombre") == phase_name for phase in flow.get("fases", [])):
+        if flow and any(phase.get("name") == phase_name for phase in flow.get("phases", [])):
             return "phase"
 
     if agent_normalized.startswith("alfred:"):
@@ -829,10 +796,6 @@ def _infer_legacy_task_type(task: Dict[str, Any]) -> str:
     if any(
         signal in notes_normalized
         for signal in (
-            "fase actual:",
-            "flujo completado",
-            "trabajo activo visible para sonia y la memory ui",
-            "fases completadas:",
             "текущая фаза:",
             "процесс завершен",
             "активная работа видна в sonia и memory ui",
@@ -1263,8 +1226,8 @@ def _ensure_session_execution_task(
     project_dir: str,
     session: Dict[str, Any],
 ) -> Dict[str, Any]:
-    description = " ".join((session.get("descripcion", "") or "").split()).strip()
-    command = str(session.get("comando", "alfred")).strip() or "alfred"
+    description = " ".join((session.get("description", "") or "").split()).strip()
+    command = str(session.get("command", "alfred")).strip() or "alfred"
     agent_label = f"alfred:{command}"
 
     board = load_kanban_board(project_dir)
@@ -1441,10 +1404,10 @@ def _project_dir_from_state_path(state_path: str) -> str:
 
 
 def _load_matching_session_uat(project_dir: str, session: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    if session.get("fase_actual") != "completado":
+    if session.get("current_phase") != "completed":
         return None
 
-    command = str(session.get("comando", "desconocido")).strip() or "desconocido"
+    command = str(session.get("command", "unknown")).strip() or "unknown"
     target_id = f"session:{command}:{_last_completed_at(session)}"
     uat = load_uat(project_dir)
     if isinstance(uat, dict) and uat.get("target_id") == target_id:
@@ -1454,22 +1417,22 @@ def _load_matching_session_uat(project_dir: str, session: Dict[str, Any]) -> Opt
 
 def _session_phase_summary(session: Dict[str, Any]) -> str:
     completed = [
-        phase.get("nombre", "")
-        for phase in (session.get("fases_completadas") or [])
-        if isinstance(phase, dict) and phase.get("nombre")
+        phase.get("name", "")
+        for phase in (session.get("completed_phases") or [])
+        if isinstance(phase, dict) and phase.get("name")
     ]
     if not completed:
         return "Завершённых фаз пока нет."
     return "Завершённые фазы: " + ", ".join(completed) + "."
 
 
-def _completed_style_visual_phase(session: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    for phase in (session.get("fases_completadas") or []):
+def _completed_visual_style_phase(session: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    for phase in (session.get("completed_phases") or []):
         if not isinstance(phase, dict):
             continue
-        if phase.get("nombre") != "estilo_visual":
+        if phase.get("name") != "visual_style":
             continue
-        if str(phase.get("resultado", "")).strip() == "saltada":
+        if str(phase.get("result", "")).strip() == "skipped":
             return None
         return phase
     return None
@@ -1526,13 +1489,13 @@ def _enrich_style_visual_phase_result(project_dir: str, phase_result: Dict[str, 
     enriched = dict(phase_result)
     artifacts = [
         str(item).strip()
-        for item in (enriched.get("artefactos") or [])
+        for item in (enriched.get("artifacts") or [])
         if str(item).strip()
     ]
     style_direction_path = _project_path(project_dir, STYLE_DIRECTION_RELATIVE_PATH)
     if os.path.isfile(style_direction_path) and STYLE_DIRECTION_RELATIVE_PATH not in artifacts:
         artifacts.append(STYLE_DIRECTION_RELATIVE_PATH)
-    enriched["artefactos"] = artifacts
+    enriched["artifacts"] = artifacts
 
     choice = _load_latest_designer_choice(project_dir)
     if isinstance(choice, dict):
@@ -1543,32 +1506,32 @@ def _enrich_style_visual_phase_result(project_dir: str, phase_result: Dict[str, 
     return enriched
 
 
-def _enrich_session_style_visual(project_dir: str, session: Dict[str, Any]) -> Dict[str, Any]:
-    phase_result = _completed_style_visual_phase(session)
+def _enrich_session_visual_style(project_dir: str, session: Dict[str, Any]) -> Dict[str, Any]:
+    phase_result = _completed_visual_style_phase(session)
     if phase_result is None:
         return session
 
     enriched = dict(session)
     phase_entries: List[Dict[str, Any]] = []
-    for phase in (session.get("fases_completadas") or []):
+    for phase in (session.get("completed_phases") or []):
         if not isinstance(phase, dict):
             phase_entries.append(phase)
             continue
-        if phase.get("nombre") == "estilo_visual" and str(phase.get("resultado", "")).strip() != "saltada":
+        if phase.get("name") == "visual_style" and str(phase.get("result", "")).strip() != "skipped":
             phase_entries.append(_enrich_style_visual_phase_result(project_dir, phase))
         else:
             phase_entries.append(phase)
 
-    enriched["fases_completadas"] = phase_entries
+    enriched["completed_phases"] = phase_entries
     global_artifacts = [
         str(item).strip()
-        for item in (session.get("artefactos") or [])
+        for item in (session.get("artifacts") or [])
         if str(item).strip()
     ]
     if os.path.isfile(_project_path(project_dir, STYLE_DIRECTION_RELATIVE_PATH)):
         if STYLE_DIRECTION_RELATIVE_PATH not in global_artifacts:
             global_artifacts.append(STYLE_DIRECTION_RELATIVE_PATH)
-    enriched["artefactos"] = global_artifacts
+    enriched["artifacts"] = global_artifacts
     return enriched
 
 
@@ -1584,19 +1547,19 @@ def _phase_task_notes(
     phase_result: Optional[Dict[str, Any]] = None,
     current_phase: bool = False,
 ) -> str:
-    phase_name = phase_def.get("nombre", "desconocida")
-    agents = ", ".join(phase_def.get("agentes") or [])
+    phase_name = phase_def.get("name", "unknown")
+    agents = ", ".join(phase_def.get("agents") or [])
     base = f"Фаза '{phase_name}' процесса '{command}'."
     if agents:
         base += f" Базовые агенты: {agents}."
 
     if phase_result is not None:
-        result = str(phase_result.get("resultado", "aprobado")).strip() or "aprobado"
-        if result == "saltada":
+        result = str(phase_result.get("result", "approved")).strip() or "approved"
+        if result == "skipped":
             return f"{base} Фаза пропущена по условию процесса."
 
-        iterations = phase_result.get("iteraciones", 0)
-        artifacts = phase_result.get("artefactos") or []
+        iterations = phase_result.get("iterations", 0)
+        artifacts = phase_result.get("artifacts") or []
         note = f"{base} Фаза завершена с результатом '{_phase_status_label(result)}'."
         if isinstance(iterations, int) and iterations > 0:
             note += f" Внутренних итераций: {iterations}."
@@ -1608,7 +1571,7 @@ def _phase_task_notes(
         return note
 
     if current_phase:
-        gate_type = phase_def.get("gate_tipo", "без gate")
+        gate_type = phase_def.get("gate_type", "без gate")
         return f"{base} Фаза активна. Gate: {gate_type}."
 
     return f"{base} Ожидает выполнения."
@@ -1617,9 +1580,9 @@ def _phase_task_notes(
 def _phase_task_evidence(phase_result: Optional[Dict[str, Any]]) -> str:
     if not isinstance(phase_result, dict):
         return ""
-    completed_at = str(phase_result.get("completada_en", "")).strip()
-    result = str(phase_result.get("resultado", "")).strip()
-    if result == "saltada":
+    completed_at = str(phase_result.get("completed_at", "")).strip()
+    result = str(phase_result.get("result", "")).strip()
+    if result == "skipped":
         return ""
     if _designer_field(phase_result, "choice"):
         label = str(_designer_field(phase_result, "label") or _designer_field(phase_result, "choice")).strip()
@@ -1627,7 +1590,7 @@ def _phase_task_evidence(phase_result: Optional[Dict[str, Any]]) -> str:
         evidence = f"Визуальный выбор '{label}' зарегистрирован"
         if timestamp:
             evidence += f" {timestamp}"
-        artifacts = phase_result.get("artefactos") or []
+        artifacts = phase_result.get("artifacts") or []
         if STYLE_DIRECTION_RELATIVE_PATH in artifacts:
             evidence += f", создан артефакт {STYLE_DIRECTION_RELATIVE_PATH}"
         return evidence
@@ -1642,19 +1605,19 @@ def _phase_task_body(
     phase_result: Optional[Dict[str, Any]] = None,
     current_phase: bool = False,
 ) -> str:
-    phase_name = phase_def.get("nombre", "desconocida")
-    gate_type = phase_def.get("gate_tipo", "без gate")
-    mode = "параллельно" if phase_def.get("paralelo") else "последовательно"
-    description = " ".join((phase_def.get("descripcion", "") or "").split()).strip()
-    artifacts = phase_result.get("artefactos") if isinstance(phase_result, dict) else []
+    phase_name = phase_def.get("name", "unknown")
+    gate_type = phase_def.get("gate_type", "без gate")
+    mode = "параллельно" if phase_def.get("parallel") else "последовательно"
+    description = " ".join((phase_def.get("description", "") or "").split()).strip()
+    artifacts = phase_result.get("artifacts") if isinstance(phase_result, dict) else []
     if not isinstance(artifacts, list):
         artifacts = []
 
-    result_label = "pendiente"
+    result_label = "pending"
     if phase_result is not None:
-        result_label = str(phase_result.get("resultado", "aprobado")).strip() or "aprobado"
+        result_label = str(phase_result.get("result", "approved")).strip() or "approved"
     elif current_phase:
-        result_label = "en curso"
+        result_label = "in_progress"
 
     lines = [
         f"Имя фазы: {phase_name}",
@@ -1666,10 +1629,10 @@ def _phase_task_body(
         lines.append(f"Цель: {description}")
 
     if isinstance(phase_result, dict):
-        iterations = phase_result.get("iteraciones", 0)
+        iterations = phase_result.get("iterations", 0)
         if isinstance(iterations, int):
             lines.append(f"Внутренних итераций: {iterations}")
-        completed_at = str(phase_result.get("completada_en", "")).strip()
+        completed_at = str(phase_result.get("completed_at", "")).strip()
         if completed_at:
             lines.append(f"Завершена: {completed_at}")
         if _designer_field(phase_result, "choice"):
@@ -1682,25 +1645,25 @@ def _phase_task_body(
     if artifacts:
         lines.append("Артефакты:")
         lines.extend(f"* {item}" for item in artifacts if str(item).strip())
-    elif phase_result is not None and result_label != "saltada":
+    elif phase_result is not None and result_label != "skipped":
         lines.append("Артефакты: явных артефактов нет")
 
     return "\n".join(lines)
 
 
 def _sync_session_phase_tasks(project_dir: str, session: Dict[str, Any]) -> Dict[str, str]:
-    command = str(session.get("comando", "alfred")).strip() or "alfred"
+    command = str(session.get("command", "alfred")).strip() or "alfred"
     flow = FLOWS.get(command)
     if not flow:
         return {}
 
-    description = " ".join((session.get("descripcion", "") or "").split()).strip()
+    description = " ".join((session.get("description", "") or "").split()).strip()
     completed_entries = {
-        phase.get("nombre", ""): phase
-        for phase in (session.get("fases_completadas") or [])
-        if isinstance(phase, dict) and phase.get("nombre")
+        phase.get("name", ""): phase
+        for phase in (session.get("completed_phases") or [])
+        if isinstance(phase, dict) and phase.get("name")
     }
-    current_phase = str(session.get("fase_actual", "")).strip()
+    current_phase = str(session.get("current_phase", "")).strip()
     stored_ids = session.get("kanban_phase_task_ids")
     if not isinstance(stored_ids, dict):
         stored_ids = {}
@@ -1708,8 +1671,8 @@ def _sync_session_phase_tasks(project_dir: str, session: Dict[str, Any]) -> Dict
     phase_task_ids: Dict[str, str] = {}
     previous_task_id = ""
 
-    for phase_def in flow.get("fases", []):
-        phase_name = phase_def.get("nombre", "desconocida")
+    for phase_def in flow.get("phases", []):
+        phase_name = phase_def.get("name", "unknown")
         phase_result = completed_entries.get(phase_name)
         is_current = current_phase == phase_name and phase_result is None
         if phase_result is not None:
@@ -1733,7 +1696,7 @@ def _sync_session_phase_tasks(project_dir: str, session: Dict[str, Any]) -> Dict
         )
         evidence = _phase_task_evidence(phase_result)
         dependency = previous_task_id if previous_task_id else ""
-        agent = ", ".join(phase_def.get("agentes") or [])
+        agent = ", ".join(phase_def.get("agents") or [])
         criteria = _normalize_task_criteria(None, title, notes, body, evidence)
 
         board = load_kanban_board(project_dir)
@@ -1794,14 +1757,14 @@ def _sync_session_phase_tasks(project_dir: str, session: Dict[str, Any]) -> Dict
 
 
 def _sync_session_main_task(project_dir: str, session: Dict[str, Any]) -> Dict[str, Any]:
-    description = " ".join((session.get("descripcion", "") or "").split()).strip()
-    command = str(session.get("comando", "alfred")).strip() or "alfred"
+    description = " ".join((session.get("description", "") or "").split()).strip()
+    command = str(session.get("command", "alfred")).strip() or "alfred"
     agent_label = f"alfred:{command}"
-    phase = str(session.get("fase_actual", "")).strip() or "desconocida"
+    phase = str(session.get("current_phase", "")).strip() or "unknown"
     uat = _load_matching_session_uat(project_dir, session)
     uat_status = str(uat.get("status", "")).strip() if uat else ""
 
-    if phase == "completado":
+    if phase == "completed":
         if uat_status == "rejected":
             target_status = "blocked"
             session_note = (
@@ -1881,23 +1844,23 @@ def sync_session_state_to_kanban(
 ) -> Dict[str, Any]:
     if not isinstance(session, dict):
         return session
-    if not session.get("comando") or not session.get("descripcion"):
+    if not session.get("command") or not session.get("description"):
         return session
 
     project_dir = _project_dir_from_state_path(state_path)
     normalize_kanban_task_types(project_dir)
-    synced = _enrich_session_style_visual(project_dir, dict(session))
+    synced = _enrich_session_visual_style(project_dir, dict(session))
     main_task = _sync_session_main_task(project_dir, synced)
     synced["kanban_task_id"] = main_task.get("id", "")
     synced["kanban_phase_task_ids"] = _sync_session_phase_tasks(project_dir, synced)
 
-    command = str(synced.get("comando", "alfred")).strip() or "alfred"
-    description = " ".join((synced.get("descripcion", "") or "").split()).strip()
-    phase = str(synced.get("fase_actual", "")).strip()
+    command = str(synced.get("command", "alfred")).strip() or "alfred"
+    description = " ".join((synced.get("description", "") or "").split()).strip()
+    phase = str(synced.get("current_phase", "")).strip()
     uat = _load_matching_session_uat(project_dir, synced)
     uat_status = str(uat.get("status", "")).strip() if uat else ""
 
-    if phase == "completado" and uat_status in {"approved", "rejected"}:
+    if phase == "completed" and uat_status in {"approved", "rejected"}:
         _delete_first_matching_kanban_task(
             project_dir,
             [synced.get("kanban_verify_task_id", ""), _verification_task_title(description)],
@@ -1947,17 +1910,17 @@ def _phase_fallback_visible_criteria(phase_def: Dict[str, Any]) -> List[str]:
     knows the operational goal and the gate type.
     """
     criteria: List[str] = []
-    description = " ".join((phase_def.get("descripcion", "") or "").split()).strip()
-    gate = str(phase_def.get("gate_tipo", "")).strip()
+    description = " ".join((phase_def.get("description", "") or "").split()).strip()
+    gate = str(phase_def.get("gate_type", "")).strip()
 
     if description:
         criteria.append(description.rstrip("."))
 
-    if gate and gate not in {"libre", "sin gate", "без gate"}:
+    if gate and gate not in {"free", "без gate"}:
         criteria.append(f"Закрыть gate `{gate}` без открытых блокеров")
 
     if not criteria:
-        phase_name = str(phase_def.get("nombre", "desconocida")).strip() or "desconocida"
+        phase_name = str(phase_def.get("name", "unknown")).strip() or "unknown"
         criteria.append(f"Завершить фазу `{phase_name}` с видимым рабочим подтверждением")
 
     return criteria
@@ -1967,14 +1930,14 @@ def _build_phase_doc_rows(
     session: Dict[str, Any],
     board: Dict[str, List[Dict[str, Any]]],
 ) -> List[Dict[str, Any]]:
-    command = str(session.get("comando", "alfred")).strip() or "alfred"
-    description = " ".join((session.get("descripcion", "") or "").split()).strip() or "без описания"
+    command = str(session.get("command", "alfred")).strip() or "alfred"
+    description = " ".join((session.get("description", "") or "").split()).strip() or "без описания"
     flow = FLOWS.get(command, {})
-    current_phase = str(session.get("fase_actual", "")).strip()
+    current_phase = str(session.get("current_phase", "")).strip()
     completed_entries = {
-        str(phase.get("nombre", "")).strip(): phase
-        for phase in (session.get("fases_completadas") or [])
-        if isinstance(phase, dict) and str(phase.get("nombre", "")).strip()
+        str(phase.get("name", "")).strip(): phase
+        for phase in (session.get("completed_phases") or [])
+        if isinstance(phase, dict) and str(phase.get("name", "")).strip()
     }
     tasks_by_id = _kanban_tasks_by_id(board)
     stored_ids = session.get("kanban_phase_task_ids")
@@ -1983,15 +1946,15 @@ def _build_phase_doc_rows(
     optional_flags = _session_optional_agent_flags(session)
 
     rows: List[Dict[str, Any]] = []
-    for phase_def in flow.get("fases", []):
-        phase_name = str(phase_def.get("nombre", "")).strip() or "desconocida"
+    for phase_def in flow.get("phases", []):
+        phase_name = str(phase_def.get("name", "")).strip() or "unknown"
         phase_result = completed_entries.get(phase_name)
         if phase_result is not None:
-            status = str(phase_result.get("resultado", "aprobado")).strip() or "aprobado"
+            status = str(phase_result.get("result", "approved")).strip() or "approved"
         elif current_phase == phase_name:
-            status = "en curso"
+            status = "in_progress"
         else:
-            status = "pendiente"
+            status = "pending"
 
         phase_task = tasks_by_id.get(str(stored_ids.get(phase_name, "")).strip())
         if phase_task is None:
@@ -2014,23 +1977,23 @@ def _build_phase_doc_rows(
             evidence = " ".join((phase_task.get("evidence", "") or "").split()).strip()
         artifacts = []
         if isinstance(phase_result, dict):
-            artifacts = _dedupe_artifact_paths(list(phase_result.get("artefactos") or []))
+            artifacts = _dedupe_artifact_paths(list(phase_result.get("artifacts") or []))
         effective_optionals = get_effective_agents(phase_name, optional_flags)
         parallel_optionals = order_optional_agent_names(
-            list(effective_optionals.get("paralelo") or [])
+            list(effective_optionals.get("parallel") or [])
         )
         sequential_optionals = order_optional_agent_names(
-            list(effective_optionals.get("secuencial") or [])
+            list(effective_optionals.get("sequential") or [])
         )
 
         rows.append({
             "name": phase_name,
             "status": status,
-            "gate": str(phase_def.get("gate_tipo", "без gate")).strip() or "без gate",
-            "agents": list(phase_def.get("agentes") or []),
+            "gate": str(phase_def.get("gate_type", "без gate")).strip() or "без gate",
+            "agents": list(phase_def.get("agents") or []),
             "parallel_optionals": parallel_optionals,
             "sequential_optionals": sequential_optionals,
-            "iterations": int(phase_result.get("iteraciones", 0)) if isinstance(phase_result, dict) else 0,
+            "iterations": int(phase_result.get("iterations", 0)) if isinstance(phase_result, dict) else 0,
             "criteria": criteria,
             "criteria_hints": criteria_hints,
             "evidence": evidence,
@@ -2051,34 +2014,32 @@ def _get_verify_task(
 
 
 def _session_next_command(session: Dict[str, Any], uat: Optional[Dict[str, Any]]) -> str:
-    phase = str(session.get("fase_actual", "")).strip()
-    if phase != "completado":
-        return "/alfred-dev:retomar"
+    phase = str(session.get("current_phase", "")).strip()
+    if phase != "completed":
+        return "/alfred-dev:resume"
 
     uat_status = str((uat or {}).get("status", "")).strip()
     if uat_status == "approved":
         return "/alfred"
 
-    next_after_completion = _canonical_slash_commands(
-        session.get("next_after_completion", "")
-    ).strip()
+    next_after_completion = str(session.get("next_after_completion", "") or "").strip()
     if next_after_completion:
         return next_after_completion
     return "/alfred-dev:uat"
 
 
 def _session_status_label(session: Dict[str, Any], uat: Optional[Dict[str, Any]]) -> str:
-    phase = str(session.get("fase_actual", "")).strip()
-    if phase == "completado":
+    phase = str(session.get("current_phase", "")).strip()
+    if phase == "completed":
         uat_status = str((uat or {}).get("status", "")).strip()
         if uat_status == "approved":
-            return "completado y verificado"
+            return "completed_verified"
         if uat_status == "rejected":
-            return "completado con UAT rechazada"
-        return "completado pendiente de UAT"
+            return "completed_uat_rejected"
+        return "completed_uat_pending"
     if is_session_paused(session):
-        return "pausado"
-    return "activo"
+        return "paused"
+    return "active"
 
 
 def render_session_current_markdown(
@@ -2087,13 +2048,13 @@ def render_session_current_markdown(
     uat: Optional[Dict[str, Any]] = None,
     board: Optional[Dict[str, List[Dict[str, Any]]]] = None,
 ) -> str:
-    command = str(session.get("comando", "alfred")).strip() or "alfred"
-    description = " ".join((session.get("descripcion", "") or "").split()).strip() or "без описания"
-    phase = str(session.get("fase_actual", "desconocida")).strip() or "desconocida"
+    command = str(session.get("command", "alfred")).strip() or "alfred"
+    description = " ".join((session.get("description", "") or "").split()).strip() or "без описания"
+    phase = str(session.get("current_phase", "unknown")).strip() or "unknown"
     completed = [
-        str(phase_entry.get("nombre", "")).strip()
-        for phase_entry in (session.get("fases_completadas") or [])
-        if isinstance(phase_entry, dict) and str(phase_entry.get("nombre", "")).strip()
+        str(phase_entry.get("name", "")).strip()
+        for phase_entry in (session.get("completed_phases") or [])
+        if isinstance(phase_entry, dict) and str(phase_entry.get("name", "")).strip()
     ]
     latest_completed = completed[-1] if completed else ""
     next_command = _session_next_command(session, uat)
@@ -2111,7 +2072,7 @@ def render_session_current_markdown(
     ]
     if team_source:
         lines.append(f"- Источник runtime-команды: {team_source}.")
-    if phase != "completado":
+    if phase != "completed":
         lines.append(f"- Текущая фаза: `{phase}`.")
         if current_row:
             lines.append(f"- Незакрытая gate: `{current_row['gate']}`.")
@@ -2149,20 +2110,20 @@ def render_session_progress_markdown(
     board: Dict[str, List[Dict[str, Any]]],
     uat: Optional[Dict[str, Any]] = None,
 ) -> str:
-    command = str(session.get("comando", "alfred")).strip() or "alfred"
-    description = " ".join((session.get("descripcion", "") or "").split()).strip() or "без описания"
-    phase = str(session.get("fase_actual", "desconocida")).strip() or "desconocida"
+    command = str(session.get("command", "alfred")).strip() or "alfred"
+    description = " ".join((session.get("description", "") or "").split()).strip() or "без описания"
+    phase = str(session.get("current_phase", "unknown")).strip() or "unknown"
     flow = FLOWS.get(command, {})
-    total_phases = len(flow.get("fases", []))
+    total_phases = len(flow.get("phases", []))
     completed_entries = [
         phase_entry
-        for phase_entry in (session.get("fases_completadas") or [])
+        for phase_entry in (session.get("completed_phases") or [])
         if isinstance(phase_entry, dict)
     ]
     completed_names = [
-        str(phase_entry.get("nombre", "")).strip()
+        str(phase_entry.get("name", "")).strip()
         for phase_entry in completed_entries
-        if str(phase_entry.get("nombre", "")).strip()
+        if str(phase_entry.get("name", "")).strip()
     ]
     visible_board = _filter_kanban_board_tasks(board, _is_visible_kanban_task)
     backlog_total = len(visible_board.get("backlog", []))
@@ -2171,7 +2132,7 @@ def render_session_progress_markdown(
     blocked_total = len(visible_board.get("blocked", []))
     total_visible = backlog_total + in_progress_total + done_total + blocked_total
     progress_pct = round((done_total / total_visible) * 100) if total_visible else 0
-    artifacts = _dedupe_artifact_paths(list(session.get("artefactos") or []))
+    artifacts = _dedupe_artifact_paths(list(session.get("artifacts") or []))
     phase_rows = _build_phase_doc_rows(session, board)
     team_source = _team_source_label_ru(_session_team_source_label(session))
     on_demand_optionals = _session_on_demand_optionals_for_flow(session)
@@ -2186,7 +2147,7 @@ def render_session_progress_markdown(
     ]
     if team_source:
         lines.append(f"- Источник runtime-команды: {team_source}.")
-    if phase != "completado":
+    if phase != "completed":
         lines.append(f"- Текущая фаза: `{phase}`.")
     if completed_names:
         lines.append("- Закрытые фазы: " + ", ".join(f"`{name}`" for name in completed_names) + ".")
@@ -2229,21 +2190,21 @@ def render_session_traceability_markdown(
     uat: Optional[Dict[str, Any]] = None,
     board: Optional[Dict[str, List[Dict[str, Any]]]] = None,
 ) -> str:
-    command = str(session.get("comando", "alfred")).strip() or "alfred"
-    description = " ".join((session.get("descripcion", "") or "").split()).strip() or "без описания"
-    phase = str(session.get("fase_actual", "desconocida")).strip() or "desconocida"
+    command = str(session.get("command", "alfred")).strip() or "alfred"
+    description = " ".join((session.get("description", "") or "").split()).strip() or "без описания"
+    phase = str(session.get("current_phase", "unknown")).strip() or "unknown"
     completed_entries = [
         phase_entry
-        for phase_entry in (session.get("fases_completadas") or [])
+        for phase_entry in (session.get("completed_phases") or [])
         if isinstance(phase_entry, dict)
     ]
-    artifacts = _dedupe_artifact_paths(list(session.get("artefactos") or []))
+    artifacts = _dedupe_artifact_paths(list(session.get("artifacts") or []))
     phase_rows = _build_phase_doc_rows(session, board or {})
     verify_task = _get_verify_task(session, board or {})
     team_source = _team_source_label_ru(_session_team_source_label(session))
     on_demand_optionals = _session_on_demand_optionals_for_flow(session)
 
-    if phase == "completado":
+    if phase == "completed":
         uat_status = str((uat or {}).get("status", "")).strip()
         if uat_status == "approved":
             main_risk = "Главного блокера нет: процесс уже проверен."
@@ -2285,9 +2246,9 @@ def render_session_traceability_markdown(
 
     if completed_entries:
         for phase_entry in completed_entries:
-            phase_name = str(phase_entry.get("nombre", "")).strip() or "desconocida"
-            result = str(phase_entry.get("resultado", "")).strip() or "aprobado"
-            phase_artifacts = _dedupe_artifact_paths(list(phase_entry.get("artefactos") or []))
+            phase_name = str(phase_entry.get("name", "")).strip() or "unknown"
+            result = str(phase_entry.get("result", "")).strip() or "approved"
+            phase_artifacts = _dedupe_artifact_paths(list(phase_entry.get("artifacts") or []))
             summary = f"- `{phase_name}` -> `{_phase_status_label(result)}`"
             if phase_artifacts:
                 summary += f" · артефакты: {', '.join(f'`{item}`' for item in phase_artifacts[:3])}"
@@ -2390,10 +2351,10 @@ def sync_session_state_to_operational_docs(
 ) -> Dict[str, Any]:
     if not isinstance(session, dict):
         return session
-    if not session.get("comando") or not session.get("descripcion"):
+    if not session.get("command") or not session.get("description"):
         return session
 
-    synced = _enrich_session_style_visual(project_dir, dict(session))
+    synced = _enrich_session_visual_style(project_dir, dict(session))
     uat = _load_matching_session_uat(project_dir, synced)
     board = load_kanban_board(project_dir)
     os.makedirs(_project_path(project_dir, os.path.join("docs", "project")), exist_ok=True)
@@ -2401,8 +2362,8 @@ def sync_session_state_to_operational_docs(
     current_path = _project_path(project_dir, CURRENT_RELATIVE_PATH)
     progress_path = _project_path(project_dir, PROGRESS_MD_RELATIVE_PATH)
     traceability_path = _project_path(project_dir, TRACEABILITY_MD_RELATIVE_PATH)
-    synced["artefactos"] = _dedupe_artifact_paths(
-        list(synced.get("artefactos") or [])
+    synced["artifacts"] = _dedupe_artifact_paths(
+        list(synced.get("artifacts") or [])
         + (
             [UAT_MD_RELATIVE_PATH, UAT_JSON_RELATIVE_PATH]
             if isinstance(uat, dict)
@@ -2449,9 +2410,7 @@ def _task_is_skipped_phase(task: Dict[str, Any]) -> bool:
     body = _normalize_free_text(task.get("body", ""))
     notes = _normalize_free_text(task.get("notes", ""))
     return (
-        "estado de fase: saltada" in body
-        or "статус фазы: пропущена" in body
-        or "fase saltada por condicion del flujo" in notes
+        "статус фазы: пропущена" in body
         or "фаза пропущена по условию процесса" in notes
     )
 
@@ -2486,10 +2445,10 @@ def _build_progress_overview_cards(
     """Build compact, stable cards for the overview and UI."""
     cards: List[Dict[str, Any]] = []
     has_active_state = bool(
-        state and state.get("fase_actual") != "completado" and not is_session_paused(state)
+        state and state.get("current_phase") != "completed" and not is_session_paused(state)
     )
     has_paused_state = bool(
-        state and state.get("fase_actual") != "completado" and is_session_paused(state)
+        state and state.get("current_phase") != "completed" and is_session_paused(state)
     )
     has_handoff = bool(handoff and not handoff.get("resolved", False))
 
@@ -2498,21 +2457,21 @@ def _build_progress_overview_cards(
             {
                 "label": "Активный процесс",
                 "title": (
-                    f"{state.get('comando', 'desconocido')} — "
-                    f"{state.get('descripcion', 'без описания')}"
+                    f"{state.get('command', 'unknown')} — "
+                    f"{state.get('description', 'без описания')}"
                 ),
-                "body": f"Текущая фаза: {state.get('fase_actual', 'desconocida')}",
-                "chips": [state.get("fase_actual", "desconocida")],
+                "body": f"Текущая фаза: {state.get('current_phase', 'unknown')}",
+                "chips": [state.get("current_phase", "unknown")],
             }
         )
     elif has_handoff:
         cards.append(
             {
                 "label": "Незакрытый handoff",
-                "title": handoff.get("command", "desconocido"),
+                "title": handoff.get("command", "unknown"),
                 "body": (
-                    f"Фаза: {handoff.get('phase', 'desconocida')} · "
-                    f"Продолжить через {handoff.get('resume_command', '/alfred-dev:retomar')}"
+                    f"Фаза: {handoff.get('phase', 'unknown')} · "
+                    f"Продолжить через {handoff.get('resume_command', '/alfred-dev:resume')}"
                 ),
                 "chips": ["pending"],
             }
@@ -2522,20 +2481,20 @@ def _build_progress_overview_cards(
             {
                 "label": "Сессия на паузе",
                 "title": (
-                    f"{state.get('comando', 'desconocido')} — "
-                    f"{state.get('descripcion', 'без описания')}"
+                    f"{state.get('command', 'unknown')} — "
+                    f"{state.get('description', 'без описания')}"
                 ),
-                "body": f"Фаза на паузе: {state.get('fase_actual', 'desconocida')}",
+                "body": f"Фаза на паузе: {state.get('current_phase', 'unknown')}",
                 "chips": ["paused"],
             }
         )
-    elif state and state.get("fase_actual") == "completado":
+    elif state and state.get("current_phase") == "completed":
         cards.append(
             {
                 "label": "Последний завершённый процесс",
                 "title": (
-                    f"{state.get('comando', 'desconocido')} — "
-                    f"{state.get('descripcion', 'без описания')}"
+                    f"{state.get('command', 'unknown')} — "
+                    f"{state.get('description', 'без описания')}"
                 ),
                 "body": (
                     f"Итоговый статус: завершено"
@@ -2545,7 +2504,7 @@ def _build_progress_overview_cards(
                         else " · UAT в ожидании"
                     )
                 ),
-                "chips": ["completado"],
+                "chips": ["completed"],
             }
         )
 
@@ -2595,10 +2554,6 @@ def _build_project_signal_cards(
     filtered_traceability_signals = list(traceability_signals)
 
     if overview_labels & {
-        "Flujo activo",
-        "Handoff pendiente",
-        "Sesión pausada",
-        "Último flujo completado",
         "Активный процесс",
         "Незакрытый handoff",
         "Сессия на паузе",
@@ -2609,15 +2564,6 @@ def _build_project_signal_cards(
             for item in filtered_current_signals
             if not item.startswith(
                 (
-                    "Flujo activo:",
-                    "Flujo:",
-                    "Handoff pendiente",
-                    "Sesión pausada:",
-                    "Objetivo actual:",
-                    "Estado:",
-                    "Estado final registrado:",
-                    "Última fase cerrada:",
-                    "Fase actual:",
                     "Активный процесс:",
                     "Процесс:",
                     "Незакрытый handoff",
@@ -2635,9 +2581,6 @@ def _build_project_signal_cards(
             for item in filtered_progress_signals
             if not item.startswith(
                 (
-                    "Flujo operativo:",
-                    "Trabajo en curso:",
-                    "Estado del flujo:",
                     "Рабочий процесс:",
                     "Работа в процессе:",
                     "Статус процесса:",
@@ -2649,26 +2592,24 @@ def _build_project_signal_cards(
             for item in filtered_traceability_signals
             if not item.startswith(
                 (
-                    "Flujo:",
-                    "Objetivo trazado:",
                     "Процесс:",
                     "Отслеживаемая цель:",
                 )
             )
         ]
 
-    if overview_labels & {"Siguiente paso recomendado", "Рекомендуемый следующий шаг"}:
+    if overview_labels & {"Рекомендуемый следующий шаг"}:
         filtered_current_signals = [
             item
             for item in filtered_current_signals
-            if not item.startswith(("Siguiente paso sugerido:", "Предлагаемый следующий шаг:"))
+            if not item.startswith("Предлагаемый следующий шаг:")
         ]
 
     if "UAT" in overview_labels:
         filtered_traceability_signals = [
             item
             for item in filtered_traceability_signals
-            if not item.startswith(("UAT actual:", "Текущая UAT:"))
+            if not item.startswith("Текущая UAT:")
         ]
 
     cards: List[Dict[str, Any]] = []
@@ -2785,7 +2726,7 @@ def build_lane_snapshot(project_dir: str, lane: str) -> Dict[str, Any]:
 
 
 def render_lane_markdown(snapshot: Dict[str, Any]) -> str:
-    lane = snapshot.get("lane", "desconocido")
+    lane = snapshot.get("lane", "unknown")
     label = _KANBAN_STATUS_LABELS.get(lane, lane)
     tasks = snapshot.get("tasks", [])
     next_action = snapshot.get("next_action", {"command": "alfred", "reason": ""})
@@ -2912,13 +2853,13 @@ def validate_operational_artifacts(project_dir: str) -> Dict[str, Any]:
 
     state = _load_active_session_state(project_dir) or load_state(_project_path(project_dir, STATE_RELATIVE_PATH))
     if isinstance(state, dict):
-        style_phase = _completed_style_visual_phase(state)
+        style_phase = _completed_visual_style_phase(state)
         if style_phase is not None:
             if os.path.isfile(_project_path(project_dir, STYLE_DIRECTION_RELATIVE_PATH)):
-                checks.append("Для фазы estilo_visual есть docs/style-direction.md.")
+                checks.append("Для фазы visual_style есть docs/style-direction.md.")
             else:
                 warnings.append(
-                    "Фаза estilo_visual отмечена как завершённая, но docs/style-direction.md нет."
+                    "Фаза visual_style отмечена как завершённая, но docs/style-direction.md нет."
                 )
 
     sync_state = _read_json_file(_project_path(project_dir, GITHUB_SYNC_JSON_RELATIVE_PATH))
@@ -2968,7 +2909,7 @@ def validate_operational_artifacts(project_dir: str) -> Dict[str, Any]:
 
 
 def render_validation_markdown(report: Dict[str, Any]) -> str:
-    status = report.get("status", "desconocido")
+    status = report.get("status", "unknown")
     verdict = {
         "ok": "ПРОЙДЕНО",
         "warning": "ПРОЙДЕНО С ПРЕДУПРЕЖДЕНИЯМИ",
@@ -3014,7 +2955,7 @@ def render_normalize_kanban_markdown(result: Dict[str, Any]) -> str:
             task_id = item.get("id") or "без-id"
             title = item.get("title") or "без названия"
             task_type = item.get("task_type") or "generic"
-            status = item.get("status") or "desconocido"
+            status = item.get("status") or "unknown"
             lines.append(f"- [{task_id}] {title} -> `{task_type}` ({status})")
     else:
         lines.append("- Доска уже была нормализована.")
@@ -3460,7 +3401,7 @@ def stop_memory_ui(project_dir: str) -> Dict[str, Any]:
 
 
 _MEMORY_UI_STOP_TOKENS = frozenset({
-    "stop", "cerrar", "detener", "off", "halt",
+    "stop", "off", "halt",
     "стоп", "закрой", "закрыть", "останови", "остановить", "выключи",
 })
 _MEMORY_UI_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
@@ -3756,7 +3697,7 @@ def _issue_body_for_task(task: Dict[str, Any]) -> str:
     lines = [
         "## Синхронизировано Alfred Dev",
         "",
-        f"- Статус SonIA: `{task.get('status', 'desconocido')}`",
+        f"- Статус SonIA: `{task.get('status', 'unknown')}`",
         f"- Источник: `{task.get('path', '-')}`",
     ]
     if task.get("agent"):
@@ -3904,8 +3845,8 @@ def _board_issue_body(
         f"- Синхронизировано: {_now_utc().isoformat()}",
         f"- Текущий рабочий фокус: {next_action.get('focus', 'Рекомендуемый следующий шаг')}",
         (
-            f"- Источник рекомендации: {next_action.get('source_label', next_action.get('source', 'desconocida'))} "
-            f"(`{next_action.get('source', 'desconocida')}`)"
+            f"- Источник рекомендации: {next_action.get('source_label', next_action.get('source', 'unknown'))} "
+            f"(`{next_action.get('source', 'unknown')}`)"
         ),
         f"- Рекомендуемый следующий шаг: `/alfred-dev:{_public_command(next_action.get('command', 'alfred'))}`",
         (
@@ -4042,8 +3983,8 @@ def render_github_sync_markdown(result: Dict[str, Any]) -> str:
         f"- Синхронизировано задач: {len(result.get('tasks', []))}",
         f"- Текущий рабочий фокус: {next_action.get('focus', 'Рекомендуемый следующий шаг')}",
         (
-            f"- Источник рекомендации: {next_action.get('source_label', next_action.get('source', 'desconocida'))} "
-            f"(`{next_action.get('source', 'desconocida')}`)"
+            f"- Источник рекомендации: {next_action.get('source_label', next_action.get('source', 'unknown'))} "
+            f"(`{next_action.get('source', 'unknown')}`)"
         ),
     ]
     skipped = result.get("skipped", [])
@@ -4249,7 +4190,7 @@ def sync_project_to_github(project_dir: str, raw_request: str = "") -> Dict[str,
 
     state = load_state(_project_path(project_dir, STATE_RELATIVE_PATH))
     bypass_path = None
-    if state and state.get("fase_actual") != "completado":
+    if state and state.get("current_phase") != "completed":
         bypass_path = arm_stop_hook_bypass(project_dir, "/alfred-dev:sync-github")
 
     return {
@@ -4296,9 +4237,7 @@ def _extract_recommended_alfred_command(markdown: str) -> Optional[str]:
     for index, raw_line in enumerate(lines):
         normalized_line = _normalize_free_text(re.sub(r"[*_`#>-]+", " ", raw_line))
         if (
-            "comando recomendado" not in normalized_line
-            and "siguiente comando recomendado" not in normalized_line
-            and "рекомендуемая команда" not in normalized_line
+            "рекомендуемая команда" not in normalized_line
             and "рекомендуемая следующая команда" not in normalized_line
         ):
             continue
@@ -4581,18 +4520,18 @@ def _detect_primary_modules(project_dir: str, stack: Optional[Dict[str, str]] = 
 
 def _describe_stack(stack: Dict[str, str]) -> List[str]:
     details = [
-        f"Runtime: `{_stack_value_label(stack.get('runtime', 'desconocido'))}`",
-        f"Основной язык: `{_stack_value_label(stack.get('lenguaje', 'desconocido'))}`",
-        f"Framework: `{_stack_value_label(stack.get('framework', 'desconocido'))}`",
+        f"Runtime: `{_stack_value_label(stack.get('runtime', 'unknown'))}`",
+        f"Основной язык: `{_stack_value_label(stack.get('language', 'unknown'))}`",
+        f"Framework: `{_stack_value_label(stack.get('framework', 'unknown'))}`",
     ]
     orm = stack.get("orm")
-    if orm and orm != "ninguno":
+    if orm and orm != "none":
         details.append(f"ORM: `{orm}`")
     test_runner = stack.get("test_runner")
-    if test_runner and test_runner != "desconocido":
+    if test_runner and test_runner != "unknown":
         details.append(f"Test runner: `{test_runner}`")
     bundler = stack.get("bundler")
-    if bundler and bundler != "desconocido":
+    if bundler and bundler != "unknown":
         details.append(f"Bundler: `{bundler}`")
     return details
 
@@ -4609,7 +4548,7 @@ def _summarize_tests_build_deploy(project_dir: str, package_data: Dict[str, Any]
         tests.append("Есть каталог `tests/`.")
     if os.path.isdir(os.path.join(project_dir, "__tests__")):
         tests.append("Есть каталог `__tests__/`.")
-    if stack.get("test_runner") not in {None, "", "desconocido"}:
+    if stack.get("test_runner") not in {None, "", "unknown"}:
         tests.append(f"Обнаружен runner: `{stack['test_runner']}`.")
     if "test" in scripts:
         tests.append(f"Script `test`: `{scripts['test']}`.")
@@ -4697,10 +4636,10 @@ def _infer_conventions(project_dir: str, stack: Dict[str, str], modules: List[st
             conventions.append(
                 f"Менять схему БД только новой миграцией {tool} в `{relative}/` (сейчас файлов: {count})."
             )
-    elif runtime != "desconocido":
+    elif runtime != "unknown":
         conventions.append(f"Соблюдать конвенции runtime `{runtime}`, которые уже есть в репозитории.")
 
-    if framework not in {None, "", "desconocido"}:
+    if framework not in {None, "", "unknown"}:
         conventions.append(f"Следовать паттернам framework `{framework}`, прежде чем вводить новые структуры.")
 
     if "docs" in modules or os.path.isdir(os.path.join(project_dir, "docs")):
@@ -4716,14 +4655,14 @@ def _infer_risks(project_dir: str, stack: Dict[str, str], analysis: Dict[str, Li
     risks: List[str] = []
 
     tests = analysis.get("tests", [])
-    if any("Не обнаружено" in item or "No se detecta" in item for item in tests):
+    if any("Не обнаружено" in item for item in tests):
         risks.append("Отсутствие явных тестов повышает риск регрессии при изменениях в репозитории.")
 
     deploy = analysis.get("deploy", [])
-    if any("Не обнаружено" in item or "No se detectan" in item for item in deploy):
+    if any("Не обнаружено" in item for item in deploy):
         risks.append("Явных признаков развёртывания/CI нет, поэтому перед крупными изменениями стоит проверить путь поставки.")
 
-    if stack.get("framework") in {None, "", "desconocido"} and project_has_codebase(project_dir):
+    if stack.get("framework") in {None, "", "unknown"} and project_has_codebase(project_dir):
         risks.append("Framework явно не объявлен: есть риск предположить неверную архитектуру, если не сверить её с кодом.")
 
     if not risks:
@@ -4932,8 +4871,8 @@ def render_codebase_current_markdown(record: Dict[str, Any]) -> str:
         "# Current\n\n"
         "- Статус: карта brownfield подготовлена и сохранена в `docs/project/codebase-map.md`.\n"
         f"{focus_line}"
-        f"- Обнаруженный stack: runtime `{_stack_value_label(record['stack'].get('runtime', 'desconocido'))}`, "
-        f"framework `{_stack_value_label(record['stack'].get('framework', 'desconocido'))}`.\n"
+        f"- Обнаруженный stack: runtime `{_stack_value_label(record['stack'].get('runtime', 'unknown'))}`, "
+        f"framework `{_stack_value_label(record['stack'].get('framework', 'unknown'))}`.\n"
         f"- Что осталось: выбрать следующий процесс на основе готовой карты.\n"
         f"- Главный риск: {record['risks'][0]}\n"
         f"- Рекомендуемая следующая команда: /alfred-dev:{_public_command(record['recommended_command'])}\n"
@@ -4949,8 +4888,8 @@ def render_codebase_map_summary(result: Dict[str, Any]) -> str:
     return (
         "## Карта brownfield составлена\n\n"
         f"- Проект: `{result.get('project_name', 'проект')}`\n"
-        f"- Обнаруженный стек: runtime `{_stack_value_label(stack.get('runtime', 'desconocido'))}`, "
-        f"framework `{_stack_value_label(stack.get('framework', 'desconocido'))}`\n"
+        f"- Обнаруженный стек: runtime `{_stack_value_label(stack.get('runtime', 'unknown'))}`, "
+        f"framework `{_stack_value_label(stack.get('framework', 'unknown'))}`\n"
         f"{focus_line}"
         f"- Артефакты: `{CODEBASE_MAP_RELATIVE_PATH}` и `{CURRENT_RELATIVE_PATH}`\n"
         f"- Рекомендуемая следующая команда: `/alfred-dev:{_public_command(result.get('recommended_command', 'alfred'))}`\n"
@@ -4999,7 +4938,7 @@ def render_quick_setup_summary(result: Dict[str, Any]) -> str:
     )
     return (
         "## Quick подготовлен\n\n"
-        f"- Активная сессия: `{result.get('command', 'quick')}` в фазе `{result.get('phase', 'ejecucion_acotada')}`\n"
+        f"- Активная сессия: `{result.get('command', 'quick')}` в фазе `{result.get('phase', 'scoped_execution')}`\n"
         f"- Запрошенное изменение: `{result.get('description', 'быстрое ограниченное изменение')}`\n"
         f"- Сохранённое состояние: `{STATE_RELATIVE_PATH}`\n"
         f"{map_note}"
@@ -5025,16 +4964,16 @@ def _default_flow_description(command: str) -> str:
 
 def _first_phase_description(command: str, phase: str) -> str:
     flow = FLOWS.get(command, {})
-    for candidate in flow.get("fases", []):
-        if candidate.get("nombre") == phase:
-            return str(candidate.get("descripcion", "")).strip()
+    for candidate in flow.get("phases", []):
+        if candidate.get("name") == phase:
+            return str(candidate.get("description", "")).strip()
     return ""
 
 
 def render_flow_start_current_markdown(result: Dict[str, Any]) -> str:
     """Summarize the deterministic start of a long flow in current.md."""
-    command = result.get("command", "flujo")
-    phase = result.get("phase", "fase_inicial")
+    command = result.get("command", "unknown")
+    phase = result.get("phase", "initial_phase")
     description = result.get("description", "trabajo")
     pending_gate = result.get("pending_gate") or "незакрытая gate не обнаружена"
     return (
@@ -5045,14 +4984,14 @@ def render_flow_start_current_markdown(result: Dict[str, Any]) -> str:
         f"- Незакрытая gate: {pending_gate}.\n"
         "- Что готово: рабочее состояние, минимальная трассируемость и основная задача в SonIA.\n"
         "- Что осталось: выполнить текущую фазу, дать подтверждение и закрыть соответствующую gate.\n"
-        "- Рекомендуемая следующая команда: /alfred-dev:retomar\n"
+        "- Рекомендуемая следующая команда: /alfred-dev:resume\n"
     )
 
 
 def render_flow_start_progress_markdown(result: Dict[str, Any]) -> str:
     """Leave a minimal human signal in progress after a long flow starts."""
-    command = result.get("command", "flujo")
-    phase = result.get("phase", "fase_inicial")
+    command = result.get("command", "unknown")
+    phase = result.get("phase", "initial_phase")
     phase_description = result.get("phase_description") or "Первая фаза процесса."
     return (
         "# Progress\n\n"
@@ -5060,26 +4999,26 @@ def render_flow_start_progress_markdown(result: Dict[str, Any]) -> str:
         f"- Начальная фаза ожидает: `{phase}`.\n"
         f"- Цель фазы: {phase_description}\n"
         "- Завершённых фаз пока нет: helper только подготовил continuity и guardrails.\n"
-        "- Продолжи через `/alfred-dev:retomar`, чтобы выполнить реальную работу с её gates.\n"
+        "- Продолжи через `/alfred-dev:resume`, чтобы выполнить реальную работу с её gates.\n"
     )
 
 
 def render_flow_start_traceability_markdown(result: Dict[str, Any]) -> str:
     """Record the initial criteria of the flow without faking evidence."""
-    command = result.get("command", "flujo")
+    command = result.get("command", "unknown")
     pending_gate = result.get("pending_gate") or "незакрытая gate не обнаружена"
     return (
         "# Traceability\n\n"
         f"- `{command}` запущен через helper-first: ни одна фаза не отмечена как завершённая.\n"
         f"- Начальная незакрытая gate: {pending_gate}.\n"
         "- Требуемое подтверждение: артефакты фазы, tests/checks, где они применимы, и проверка безопасности по процессу.\n"
-        "- Команда продолжения: `/alfred-dev:retomar`.\n"
+        "- Команда продолжения: `/alfred-dev:resume`.\n"
     )
 
 
 def render_flow_start_summary(result: Dict[str, Any]) -> str:
     """Short summary to return when a long flow is seeded."""
-    command = result.get("command", "flujo")
+    command = result.get("command", "unknown")
     marker = result.get("headless_marker") or f"{command.upper()}_HEADLESS_START"
     pending_gate = result.get("pending_gate") or "незакрытая gate не обнаружена"
     phase_description = result.get("phase_description") or "Первая фаза процесса."
@@ -5089,11 +5028,11 @@ def render_flow_start_summary(result: Dict[str, Any]) -> str:
     return (
         f"`{marker}`\n\n"
         "## Процесс подготовлен\n\n"
-        f"- Активная сессия: `{command}` в фазе `{result.get('phase', 'fase_inicial')}`\n"
+        f"- Активная сессия: `{command}` в фазе `{result.get('phase', 'initial_phase')}`\n"
         f"- Запрошенная работа: `{result.get('description', 'работа')}`\n"
         f"- Незакрытая gate: {pending_gate}\n"
         f"- Сохранённое состояние: `{STATE_RELATIVE_PATH}`\n"
-        f"- Следующий шаг: `{result.get('next_command', '/alfred-dev:retomar')}`\n\n"
+        f"- Следующий шаг: `{result.get('next_command', '/alfred-dev:resume')}`\n\n"
         f"{sonarqube_section}"
         "### Первая фаза\n\n"
         f"{phase_description}\n\n"
@@ -5268,7 +5207,7 @@ def _build_audit_sonarqube_preflight() -> Dict[str, Any]:
     if not docker:
         return {
             "status": "docker_missing",
-            "sonarqube_autorizado": False,
+            "sonarqube_authorized": False,
             "headless_marker": "AUDIT_DOCKER_INSTALL_MENU_HEADLESS",
             "summary": "Docker недоступен в PATH; перед установкой или подготовкой Docker для SonarQube нужно решение человека.",
             "menu_title": "Подготовить Docker для SonarQube",
@@ -5291,7 +5230,7 @@ def _build_audit_sonarqube_preflight() -> Dict[str, Any]:
     ):
         return {
             "status": "docker_missing",
-            "sonarqube_autorizado": False,
+            "sonarqube_authorized": False,
             "headless_marker": "AUDIT_DOCKER_INSTALL_MENU_HEADLESS",
             "summary": "Docker недоступен в PATH; перед установкой или подготовкой Docker для SonarQube нужно решение человека.",
             "detail": missing_signal[:500],
@@ -5305,7 +5244,7 @@ def _build_audit_sonarqube_preflight() -> Dict[str, Any]:
     if version.returncode == 0 and info.returncode == 0:
         return {
             "status": "docker_ready",
-            "sonarqube_autorizado": True,
+            "sonarqube_authorized": True,
             "headless_marker": "AUDIT_HEADLESS_START",
             "summary": "Docker установлен, daemon отвечает; SonarQube разрешён для интерактивного аудита.",
             "menu_title": "",
@@ -5315,7 +5254,7 @@ def _build_audit_sonarqube_preflight() -> Dict[str, Any]:
     detail = " ".join(part.strip() for part in [version_text, info_text] if part and part.strip())
     return {
         "status": "docker_daemon_down",
-        "sonarqube_autorizado": False,
+        "sonarqube_authorized": False,
         "headless_marker": "AUDIT_DOCKER_START_MENU_HEADLESS",
         "summary": (
             "Docker есть, но daemon не отвечает; перед запуском Docker Desktop или сервиса "
@@ -5354,7 +5293,7 @@ def _render_audit_sonarqube_summary(result: Dict[str, Any]) -> str:
     return (
         "### Preflight SonarQube\n\n"
         f"- Статус: `{preflight.get('status', 'неизвестно')}`\n"
-        f"- Разрешено для SonarQube: `{str(preflight.get('sonarqube_autorizado', False)).lower()}`\n"
+        f"- Разрешено для SonarQube: `{str(preflight.get('sonarqube_authorized', False)).lower()}`\n"
         f"- Вывод: {preflight.get('summary', 'нет резюме')}\n"
         f"{detail_line}\n"
         f"{menu_block}"
@@ -5375,22 +5314,22 @@ def start_flow_session(project_dir: str, command: str, raw_request: str = "") ->
     )
     state_path = _project_path(project_dir, STATE_RELATIVE_PATH)
     state = load_state(state_path)
-    if state and state.get("fase_actual") != "completado":
-        if state.get("comando") == normalized_command and state.get("descripcion") == description:
+    if state and state.get("current_phase") != "completed":
+        if state.get("command") == normalized_command and state.get("description") == description:
             pending_gate = get_pending_gate(state)
             result = {
                 "state_path": state_path,
-                "command": state.get("comando", normalized_command),
-                "phase": state.get("fase_actual", ""),
-                "description": state.get("descripcion", description),
+                "command": state.get("command", normalized_command),
+                "phase": state.get("current_phase", ""),
+                "description": state.get("description", description),
                 "pending_gate": pending_gate,
                 "phase_description": _first_phase_description(
-                    str(state.get("comando", normalized_command)),
-                    str(state.get("fase_actual", "")),
+                    str(state.get("command", normalized_command)),
+                    str(state.get("current_phase", "")),
                 ),
-                "next_command": "/alfred-dev:retomar",
+                "next_command": "/alfred-dev:resume",
                 "headless_marker": f"{normalized_command.upper()}_HEADLESS_START",
-                "artifacts": state.get("artefactos", []),
+                "artifacts": state.get("artifacts", []),
                 "already_active": True,
                 "bypass_path": arm_stop_hook_bypass(project_dir, f"/alfred-dev:{normalized_command}"),
             }
@@ -5399,17 +5338,17 @@ def start_flow_session(project_dir: str, command: str, raw_request: str = "") ->
                 result["headless_marker"] = result["sonarqube_preflight"].get("headless_marker", "AUDIT_HEADLESS_START")
             return result
         raise RuntimeError(
-            "Активная сессия уже есть. Используй /alfred-dev:next или /alfred-dev:retomar, прежде чем открывать другой процесс."
+            "Активная сессия уже есть. Используй /alfred-dev:next или /alfred-dev:resume, прежде чем открывать другой процесс."
         )
 
     handoff = load_handoff(project_dir)
     if handoff and not handoff.get("resolved", False):
         raise RuntimeError(
-            "Есть незакрытый handoff. Продолжи его через /alfred-dev:retomar, прежде чем открывать другой процесс."
+            "Есть незакрытый handoff. Продолжи его через /alfred-dev:resume, прежде чем открывать другой процесс."
         )
 
     session = run_flow(normalized_command, description, project_dir=project_dir)
-    session["origen"] = f"/alfred-dev:{normalized_command}"
+    session["origin"] = f"/alfred-dev:{normalized_command}"
     session["helper_first"] = True
     session["next_after_completion"] = "/alfred-dev:uat"
 
@@ -5419,7 +5358,7 @@ def start_flow_session(project_dir: str, command: str, raw_request: str = "") ->
     bypass_path = arm_stop_hook_bypass(project_dir, f"/alfred-dev:{normalized_command}")
 
     pending_gate = get_pending_gate(session)
-    phase = str(session.get("fase_actual", ""))
+    phase = str(session.get("current_phase", ""))
     phase_description = _first_phase_description(normalized_command, phase)
     sonarqube_preflight = (
         _build_audit_sonarqube_preflight()
@@ -5430,10 +5369,10 @@ def start_flow_session(project_dir: str, command: str, raw_request: str = "") ->
         "state_path": state_path,
         "command": normalized_command,
         "phase": phase,
-        "description": session.get("descripcion", description),
+        "description": session.get("description", description),
         "pending_gate": pending_gate,
         "phase_description": phase_description,
-        "next_command": "/alfred-dev:retomar",
+        "next_command": "/alfred-dev:resume",
         "headless_marker": (
             sonarqube_preflight.get("headless_marker", "AUDIT_HEADLESS_START")
             if sonarqube_preflight
@@ -5451,7 +5390,7 @@ def start_flow_session(project_dir: str, command: str, raw_request: str = "") ->
     if sonarqube_preflight is not None:
         result["sonarqube_preflight"] = sonarqube_preflight
         session["sonarqube_preflight"] = sonarqube_preflight
-        session["sonarqube_autorizado"] = sonarqube_preflight.get("sonarqube_autorizado", False)
+        session["sonarqube_authorized"] = sonarqube_preflight.get("sonarqube_authorized", False)
 
     with open(_project_path(project_dir, CURRENT_RELATIVE_PATH), "w", encoding="utf-8") as fh:
         fh.write(render_flow_start_current_markdown(result))
@@ -5462,21 +5401,21 @@ def start_flow_session(project_dir: str, command: str, raw_request: str = "") ->
 
     active_task = _ensure_session_execution_task(project_dir, session)
     session["kanban_task_id"] = active_task.get("id", "")
-    session["artefactos"] = result["artifacts"]
+    session["artifacts"] = result["artifacts"]
     save_state(session, state_path)
 
     _capture_helper_memory(
         project_dir,
         helper_name=normalized_command,
         phase=phase,
-        event_summary=f"{normalized_command} подготовлен: {session['descripcion']}",
+        event_summary=f"{normalized_command} подготовлен: {session['description']}",
         event_content=(
-            f"Процесс {normalized_command} активен для '{session['descripcion']}'. "
+            f"Процесс {normalized_command} активен для '{session['description']}'. "
             f"Начальная фаза: {phase}. Незакрытая gate: {pending_gate}. "
             "Во время helper-first ни одна фаза не завершена."
         ),
-        decision_title=f"Открыть процесс {normalized_command}: {session['descripcion']}",
-        decision_choice="Подготовить состояние и продолжить через /alfred-dev:retomar",
+        decision_title=f"Открыть процесс {normalized_command}: {session['description']}",
+        decision_choice="Подготовить состояние и продолжить через /alfred-dev:resume",
         decision_context=(
             "Команде нужны continuity и проверяемые gates. В headless-режиме "
             "она не должна пытаться пройти весь интерактивный процесс."
@@ -5535,7 +5474,7 @@ def render_prefetch_response(payload: Dict[str, Any]) -> str:
 def write_codebase_map_files(project_dir: str, raw_request: str = "") -> Dict[str, Any]:
     """Create a persistent brownfield map for `/alfred-dev:map-codebase`."""
     state = load_state(_project_path(project_dir, STATE_RELATIVE_PATH))
-    if state and state.get("fase_actual") != "completado":
+    if state and state.get("current_phase") != "completed":
         raise RuntimeError(
             "Активная сессия уже есть. Используй /alfred-dev:next, прежде чем заново составлять карту кодовой базы."
         )
@@ -5543,7 +5482,7 @@ def write_codebase_map_files(project_dir: str, raw_request: str = "") -> Dict[st
     handoff = load_handoff(project_dir)
     if handoff and not handoff.get("resolved", False):
         raise RuntimeError(
-            "Есть незакрытый handoff. Используй /alfred-dev:retomar, прежде чем открывать /alfred-dev:map-codebase."
+            "Есть незакрытый handoff. Используй /alfred-dev:resume, прежде чем открывать /alfred-dev:map-codebase."
         )
 
     package_data = _load_package_json(project_dir)
@@ -5668,15 +5607,15 @@ def get_pending_gate(session: Optional[Dict[str, Any]]) -> Optional[str]:
     if not session:
         return None
 
-    command = session.get("comando")
-    phase_name = session.get("fase_actual")
-    phase_index = session.get("fase_numero")
+    command = session.get("command")
+    phase_name = session.get("current_phase")
+    phase_index = session.get("phase_number")
 
     if (
         not isinstance(command, str)
         or not isinstance(phase_name, str)
         or not isinstance(phase_index, int)
-        or phase_name == "completado"
+        or phase_name == "completed"
     ):
         return None
 
@@ -5684,11 +5623,11 @@ def get_pending_gate(session: Optional[Dict[str, Any]]) -> Optional[str]:
     if not flow:
         return None
 
-    phases = flow.get("fases", [])
+    phases = flow.get("phases", [])
     if phase_index < 0 or phase_index >= len(phases):
         return None
 
-    return phases[phase_index].get("gate_tipo")
+    return phases[phase_index].get("gate_type")
 
 
 def is_session_paused(session: Optional[Dict[str, Any]]) -> bool:
@@ -5712,13 +5651,13 @@ def _normalize_free_text(text: str) -> str:
 
 
 def _last_completed_at(state: Dict[str, Any]) -> str:
-    completed = state.get("fases_completadas") or []
+    completed = state.get("completed_phases") or []
     if completed and isinstance(completed[-1], dict):
-        completed_at = completed[-1].get("completada_en")
+        completed_at = completed[-1].get("completed_at")
         if isinstance(completed_at, str) and completed_at.strip():
             return completed_at
 
-    for key in ("actualizado_en", "creado_en"):
+    for key in ("updated_at", "created_at"):
         value = state.get(key)
         if isinstance(value, str) and value.strip():
             return value
@@ -5729,21 +5668,21 @@ def _last_completed_at(state: Dict[str, Any]) -> str:
 def build_verification_target(project_dir: str) -> Optional[Dict[str, Any]]:
     """Resolve the current deliverable that manual verification can cover."""
     state = load_state(_project_path(project_dir, STATE_RELATIVE_PATH))
-    if state and state.get("fase_actual") != "completado":
+    if state and state.get("current_phase") != "completed":
         return {
             "blocked": True,
             "reason": (
-                f"Сессия '{state.get('comando', 'desconocido')}' всё ещё активна "
-                f"в фазе '{state.get('fase_actual', 'desconocida')}'."
+                f"Сессия '{state.get('command', 'unknown')}' всё ещё активна "
+                f"в фазе '{state.get('current_phase', 'unknown')}'."
             ),
-            "command": state.get("comando", "desconocido"),
-            "phase": state.get("fase_actual", "desconocida"),
+            "command": state.get("command", "unknown"),
+            "phase": state.get("current_phase", "unknown"),
         }
 
-    if state and state.get("fase_actual") == "completado":
+    if state and state.get("current_phase") == "completed":
         completed_at = _last_completed_at(state)
-        command = state.get("comando", "desconocido")
-        description = state.get("descripcion", "")
+        command = state.get("command", "unknown")
+        description = state.get("description", "")
         return {
             "blocked": False,
             "source": "completed-session",
@@ -5791,15 +5730,15 @@ def _parse_verify_request(raw_request: str) -> Dict[str, str]:
     notes = notes.lstrip(":.- ").strip()
 
     approved = {
-        "aprobado", "aprobar", "ok", "pass", "passed", "aceptado", "validado",
+        "approved", "ok", "pass", "passed", "accepted",
         "одобрено", "одобрить", "принято", "принять", "ок",
     }
     rejected = {
-        "rechazado", "rechazar", "ko", "fail", "failed", "falla", "fallado",
+        "rejected", "ko", "fail", "failed",
         "отклонено", "отклонить", "провал",
     }
     pending = {
-        "pendiente", "preparar", "prepare", "reset", "reabrir", "abrir",
+        "pending", "prepare", "reset", "reopen",
         "ожидает", "подготовить", "переоткрыть", "открыть",
     }
 
@@ -5826,19 +5765,19 @@ def _status_label_ru(status: str) -> str:
 
 def _session_status_label_ru(label: str) -> str:
     return {
-        "completado y verificado": "завершено и проверено",
-        "completado con UAT rechazada": "завершено, UAT отклонена",
-        "completado pendiente de UAT": "завершено, ожидает UAT",
-        "pausado": "на паузе",
-        "activo": "активно",
-        "sin sesión activa": "нет активной сессии",
+        "completed_verified": "завершено и проверено",
+        "completed_uat_rejected": "завершено, UAT отклонена",
+        "completed_uat_pending": "завершено, ожидает UAT",
+        "paused": "на паузе",
+        "active": "активно",
+        "no_session": "нет активной сессии",
     }.get(label, label)
 
 
 def _team_source_label_ru(label: str) -> str:
     return {
-        "configuración persistida": "сохранённая конфигурация",
-        "composición dinámica": "динамический состав",
+        "persisted_config": "сохранённая конфигурация",
+        "dynamic_composition": "динамический состав",
     }.get(label, label)
 
 
@@ -5847,7 +5786,7 @@ def _next_command_for_uat(status: str) -> str:
         return "/alfred"
     if status == "rejected":
         return "/alfred"
-    return "/alfred-dev:uat aprobado"
+    return "/alfred-dev:uat approved"
 
 
 def _build_uat_record(
@@ -5906,7 +5845,7 @@ def render_uat_markdown(uat: Dict[str, Any]) -> str:
     if uat.get("status") == "pending":
         action = (
             "Выполни ручную проверку и запиши результат через "
-            "`/alfred-dev:uat aprobado` или `/alfred-dev:uat rechazado <заметка>`."
+            "`/alfred-dev:uat approved` или `/alfred-dev:uat rejected <заметка>`."
         )
     elif uat.get("status") == "approved":
         action = (
@@ -5968,7 +5907,7 @@ def write_uat_files(project_dir: str, raw_request: str = "") -> Dict[str, Any]:
         session = load_state(state_path)
         if (
             isinstance(session, dict)
-            and session.get("fase_actual") == "completado"
+            and session.get("current_phase") == "completed"
             and record.get("target_id") == target.get("target_id")
         ):
             save_state(session, state_path)
@@ -6046,8 +5985,8 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
     """Suggest the next operational command with a stable priority."""
     state = _load_active_session_state(project_dir)
     if state is not None:
-        command = state.get("comando", "desconocido")
-        phase = state.get("fase_actual", "desconocida")
+        command = state.get("command", "unknown")
+        phase = state.get("current_phase", "unknown")
         return _build_next_action_payload(
             "resume",
             f"Есть активная сессия '{command}' в фазе '{phase}'.",
@@ -6072,7 +6011,7 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
             focus="Подхватить незакрытый handoff",
             directive=(
                 f"Продолжи `{handoff['command']}` с `{handoff['phase']}` через "
-                f"`{handoff.get('resume_command', '/alfred-dev:retomar')}`."
+                f"`{handoff.get('resume_command', '/alfred-dev:resume')}`."
             ),
             urgency="alta",
         )
@@ -6199,12 +6138,12 @@ def build_progress_snapshot(
     uat = load_uat(project_dir)
     has_active_state = bool(
         state
-        and state.get("fase_actual") != "completado"
+        and state.get("current_phase") != "completed"
         and not is_session_paused(state)
     )
     has_paused_state = bool(
         state
-        and state.get("fase_actual") != "completado"
+        and state.get("current_phase") != "completed"
         and is_session_paused(state)
     )
 
@@ -6238,20 +6177,20 @@ def build_progress_snapshot(
             item
             for item in [
                 (
-                    f"Активный процесс: `{state.get('comando', 'desconocido')}` в фазе "
-                    f"`{state.get('fase_actual', 'desconocida')}`."
+                    f"Активный процесс: `{state.get('command', 'unknown')}` в фазе "
+                    f"`{state.get('current_phase', 'unknown')}`."
                     if has_active_state
                     else ""
                 ),
                 (
-                    f"Незакрытый handoff для `{handoff.get('command', 'desconocido')}` "
-                    f"в фазе `{handoff.get('phase', 'desconocida')}`."
+                    f"Незакрытый handoff для `{handoff.get('command', 'unknown')}` "
+                    f"в фазе `{handoff.get('phase', 'unknown')}`."
                     if handoff and not handoff.get("resolved", False)
                     else ""
                 ),
                 (
-                    f"Сессия на паузе: `{state.get('comando', 'desconocido')}` в фазе "
-                    f"`{state.get('fase_actual', 'desconocida')}`."
+                    f"Сессия на паузе: `{state.get('command', 'unknown')}` в фазе "
+                    f"`{state.get('current_phase', 'unknown')}`."
                     if has_paused_state and not (handoff and not handoff.get("resolved", False))
                     else ""
                 ),
@@ -6302,7 +6241,7 @@ def build_progress_snapshot(
         ]
 
     bypass_path = None
-    if arm_bypass and state and state.get("fase_actual") != "completado":
+    if arm_bypass and state and state.get("current_phase") != "completed":
         bypass_path = arm_stop_hook_bypass(project_dir, source_command)
 
     kanban_payload = {
@@ -6386,7 +6325,7 @@ def build_status_snapshot(
     uat = snapshot.get("uat")
     phase_rows = _build_phase_doc_rows(state, board) if isinstance(state, dict) else []
     artifacts = (
-        _dedupe_artifact_paths(list((state or {}).get("artefactos") or []))
+        _dedupe_artifact_paths(list((state or {}).get("artifacts") or []))
         if isinstance(state, dict)
         else []
     )
@@ -6394,7 +6333,7 @@ def build_status_snapshot(
     if (
         arm_bypass
         and isinstance(state, dict)
-        and state.get("fase_actual") != "completado"
+        and state.get("current_phase") != "completed"
     ):
         bypass_path = arm_stop_hook_bypass(project_dir, source_command)
 
@@ -6405,7 +6344,7 @@ def build_status_snapshot(
         "session_status_label": (
             _session_status_label(state, uat)
             if isinstance(state, dict)
-            else "sin sesión activa"
+            else "no_session"
         ),
         "team_source": (
             _session_team_source_label(state)
@@ -6414,7 +6353,7 @@ def build_status_snapshot(
         ),
         "pending_gate": (
             get_pending_gate(state)
-            if isinstance(state, dict) and state.get("fase_actual") != "completado"
+            if isinstance(state, dict) and state.get("current_phase") != "completed"
             else ""
         ),
         "bypass_path": bypass_path,
@@ -6439,20 +6378,20 @@ def render_status_markdown(snapshot: Dict[str, Any]) -> str:
             [
                 "### Сессия",
                 "",
-                f"- Процесс: `{state.get('comando', 'desconocido')}`",
-                f"- Описание: {state.get('descripcion', 'Без описания')}",
+                f"- Процесс: `{state.get('command', 'unknown')}`",
+                f"- Описание: {state.get('description', 'Без описания')}",
                 f"- Статус: {_session_status_label_ru(snapshot.get('session_status_label', 'неизвестно'))}",
             ]
         )
-        if state.get("fase_actual") != "completado":
-            lines.append(f"- Текущая фаза: `{state.get('fase_actual', 'desconocida')}`")
+        if state.get("current_phase") != "completed":
+            lines.append(f"- Текущая фаза: `{state.get('current_phase', 'unknown')}`")
         if pending_gate:
             lines.append(f"- Незакрытая gate: `{pending_gate}`")
         if team_source:
             lines.append(f"- Источник runtime-команды: {_team_source_label_ru(team_source)}.")
         if handoff and not handoff.get("resolved", False):
             lines.append(
-                f"- Незакрытый handoff: продолжить через `{handoff.get('resume_command', '/alfred-dev:retomar')}` с `{handoff.get('phase', 'desconocida')}`."
+                f"- Незакрытый handoff: продолжить через `{handoff.get('resume_command', '/alfred-dev:resume')}` с `{handoff.get('phase', 'unknown')}`."
             )
         on_demand_optionals = _session_on_demand_optionals_for_flow(state)
         if on_demand_optionals:
@@ -6466,9 +6405,9 @@ def render_status_markdown(snapshot: Dict[str, Any]) -> str:
             [
                 "### Handoff",
                 "",
-                f"- Незавершённый процесс: `{handoff.get('command', 'desconocido')}`",
-                f"- Фаза: `{handoff.get('phase', 'desconocida')}`",
-                f"- Продолжить через: `{handoff.get('resume_command', '/alfred-dev:retomar')}`",
+                f"- Незавершённый процесс: `{handoff.get('command', 'unknown')}`",
+                f"- Фаза: `{handoff.get('phase', 'unknown')}`",
+                f"- Продолжить через: `{handoff.get('resume_command', '/alfred-dev:resume')}`",
             ]
         )
     else:
@@ -6535,14 +6474,14 @@ def render_progress_markdown(snapshot: Dict[str, Any]) -> str:
 
     lines = ["## Рабочая сводка проекта", ""]
 
-    if state and state.get("fase_actual") != "completado" and not is_session_paused(state):
+    if state and state.get("current_phase") != "completed" and not is_session_paused(state):
         lines.extend(
             [
                 "### Активный процесс",
                 "",
-                f"- Процесс: `{state.get('comando', 'desconocido')}`",
-                f"- Описание: {state.get('descripcion', 'Без описания')}",
-                f"- Текущая фаза: `{state.get('fase_actual', 'desconocida')}`",
+                f"- Процесс: `{state.get('command', 'unknown')}`",
+                f"- Описание: {state.get('description', 'Без описания')}",
+                f"- Текущая фаза: `{state.get('current_phase', 'unknown')}`",
             ]
         )
     elif handoff and not handoff.get("resolved", False):
@@ -6550,20 +6489,20 @@ def render_progress_markdown(snapshot: Dict[str, Any]) -> str:
             [
                 "### Незакрытый handoff",
                 "",
-                f"- Процесс: `{handoff.get('command', 'desconocido')}`",
-                f"- Фаза: `{handoff.get('phase', 'desconocida')}`",
-                f"- Следующий шаг: `{handoff.get('resume_command', '/alfred-dev:retomar')}`",
+                f"- Процесс: `{handoff.get('command', 'unknown')}`",
+                f"- Фаза: `{handoff.get('phase', 'unknown')}`",
+                f"- Следующий шаг: `{handoff.get('resume_command', '/alfred-dev:resume')}`",
             ]
         )
-    elif state and state.get("fase_actual") != "completado" and is_session_paused(state):
+    elif state and state.get("current_phase") != "completed" and is_session_paused(state):
         lines.extend(
             [
                 "### Сессия на паузе",
                 "",
-                f"- Процесс: `{state.get('comando', 'desconocido')}`",
-                f"- Описание: {state.get('descripcion', 'Без описания')}",
-                f"- Фаза на паузе: `{state.get('fase_actual', 'desconocida')}`",
-                "- Видимого handoff нет; стоит пересоздать его через `/alfred-dev:pause` или продолжить через `/alfred-dev:retomar`.",
+                f"- Процесс: `{state.get('command', 'unknown')}`",
+                f"- Описание: {state.get('description', 'Без описания')}",
+                f"- Фаза на паузе: `{state.get('current_phase', 'unknown')}`",
+                "- Видимого handoff нет; стоит пересоздать его через `/alfred-dev:pause` или продолжить через `/alfred-dev:resume`.",
             ]
         )
     else:
@@ -6607,7 +6546,7 @@ def render_progress_markdown(snapshot: Dict[str, Any]) -> str:
         lines.extend(
             [
                 f"- Статус: {_status_label_ru(uat.get('status', ''))}",
-                f"- Цель: `{uat.get('target_command', 'desconocido')}`",
+                f"- Цель: `{uat.get('target_command', 'unknown')}`",
             ]
         )
         notes = uat.get("notes")
@@ -6631,7 +6570,7 @@ def _infer_primary_actor(description: str) -> str:
         return "новый пользователь"
     if any(token in normalized for token in ("admin", "administr", "админ", "администр")):
         return "администратор"
-    if any(token in normalized for token in ("equipo", "operacion", "команд", "операц")):
+    if any(token in normalized for token in ("team", "operacion", "команд", "операц")):
         return "внутренняя команда"
     return "основной актор требует уточнения"
 
@@ -6744,7 +6683,7 @@ def render_quick_current_markdown(record: Dict[str, Any]) -> str:
         "- Что готово: Alfred уже подготовил быструю сессию и минимальный контекст для продолжения.\n"
         f"{warning_line}"
         "- Что осталось: выполнить ограниченное изменение, проверить его и закрыть через `/alfred-dev:uat`.\n"
-        "- Рекомендуемая следующая команда: /alfred-dev:retomar\n"
+        "- Рекомендуемая следующая команда: /alfred-dev:resume\n"
     )
 
 
@@ -6768,7 +6707,7 @@ def render_quick_progress_markdown(record: Dict[str, Any]) -> str:
 def write_discovery_files(project_dir: str, raw_request: str = "") -> Dict[str, Any]:
     """Create a light, reusable refinement for /alfred-dev:discuss."""
     state = load_state(_project_path(project_dir, STATE_RELATIVE_PATH))
-    if state and state.get("fase_actual") != "completado":
+    if state and state.get("current_phase") != "completed":
         raise RuntimeError(
             "Активная сессия уже есть. Используй /alfred-dev:next, прежде чем открывать discuss."
         )
@@ -6776,7 +6715,7 @@ def write_discovery_files(project_dir: str, raw_request: str = "") -> Dict[str, 
     handoff = load_handoff(project_dir)
     if handoff and not handoff.get("resolved", False):
         raise RuntimeError(
-            "Есть незакрытый handoff. Используй /alfred-dev:retomar, прежде чем открывать discuss."
+            "Есть незакрытый handoff. Используй /alfred-dev:resume, прежде чем открывать discuss."
         )
 
     description = _normalize_request_description(raw_request, "Следующая работа для уточнения")
@@ -6901,27 +6840,25 @@ def start_quick_session(project_dir: str, raw_request: str = "") -> Dict[str, An
         raw_request,
         "Быстрое ограниченное изменение",
     )
-    if state and state.get("fase_actual") != "completado":
-        if state.get("comando") == "quick" and state.get("descripcion") == description:
+    if state and state.get("current_phase") != "completed":
+        if state.get("command") == "quick" and state.get("description") == description:
             return {
                 "state_path": state_path,
-                "command": state["comando"],
-                "phase": state["fase_actual"],
-                "description": state["descripcion"],
+                "command": state["command"],
+                "phase": state["current_phase"],
+                "description": state["description"],
                 "needs_codebase_map": needs_codebase_map(project_dir),
-                "next_command": _canonical_slash_commands(
-                    state.get("next_after_completion", "/alfred-dev:uat")
-                ),
+                "next_command": state.get("next_after_completion", "/alfred-dev:uat"),
                 "bypass_path": arm_stop_hook_bypass(project_dir, "/alfred-dev:quick"),
             }
         raise RuntimeError(
-            "Активная сессия уже есть. Используй /alfred-dev:next или /alfred-dev:retomar, прежде чем открывать quick."
+            "Активная сессия уже есть. Используй /alfred-dev:next или /alfred-dev:resume, прежде чем открывать quick."
         )
 
     handoff = load_handoff(project_dir)
     if handoff and not handoff.get("resolved", False):
         raise RuntimeError(
-            "Есть незакрытый handoff. Продолжи его через /alfred-dev:retomar, прежде чем открывать quick."
+            "Есть незакрытый handoff. Продолжи его через /alfred-dev:resume, прежде чем открывать quick."
         )
 
     verify_suggestion = suggest_verify_action(project_dir)
@@ -6932,7 +6869,7 @@ def start_quick_session(project_dir: str, raw_request: str = "") -> Dict[str, An
 
     session = run_flow("quick", description, project_dir=project_dir)
     session["modo_rapido"] = True
-    session["origen"] = "/alfred-dev:quick"
+    session["origin"] = "/alfred-dev:quick"
     session["next_after_completion"] = "/alfred-dev:uat"
     os.makedirs(_project_path(project_dir, ".claude"), exist_ok=True)
     bypass_path = arm_stop_hook_bypass(project_dir, "/alfred-dev:quick")
@@ -6940,8 +6877,8 @@ def start_quick_session(project_dir: str, raw_request: str = "") -> Dict[str, An
     ensure_project_docs(project_dir)
 
     quick_record = {
-        "description": session["descripcion"],
-        "phase": session["fase_actual"],
+        "description": session["description"],
+        "phase": session["current_phase"],
         "needs_codebase_map": needs_codebase_map(project_dir),
     }
     with open(_project_path(project_dir, CURRENT_RELATIVE_PATH), "w", encoding="utf-8") as fh:
@@ -6965,8 +6902,8 @@ def start_quick_session(project_dir: str, raw_request: str = "") -> Dict[str, An
     active_task = _ensure_session_execution_task(project_dir, session)
     verify_task = _ensure_verification_task(
         project_dir,
-        description=session["descripcion"],
-        command=session["comando"],
+        description=session["description"],
+        command=session["command"],
     )
     session["kanban_task_id"] = active_task.get("id", "")
     session["kanban_verify_task_id"] = verify_task.get("id", "")
@@ -6975,14 +6912,14 @@ def start_quick_session(project_dir: str, raw_request: str = "") -> Dict[str, An
     _capture_helper_memory(
         project_dir,
         helper_name="quick",
-        phase=session["fase_actual"],
-        event_summary=f"Quick подготовлен: {session['descripcion']}",
+        phase=session["current_phase"],
+        event_summary=f"Quick подготовлен: {session['description']}",
         event_content=(
-            f"Quick активен для '{session['descripcion']}'. "
+            f"Quick активен для '{session['description']}'. "
             f"Ожидаемое закрытие: {session['next_after_completion']}. "
             f"Обновлённые артефакты: {CURRENT_RELATIVE_PATH} и {PROGRESS_MD_RELATIVE_PATH}."
         ),
-        decision_title=f"Классифицировать как quick: {session['descripcion']}",
+        decision_title=f"Классифицировать как quick: {session['description']}",
         decision_choice=f"Решить через /alfred-dev:quick и закрыть через {session['next_after_completion']}",
         decision_context=(
             "Изменение считается ограниченным и не открывает полноценную feature, пока объём не вырастет."
@@ -7006,9 +6943,9 @@ def start_quick_session(project_dir: str, raw_request: str = "") -> Dict[str, An
 
     return {
         "state_path": state_path,
-        "command": session["comando"],
-        "phase": session["fase_actual"],
-        "description": session["descripcion"],
+        "command": session["command"],
+        "phase": session["current_phase"],
+        "description": session["description"],
         "needs_codebase_map": quick_record["needs_codebase_map"],
         "next_command": session["next_after_completion"],
         "bypass_path": bypass_path,
@@ -7021,26 +6958,26 @@ def start_quick_session(project_dir: str, raw_request: str = "") -> Dict[str, An
 def build_handoff(project_dir: str) -> Optional[Dict[str, Any]]:
     """Build a handoff from the active session state."""
     state = load_state(_project_path(project_dir, STATE_RELATIVE_PATH))
-    if not state or state.get("fase_actual") == "completado":
+    if not state or state.get("current_phase") == "completed":
         return None
 
     gate = get_pending_gate(state)
-    completed = [phase.get("nombre", "desconocida") for phase in state.get("fases_completadas", [])]
+    completed = [phase.get("name", "unknown") for phase in state.get("completed_phases", [])]
 
     return {
         "version": 1,
         "created_at": _now_utc().isoformat(),
-        "command": state.get("comando", "desconocido"),
-        "description": state.get("descripcion", ""),
-        "phase": state.get("fase_actual", "desconocida"),
-        "phase_number": state.get("fase_numero", 0) + 1,
+        "command": state.get("command", "unknown"),
+        "description": state.get("description", ""),
+        "phase": state.get("current_phase", "unknown"),
+        "phase_number": state.get("phase_number", 0) + 1,
         "completed_phases": completed,
         "pending_gate": gate,
-        "artifacts": state.get("artefactos", []),
-        "resume_command": "/alfred-dev:retomar",
+        "artifacts": state.get("artifacts", []),
+        "resume_command": "/alfred-dev:resume",
         "next_step": (
-            f"Продолжить '{state.get('comando', 'desconocido')}' "
-            f"с фазы '{state.get('fase_actual', 'desconocida')}'."
+            f"Продолжить '{state.get('command', 'unknown')}' "
+            f"с фазы '{state.get('current_phase', 'unknown')}'."
         ),
         "resolved": False,
     }
@@ -7370,7 +7307,7 @@ def render_handoff_markdown(handoff: Dict[str, Any]) -> str:
         "## Зарегистрированные артефакты\n\n"
         f"{artifact_lines}\n\n"
         "## Следующий шаг\n\n"
-        f"- Команда возврата: `{handoff.get('resume_command', '/alfred-dev:retomar')}`\n"
+        f"- Команда возврата: `{handoff.get('resume_command', '/alfred-dev:resume')}`\n"
         f"- Предлагаемое действие: {handoff.get('next_step', '-')}\n"
     )
 
@@ -7378,7 +7315,7 @@ def render_handoff_markdown(handoff: Dict[str, Any]) -> str:
 def render_pause_markdown(result: Dict[str, Any]) -> str:
     """Render a helper-first pause in human format."""
     gate = result.get("pending_gate") or "незакрытая gate не обнаружена"
-    next_step = result.get("next_step") or "Продолжить сессию через `/alfred-dev:retomar`."
+    next_step = result.get("next_step") or "Продолжить сессию через `/alfred-dev:resume`."
     return (
         "## Сессия на паузе\n\n"
         f"- Процесс: `{result.get('command', '-')}`\n"
@@ -7387,7 +7324,7 @@ def render_pause_markdown(result: Dict[str, Any]) -> str:
         f"- Незакрытая gate: {gate}\n"
         f"- Handoff сохранён в: `{HANDOFF_JSON_RELATIVE_PATH}` и `{HANDOFF_MD_RELATIVE_PATH}`\n"
         f"- Состояние обновлено в: `{STATE_RELATIVE_PATH}`\n"
-        f"- Команда возврата: `/alfred-dev:retomar`\n"
+        f"- Команда возврата: `/alfred-dev:resume`\n"
         f"- Следующее действие: {next_step}\n"
     )
 
@@ -7465,9 +7402,9 @@ def pause_session(project_dir: str) -> Optional[Dict[str, str]]:
         **handoff_paths,
         "state_path": _project_path(project_dir, STATE_RELATIVE_PATH),
         "paused_at": state["paused_at"],
-        "command": handoff.get("command", state.get("comando", "")),
-        "description": handoff.get("description", state.get("descripcion", "")),
-        "phase": handoff.get("phase", state.get("fase_actual", "")),
+        "command": handoff.get("command", state.get("command", "")),
+        "description": handoff.get("description", state.get("description", "")),
+        "phase": handoff.get("phase", state.get("current_phase", "")),
         "pending_gate": handoff.get("pending_gate", ""),
         "next_step": handoff.get("next_step", ""),
     }
@@ -7489,13 +7426,13 @@ def resume_session(project_dir: str) -> Optional[Dict[str, str]]:
     }
 
     if state is not None:
-        result["command"] = state.get("comando", "")
-        result["description"] = state.get("descripcion", "")
-        result["phase"] = state.get("fase_actual", "")
+        result["command"] = state.get("command", "")
+        result["description"] = state.get("description", "")
+        result["phase"] = state.get("current_phase", "")
         result["pending_gate"] = get_pending_gate(state)
         result["next_step"] = (
-            f"Продолжить '{state.get('comando', 'flujo')}' с фазы "
-            f"'{state.get('fase_actual', 'desconocida')}'."
+            f"Продолжить '{state.get('command', 'unknown')}' с фазы "
+            f"'{state.get('current_phase', 'unknown')}'."
         )
     elif active_handoff and handoff is not None:
         result["command"] = handoff.get("command", "")
@@ -7504,14 +7441,14 @@ def resume_session(project_dir: str) -> Optional[Dict[str, str]]:
         result["pending_gate"] = handoff.get("pending_gate", "")
         result["next_step"] = handoff.get(
             "next_step",
-            f"Продолжить через {handoff.get('resume_command', '/alfred-dev:retomar')}.",
+            f"Продолжить через {handoff.get('resume_command', '/alfred-dev:resume')}.",
         )
 
     if state is not None:
         state.pop("paused_at", None)
         state.pop("paused_via", None)
         state["resumed_at"] = resumed_at
-        if state.get("kanban_task_id") or state.get("comando") == "quick":
+        if state.get("kanban_task_id") or state.get("command") == "quick":
             synced_task = _ensure_session_execution_task(project_dir, state)
             state["kanban_task_id"] = synced_task.get("id", "")
         save_state(state, state_path)
@@ -7523,7 +7460,7 @@ def resume_session(project_dir: str) -> Optional[Dict[str, str]]:
         save_handoff(project_dir, handoff)
         result["handoff_path"] = _project_path(project_dir, HANDOFF_JSON_RELATIVE_PATH)
 
-    bypass_path = arm_stop_hook_bypass(project_dir, "/alfred-dev:retomar")
+    bypass_path = arm_stop_hook_bypass(project_dir, "/alfred-dev:resume")
     result["bypass_path"] = bypass_path
     try:
         from core.session_brief import build_session_brief
@@ -7654,7 +7591,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--raw",
         default="",
         dest="raw_request",
-        help="stop|cerrar|detener to shut down the UI",
+        help="stop|стоп|закрыть to shut down the UI",
     )
 
     map_parser = subparsers.add_parser(
@@ -7756,12 +7693,12 @@ def _build_parser() -> argparse.ArgumentParser:
     hygiene_parser.add_argument("--command", default="", dest="hygiene_command")
     hygiene_parser.add_argument("--json", action="store_true", dest="as_json")
 
-    cierre_parser = subparsers.add_parser(
-        "cierre",
+    closing_parser = subparsers.add_parser(
+        "closing",
         help="Teachable session close (what, evidence, pending)",
     )
-    cierre_parser.add_argument("project_dir", nargs="?", default=".")
-    cierre_parser.add_argument("--json", action="store_true", dest="as_json")
+    closing_parser.add_argument("project_dir", nargs="?", default=".")
+    closing_parser.add_argument("--json", action="store_true", dest="as_json")
 
     docs_sync_parser = subparsers.add_parser(
         "sync-project-docs",
@@ -8032,14 +7969,14 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(render_hygiene_markdown(result))
         return 0 if result["passed"] else 1
 
-    if args.command == "cierre":
-        from core.hygiene import build_cierre, render_cierre_markdown
+    if args.command == "closing":
+        from core.hygiene import build_closing, render_closing_markdown
 
-        result = build_cierre(project_dir)
+        result = build_closing(project_dir)
         if args.as_json:
             print(json.dumps(result, ensure_ascii=False))
         else:
-            print(render_cierre_markdown(result))
+            print(render_closing_markdown(result))
         return 0
 
     if args.command == "sync-project-docs":

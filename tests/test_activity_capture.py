@@ -63,8 +63,8 @@ from core.orchestrator import advance_phase, create_session, save_state
 
 def _complete_session(command: str, description: str):
     session = create_session(command, description)
-    while session["fase_actual"] != "completado":
-        session = advance_phase(session, resultado="aprobado", artefactos=[])
+    while session["current_phase"] != "completed":
+        session = advance_phase(session, result="approved", artifacts=[])
     return session
 
 class _DBTestCase(unittest.TestCase):
@@ -329,10 +329,10 @@ class TestDispatchWrite(_DBTestCase):
 
         state_file = os.path.join(self._tmpdir, "alfred-dev-state.json")
         state = {
-            "comando": "feature",
-            "fase_actual": "producto",
-            "descripcion": "test feature",
-            "fases_completadas": [],
+            "command": "feature",
+            "current_phase": "product",
+            "description": "test feature",
+            "completed_phases": [],
         }
         with open(state_file, "w") as f:
             json.dump(state, f)
@@ -359,10 +359,10 @@ class TestDispatchWrite(_DBTestCase):
         os.makedirs(state_dir, exist_ok=True)
         state_file = os.path.join(state_dir, "alfred-dev-state.json")
         state = {
-            "comando": "feature",
-            "fase_actual": "producto",
-            "descripcion": "test feature",
-            "fases_completadas": [],
+            "command": "feature",
+            "current_phase": "product",
+            "description": "test feature",
+            "completed_phases": [],
         }
         with open(state_file, "w", encoding="utf-8") as f:
             json.dump(state, f)
@@ -828,8 +828,8 @@ class TestDispatchPrompt(_DBTestCase):
         with open(state_path, "r", encoding="utf-8") as fh:
             state = json.load(fh)
 
-        self.assertEqual(state["comando"], "quick")
-        self.assertEqual(state["descripcion"], "ajustar copy del login")
+        self.assertEqual(state["command"], "quick")
+        self.assertEqual(state["description"], "ajustar copy del login")
         self.assertTrue(os.path.isfile(os.path.join(self._tmpdir, ".claude", "alfred-stop-hook-bypass.json")))
 
         prefetched = self._get_events("alfred_prefetched")
@@ -862,7 +862,7 @@ class TestDispatchPrompt(_DBTestCase):
             "prefetched_command": "map-codebase",
             "recommended_command": "discuss",
             "project_name": "demo",
-            "stack": {"runtime": "node", "framework": "desconocido"},
+            "stack": {"runtime": "node", "framework": "unknown"},
         }
         save_prefetch_result(self._tmpdir, payload)
         consume_prefetch_result(self._tmpdir, "map-codebase")
@@ -883,7 +883,7 @@ class TestDispatchPrompt(_DBTestCase):
             "prefetched_command": "map-codebase",
             "recommended_command": "discuss",
             "project_name": "demo",
-            "stack": {"runtime": "node", "framework": "desconocido"},
+            "stack": {"runtime": "node", "framework": "unknown"},
         }
         save_prefetch_result(self._tmpdir, payload)
         self.assertTrue(
@@ -909,7 +909,7 @@ class TestHookScriptRuntime(unittest.TestCase):
         with open(".claude/alfred-dev.local.md", "w", encoding="utf-8") as fh:
             fh.write(
                 "---\n"
-                "memoria:\n"
+                "memory:\n"
                 "  enabled: true\n"
                 "  sync_to_native: true\n"
                 "  sync_commits_limit: 10\n"
@@ -1199,7 +1199,7 @@ class TestDispatchStop(_DBTestCase):
             "prefetched_command": "map-codebase",
             "recommended_command": "discuss",
             "project_name": "demo",
-            "stack": {"runtime": "node", "framework": "desconocido"},
+            "stack": {"runtime": "node", "framework": "unknown"},
         }
         save_prefetch_result(self._tmpdir, payload)
         consume_prefetch_result(self._tmpdir, "map-codebase")
@@ -1234,10 +1234,10 @@ class TestProcessState(_DBTestCase):
         self._db.complete_iteration(self._it_id)
 
         state_file = self._write_state({
-            "comando": "feature",
-            "fase_actual": "producto",
-            "descripcion": "test feature",
-            "fases_completadas": [],
+            "command": "feature",
+            "current_phase": "product",
+            "description": "test feature",
+            "completed_phases": [],
         })
 
         _capture._process_state(self._db, state_file)
@@ -1249,10 +1249,10 @@ class TestProcessState(_DBTestCase):
     def test_registers_phase_completed(self):
         """Completed phases are recorded as events."""
         state_file = self._write_state({
-            "comando": "feature",
-            "fase_actual": "arquitectura",
-            "descripcion": "test",
-            "fases_completadas": [{"nombre": "producto", "resultado": "aprobado"}],
+            "command": "feature",
+            "current_phase": "architecture",
+            "description": "test",
+            "completed_phases": [{"name": "product", "result": "approved"}],
         })
 
         _capture._process_state(self._db, state_file)
@@ -1263,12 +1263,12 @@ class TestProcessState(_DBTestCase):
     def test_does_not_duplicate_phases(self):
         """Two runs with the same phases do not duplicate events."""
         state_file = self._write_state({
-            "comando": "feature",
-            "fase_actual": "desarrollo",
-            "descripcion": "test",
-            "fases_completadas": [
-                {"nombre": "producto", "resultado": "aprobado"},
-                {"nombre": "arquitectura", "resultado": "aprobado"},
+            "command": "feature",
+            "current_phase": "development",
+            "description": "test",
+            "completed_phases": [
+                {"name": "product", "result": "approved"},
+                {"name": "architecture", "result": "approved"},
             ],
         })
 
@@ -1283,8 +1283,8 @@ class TestProcessState(_DBTestCase):
         """Deduplication must not depend on the limit of 100 general events."""
         self._db.log_event(
             event_type="phase_completed",
-            phase="producto",
-            payload={"fase": "producto", "resultado": "aprobado"},
+            phase="product",
+            payload={"phase": "product", "result": "approved"},
             iteration_id=self._it_id,
         )
         for index in range(120):
@@ -1295,10 +1295,10 @@ class TestProcessState(_DBTestCase):
             )
 
         state_file = self._write_state({
-            "comando": "feature",
-            "fase_actual": "arquitectura",
-            "descripcion": "test",
-            "fases_completadas": [{"nombre": "producto", "resultado": "aprobado"}],
+            "command": "feature",
+            "current_phase": "architecture",
+            "description": "test",
+            "completed_phases": [{"name": "product", "result": "approved"}],
         })
 
         _capture._process_state(self._db, state_file)
@@ -1312,10 +1312,10 @@ class TestProcessState(_DBTestCase):
         session_id = self._db.start_iteration("session", "Sesion general")
 
         state_file = self._write_state({
-            "comando": "feature",
-            "fase_actual": "producto",
-            "descripcion": "implementar login social",
-            "fases_completadas": [],
+            "command": "feature",
+            "current_phase": "product",
+            "description": "implementar login social",
+            "completed_phases": [],
         })
 
         _capture._process_state(self._db, state_file)
@@ -1336,12 +1336,12 @@ class TestProcessState(_DBTestCase):
         self.assertEqual(len(started_events), 1)
 
     def test_completes_iteration(self):
-        """Phase 'completado' closes the iteration."""
+        """Phase 'completed' closes the iteration."""
         state_file = self._write_state({
-            "comando": "feature",
-            "fase_actual": "completado",
-            "descripcion": "test",
-            "fases_completadas": [{"nombre": "producto"}],
+            "command": "feature",
+            "current_phase": "completed",
+            "description": "test",
+            "completed_phases": [{"name": "product"}],
         })
 
         _capture._process_state(self._db, state_file)
@@ -1355,10 +1355,10 @@ class TestProcessState(_DBTestCase):
     def test_string_phases(self):
         """Phases given as strings (not dicts) are processed correctly."""
         state_file = self._write_state({
-            "comando": "fix",
-            "fase_actual": "validacion",
-            "descripcion": "test",
-            "fases_completadas": ["diagnostico", "correccion"],
+            "command": "fix",
+            "current_phase": "validation",
+            "description": "test",
+            "completed_phases": ["diagnosis", "correction"],
         })
 
         _capture._process_state(self._db, state_file)
@@ -1382,10 +1382,10 @@ class TestProcessState(_DBTestCase):
     def test_auto_pins_completed_phase(self):
         """Completed phases are pinned automatically."""
         state_file = self._write_state({
-            "comando": "feature",
-            "fase_actual": "arquitectura",
-            "descripcion": "test",
-            "fases_completadas": [{"nombre": "producto", "resultado": "ok"}],
+            "command": "feature",
+            "current_phase": "architecture",
+            "description": "test",
+            "completed_phases": [{"name": "product", "result": "ok"}],
         })
 
         _capture._process_state(self._db, state_file)
@@ -1394,7 +1394,7 @@ class TestProcessState(_DBTestCase):
         try:
             cursor = self._db._conn.execute(
                 "SELECT * FROM pinned_items WHERE item_ref = ?",
-                ("phase:producto",),
+                ("phase:product",),
             )
             pins = cursor.fetchall()
             self.assertGreaterEqual(len(pins), 1)
@@ -2051,21 +2051,21 @@ class TestLoadStateFile(unittest.TestCase):
 
     def test_valid_state(self):
         self._write_state({
-            "comando": "feature",
-            "fase_actual": "producto",
-            "descripcion": "login with OAuth2",
+            "command": "feature",
+            "current_phase": "product",
+            "description": "login with OAuth2",
         })
         result = _capture._load_state_file(self._tmpfile.name)
         self.assertIsNotNone(result)
-        self.assertEqual(result["comando"], "feature")
+        self.assertEqual(result["command"], "feature")
 
-    def test_missing_comando(self):
-        self._write_state({"fase_actual": "producto"})
+    def test_missing_command(self):
+        self._write_state({"current_phase": "product"})
         result = _capture._load_state_file(self._tmpfile.name)
         self.assertIsNone(result)
 
-    def test_missing_fase_actual(self):
-        self._write_state({"comando": "feature"})
+    def test_missing_current_phase(self):
+        self._write_state({"command": "feature"})
         result = _capture._load_state_file(self._tmpfile.name)
         self.assertIsNone(result)
 

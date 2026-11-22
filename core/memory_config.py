@@ -4,7 +4,7 @@ Lightweight reader for the per-project Alfred memory configuration.
 
 The ``.claude/alfred-dev.local.md`` file uses simple YAML frontmatter.
 This module does not depend on PyYAML. It exposes a small API that reads
-the ``memoria`` subsection with consistent defaults.
+the ``memory`` subsection with consistent defaults.
 """
 
 from __future__ import annotations
@@ -86,7 +86,7 @@ def _normalize_memory_value(key: str, value: Any) -> Any:
 
 def load_memory_config(project_dir: str) -> Dict[str, Any]:
     """
-    Return the effective ``memoria`` configuration for a project.
+    Return the effective ``memory`` configuration for a project.
 
     If the file does not exist or the section is missing, return defaults.
     """
@@ -102,20 +102,20 @@ def load_memory_config(project_dir: str) -> Dict[str, Any]:
     frontmatter = _extract_frontmatter(content)
     lines = frontmatter.splitlines()
 
-    memoria_indent: Optional[int] = None
+    memory_indent: Optional[int] = None
     for index, line in enumerate(lines):
         stripped = line.strip()
-        if stripped != "memoria:":
+        if stripped != "memory:":
             continue
 
-        memoria_indent = len(line) - len(line.lstrip(" "))
+        memory_indent = len(line) - len(line.lstrip(" "))
         for child in lines[index + 1:]:
             child_stripped = child.strip()
             if not child_stripped or child_stripped.startswith("#"):
                 continue
 
             child_indent = len(child) - len(child.lstrip(" "))
-            if child_indent <= memoria_indent:
+            if child_indent <= memory_indent:
                 break
             if ":" not in child_stripped:
                 continue

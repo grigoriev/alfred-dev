@@ -4,7 +4,7 @@ PostToolUse hook for Bash: test quality gate.
 
 Intercepts Bash command output to detect test runs and, if tests ran,
 checks if they failed. On failure, it reports to stderr in the voice of
-the QA persona (El Rompe-cosas).
+the QA persona.
 
 Delegates command and result detection to ``evidence_guard_lib`` to keep
 one source of truth for the patterns.
@@ -41,7 +41,7 @@ def main():
 
     Reads the JSON from stdin, extracts the command and its output, and
     checks for failed tests. If tests failed, writes a warning to stderr
-    in the voice of El Rompe-cosas.
+    in the voice of the QA persona.
     """
     try:
         data = json.load(sys.stdin)

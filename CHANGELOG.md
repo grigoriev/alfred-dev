@@ -7,6 +7,18 @@
 
 ---
 
+## [0.8.0] - 2026-11-22
+
+Релиз русского форка (`v0.8.0-ru`). Ломает совместимость с файлами 0.7.x.
+
+### Changed
+
+- **Английские идентификаторы.** Ключи конфига, поля состояния сессии, ID фаз и gate, статусы и значения теперь на английском. Примеры: `autonomia` → `autonomy`, `autonomo` → `autonomous`, `fase_actual` → `current_phase`, `equipo_sesion` → `session_team`, `calidad` → `quality`, `gate_calidad` → `gate_quality`, `automatico+seguridad` → `automatic+security`, `aprobado` → `approved`. Заголовок заметок в конфиге: `## Заметки`.
+- **Команды:** `/alfred-dev:retomar` → `/alfred-dev:resume`, `/alfred-dev:ajustes` → `/alfred-dev:config`.
+- **UAT:** вердикты `approved`, `rejected`, `pending` (или `одобрено`, `отклонено`, `ожидает`).
+- **Шаблоны и docs:** статусы ADR (`proposed`, `accepted`), compliance (`compliant`, `partial`, `pending`, `not-applicable`, `accepted-risk`) и плейсхолдеры на английском.
+- **Без совместимости.** Испанские ключи, значения и команды 0.7.x больше не читаются. Переведи `.claude/alfred-dev.local.md` и `.claude/alfred-dev-state.json` проекта на новые имена или пересоздай их. Испанские фразы для маршрутизации свободного ввода остаются.
+
 ## [0.7.3] - 2026-11-22
 
 Релиз русского форка (`v0.7.3-ru`).

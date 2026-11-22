@@ -36,7 +36,7 @@ MANIFEST_NAMES = (
 )
 
 EVIDENCE_RELATIVE = os.path.join(".claude", "alfred-evidence.json")
-CIERRE_RELATIVE = os.path.join(".claude", "alfred-last-cierre.md")
+CLOSING_RELATIVE = os.path.join(".claude", "alfred-last-closing.md")
 
 
 def _git_changed_files(project_dir: str) -> List[str]:
@@ -92,7 +92,7 @@ def _doc_status_map(project_dir: str) -> Dict[str, str]:
 def run_hygiene(project_dir: str, command: str = "") -> Dict[str, Any]:
     """Check UAT, living docs and touched manifests without an evaluation."""
     root = os.path.abspath(project_dir)
-    comando = (command or "").strip().lower()
+    command = (command or "").strip().lower()
     blockers: List[str] = []
     warnings: List[str] = []
 
@@ -101,13 +101,13 @@ def run_hygiene(project_dir: str, command: str = "") -> Dict[str, Any]:
     verify = suggest_verify_action(root)
     if uat_status == "rejected":
         msg = "UAT отклонена: не выполняй deploy, пока не исправишь замечания из docs/project/uat.md."
-        if comando in {"ship", "audit"}:
+        if command in {"ship", "audit"}:
             blockers.append(msg)
         else:
             warnings.append(msg)
     elif verify is not None or uat_status == "pending":
         msg = "UAT последнего результата в ожидании. Закрой `/alfred-dev:uat` перед ship."
-        if comando == "ship":
+        if command == "ship":
             blockers.append(msg)
         else:
             warnings.append(msg)
@@ -123,12 +123,12 @@ def run_hygiene(project_dir: str, command: str = "") -> Dict[str, Any]:
             "Архитектура заполнена, а threat-model всё ещё скелет. "
             "Обнови `docs/project/threat-model.md`."
         )
-        if comando in {"ship", "audit", "feature"}:
+        if command in {"ship", "audit", "feature"}:
             blockers.append(msg)
         else:
             warnings.append(msg)
 
-    if comando in {"ship", "audit"} and compliance in {"scaffold", "missing", "empty"}:
+    if command in {"ship", "audit"} and compliance in {"scaffold", "missing", "empty"}:
         blockers.append(
             "Реестр compliance всё ещё скелет. "
             "Заполни `docs/project/compliance.md` с подтверждениями."
@@ -150,7 +150,7 @@ def run_hygiene(project_dir: str, command: str = "") -> Dict[str, Any]:
     passed = not blockers
     return {
         "passed": passed,
-        "command": comando,
+        "command": command,
         "blockers": blockers,
         "warnings": warnings,
         "uat_status": uat_status,
@@ -176,19 +176,19 @@ def render_hygiene_markdown(result: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def build_cierre(project_dir: str) -> Dict[str, Any]:
+def build_closing(project_dir: str) -> Dict[str, Any]:
     root = os.path.abspath(project_dir)
     state_path = os.path.join(root, STATE_RELATIVE_PATH)
     state = load_state(state_path) if os.path.isfile(state_path) else {}
     if not isinstance(state, dict):
         state = {}
     evidence = _latest_evidence(root)
-    hygiene = run_hygiene(root, str(state.get("comando") or ""))
+    hygiene = run_hygiene(root, str(state.get("command") or ""))
     brief = build_session_brief(root)
 
-    what = str(state.get("descripcion") or "изменение этой сессии")
-    command = str(state.get("comando") or "quick")
-    phase = str(state.get("fase_actual") or "")
+    what = str(state.get("description") or "изменение этой сессии")
+    command = str(state.get("command") or "quick")
+    phase = str(state.get("current_phase") or "")
 
     verified = "нет подтверждения тестами за последние минуты"
     if evidence:
@@ -215,26 +215,26 @@ def build_cierre(project_dir: str) -> Dict[str, Any]:
     }
 
 
-def write_session_cierre(project_dir: str) -> Optional[str]:
+def write_session_closing(project_dir: str) -> Optional[str]:
     """Save the wrap-up on session exit if there was work."""
     root = os.path.abspath(project_dir)
     state_path = os.path.join(root, STATE_RELATIVE_PATH)
     state = load_state(state_path) if os.path.isfile(state_path) else None
     has_state = isinstance(state, dict) and bool(
-        state.get("comando") or state.get("descripcion")
+        state.get("command") or state.get("description")
     )
     has_evidence = os.path.isfile(os.path.join(root, EVIDENCE_RELATIVE))
     if not has_state and not has_evidence:
         return None
-    payload = build_cierre(root)
-    dest = os.path.join(root, CIERRE_RELATIVE)
+    payload = build_closing(root)
+    dest = os.path.join(root, CLOSING_RELATIVE)
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     with open(dest, "w", encoding="utf-8") as handle:
-        handle.write(render_cierre_markdown(payload) + "\n")
+        handle.write(render_closing_markdown(payload) + "\n")
     return dest
 
 
-def render_cierre_markdown(result: Dict[str, Any]) -> str:
+def render_closing_markdown(result: Dict[str, Any]) -> str:
     pending = result.get("pending") or ["ничего блокирующего"]
     lines = [
         "## Итог Alfred",

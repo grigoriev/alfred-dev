@@ -38,9 +38,8 @@ class TestSessionStartHookContract(unittest.TestCase):
         self.assertIn("/alfred-dev:feature", self.hook)
         self.assertIn("/alfred-dev:audit", self.hook)
         self.assertIn("/alfred-dev:progress", self.hook)
-        self.assertIn("/alfred-dev:retomar", self.hook)
+        self.assertIn("/alfred-dev:resume", self.hook)
         self.assertNotIn("/alfred-dev:next", self.hook)
-        self.assertNotIn("/alfred-dev:resume", self.hook)
         self.assertNotIn("/alfred-dev:help", self.hook)
         self.assertNotIn("- /alfred audit -", self.hook)
 
@@ -49,7 +48,7 @@ class TestSessionStartHookContract(unittest.TestCase):
         self.assertNotIn("api.github.com/repos/grigoriev/alfred-dev/releases/latest", self.hook)
 
     def test_hook_injects_next_step_recommendation(self):
-        self.assertIn("/alfred-dev:retomar", self.hook)
+        self.assertIn("/alfred-dev:resume", self.hook)
 
     def test_session_start_registers_sync_bootstrap_before_async_context(self):
         self.assertIn("session-bootstrap.sh", self.hooks_json)
@@ -158,7 +157,7 @@ class TestSessionBootstrapRuntime(unittest.TestCase):
             os.makedirs(claude_dir, exist_ok=True)
             local_config = os.path.join(claude_dir, "alfred-dev.local.md")
             with open(local_config, "w", encoding="utf-8") as fh:
-                fh.write("# Notes\n\nmemoria:\n  enabled: true\n")
+                fh.write("# Notes\n\nmemory:\n  enabled: true\n")
 
             result = subprocess.run(
                 [script_path],
@@ -183,9 +182,9 @@ class TestSessionBootstrapRuntime(unittest.TestCase):
             with open(local_config, "w", encoding="utf-8") as fh:
                 fh.write(
                     "---\n"
-                    "autonomia:\n"
-                    "  producto: autonomo\n"
-                    "memoria:\n"
+                    "autonomy:\n"
+                    "  product: autonomous\n"
+                    "memory:\n"
                     "  enabled: false\n"
                     "---\n"
                 )
@@ -212,7 +211,7 @@ class TestSessionBootstrapRuntime(unittest.TestCase):
                 "w",
                 encoding="utf-8",
             ) as fh:
-                fh.write("---\nmemoria:\n  enabled: false\n---\n")
+                fh.write("---\nmemory:\n  enabled: false\n---\n")
 
             result = subprocess.run(
                 [script_path],
@@ -274,24 +273,24 @@ class TestSessionStartRuntime(unittest.TestCase):
             ) as fh:
                 fh.write(
                     "---\n"
-                    "autonomia:\n"
-                    "  producto: autonomo\n"
-                    "  arquitectura: autonomo\n"
-                    "  desarrollo: autonomo\n"
-                    "  calidad: interactivo\n"
-                    "  documentacion: autonomo\n"
-                    "  entrega: autonomo\n"
-                    "agentes_opcionales:\n"
+                    "autonomy:\n"
+                    "  product: autonomous\n"
+                    "  architecture: autonomous\n"
+                    "  development: autonomous\n"
+                    "  quality: interactive\n"
+                    "  documentation: autonomous\n"
+                    "  delivery: autonomous\n"
+                    "optional_agents:\n"
                     "  cto: true\n"
                     "  seo-specialist: true\n"
-                    "memoria:\n"
+                    "memory:\n"
                     "  enabled: false\n"
-                    "personalidad:\n"
-                    "  nivel_sarcasmo: 5\n"
-                    "  idioma: en\n"
-                    "  verbosidad: alta\n"
-                    "  celebrar_victorias: false\n"
-                    "  insultar_malas_practicas: false\n"
+                    "personality:\n"
+                    "  sarcasm_level: 5\n"
+                    "  language: en\n"
+                    "  verbosity: alta\n"
+                    "  celebrate_wins: false\n"
+                    "  call_out_bad_practices: false\n"
                     "---\n"
                 )
 
@@ -322,9 +321,9 @@ class TestSessionStartRuntime(unittest.TestCase):
             ) as fh:
                 fh.write(
                     "---\n"
-                    "autonomia:\n"
-                    "  producto: autonomo\n"
-                    "memoria:\n"
+                    "autonomy:\n"
+                    "  product: autonomous\n"
+                    "memory:\n"
                     "  enabled: false\n"
                     "---\n"
                 )
@@ -359,7 +358,7 @@ class TestSessionStartRuntime(unittest.TestCase):
             ) as fh:
                 fh.write(
                     "---\n"
-                    "memoria:\n"
+                    "memory:\n"
                     "  enabled: true\n"
                     "  sync_to_native: true\n"
                     "---\n\n"
@@ -398,47 +397,6 @@ class TestSessionStartRuntime(unittest.TestCase):
                 any(name.endswith(".md") for name in os.listdir(memory_dir)),
                 msg=f"No native memories were generated in {memory_dir}",
             )
-
-    def test_session_start_falls_back_to_project_decisions_when_active_iteration_is_empty(self):
-        self.skipTest("SessionStart no longer injects the SQLite decision summary.")
-
-    def _disabled_session_start_falls_back_to_project_decisions_when_active_iteration_is_empty(self):
-        script_path = os.path.join(_PROJECT_ROOT, "hooks", "session-start.sh")
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            claude_dir = os.path.join(tmpdir, ".claude")
-            os.makedirs(claude_dir, exist_ok=True)
-            with open(
-                os.path.join(claude_dir, "alfred-dev.local.md"),
-                "w",
-                encoding="utf-8",
-            ) as fh:
-                fh.write("---\nmemoria:\n  enabled: true\n---\n")
-
-            db = MemoryDB(os.path.join(claude_dir, "alfred-memory.db"))
-            feature_id = db.start_iteration("feature", "Historical decision")
-            db.log_decision(
-                title="Use the stable API",
-                chosen="Responses API",
-                iteration_id=feature_id,
-            )
-            db.complete_iteration(feature_id)
-            db.start_iteration("session", "Current empty session")
-            db.close()
-
-            result = subprocess.run(
-                [script_path],
-                cwd=tmpdir,
-                text=True,
-                capture_output=True,
-                check=False,
-            )
-
-            self.assertEqual(result.returncode, 0, msg=result.stderr)
-            payload = json.loads(result.stdout)
-            additional_context = payload["hookSpecificOutput"]["additionalContext"]
-            self.assertIn("La iteracion activa aun no tiene decisiones", additional_context)
-            self.assertIn("Use the stable API", additional_context)
 
 
 if __name__ == "__main__":

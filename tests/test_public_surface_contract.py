@@ -607,7 +607,7 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
         feature_command = _read("commands/feature.md")
         cto = _read("docs/agents/cto.md")
 
-        self.assertIn("estilo", _normalize(flows))
+        self.assertIn("style", _normalize(flows))
         self.assertIn("designer", _normalize(feature_command))
         self.assertIn("cto", _normalize(cto))
 
@@ -659,7 +659,7 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
 
     def test_configuration_surface_uses_canonical_phase_schema(self):
         readme = _read("README.md")
-        config_command_norm = _normalize(_read("commands/ajustes.md"))
+        config_command_norm = _normalize(_read("commands/config.md"))
         configuration_doc_norm = _normalize(_read("docs/configuration.md"))
 
         readme_config = _slice_between(
@@ -667,13 +667,13 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
             "## Конфигурация",
             "## Отказ от ответственности",
         )
-        self.assertIn("entrega: autonomo", readme_config)
+        self.assertIn("delivery: autonomous", readme_config)
         self.assertIn("cto: true", readme_config)
-        self.assertNotIn("seguridad: autonomo", readme_config)
-        self.assertNotIn("devops: semi-autonomo", readme_config)
+        self.assertNotIn("security: autonomous", readme_config)
+        self.assertNotIn("devops: semi-autonomous", readme_config)
 
         self.assertIn(
-            "producto, arquitectura, desarrollo, calidad, documentacion, entrega",
+            "product, architecture, development, quality, documentation, delivery",
             config_command_norm,
         )
         self.assertIn(_normalize("главное меню"), config_command_norm)
@@ -694,10 +694,10 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
         self.assertIn("build_config_section_change_preview()", configuration_doc_norm)
         self.assertIn("update_config_section()", configuration_doc_norm)
         self.assertIn("update_project_config_section()", configuration_doc_norm)
-        self.assertIn("auditoria", configuration_doc_norm)
+        self.assertIn("группы `audit`", configuration_doc_norm)
         self.assertIn(_normalize("внешнее второе мнение"), configuration_doc_norm)
-        self.assertIn("memoria.enabled: true", configuration_doc_norm)
-        self.assertIn("ship:despliegue", configuration_doc_norm)
+        self.assertIn("memory.enabled: true", configuration_doc_norm)
+        self.assertIn("ship:deployment", configuration_doc_norm)
         self.assertIn(_normalize("обязательное подтверждение человеком"), configuration_doc_norm)
         architecture = _normalize(_read("docs/architecture.md"))
         self.assertIn("build_config_section_summaries()", architecture)
@@ -711,7 +711,7 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
         progress_command = _read("commands/progress.md")
         sync_github_command = _read("commands/sync-github.md")
         pause_command = _read("commands/pause.md")
-        resume_command = _read("commands/retomar.md")
+        resume_command = _read("commands/resume.md")
         verify_command = _read("commands/uat.md")
         update_command = _read("commands/update.md")
 
@@ -981,79 +981,14 @@ class TestInstallSurfaceContracts(unittest.TestCase):
 
 class TestOptionalAgentsContracts(unittest.TestCase):
     def test_config_and_composition_include_nine_optional_agents(self):
-        config = _read("commands/ajustes.md")
-        composition = _read("commands/_composicion.md")
+        config = _read("commands/config.md")
+        composition = _read("commands/_composition.md")
         configuration = _read("docs/configuration.md")
 
         self.assertIn("cto", _normalize(config))
         self.assertIn("build_optional_agent_group_menu", config)
         self.assertIn("Designer", composition)
         self.assertIn("build_optional_agent_group_menus()", configuration)
-
-    def test_copywriter_doc_does_not_overpromise_automatic_quality_integration(self):
-        self.skipTest("copywriter is no longer a plugin agent")
-        copywriter = _read("docs/agents/copywriter.md")
-        self.assertIn(
-            "Durante `feature:documentacion`, `ship:documentacion` o una ejecución acotada con copy visible",
-            copywriter,
-        )
-        self.assertIn("no se considera una etapa automática universal del flujo", copywriter)
-        self.assertNotIn("Ficheros de internacionalizacion o localizacion", copywriter)
-
-    def test_content_optional_docs_keep_runtime_boundaries_clear(self):
-        self.skipTest("content agents were removed")
-        composition = _read("commands/_composicion.md")
-        seo = _read("docs/agents/seo-specialist.md")
-        ux = _read("docs/agents/ux-reviewer.md")
-        i18n = _read("docs/agents/i18n-specialist.md")
-
-        self.assertIn("Reglas anti-solape para contenido y UX", composition)
-        self.assertIn("No es el dueño del tono", composition)
-        self.assertIn("No es el dueño del SEO técnico", composition)
-        self.assertIn("No es el dueño de la usabilidad del flujo", composition)
-        self.assertIn("quick:validacion_rapida", seo)
-        self.assertIn("No decidir el tono del texto", seo)
-        self.assertIn("No se encarga del SEO técnico", ux)
-        self.assertIn("No decide indexación", i18n)
-
-    def test_technical_optional_docs_keep_runtime_boundaries_clear(self):
-        self.skipTest("optional technical agents were removed; only cto remains")
-        composition = _read("commands/_composicion.md")
-        data = _read("docs/agents/data-engineer.md")
-        performance = _read("docs/agents/performance-engineer.md")
-        config = _read("commands/config.md")
-        help_command = _read("commands/help.md")
-        readme = _read("README.md")
-        configuration = _read("docs/configuration.md")
-
-        self.assertIn("Reglas anti-solape para datos y rendimiento", composition)
-        self.assertIn("Si el síntoma es \"va lento\" pero aún no sabemos por qué, empieza por `performance-engineer`", composition)
-        self.assertIn("No actua como profiler general del sistema", data)
-        self.assertIn("Sugerencia estática (`suggest_optional_agents`)", data)
-        self.assertIn("stack detectado tenga un ORM distinto de `ninguno`", data)
-        self.assertIn("No reescribe esquemas, migraciones ni índices por defecto", performance)
-        self.assertIn("más de 50 ficheros fuente", performance)
-        self.assertIn("Esquema, migraciones, queries, índices o persistencia", config)
-        self.assertIn("Latencia, bundles, memoria o cuellos de botella medibles", config)
-        self.assertIn("Esquema, migraciones, queries, índices o persistencia", help_command)
-        self.assertIn("Latencia, bundles, memoria o cuellos de botella medibles", help_command)
-        self.assertIn("Esquema, migraciones, queries, índices o persistencia", readme)
-        self.assertIn("Latencia, bundles, memoria o cuellos de botella medibles", readme)
-        self.assertIn("Estas sugerencias estáticas son deliberadamente conservadoras", configuration)
-        self.assertIn("performance-engineer, quizá data-engineer", configuration)
-
-    def test_project_manager_doc_keeps_operational_boundary_clear(self):
-        self.skipTest("project-manager is no longer an agent; SonIA remains as artifacts")
-        sonia = _read("docs/agents/project-manager.md")
-        agents_readme = _read("docs/agents/README.md")
-        architecture = _read("docs/architecture.md")
-
-        self.assertIn("convierte PRDs ya aprobados", sonia)
-        self.assertIn("Materializa en el kanban el trabajo ya definido", sonia)
-        self.assertIn("de forma objetiva desde el estado", sonia)
-        self.assertIn("No reprioriza el roadmap", sonia)
-        self.assertIn("Materializa kanban, trazabilidad y siguiente paso operativo", agents_readme)
-        self.assertIn("PM operativo y trazabilidad", architecture)
 
     def test_core_agent_docs_keep_product_architecture_orchestration_boundary_clear(self):
         po = _read("docs/agents/product-owner.md")
@@ -1079,8 +1014,8 @@ class TestLandingSurfaceContracts(unittest.TestCase):
         self.assertIn("catalogo publicado de 62 skills", _normalize(es))
         self.assertIn("62 skills en 15 dominios", es)
         self.assertIn("{ number: 62, label: 'Skills' }", es)
-        self.assertIn("Son 9 agentes especializados", es)
-        self.assertIn("19 agentes. catalogo publicado de 62 skills. 13 hooks. 25 comandos namespaced + /alfred.", _normalize(es))
+        self.assertIn("Son 9 agents especializados", es)
+        self.assertIn("19 agents. catalogo publicado de 62 skills. 13 hooks. 25 comandos namespaced + /alfred.", _normalize(es))
         self.assertIn("CTO", es)
 
     def test_english_landing_uses_current_counts(self):

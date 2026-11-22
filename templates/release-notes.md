@@ -1,19 +1,19 @@
 # Release Notes: v{{version}}
 
-**Дата:** {{fecha}}
+**Дата:** {{date}}
 **Автор:** tech-writer
 
 ## Резюме
 
-{{resumen_release}}
+{{release_summary}}
 
 ## Новое
 
-{{novedades}}
+{{new_features}}
 
 ## Исправления
 
-{{correcciones}}
+{{fixes}}
 
 ## Важные изменения
 
@@ -21,15 +21,15 @@
 
 ## Руководство по миграции
 
-{{guia_migracion}}
+{{migration_guide}}
 
 ## Известные проблемы
 
-{{problemas_conocidos}}
+{{known_issues}}
 
 ## Благодарности
 
-{{agradecimientos}}
+{{acknowledgements}}
 
 <!-- ЗАПОЛНЕННЫЙ ПРИМЕР ─────────────────────────────────────────────────
 
@@ -40,27 +40,27 @@
 
 ## Резюме
 
-{{resumen_version}}
+{{version_summary}}
 
 ## Новое
 
-{{novedades}}
+{{new_features}}
 
 ## Исправления
 
-{{correcciones}}
+{{fixes}}
 
 ## Важные изменения
 
-{{cambios_importantes}}
+{{breaking_changes_detail}}
 
 ## Руководство по миграции
 
-{{guia_migracion_detallada}}
+{{detailed_migration_guide}}
 
 ## Известные проблемы
 
-{{problemas_conocidos}}
+{{known_issues}}
 
 ## Благодарности
 

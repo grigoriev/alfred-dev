@@ -380,11 +380,11 @@ Claude Code запускает сервер в начале сессии и де
 
 Когда хук видит запись в `alfred-dev-state.json`, он выполняет три проверки подряд:
 
-1. **Новая итерация**: если в БД нет активной итерации, начинается новая с данными из состояния (`comando`, `descripcion`) и записывается событие `iteration_started`.
+1. **Новая итерация**: если в БД нет активной итерации, начинается новая с данными из состояния (`command`, `description`) и записывается событие `iteration_started`.
 
 2. **Завершённые фазы**: сравнивает завершённые фазы нового состояния с уже записанными в БД событиями `phase_completed`. Для каждой новой фазы без события записывает `phase_completed` с именем фазы, результатом, датой завершения и созданными артефактами.
 
-3. **Завершённая итерация**: если `fase_actual` в состоянии равна `"completado"`, закрывает активную итерацию и записывает событие `iteration_completed`.
+3. **Завершённая итерация**: если `current_phase` в состоянии равна `"completed"`, закрывает активную итерацию и записывает событие `iteration_completed`.
 
 ### Захват коммитов
 
@@ -392,7 +392,7 @@ Claude Code запускает сервер в начале сессии и де
 
 ### Предварительная проверка
 
-Перед обработкой любого события хук проверяет, что память включена, читая `.claude/alfred-dev.local.md`. Он ищет шаблон `memoria:` с последующим `enabled: true` через регулярное выражение, которое допускает комментарии и другие ключи между ними. Также он автоматически исключает файлы внутренних путей и тривиальные команды, чтобы не было шума.
+Перед обработкой любого события хук проверяет, что память включена, читая `.claude/alfred-dev.local.md`. Он ищет шаблон `memory:` с последующим `enabled: true` через регулярное выражение, которое допускает комментарии и другие ключи между ними. Также он автоматически исключает файлы внутренних путей и тривиальные команды, чтобы не было шума.
 
 
 ## Полный поток захвата и запросов
@@ -412,27 +412,27 @@ sequenceDiagram
     Note over U,B: --- Текущая сессия: запись ---
 
     U->>A: /alfred-dev:feature "Система кэша"
-    A->>S: Пишет начальное состояние (comando, descripcion)
+    A->>S: Пишет начальное состояние (command, description)
     S-->>H: PostToolUse запускает хук
     H->>H: Читает state.json, проверяет, что память активна
     H->>DB: start_iteration() + log_event(iteration_started)
 
     A->>A: Выполняет фазу продукта
-    A->>S: Обновляет fases_completadas
+    A->>S: Обновляет completed_phases
     S-->>H: PostToolUse запускает хук
-    H->>DB: log_event(phase_completed, fase: producto)
+    H->>DB: log_event(phase_completed, phase: product)
 
     A->>A: Выполняет фазу архитектуры
-    A->>S: Обновляет fases_completadas
+    A->>S: Обновляет completed_phases
     S-->>H: PostToolUse запускает хук
-    H->>DB: log_event(phase_completed, fase: arquitectura)
+    H->>DB: log_event(phase_completed, phase: architecture)
 
     A->>MCP: memory_log_decision(title, chosen, rationale...)
     MCP->>DB: log_decision()
     DB-->>MCP: decision_id
 
     A->>A: Завершает все фазы
-    A->>S: fase_actual = "completado"
+    A->>S: current_phase = "completed"
     S-->>H: PostToolUse запускает хук
     H->>DB: complete_iteration() + log_event(iteration_completed)
 
@@ -476,7 +476,7 @@ sequenceDiagram
 | Коммиты | Не удаляются никогда | Это связь с реальным кодом |
 | События | Удаляются после `retention_days` | Это механические данные, их ценность со временем падает |
 
-Очистка событий выполняется автоматически при запуске MCP-сервера. Метод `purge_old_events()` удаляет события, у которых `created_at` раньше текущей даты минус `retention_days`, и очищает их строки в `memory_fts`. Значение по умолчанию: 365 дней. Его можно задать через переменную окружения `ALFRED_MEMORY_RETENTION_DAYS` или ключ `memoria.retention_days` в конфигурации проекта.
+Очистка событий выполняется автоматически при запуске MCP-сервера. Метод `purge_old_events()` удаляет события, у которых `created_at` раньше текущей даты минус `retention_days`, и очищает их строки в `memory_fts`. Значение по умолчанию: 365 дней. Его можно задать через переменную окружения `ALFRED_MEMORY_RETENTION_DAYS` или ключ `memory.retention_days` в конфигурации проекта.
 
 ### Версионирование схемы
 
@@ -489,7 +489,7 @@ sequenceDiagram
 
 ## Конфигурация
 
-Постоянная память настраивается в секции `memoria` файла `.claude/alfred-dev.local.md` проекта. Её также можно настроить интерактивно через `/alfred-dev:ajustes`.
+Постоянная память настраивается в секции `memory` файла `.claude/alfred-dev.local.md` проекта. Её также можно настроить интерактивно через `/alfred-dev:config`.
 
 ### Ключи конфигурации
 
@@ -508,7 +508,7 @@ sequenceDiagram
 
 ```yaml
 ---
-memoria:
+memory:
   enabled: true
 ---
 ```
@@ -517,7 +517,7 @@ memoria:
 
 ```yaml
 ---
-memoria:
+memory:
   enabled: true
   sync_to_native: true
   sync_commits_limit: 10
@@ -525,7 +525,7 @@ memoria:
   capture_commits: true
   retention_days: 365
 
-agentes_opcionales:
+optional_agents:
   cto: true
 ---
 ```

@@ -1,6 +1,6 @@
 ---
 description: "Открывает или закрывает локальный UI памяти: timeline, решения, граф и поиск"
-argument-hint: "[stop|cerrar]"
+argument-hint: "[stop]"
 ---
 
 # /alfred-dev:memory-ui
@@ -13,7 +13,7 @@ argument-hint: "[stop|cerrar]"
 ## Семантика
 
 - Без аргумента: открывает или переиспользует UI на `http://127.0.0.1`.
-- `stop`, `cerrar` или `detener`: выключает локальный сервер, если он жив.
+- `stop`: выключает локальный сервер, если он жив.
 
 При завершении сессии Claude `SessionEnd` останавливает UI, если он ещё работает.
 
@@ -35,7 +35,7 @@ python3 .claude/alfred-continuity.py consume-prefetch "$PWD" --expected memory-u
 python3 .claude/alfred-continuity.py memory-ui "$PWD" --raw "$ARGUMENTS"
 ```
 
-Helper также принимает `--stop` как алиас `stop`/`cerrar`/`detener`.
+Helper также принимает `--stop` как алиас `stop`.
 
 Если helper возвращает валидный ответ, используй его как есть в качестве итогового ответа
 и не оборачивай в дополнительную прозу. Helper уже показывает URL, состояние

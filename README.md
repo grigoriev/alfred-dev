@@ -47,7 +47,7 @@ Alfred Dev не монолитный агент, который пытается
 
 ### Процесс feature: хронология фаз
 
-Процесс `feature` самый полный: до семи последовательных фаз. Фаза `estilo_visual` появляется только если у проекта есть фронтенд. `security-officer` участвует в архитектуре, качестве и поставке: безопасность не последний шаг.
+Процесс `feature` самый полный: до семи последовательных фаз. Фаза `visual_style` появляется только если у проекта есть фронтенд. `security-officer` участвует в архитектуре, качестве и поставке: безопасность не последний шаг.
 
 ```mermaid
 timeline
@@ -169,7 +169,7 @@ irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.ps1 | ie
 /alfred-dev:feature система входа по email и паролю
 ```
 
-`/alfred-dev:ajustes` меняет автономность и CTO. `/alfred-dev:feature` проходит
+`/alfred-dev:config` меняет автономность и CTO. `/alfred-dev:feature` проходит
 до 7 фаз (продукт, визуальный стиль, архитектура, разработка, качество,
 документация, поставка). Autopilot решает только настроенные пользовательские gates;
 он не пропускает тесты, безопасность, подтверждение и ручное подтверждение развёртывания.
@@ -177,11 +177,11 @@ irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.ps1 | ie
 
 ## Новое в v0.7.0
 
-Сокращение под SDK Claude Code: 10 агентов (`inherit`), 11 плоских skills, 18 опубликованных команд. Точка входа: `/alfred-dev:alfred`. Публичная непрерывность: `alfred`, `progress` и `retomar`. Без глобального алиаса `/alfred`, без stop-hook Ralph и без перезаписи `settings.json`. Сервер памяти использует современный MCP stdio и запускает `mcp/memory_server.py` с FastMCP, если установлен пакет `mcp`. Secret-guard покрывает Write, Edit, Bash и MCP-инструменты записи. Agent Teams только если пользователь уже включил их. Живой аудит: [docs/release.md](docs/release.md). История 0.6.x: [changelog](CHANGELOG.md).
+Сокращение под SDK Claude Code: 10 агентов (`inherit`), 11 плоских skills, 18 опубликованных команд. Точка входа: `/alfred-dev:alfred`. Публичная непрерывность: `alfred`, `progress` и `resume`. Без глобального алиаса `/alfred`, без stop-hook Ralph и без перезаписи `settings.json`. Сервер памяти использует современный MCP stdio и запускает `mcp/memory_server.py` с FastMCP, если установлен пакет `mcp`. Secret-guard покрывает Write, Edit, Bash и MCP-инструменты записи. Agent Teams только если пользователь уже включил их. Живой аудит: [docs/release.md](docs/release.md). История 0.6.x: [changelog](CHANGELOG.md).
 
 ## Команды
 
-Весь интерфейс управляется из командной строки Claude Code. Главная точка входа: `/alfred-dev:alfred`. Остальные используют тот же префикс `/alfred-dev:`. Глобального алиаса `/alfred` нет. `plugin.json` публикует 18 команд. В `commands/` остаются внутренние хелперы, которые не перечислены как slash: `next`, `search`, `_composicion.md` и `_docs_vivas.md`.
+Весь интерфейс управляется из командной строки Claude Code. Главная точка входа: `/alfred-dev:alfred`. Остальные используют тот же префикс `/alfred-dev:`. Глобального алиаса `/alfred` нет. `plugin.json` публикует 18 команд. В `commands/` остаются внутренние хелперы, которые не перечислены как slash: `next`, `search`, `_composition.md` и `_living_docs.md`.
 
 ### Core
 
@@ -199,13 +199,13 @@ irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.ps1 | ie
 | `/alfred-dev:audit` | Аудит четырьмя агентами параллельно: качество, безопасность, архитектура, документация. |
 | `/alfred-dev:ship` | Релиз: финальный аудит, changelog, семантическое версионирование, развёртывание. |
 | `/alfred-dev:memory-ui` | Открывает или закрывает локальный UI памяти SQLite. |
-| `/alfred-dev:ajustes` | Настройка автономности, стека, CTO, памяти и личности. |
+| `/alfred-dev:config` | Настройка автономности, стека, CTO, памяти и личности. |
 
 ### Операционные
 
 | Команда | Описание |
 |---------|----------|
-| `/alfred-dev:retomar` | Продолжает приостановленную сессию по handoff и сохранённому состоянию. |
+| `/alfred-dev:resume` | Продолжает приостановленную сессию по handoff и сохранённому состоянию. |
 | `/alfred-dev:pause` | Приостанавливает текущую работу и создаёт постоянный handoff. |
 | `/alfred-dev:sync-github [owner/repo]` | Отражает локальную доску в GitHub Issues через `gh`. |
 | `/alfred-dev:cto [dir] [--scope X]` | Внешнее ревью готовой фичи через Greptile CLI. |
@@ -253,7 +253,7 @@ Alfred запускает процесс до 7 фаз:
 
 ### Опциональный агент (CTO)
 
-Единственный опциональный агент рантайма: **CTO**, внешнее ревью готовой фичи через Greptile CLI. Он включён по умолчанию, но в процессах работает только на закрытии качества `feature` и на финальном аудите `ship`. В `quick`, `fix`, `spike` и `audit` он не участвует. `/alfred-dev:cto` запускает ревью вручную в любой момент. Выключить CTO можно через `/alfred-dev:ajustes`. Нужны Greptile CLI, вход через `greptile login` и подключённый репозиторий. Нет data-engineer, ux-reviewer, github-manager и остального каталога 0.6. Подробнее в [документации по конфигурации](docs/configuration.md#динамический-состав-команды).
+Единственный опциональный агент рантайма: **CTO**, внешнее ревью готовой фичи через Greptile CLI. Он включён по умолчанию, но в процессах работает только на закрытии качества `feature` и на финальном аудите `ship`. В `quick`, `fix`, `spike` и `audit` он не участвует. `/alfred-dev:cto` запускает ревью вручную в любой момент. Выключить CTO можно через `/alfred-dev:config`. Нужны Greptile CLI, вход через `greptile login` и подключённый репозиторий. Нет data-engineer, ux-reviewer, github-manager и остального каталога 0.6. Подробнее в [документации по конфигурации](docs/configuration.md#динамический-состав-команды).
 
 ### Skills (11)
 
@@ -285,7 +285,7 @@ Skills с побочными эффектами (`style-direction`, `sonarqube`,
 | `session-bootstrap.sh` | `SessionStart` | Синхронный bootstrap: локальный конфиг, память, права и обёртка непрерывности |
 | `session-start.sh` | `SessionStart` | Брифинг сессии, протокол общения без slash и контекст непрерывности |
 | `session-end.py` | `SessionEnd` | Останавливает Memory UI и записывает закрытие сессии (fail-open) |
-| `prompt-route.py` | `UserPromptSubmit` | Если в тексте нет slash, предлагает fix/quick/retomar по запросу |
+| `prompt-route.py` | `UserPromptSubmit` | Если в тексте нет slash, предлагает fix/quick/resume по запросу |
 | `secret-guard.py` | `PreToolUse` (Write/Edit/Bash/MCP) | Блокирует запись секретов |
 | `dangerous-command-guard.py` | `PreToolUse` (Bash) | Блокирует разрушительные команды (`rm -rf /`, force push, DROP DATABASE) |
 | `sensitive-read-guard.py` | `PreToolUse` (Read) | Предупреждает при чтении чувствительных файлов (приватные ключи, `.env`, учётные данные) |
@@ -316,10 +316,10 @@ Skills с побочными эффектами (`style-direction`, `sonarqube`,
 |-----------|-----------------|---------|
 | Оркестрация | `orchestrator.py` | Конечный автомат 6 процессов, сессии, gates, autopilot, итеративный цикл |
 | Личность | `personality.py` | Фразы, тон, анонсы и формат вердикта |
-| Конфигурация | `config_loader.py`, `optional_agents.py`, `config_cli.py` | Загрузка конфига, определение стека, меню `/alfred-dev:ajustes` и CTO |
+| Конфигурация | `config_loader.py`, `optional_agents.py`, `config_cli.py` | Загрузка конфига, определение стека, меню `/alfred-dev:config` и CTO |
 | Непрерывность | `continuity.py`, `session_report.py`, `session_brief.py`, `hygiene.py` | Хелперы, пауза/возобновление, брифинг, гигиена ship и UAT |
 | Живые доки | `project_docs.py` | Каркас и проверка `docs/project/` и `docs/adr/` |
-| Маршрутизация | `prompt_route.py` | Классифицирует промпты без slash (fix, quick, retomar, map-codebase) |
+| Маршрутизация | `prompt_route.py` | Классифицирует промпты без slash (fix, quick, resume, map-codebase) |
 | Память | `memory.py`, `memory_config.py`, `memory_sync.py`, `memory_ui_server.py` | Локальный SQLite, sync Markdown и локальный GET UI |
 | Безопасность | `secrets.py` | Санитизация и обнаружение секретов, используется памятью, упаковкой и guards |
 | Визуал Designer | `selina_visual.py`, `selina_style_*.py` | Условное визуальное направление, каталог, варианты и селектор |
@@ -333,7 +333,7 @@ python3 -m pytest tests/ -v
 
 Quality gates: проверяемые контрольные точки между фазами. Если условия gate не выполнены, процесс останавливается или остаётся в ожидании с понятным следующим действием. Autopilot решает только настроенные пользовательские gates; он не пропускает тесты, безопасность, подтверждение и ручное подтверждение развёртывания.
 
-Оркестратор определяет 5 типов: `libre`, `usuario`, `automatico`, `usuario+seguridad` и `automatico+seguridad`.
+Оркестратор определяет 5 типов: `free`, `user`, `automatic`, `user+security` и `automatic+security`.
 
 | Gate | Условие |
 |------|---------|
@@ -346,7 +346,7 @@ Quality gates: проверяемые контрольные точки межд
 | Документация полная | Все артефакты задокументированы, есть проверяемый чек-лист/подтверждение |
 | Пайплайн зелёный | CI/CD зелёный, без root-пользователя в контейнере, без секретов в образе |
 
-Каждая gate выдаёт формальный вердикт: **APROBADO**, **APROBADO CON CONDICIONES** или **RECHAZADO**, с блокирующими находками и рекомендуемым следующим действием.
+Каждая gate выдаёт формальный вердикт: **ОДОБРЕНО**, **ОДОБРЕНО С УСЛОВИЯМИ** или **ОТКЛОНЕНО**, с блокирующими находками и рекомендуемым следующим действием.
 
 ## Compliance
 
@@ -381,7 +381,7 @@ Designer подключается только если определённый
 
 Alfred Dev помнит решения, коммиты и итерации между сессиями. Память хранится в локальном SQLite (`.claude/alfred-memory.db`) внутри каждого проекта, без удалённых сервисов.
 
-`load_config()` начинает с `memoria.enabled: false`, если локального файла нет. В первой сессии `session-bootstrap.sh` создаёт `.claude/alfred-dev.local.md` с включённой памятью. После этого `/alfred-dev:ajustes` может её отключить. Если память выключена, процессы продолжают работать; у будущих сессий не будет истории.
+`load_config()` начинает с `memory.enabled: false`, если локального файла нет. В первой сессии `session-bootstrap.sh` создаёт `.claude/alfred-dev.local.md` с включённой памятью. После этого `/alfred-dev:config` может её отключить. Если память выключена, процессы продолжают работать; у будущих сессий не будет истории.
 
 При включённой памяти `activity-capture.py` записывает события на `UserPromptSubmit` и `PostToolUse` (Write, Edit, Bash): итерации, фазы, коммиты (SHA, автор, файлы) и активность сессии. Решения запрашиваются через MCP-сервер и `/alfred-dev:memory-ui`.
 
@@ -424,22 +424,22 @@ alfred-dev/
 
 ## Конфигурация
 
-Плагин настраивается по проекту через `.claude/alfred-dev.local.md` в корне проекта. В первой сессии `SessionStart` создаёт его, если файла нет, с автономностью по фазам `autonomo` и включённой памятью; затем `/alfred-dev:ajustes` позволяет переключить на `interactivo` или `semi-autonomo`. Единственный опциональный агент: CTO:
+Плагин настраивается по проекту через `.claude/alfred-dev.local.md` в корне проекта. В первой сессии `SessionStart` создаёт его, если файла нет, с автономностью по фазам `autonomous` и включённой памятью; затем `/alfred-dev:config` позволяет переключить на `interactive` или `semi-autonomous`. Единственный опциональный агент: CTO:
 
 ```yaml
 ---
-autonomia:
-  producto: autonomo
-  arquitectura: autonomo
-  desarrollo: autonomo
-  calidad: autonomo
-  documentacion: autonomo
-  entrega: autonomo
+autonomy:
+  product: autonomous
+  architecture: autonomous
+  development: autonomous
+  quality: autonomous
+  documentation: autonomous
+  delivery: autonomous
 
-agentes_opcionales:
+optional_agents:
   cto: true
 
-memoria:
+memory:
   enabled: true
   sync_to_native: true
   sync_commits_limit: 10
@@ -447,18 +447,18 @@ memoria:
   capture_commits: true
   retention_days: 365
 
-personalidad:
-  nivel_sarcasmo: 3
-  verbosidad: normal
-  idioma: ru
-  celebrar_victorias: true
-  insultar_malas_practicas: true
+personality:
+  sarcasm_level: 3
+  verbosity: normal
+  language: ru
+  celebrate_wins: true
+  call_out_bad_practices: true
 ---
 
 Дополнительные заметки по проекту, которые Alfred должен учитывать.
 ```
 
-Три уровня автономности по фазам: `interactivo` (запрашивает подтверждение), `semi-autonomo` и `autonomo`. Autopilot не пропускает тесты, безопасность, подтверждение и deploy.
+Три уровня автономности по фазам: `interactive` (запрашивает подтверждение), `semi-autonomous` и `autonomous`. Autopilot не пропускает тесты, безопасность, подтверждение и deploy.
 
 ## Отказ от ответственности
 

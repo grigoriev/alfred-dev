@@ -50,15 +50,15 @@ class TestManualSmokeRunner(unittest.TestCase):
         self.assertEqual(len(case_ids), len(set(case_ids)))
         self.assertGreaterEqual(len(case_ids), 36)
         self.assertIn("/alfred-dev:alfred", prompts)
-        self.assertIn("/alfred-dev:ajustes", prompts)
-        self.assertIn("/alfred-dev:feature sistema de login con email y password", prompts)
-        self.assertIn("/alfred-dev:quick cambia el texto del CTA", prompts)
-        self.assertIn("/alfred-dev:fix el login falla con password correcta", prompts)
-        self.assertIn("/alfred-dev:spike compara SQLite y Postgres", prompts)
+        self.assertIn("/alfred-dev:config", prompts)
+        self.assertIn("/alfred-dev:feature система входа по email и паролю", prompts)
+        self.assertIn("/alfred-dev:quick поменяй текст CTA", prompts)
+        self.assertIn("/alfred-dev:fix вход не работает с правильным паролем", prompts)
+        self.assertIn("/alfred-dev:spike сравни SQLite и Postgres", prompts)
         self.assertIn("/alfred-dev:audit", prompts)
-        self.assertIn("/alfred-dev:uat aprobado por usuario", prompts)
-        self.assertIn("/alfred-dev:uat rechazado falta revisar copy", prompts)
-        self.assertIn("/alfred-dev:uat pendiente esperando validacion de negocio", prompts)
+        self.assertIn("/alfred-dev:uat approved пользователь подтвердил результат", prompts)
+        self.assertIn("/alfred-dev:uat rejected нужно перепроверить тексты", prompts)
+        self.assertIn("/alfred-dev:uat pending ждём подтверждения от бизнеса", prompts)
         self.assertIn("/alfred-dev:cto src/ --scope security", prompts)
         self.assertIn("/alfred-dev:cto --scope architecture", prompts)
         self.assertIn("/alfred-dev:cto --scope performance", prompts)
@@ -114,9 +114,9 @@ class TestManualSmokeRunner(unittest.TestCase):
         self.assertIn("verify:rejected", coverage)
         self.assertIn("alfred:optional-prompt", coverage)
         self.assertIn("config:exit-without-changes", coverage)
-        self.assertIn("config:autonomia", coverage)
-        self.assertIn("config:personalidad", coverage)
-        self.assertEqual(coverage["config:memoria"], ["config"])
+        self.assertIn("config:autonomy", coverage)
+        self.assertIn("config:personality", coverage)
+        self.assertEqual(coverage["config:memory"], ["config"])
 
     def test_manual_matrix_covers_update_runtime_scope_contracts(self):
         manual_smoke = _load_manual_smoke_module()
@@ -214,9 +214,9 @@ class TestManualSmokeRunner(unittest.TestCase):
                 )
             )
 
-        self.assertEqual(state["comando"], "quick")
-        self.assertEqual(state["fase_actual"], "ejecucion_acotada")
-        self.assertEqual(state["fase_numero"], 0)
+        self.assertEqual(state["command"], "quick")
+        self.assertEqual(state["current_phase"], "scoped_execution")
+        self.assertEqual(state["phase_number"], 0)
 
     def test_result_status_detects_auth_block(self):
         manual_smoke = _load_manual_smoke_module()
@@ -693,7 +693,7 @@ class TestManualSmokeRunner(unittest.TestCase):
 
         self.assertIn(".claude/alfred-dev-state.json", previews)
         self.assertIn("docs/project/uat.md", previews)
-        self.assertIn("completado", previews[".claude/alfred-dev-state.json"])
+        self.assertIn("completed", previews[".claude/alfred-dev-state.json"])
 
     def test_safe_preview_sanitizes_secret_patterns(self):
         manual_smoke = _load_manual_smoke_module()
@@ -736,8 +736,8 @@ class TestManualSmokeRunner(unittest.TestCase):
             manual_smoke._seed_active_quick(project)
             state = json.loads((project / ".claude" / "alfred-dev-state.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(state["comando"], "quick")
-        self.assertEqual(state["fase_actual"], "ejecucion_acotada")
+        self.assertEqual(state["command"], "quick")
+        self.assertEqual(state["current_phase"], "scoped_execution")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             project = manual_smoke.Path(tmpdir)
@@ -745,7 +745,7 @@ class TestManualSmokeRunner(unittest.TestCase):
             handoff = json.loads((project / ".claude" / "alfred-handoff.json").read_text(encoding="utf-8"))
 
         self.assertEqual(handoff["command"], "quick")
-        self.assertEqual(handoff["phase"], "ejecucion_acotada")
+        self.assertEqual(handoff["phase"], "scoped_execution")
 
 
 if __name__ == "__main__":

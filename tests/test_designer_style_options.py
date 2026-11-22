@@ -202,7 +202,7 @@ class TestDesignerStyleOptions(unittest.TestCase):
                 {
                     "choice": "B",
                     "name": "Data-dark pro",
-                    "concept": "Modo oscuro total al estilo de Grafana o Datadog para monitorización en tiempo real.",
+                    "concept": "Modo oscuro total al style de Grafana o Datadog para monitorización en tiempo real.",
                     "palette": [{"role": "surface", "value": "#111827"}, {"role": "accent", "value": "#10B981"}],
                     "typography": {"headings": "JetBrains Mono", "body": "Geist"},
                     "tone": "técnico, preciso, urgente cuando hay alertas",

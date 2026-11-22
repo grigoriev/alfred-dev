@@ -63,14 +63,14 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn(f"no leftovers of {release_audit.OLD_VERSION}", result)
 
     def test_inventory_keeps_composition_helper_internal(self):
-        """_composicion is packaged as a resource, not as a public command."""
+        """_composition is packaged as a resource, not as a public command."""
         release_audit = _load_release_audit_module()
 
         result = release_audit.check_inventory()
 
         self.assertIn("18 namespaced commands published", result)
         self.assertIn("commands/alfred.md published as contextual entry", result)
-        self.assertIn("commands/_composicion.md internal", result)
+        self.assertIn("commands/_composition.md internal", result)
         self.assertIn("human displayName aligned between manifest and marketplace", result)
         self.assertIn("10 agents in root agents/", result)
         self.assertIn("11 flat skills", result)
@@ -828,7 +828,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("18 namespaced commands keep arguments, prefix and current naming", result)
         self.assertIn("18 helper-first wrappers covered", result)
         self.assertIn("6 main flows with canonical closing", result)
-        self.assertIn("_composicion loads from the plugin install", result)
+        self.assertIn("_composition loads from the plugin install", result)
         self.assertIn("free gates without unconditional approval", result)
         self.assertIn("autopilot via config/state without phantom public flag", result)
 
@@ -1200,7 +1200,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         original_read = release_audit._read
 
         def fake_read(path):
-            if path == "commands/ajustes.md":
+            if path == "commands/config.md":
                 return original_read(path).replace(
                     "AskUserQuestion({\n"
                     "  questions: [\n"
@@ -2042,7 +2042,7 @@ class TestReleaseAuditScript(unittest.TestCase):
                 return (
                     "---\n"
                     "description: \"Pausa\"\n"
-                    "argument-hint: \"[filtro opcional]\"\n"
+                    "argument-hint: \"[filtro optional]\"\n"
                     "---\n"
                     "# /alfred-dev:pause\n\n"
                     "Filtro: $ARGUMENTS\n"

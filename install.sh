@@ -22,7 +22,7 @@ set -euo pipefail
 
 REPO="grigoriev/alfred-dev"
 PLUGIN_NAME="alfred-dev"
-VERSION="0.7.3"
+VERSION="0.8.0"
 
 # -- Colors -----------------------------------------------------------------
 
@@ -184,7 +184,7 @@ active_non_user = [
 ]
 if active_non_user:
     details = ", ".join(
-        f"scope={entry.get('scope', 'desconocido')} projectPath={entry.get('projectPath', '')}"
+        f"scope={entry.get('scope', 'unknown')} projectPath={entry.get('projectPath', '')}"
         for entry in active_non_user
     )
     print(f"Есть активные неглобальные установки {plugin_key}: {details}", file=sys.stderr)
@@ -195,7 +195,7 @@ enabled_user = [
     if entry.get("enabled") is True and entry.get("scope") == "user"
 ]
 if not enabled_user:
-    scopes = ", ".join(str(entry.get("scope", "desconocido")) for entry in matches)
+    scopes = ", ".join(str(entry.get("scope", "unknown")) for entry in matches)
     print(f"{plugin_key} есть, но нет записи enabled со scope user. Найденные scopes: {scopes}", file=sys.stderr)
     sys.exit(1)
 
@@ -205,7 +205,7 @@ stale_non_user = [
 ]
 if stale_non_user:
     details = ", ".join(
-        f"scope={entry.get('scope', 'desconocido')} projectPath={entry.get('projectPath', '')}"
+        f"scope={entry.get('scope', 'unknown')} projectPath={entry.get('projectPath', '')}"
         for entry in stale_non_user
     )
     print(f"ВНИМАНИЕ: остались старые неактивные записи {plugin_key}: {details}")
@@ -516,7 +516,7 @@ fi
 printf "\n${GREEN}${BOLD}Установка завершена${NC}\n\n"
 printf "  В Claude Code выполни ${BOLD}/reload-plugins${NC}, а затем:\n"
 printf "  ${BOLD}/alfred-dev:alfred${NC}\n"
-printf "  ${DIM}Статус: /alfred-dev:progress · продолжить: /alfred-dev:retomar${NC}\n\n"
+printf "  ${DIM}Статус: /alfred-dev:progress · продолжить: /alfred-dev:resume${NC}\n\n"
 printf "  ${DIM}Если /reload-plugins предупреждает о MCP/стоимости cache или плагин не появился, перезапусти Claude Code.${NC}\n"
 printf "  ${DIM}Репозиторий: https://github.com/${REPO}${NC}\n"
 printf "  ${DIM}Документация: https://alfred-dev.com${NC}\n\n"

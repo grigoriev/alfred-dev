@@ -2,7 +2,7 @@
   "name": "alfred-dev",
   "displayName": "Alfred Dev",
   "description": "Плагин программной инженерии: 8 базовых агентов, Designer при наличии фронтенда и CTO для ревью готовой фичи. Постоянная память по проекту, quality gates и процессы от идеи до поставки. Русский форк Alfred Dev.",
-  "version": "0.7.3",
+  "version": "0.8.0",
   "author": {
     "name": "686f6c61"
   },
@@ -12,7 +12,7 @@
   "keywords": ["sdlc", "agents", "security", "tdd", "devops", "qa", "product", "spanish"],
   "commands": [
     "./commands/alfred.md",
-    "./commands/ajustes.md",
+    "./commands/config.md",
     "./commands/audit.md",
     "./commands/discuss.md",
     "./commands/feature.md",
@@ -23,7 +23,7 @@
     "./commands/pause.md",
     "./commands/progress.md",
     "./commands/quick.md",
-    "./commands/retomar.md",
+    "./commands/resume.md",
     "./commands/ship.md",
     "./commands/spike.md",
     "./commands/sync-github.md",

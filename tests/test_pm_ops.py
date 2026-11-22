@@ -48,11 +48,11 @@ class TestPmHelpers(unittest.TestCase):
 
 ### [T-001] Diseñar login
 
-- **Historia:** HU-01
-- **Criterios:** CA-01, CA-02
-- **Agente:** architect
-- **Dependencias:** ninguna
-- **Notas:** Aterrizar el flujo base
+- **История:** HU-01
+- **Критерии:** CA-01, CA-02
+- **Агент:** architect
+- **Зависимости:** нет
+- **Заметки:** Aterrizar el flujo base
 """,
         )
         _write(
@@ -61,11 +61,11 @@ class TestPmHelpers(unittest.TestCase):
 
 ### [T-002] Implementar endpoint POST /login
 
-- **Historia:** HU-01
-- **Criterios:** CA-01, CA-03
-- **Agente:** senior-dev
-- **Dependencias:** T-001
-- **Notas:** Pendiente de cerrar tests de error
+- **История:** HU-01
+- **Критерии:** CA-01, CA-03
+- **Агент:** senior-dev
+- **Зависимости:** T-001
+- **Заметки:** Pendiente de cerrar tests de error
 """,
         )
         _write(
@@ -74,10 +74,10 @@ class TestPmHelpers(unittest.TestCase):
 
 ### [T-003] Preparar esquema de usuarios
 
-- **Historia:** HU-01
-- **Criterios:** CA-01
-- **Agente:** data-engineer
-- **Evidencia:** tests/test_users.py::test_schema_users
+- **История:** HU-01
+- **Критерии:** CA-01
+- **Агент:** data-engineer
+- **Подтверждение:** tests/test_users.py::test_schema_users
 """,
         )
         _write(
@@ -86,11 +86,11 @@ class TestPmHelpers(unittest.TestCase):
 
 ### [T-004] Integrar sesión persistente
 
-- **Historia:** HU-01
-- **Criterios:** CA-04
-- **Agente:** senior-dev
-- **Dependencias:** Decisión de cookies seguras
-- **Notas:** Bloqueado por criterio legal pendiente
+- **История:** HU-01
+- **Критерии:** CA-04
+- **Агент:** senior-dev
+- **Зависимости:** Decisión de cookies seguras
+- **Заметки:** Bloqueado por criterio legal pending
 """,
         )
         _write(
@@ -103,7 +103,7 @@ class TestPmHelpers(unittest.TestCase):
         )
         _write(
             os.path.join(tmpdir, "docs", "project", "current.md"),
-            "# Current\n\n- Estado: implementación en curso\n- Comando recomendado: /alfred-dev:uat\n",
+            "# Current\n\n- Статус: реализация в работе\n- Рекомендуемая команда: /alfred-dev:uat\n",
         )
 
     def test_load_kanban_board_parses_heading_tasks(self):
@@ -124,8 +124,8 @@ class TestPmHelpers(unittest.TestCase):
 
 #### [T-101] Diseñar login
 
-- **Agente**: architect
-- **Criterios**: CA-01, CA-02
+- **Агент**: architect
+- **Критерии**: CA-01, CA-02
 """,
             )
             _write(os.path.join(tmpdir, "docs", "project", "kanban", "in-progress.md"), "# In Progress\n")
@@ -145,9 +145,9 @@ class TestPmHelpers(unittest.TestCase):
                 """# Backlog
 
 - [ ] [T-102] Diseñar login
-  - Agente: architect
-  - Criterios: CA-01
-  - Dependencias: ninguna
+  - Агент: architect
+  - Критерии: CA-01
+  - Зависимости: нет
 """,
             )
             _write(os.path.join(tmpdir, "docs", "project", "kanban", "in-progress.md"), "# In Progress\n")
@@ -159,7 +159,7 @@ class TestPmHelpers(unittest.TestCase):
         self.assertEqual(board["backlog"][0]["id"], "T-102")
         self.assertEqual(board["backlog"][0]["agent"], "architect")
         self.assertEqual(board["backlog"][0]["criteria"], ["CA-01"])
-        self.assertEqual(board["backlog"][0]["dependencies"], "ninguna")
+        self.assertEqual(board["backlog"][0]["dependencies"], "нет")
 
     def test_normalize_kanban_task_types_upgrades_legacy_runtime_tasks(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -167,9 +167,9 @@ class TestPmHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-### [T-010] Validar 'Login' con /alfred-dev:uat.
+### [T-010] Проверить 'Login' через /alfred-dev:uat.
 
-- **Agente:** alfred:verify
+- **Агент:** alfred:verify
 """,
             )
             _write(
@@ -178,12 +178,12 @@ class TestPmHelpers(unittest.TestCase):
 
 ### [T-011] Login
 
-- **Agente:** alfred:feature
-- **Notas:** Fase actual: producto. Fases completadas: ninguna.
+- **Агент:** alfred:feature
+- **Заметки:** Текущая фаза: product. Завершённые фазы: нет.
 
-### [T-012] feature:producto — Login
+### [T-012] feature:product — Login
 
-- **Agente:** analyst
+- **Агент:** analyst
 """,
             )
             _write(os.path.join(tmpdir, "docs", "project", "kanban", "done.md"), "# Done\n")
@@ -205,8 +205,8 @@ class TestPmHelpers(unittest.TestCase):
 
 ### [T-001] Diseñar login
 
-- **Agente:** architect
-- **Notas:** flujo base
+- **Агент:** architect
+- **Заметки:** flujo base
 """,
             )
 
@@ -241,7 +241,7 @@ class TestPmHelpers(unittest.TestCase):
                 "backlog",
                 title="Preparar UAT final",
                 agent="alfred:discuss",
-                notes="Pendiente al cerrar desarrollo.",
+                notes="Pendiente al cerrar development.",
             )
             moved = move_kanban_task(
                 tmpdir,
@@ -280,13 +280,13 @@ class TestPmHelpers(unittest.TestCase):
 
 ### [T-003] Preparar esquema de usuarios
 
-- **Agente:** data-engineer
-- **Evidencia:** tests/test_users.py::test_schema_users
+- **Агент:** data-engineer
+- **Подтверждение:** tests/test_users.py::test_schema_users
 
 ### [T-009] Cerrar UAT de login
 
-- **Agente:** qa-engineer
-- **Evidencia:** docs/project/uat.md
+- **Агент:** qa-engineer
+- **Подтверждение:** docs/project/uat.md
 """,
             )
 
@@ -312,9 +312,9 @@ class TestPmHelpers(unittest.TestCase):
 
 ### [T-003] Preparar esquema de usuarios
 
-- **Historia:** HU-01
-- **Criterios:** CA-01
-- **Agente:** data-engineer
+- **История:** HU-01
+- **Критерии:** CA-01
+- **Агент:** data-engineer
 """,
             )
             report = validate_operational_artifacts(tmpdir)
@@ -352,8 +352,8 @@ class TestPmHelpers(unittest.TestCase):
             from core.orchestrator import advance_phase, create_session, save_state  # noqa: E402
 
             session = create_session("feature", "Login and users")
-            while session["fase_actual"] != "completado":
-                session = advance_phase(session, resultado="aprobado", artefactos=[])
+            while session["current_phase"] != "completed":
+                session = advance_phase(session, result="approved", artifacts=[])
             save_state(session, os.path.join(tmpdir, ".claude", "alfred-dev-state.json"))
 
             report = validate_operational_artifacts(tmpdir)
@@ -370,14 +370,14 @@ class TestPmHelpers(unittest.TestCase):
 
             session = create_session("feature", "Login without UI")
             session["stack"] = {"runtime": "python", "framework": "fastapi"}
-            session = advance_phase(session, resultado="aprobado", artefactos=["docs/producto.md"])
+            session = advance_phase(session, result="approved", artifacts=["docs/product.md"])
             save_state(session, os.path.join(tmpdir, ".claude", "alfred-dev-state.json"))
 
             report = validate_operational_artifacts(tmpdir)
 
         self.assertIn(report["status"], {"ok", "warning"})
         self.assertFalse(
-            any("feature:estilo_visual" in warning and "done sin evidencia" in warning for warning in report["warnings"])
+            any("feature:visual_style" in warning and "done sin evidence" in warning for warning in report["warnings"])
         )
 
     def test_validate_warns_when_completed_estilo_visual_has_no_style_direction_artifact(self):
@@ -387,15 +387,15 @@ class TestPmHelpers(unittest.TestCase):
             from core.orchestrator import advance_phase, create_session, save_state  # noqa: E402
 
             session = create_session("feature", "Login with UI")
-            session = advance_phase(session, resultado="aprobado", artefactos=["docs/producto.md"])
-            session = advance_phase(session, resultado="aprobado", artefactos=[])
+            session = advance_phase(session, result="approved", artifacts=["docs/product.md"])
+            session = advance_phase(session, result="approved", artifacts=[])
             save_state(session, os.path.join(tmpdir, ".claude", "alfred-dev-state.json"))
 
             report = validate_operational_artifacts(tmpdir)
 
         self.assertEqual(report["status"], "warning")
         self.assertTrue(
-            any("estilo_visual отмечена как завершённая" in warning for warning in report["warnings"])
+            any("visual_style отмечена как завершённая" in warning for warning in report["warnings"])
         )
 
     def test_validate_ignores_internal_tasks_for_sync_coverage(self):
@@ -404,9 +404,9 @@ class TestPmHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-### [T-010] Validar 'Login' con /alfred-dev:uat.
+### [T-010] Проверить 'Login' через /alfred-dev:uat.
 
-- **Agente:** alfred:verify
+- **Агент:** alfred:verify
 """,
             )
             _write(
@@ -415,11 +415,11 @@ class TestPmHelpers(unittest.TestCase):
 
 ### [T-011] Login
 
-- **Agente:** alfred:feature
+- **Агент:** alfred:feature
 
-### [T-012] feature:producto — Login
+### [T-012] feature:product — Login
 
-- **Agente:** analyst
+- **Агент:** analyst
 """,
             )
             _write(os.path.join(tmpdir, "docs", "project", "kanban", "done.md"), "# Done\n")
@@ -525,9 +525,9 @@ class TestPmHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-### [T-010] Validar 'Login' con /alfred-dev:uat.
+### [T-010] Проверить 'Login' через /alfred-dev:uat.
 
-- **Agente:** alfred:verify
+- **Агент:** alfred:verify
 """,
             )
             _write(
@@ -536,11 +536,11 @@ class TestPmHelpers(unittest.TestCase):
 
 ### [T-011] Login
 
-- **Agente:** alfred:feature
+- **Агент:** alfred:feature
 
-### [T-012] feature:producto — Login
+### [T-012] feature:product — Login
 
-- **Agente:** analyst
+- **Агент:** analyst
 """,
             )
             _write(os.path.join(tmpdir, "docs", "project", "kanban", "done.md"), "# Done\n")
@@ -573,8 +573,8 @@ class TestGitHubSyncHelpers(unittest.TestCase):
 
 ### [T-010] Preparar labels de issues
 
-- **Agente:** github-manager
-- **Criterios:** CA-10
+- **Агент:** github-manager
+- **Критерии:** CA-10
 """,
         )
         _write(
@@ -583,8 +583,8 @@ class TestGitHubSyncHelpers(unittest.TestCase):
 
 ### [T-011] Sincronizar tablero
 
-- **Agente:** project-manager
-- **Criterios:** CA-11
+- **Агент:** project-manager
+- **Критерии:** CA-11
 """,
         )
         _write(os.path.join(tmpdir, "docs", "project", "kanban", "done.md"), "# Done\n")
@@ -646,7 +646,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
 
 ### [T-010] Preparar labels de issues
 
-- **Agente:** github-manager
+- **Агент:** github-manager
 """,
             )
             _write(
@@ -655,7 +655,7 @@ class TestGitHubSyncHelpers(unittest.TestCase):
 
 ### [T-010] Sincronizar tablero
 
-- **Agente:** project-manager
+- **Агент:** project-manager
 """,
             )
             _write(os.path.join(tmpdir, "docs", "project", "kanban", "done.md"), "# Done\n")
@@ -692,9 +692,9 @@ class TestGitHubSyncHelpers(unittest.TestCase):
                 os.path.join(tmpdir, "docs", "project", "kanban", "backlog.md"),
                 """# Backlog
 
-### [T-010] Validar 'Login' con /alfred-dev:uat.
+### [T-010] Проверить 'Login' через /alfred-dev:uat.
 
-- **Agente:** alfred:verify
+- **Агент:** alfred:verify
 """,
             )
             _write(
@@ -703,11 +703,11 @@ class TestGitHubSyncHelpers(unittest.TestCase):
 
 ### [T-011] Login
 
-- **Agente:** alfred:feature
+- **Агент:** alfred:feature
 
-### [T-012] feature:producto — Login
+### [T-012] feature:product — Login
 
-- **Agente:** analyst
+- **Агент:** analyst
 """,
             )
             _write(os.path.join(tmpdir, "docs", "project", "kanban", "done.md"), "# Done\n")
