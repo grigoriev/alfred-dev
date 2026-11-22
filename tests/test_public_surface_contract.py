@@ -292,7 +292,7 @@ class TestRuntimeSurfaceCounts(unittest.TestCase):
         plugin = _read_json(".claude-plugin/plugin.json")
         published_skill_files = _iter_manifest_skill_files()
 
-        self.assertEqual(len(plugin["commands"]), 18)
+        self.assertEqual(len(plugin["commands"]), 19)
         self.assertNotIn("agents", plugin)
         self.assertEqual(_count_agent_files(), 10)
         self.assertNotIn("mcpServers", plugin)
@@ -551,7 +551,7 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
 
         self.assertIn(_normalize("10 агентов"), _normalize(docs_readme))
         self.assertIn("11 skills", _normalize(docs_readme))
-        self.assertIn(_normalize("18 команд"), _normalize(architecture))
+        self.assertIn(_normalize("19 команд"), _normalize(architecture))
         self.assertIn("Манифест не объявляет ключ `agents`", architecture)
         self.assertIn("optional_agents.py", architecture)
         self.assertIn("build_optional_agent_group_menus()", architecture)

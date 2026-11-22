@@ -112,6 +112,8 @@ git -C <repo> status --porcelain=v1
 
 Покажи сводку того, что произойдёт, и запроси явное подтверждение перед вызовом Greptile CLI. Никогда не запускай ревью без подтверждения, даже в режиме autopilot: операция расходует квоту Greptile и время.
 
+Исключение: PR-цикл (`${CLAUDE_PLUGIN_ROOT}/commands/_pr_loop.md`). Если helper `pr-status` просит ревью Greptile, запусти `greptile review --agent --json` без отдельного подтверждения: пользователь уже включил цикл, и ревью входит в него.
+
 ## Вызов Greptile CLI
 
 После подтверждения запусти ревью из корня репозитория. `--agent` отключает вопросы, вход через браузер и уведомления об обновлении. `--json` даёт один объект с полями `summary`, `confidence`, `confidenceReasoning`, `securitySummary`, `instructions` и `comments`.

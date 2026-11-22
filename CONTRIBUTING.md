@@ -1,6 +1,6 @@
 # Руководство по участию
 
-Alfred Dev это плагин Claude Code: 10 агентов, 11 плоских skills, 18 опубликованных команд, хуки и ядро на Python. Это руководство кратко описывает, как внести вклад. Подробности работы описаны в [docs/contributing.md](docs/contributing.md).
+Alfred Dev это плагин Claude Code: 10 агентов, 11 плоских skills, 19 опубликованных команд, хуки и ядро на Python. Это руководство кратко описывает, как внести вклад. Подробности работы описаны в [docs/contributing.md](docs/contributing.md).
 
 ## Требования
 
@@ -14,9 +14,9 @@ Alfred Dev это плагин Claude Code: 10 агентов, 11 плоских
 
 ```
 alfred-dev/
-  .claude-plugin/         # plugin.json (18 команд) и marketplace.json
+  .claude-plugin/         # plugin.json (19 команд) и marketplace.json
   agents/                 # 10 агентов (8 базовых + Designer + CTO)
-  commands/               # 18 slash-команд /alfred-dev:* + внутренние helpers
+  commands/               # 19 slash-команд /alfred-dev:* + внутренние helpers
   skills/                 # 11 плоских skills (SKILL.md)
   hooks/                  # 10 скриптов жизненного цикла + hooks.json
   core/                   # Движок оркестрации, памяти и отчётов

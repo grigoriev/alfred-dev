@@ -16,7 +16,7 @@ Alfred Dev: плагин для Claude Code, который реализует �
 
 У каждого файла команды две части: YAML frontmatter с метаданными (описание команды, подсказка по аргументу) и тело Markdown с инструкциями процесса. Frontmatter позволяет Claude Code показывать контекстную справку; тело определяет фазы, gates и правила, которые нельзя пропустить.
 
-В плагине 18 команд, зарегистрированных в `plugin.json`. Контекстный вход: `/alfred-dev:alfred`:
+В плагине 19 команд, зарегистрированных в `plugin.json`. Контекстный вход: `/alfred-dev:alfred`:
 
 | Команда | Файл | Назначение |
 |---------|------|------------|
@@ -37,6 +37,7 @@ Alfred Dev: плагин для Claude Code, который реализует �
 | `/alfred-dev:ship` | `ship.md` | Релиз и развёртывание |
 | `/alfred-dev:audit` | `audit.md` | Параллельный аудит |
 | `/alfred-dev:cto` | `cto.md` | Внешнее второе мнение |
+| `/alfred-dev:pr` | `pr.md` | Доводит PR до мержа по протоколу `_pr_loop.md` |
 | `/alfred-dev:update` | `update.md` | Обновление плагина |
 
 Опубликованный контекстный вход: `/alfred-dev:alfred`. Установщик не
@@ -145,7 +146,7 @@ C4Context
     System(claude, "Claude Code", "CLI от Anthropic, который запускает модель Claude с инструментами, хуками и плагинами")
 
     Container_Boundary(plugin, "Плагин Alfred Dev") {
-        Container(commands, "Commands", "Markdown + YAML", "18 команд с namespace: процессы, публичная непрерывность и sync GitHub")
+        Container(commands, "Commands", "Markdown + YAML", "19 команд с namespace: процессы, публичная непрерывность и sync GitHub")
         Container(agents, "Agents", "Markdown", "8 ядра + Designer + CTO, вызываются как субагенты Agent")
         Container(core, "Core", "Python", "Оркестратор, непрерывность, конфиг, память и личность")
         Container(hooks, "Hooks", "Shell + Python", "10 хуков в 5 событиях жизненного цикла")
