@@ -89,17 +89,17 @@ copywriter, librarian и остальной каталог 0.6.
 | **cto** | CTO | Второе мнение через Codex CLI при закрытии качества, `audit` или `ship` |
 
 Используй каноничное меню из `core/optional_agents.py`
-(`build_optional_agent_group_menu`) с единственной группой `Auditoria`.
+(`build_optional_agent_group_menu`) с единственной группой `Аудит`.
 
 ```text
 AskUserQuestion({
   questions: [
     {
       question: "Хочешь активировать CTO как внешнее второе мнение?",
-      header: "Auditoria",
+      header: "Аудит",
       multiSelect: false,
       options: [
-        { label: "Seguir sin activar más", description: "Перейти к следующей группе" },
+        { label: "Продолжить без включения", description: "Перейти к следующей группе" },
         { label: "CTO", description: "<контекстная причина>" }
       ]
     }

@@ -171,7 +171,7 @@ _CONFIG_SECTION_LABELS = {
     "personalidad": "Личность",
 }
 _CONFIG_SECTION_MENU_EXIT = {
-    "label": "Salir sin cambios",
+    "label": "Выйти без изменений",
     "description": "Пока оставить текущую конфигурацию",
 }
 # Stack dicts store the Spanish sentinels "desconocido" and "ninguno".

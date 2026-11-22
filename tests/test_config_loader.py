@@ -390,7 +390,7 @@ class TestLoadConfig(unittest.TestCase):
         self.assertEqual(menu["questions"][0]["question"], menu["question"])
         self.assertEqual(menu["questions"][0]["options"], menu["options"])
         self.assertEqual(menu["questions"][0]["multiSelect"], False)
-        self.assertEqual(labels[0], "Salir sin cambios")
+        self.assertEqual(labels[0], "Выйти без изменений")
         self.assertIn("Автономность по фазам", labels)
         self.assertIn("Проект", labels)
         self.assertIn("Опциональные агенты", labels)
@@ -786,7 +786,7 @@ class TestOptionalAgents(unittest.TestCase):
         menus = build_optional_agent_group_menus()
         self.assertEqual([menu["group"] for menu in menus], ["audit"])
         labels = [option["label"] for option in menus[0]["options"]]
-        self.assertEqual(labels[0], "Seguir sin activar más")
+        self.assertEqual(labels[0], "Продолжить без включения")
         self.assertIn("CTO", labels)
 
     def test_static_suggestions_exclude_cto(self):

@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 OPTIONAL_AGENT_GROUP_ORDER: Tuple[str, ...] = ("audit",)
 
 OPTIONAL_AGENT_GROUP_LABELS: Dict[str, str] = {
-    "audit": "Auditoria",
+    "audit": "Аудит",
 }
 
 OPTIONAL_AGENT_GROUP_QUESTIONS: Dict[str, str] = {
@@ -17,7 +17,7 @@ OPTIONAL_AGENT_GROUP_QUESTIONS: Dict[str, str] = {
 }
 
 OPTIONAL_AGENT_MENU_EXIT = {
-    "label": "Seguir sin activar más",
+    "label": "Продолжить без включения",
     "description": "Перейти к следующей группе",
 }
 
@@ -150,7 +150,7 @@ def build_optional_agent_menu_option(
     description = get_optional_agent_specialty(agent_name)
 
     if suggested_reason:
-        label = f"{label} (Recomendado)"
+        label = f"{label} (Рекомендуется)"
         description = suggested_reason.strip()
 
     if is_optional_agent_on_demand_only(agent_name):

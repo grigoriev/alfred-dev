@@ -1735,7 +1735,7 @@ def check_config_contracts() -> list[str]:
     menu = config_loader.build_config_section_menu(config_loader.DEFAULT_CONFIG)
     menu_labels = [option["label"] for option in menu["options"]]
     # core/config_loader.py may still use the Spanish label or a Russian one.
-    if menu_labels[0] != "Salir sin cambios" and not menu_labels[0].startswith("Выйти"):
+    if menu_labels[0] != "Выйти без изменений" and not menu_labels[0].startswith("Выйти"):
         _fail(f"Config menu has no initial exit option: {menu_labels}")
     missing_labels = [
         labels[section]

@@ -1206,10 +1206,10 @@ class TestReleaseAuditScript(unittest.TestCase):
                     "  questions: [\n"
                     "    {\n"
                     "      question: \"Хочешь активировать CTO как внешнее второе мнение?\",\n"
-                    "      header: \"Auditoria\",\n"
+                    "      header: \"Аудит\",\n"
                     "      multiSelect: false,\n"
                     "      options: [\n"
-                    "        { label: \"Seguir sin activar más\", description: \"Перейти к следующей группе\" },\n"
+                    "        { label: \"Продолжить без включения\", description: \"Перейти к следующей группе\" },\n"
                     "        { label: \"CTO\", description: \"<контекстная причина>\" }\n"
                     "      ]\n"
                     "    }\n"
@@ -1217,9 +1217,9 @@ class TestReleaseAuditScript(unittest.TestCase):
                     "})",
                     "AskUserQuestion({\n"
                     "  question: \"Хочешь активировать CTO как внешнее второе мнение?\",\n"
-                    "  header: \"Auditoria\",\n"
+                    "  header: \"Аудит\",\n"
                     "  options: [\n"
-                    "    { label: \"Seguir sin activar más\", description: \"Перейти к следующей группе\" }\n"
+                    "    { label: \"Продолжить без включения\", description: \"Перейти к следующей группе\" }\n"
                     "  ]\n"
                     "})",
                 )
