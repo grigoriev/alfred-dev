@@ -791,8 +791,8 @@ class TestReadmeAndDocsSurface(unittest.TestCase):
         self.assertIn("CTO_HEADLESS_START", cto_command)
         self.assertIn("CTO_INVALID_SCOPE", cto_command)
         self.assertIn("НЕ запускай Agent", cto_command)
-        self.assertIn("выполняй `codex exec`", cto_command)
-        self.assertIn("НЕ представляй проверку как выполненную", cto_command)
+        self.assertIn("выполняй `greptile review`", cto_command)
+        self.assertIn("НЕ представляй ревью как выполненное", cto_command)
 
 
 class TestInstallSurfaceContracts(unittest.TestCase):

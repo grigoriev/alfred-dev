@@ -37,16 +37,16 @@ class TestExternalLiveSmoke(unittest.TestCase):
                 return_value={"status": "docker_ready", "live_attempted": False},
             ), mock.patch.object(
                 external,
-                "_codex_preflight",
+                "_greptile_preflight",
                 return_value={"status": "ready", "live_attempted": False},
             ), mock.patch.object(external, "_github_live_sync") as github_live, mock.patch.object(
                 external,
-                "_codex_live_exec",
-            ) as codex_live:
+                "_greptile_live_auth",
+            ) as greptile_live:
                 self.assertEqual(external.main(["--output", str(output)]), 0)
 
             github_live.assert_not_called()
-            codex_live.assert_not_called()
+            greptile_live.assert_not_called()
             payload = json.loads(output.read_text(encoding="utf-8"))
             mode = output.stat().st_mode & 0o777
 
@@ -71,7 +71,7 @@ class TestExternalLiveSmoke(unittest.TestCase):
                 return_value={"status": "docker_ready", "live_attempted": False},
             ), mock.patch.object(
                 external,
-                "_codex_preflight",
+                "_greptile_preflight",
                 return_value={"status": "ready", "live_attempted": False},
             ):
                 self.assertEqual(
@@ -98,7 +98,7 @@ class TestExternalLiveSmoke(unittest.TestCase):
                 return_value={"status": "docker_ready", "live_attempted": False},
             ), mock.patch.object(
                 external,
-                "_codex_preflight",
+                "_greptile_preflight",
                 return_value={"status": "ready", "live_attempted": False},
             ), mock.patch.object(external, "sync_project_to_github") as sync:
                 self.assertEqual(
@@ -112,54 +112,47 @@ class TestExternalLiveSmoke(unittest.TestCase):
         self.assertEqual(payload["github"]["status"], "skipped")
         self.assertFalse(payload["github"]["write_attempted"])
 
-    def test_codex_preflight_requires_json_and_last_message_flags(self):
+    def test_greptile_preflight_requires_agent_json_and_instructions_flags(self):
         external = _load_module()
 
         def fake_run(command, **_kwargs):
-            if command == ["/usr/local/bin/codex", "--version"]:
-                return {"returncode": 0, "stdout_preview": "codex-cli 0.137.0", "stderr_preview": ""}
+            if command == ["/usr/local/bin/greptile", "--version"]:
+                return {"returncode": 0, "stdout_preview": "3.8.0", "stderr_preview": ""}
             return {
                 "returncode": 0,
-                "stdout_preview": "--sandbox --ephemeral --json",
+                "stdout_preview": "--agent --json --branch",
                 "stderr_preview": "",
             }
 
-        with mock.patch.object(external.shutil, "which", return_value="/usr/local/bin/codex"), mock.patch.object(
+        with mock.patch.object(external.shutil, "which", return_value="/usr/local/bin/greptile"), mock.patch.object(
             external,
             "_run",
             side_effect=fake_run,
         ):
-            payload = external._codex_preflight()
+            payload = external._greptile_preflight()
 
-        self.assertEqual(payload["status"], "exec_help_missing_flags")
-        self.assertEqual(payload["missing_flags"], ["--output-last-message"])
+        self.assertEqual(payload["status"], "review_help_missing_flags")
+        self.assertEqual(payload["missing_flags"], ["--instructions"])
 
-    def test_codex_live_exec_uses_jsonl_and_output_last_message(self):
+    def test_greptile_live_auth_checks_sign_in_and_repository_without_review(self):
         external = _load_module()
         calls = []
 
         def fake_run(command, **_kwargs):
             calls.append(command)
-            output_path = Path(command[command.index("--output-last-message") + 1])
-            output_path.write_text("OK_ALFRED_CODEX_EXTERNAL_060\n", encoding="utf-8")
-            return {
-                "returncode": 0,
-                "stdout_preview": '{"type":"turn.completed"}',
-                "stderr_preview": "",
-            }
+            if command[1:] == ["init", "--json"]:
+                return {"returncode": 0, "stdout_preview": '{"repo":"o/r","enabled":true}', "stderr_preview": ""}
+            return {"returncode": 0, "stdout_preview": "Signed in", "stderr_preview": ""}
 
-        with mock.patch.object(external.shutil, "which", return_value="/usr/local/bin/codex"), mock.patch.object(
+        with mock.patch.object(external.shutil, "which", return_value="/usr/local/bin/greptile"), mock.patch.object(
             external,
             "_run",
             side_effect=fake_run,
         ):
-            payload = external._codex_live_exec()
+            payload = external._greptile_live_auth()
 
-        command = calls[0]
         self.assertEqual(payload["status"], "ok")
-        self.assertIn("--json", command)
-        self.assertIn("--output-last-message", command)
-        self.assertIn("OK_ALFRED_CODEX_EXTERNAL_060", payload["final_message_preview"])
+        self.assertNotIn("review", [part for command in calls for part in command])
 
     def test_safe_preview_sanitizes_secret_like_output(self):
         external = _load_module()

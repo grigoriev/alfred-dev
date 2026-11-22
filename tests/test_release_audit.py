@@ -867,7 +867,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         self.assertIn("human displayName reflected in README and changelog", result)
         self.assertIn("sensitive skills keep explicit manual activation", result)
         self.assertIn("runtime prompts without legacy /alfred", result)
-        self.assertIn("CTO does not pin an obsolete Codex CLI model", result)
+        self.assertIn("CTO does not pin a review model", result)
 
     def test_public_claims_reject_absolute_gate_language(self):
         """The public surface must not promise absolute gates without nuance."""
