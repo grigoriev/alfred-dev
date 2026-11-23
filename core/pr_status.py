@@ -345,12 +345,29 @@ def _review_is_current(review: Dict[str, Any], head: str, head_time: str) -> boo
     return _not_older(review.get("submittedAt"), head_time)
 
 
+def _claude_checks(github: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [c for c in _latest_checks(github.get("statusCheckRollup") or [])
+            if "claude-review" in _check_name(c).lower()]
+
+
+def needs_greptile_cli(github: Dict[str, Any], mode: str) -> bool:
+    """True when the Greptile CLI review decides: required mode, or optional without Claude."""
+    bot = parse_greptile(github)
+    if bot["status"] == "ok" and not bot.get("stale"):
+        return False
+    if mode == GREPTILE_REQUIRED:
+        return True
+    return mode == GREPTILE_OPTIONAL and _no_claude_workflow(github)
+
+
+def _no_claude_workflow(github: Dict[str, Any]) -> bool:
+    """True when the PR shows no sign of the Claude Code review: no review, no comment, no check."""
+    return claude_review_status(github) == "missing" and not _claude_checks(github)
+
+
 def _claude_review_running(github: Dict[str, Any]) -> bool:
     """True while the Claude Code review workflow of the PR still runs."""
-    for check in _latest_checks(github.get("statusCheckRollup") or []):
-        if "claude-review" in _check_name(check).lower() and not _check_outcome(check):
-            return True
-    return False
+    return any(not _check_outcome(check) for check in _claude_checks(github))
 
 
 def _is_claude_entry(item: Dict[str, Any]) -> bool:
@@ -489,6 +506,11 @@ def _evaluate_ai_review(github: Dict[str, Any], greptile_cli: Optional[Dict[str,
     claude = claude_review_status(github)
     if claude == "ok":
         return {"status": "off"}, "claude"
+    if mode == GREPTILE_OPTIONAL and _no_claude_workflow(github):
+        # No Claude Code review workflow in this repository: Greptile decides.
+        greptile = _evaluate_greptile_required(github, greptile_cli, fix_items, wait_items, actions)
+        current = greptile.get("status") == "ok" and not greptile.get("stale")
+        return greptile, "greptile" if current else ""
     if _claude_review_running(github):
         wait_items.append("Ревью Claude Code ещё выполняется.")
     elif claude == "stale":
@@ -540,25 +562,13 @@ def _evaluate_sonar(sonar: Dict[str, Any], blockers: List[str], fix_items: List[
 def _evaluate_greptile_required(github: Dict[str, Any], greptile_cli: Optional[Dict[str, Any]],
                                 fix_items: List[Dict[str, Any]], wait_items: List[str],
                                 actions: List[str]) -> Dict[str, Any]:
-    """Greptile in required mode: the bot summary first, then the CLI review of the head commit."""
+    """Greptile as the deciding review: the bot summary first, then the CLI review of the head commit."""
     greptile = parse_greptile(github)
     if greptile["status"] == "ok" and not greptile["stale"]:
         return greptile
     cli = greptile_cli or {"status": "missing"}
     if cli.get("status") == "ok":
-        explanation = ""
-        if cli["confidence"] == 4:
-            match = _UNVERIFIABLE_RE.search(cli.get("reasoning") or "")
-            explanation = match.group(0).strip() if match else ""
-        for comment in cli.get("comments") or []:
-            fix_items.append({
-                "kind": "greptile",
-                "path": comment.get("path") or comment.get("file") or "",
-                "line": comment.get("line") or comment.get("startLine"),
-                "body": (comment.get("body") or comment.get("message") or comment.get("text") or "")[:500],
-            })
-        return {"status": "ok", "source": "cli", "confidence": cli["confidence"],
-                "explanation": explanation, "stale": False}
+        return _greptile_from_cli(cli, fix_items)
     if cli.get("status") == "running":
         wait_items.append("Ревью Greptile CLI ещё выполняется.")
     elif greptile["status"] == "ok":
@@ -568,6 +578,22 @@ def _evaluate_greptile_required(github: Dict[str, Any], greptile_cli: Optional[D
         wait_items.append("Нет ревью Greptile для текущего коммита.")
         actions.append("run_greptile_review")
     return greptile
+
+
+def _greptile_from_cli(cli: Dict[str, Any], fix_items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    explanation = ""
+    if cli["confidence"] == 4:
+        match = _UNVERIFIABLE_RE.search(cli.get("reasoning") or "")
+        explanation = match.group(0).strip() if match else ""
+    for comment in cli.get("comments") or []:
+        fix_items.append({
+            "kind": "greptile",
+            "path": comment.get("path") or comment.get("file") or "",
+            "line": comment.get("line") or comment.get("startLine"),
+            "body": (comment.get("body") or comment.get("message") or comment.get("text") or "")[:500],
+        })
+    return {"status": "ok", "source": "cli", "confidence": cli["confidence"],
+            "explanation": explanation, "stale": False}
 
 
 def _result(verdict, blockers, fix_items, wait_items, greptile, sonar, conflict) -> Dict[str, Any]:
@@ -609,10 +635,8 @@ def pr_status(project_dir: str, pr: Optional[str] = None,
     sonar = collect_sonar(find_sonar_project_key(project_dir), int(github["number"]), fetch=fetch)
     mode = greptile_mode(project_dir)
     greptile_cli = None
-    if mode == GREPTILE_REQUIRED:
-        bot = parse_greptile(github)
-        if bot["status"] != "ok" or bot.get("stale"):
-            greptile_cli = collect_greptile_cli(project_dir, github.get("headRefOid", ""), run=greptile_run)
+    if needs_greptile_cli(github, mode):
+        greptile_cli = collect_greptile_cli(project_dir, github.get("headRefOid", ""), run=greptile_run)
     result = evaluate(github, sonar, greptile_cli, greptile_mode=mode)
     result.update({
         "pr": github.get("number"),

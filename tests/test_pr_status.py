@@ -311,7 +311,11 @@ class TestGreptileModes(unittest.TestCase):
         self.assertEqual(evaluate(github, GREEN_SONAR, greptile_mode="optional")["verdict"], VERDICT_MERGE)
 
     def test_optional_mode_waits_without_any_ai_review(self):
-        result = evaluate(_github(reviews=[]), GREEN_SONAR, greptile_mode="optional")
+        checks = _github()["statusCheckRollup"] + [
+            {"name": "claude-review / claude-review", "status": "COMPLETED", "conclusion": "SUCCESS",
+             "startedAt": "2026-11-22T12:00:00Z", "workflowName": "Claude Code Review"},
+        ]
+        result = evaluate(_github(reviews=[], statusCheckRollup=checks), GREEN_SONAR, greptile_mode="optional")
         self.assertEqual(result["verdict"], VERDICT_WAIT)
         self.assertTrue(any("Claude" in item for item in result["wait_items"]))
         self.assertNotIn("run_greptile_review", result["actions"])
@@ -384,9 +388,38 @@ class TestGreptileModes(unittest.TestCase):
             self.assertIn(needle, text)
         self.assertNotIn("Greptile:", render_pr_status({"verdict": VERDICT_WAIT, "greptile": {"status": "missing"}}))
 
+    def test_optional_mode_uses_the_cli_without_a_claude_workflow(self):
+        cli = {"status": "ok", "confidence": 5, "reasoning": "", "comments": []}
+        result = evaluate(_github(reviews=[]), GREEN_SONAR, greptile_cli=cli, greptile_mode="optional")
+        self.assertEqual(result["verdict"], VERDICT_MERGE)
+        self.assertEqual(result["ai_review"], "greptile")
+
+    def test_optional_mode_asks_for_the_cli_without_a_claude_workflow(self):
+        result = evaluate(_github(reviews=[]), GREEN_SONAR, greptile_mode="optional")
+        self.assertEqual(result["verdict"], VERDICT_WAIT)
+        self.assertIn("run_greptile_review", result["actions"])
+
     def test_unknown_mode_falls_back_to_required(self):
         result = evaluate(_github(reviews=[_claude_review()]), GREEN_SONAR, greptile_mode="sometimes")
         self.assertEqual(result["verdict"], VERDICT_WAIT)
+
+    def test_pr_status_in_optional_mode_asks_the_cli_without_claude(self):
+        github = _github(reviews=[])
+        threads = {"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": []}}}}}
+        cli_calls = []
+
+        def run(args):
+            if args[:2] == ["pr", "view"]:
+                return json.dumps({k: v for k, v in github.items() if k != "reviewThreads"})
+            return json.dumps(threads)
+
+        def greptile_run(args):
+            cli_calls.append(args)
+            return 0, ""
+
+        with tempfile.TemporaryDirectory() as tmp:
+            pr_status(tmp, "7", run=run, fetch=lambda url: {}, greptile_run=greptile_run)
+        self.assertTrue(cli_calls)
 
     def test_pr_status_in_required_mode_asks_the_cli(self):
         github = _github(reviews=[])
@@ -439,7 +472,7 @@ class TestGreptileModes(unittest.TestCase):
             return {"component": {"measures": []}}
 
         def greptile_run(args):
-            raise AssertionError("the Greptile CLI must not run in optional mode")
+            raise AssertionError("the Greptile CLI must not run when Claude reviewed")
 
         with tempfile.TemporaryDirectory() as tmp:
             with open(os.path.join(tmp, "sonar-project.properties"), "w", encoding="utf-8") as fh:

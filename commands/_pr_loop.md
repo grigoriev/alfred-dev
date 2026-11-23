@@ -16,7 +16,7 @@ The PR merges automatically, without confirmation, only when all conditions are 
 2. All CI checks are green.
 3. AI review, per `pr_loop.greptile` in `.claude/alfred-dev.local.md`:
    - `required`: a Greptile score for the head commit, 5/5, or 4/5 if Greptile states explicitly what exactly it cannot check.
-   - `optional` (default): a current Greptile score must meet the same bar; without one, the Claude Code review of the head commit is enough.
+   - `optional` (default): a current Greptile score must meet the same bar; without one, the Claude Code review of the head commit is enough. In a repository without the Claude Code review workflow, Greptile decides as in `required`.
    - `off`: Greptile does not count; the Claude Code review of the head commit is required.
 4. SonarCloud: quality gate green, 0 open issues, 100% coverage of new code.
 5. No conflicts with the base branch.
