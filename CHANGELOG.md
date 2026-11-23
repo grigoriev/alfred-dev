@@ -18,6 +18,10 @@
 
 - `SECURITY.md`, `.editorconfig`, `renovate.json` и `sonar-project.properties`.
 
+### Fixed
+
+- **Frontmatter skill `memory`.** Описание содержало `: ` без кавычек. Строгий YAML-парсер отклонял его, и skill загружался без метаданных. Тест проверяет все frontmatter.
+
 ## [0.10.0] - 2026-11-23
 
 Релиз `v0.10.0`.

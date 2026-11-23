@@ -1,6 +1,6 @@
 ---
 name: memory
-description: This skill should be used when the user asks to record a design decision, search past project decisions, inspect the Alfred memory timeline, or work with the alfred-memory MCP server. Use it to call the namespaced MCP tools instead of inventing history. Triggers: запиши решение, почему мы решили, что мы делали в прошлый раз, память, история решений.
+description: "This skill should be used when the user asks to record a design decision, search past project decisions, inspect the Alfred memory timeline, or work with the alfred-memory MCP server. Use it to call the namespaced MCP tools instead of inventing history. Triggers: запиши решение, почему мы решили, что мы делали в прошлый раз, память, история решений."
 ---
 
 # Alfred persistent memory

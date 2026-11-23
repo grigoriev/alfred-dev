@@ -537,6 +537,33 @@ class TestRuntimeSurfaceCounts(unittest.TestCase):
         self.assertIn("./commands/alfred.md", plugin["commands"])
 
 
+class TestFrontmatterYaml(unittest.TestCase):
+    """Strict YAML parsers reject a plain scalar that contains ': '."""
+
+    def test_plain_frontmatter_values_have_no_colon_space(self):
+        import glob
+
+        patterns = ("skills/*/SKILL.md", "commands/*.md", "agents/*.md")
+        offenders = []
+        for pattern in patterns:
+            for path in sorted(glob.glob(os.path.join(ROOT, pattern))):
+                with open(path, encoding="utf-8") as handle:
+                    text = handle.read()
+                match = re.match(r"---\n(.*?)\n---\n", text, re.S)
+                if not match:
+                    continue
+                for line in match.group(1).splitlines():
+                    pair = re.match(r"^([A-Za-z-]+): (.*)$", line)
+                    if not pair:
+                        continue
+                    value = pair.group(2)
+                    if value[:1] in ("\"", "'", "|", ">", "[", "{"):
+                        continue
+                    if ": " in value:
+                        offenders.append(f"{os.path.relpath(path, ROOT)}: {pair.group(1)}")
+        self.assertEqual(offenders, [])
+
+
 class TestReadmeAndDocsSurface(unittest.TestCase):
     def test_readme_matches_current_public_claims(self):
         readme = _read("README.md")
