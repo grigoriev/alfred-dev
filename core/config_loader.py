@@ -121,6 +121,10 @@ DEFAULT_CONFIG = {
     # /alfred-dev:config changes them per project.
     "optional_agents": build_optional_agent_flags(),
     "memory": dict(DEFAULT_MEMORY_CONFIG),
+    # PR loop: how Greptile counts for the merge (required, optional, off).
+    "pr_loop": {
+        "greptile": "optional",
+    },
     "notes": "",
 }
 
