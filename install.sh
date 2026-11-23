@@ -3,7 +3,7 @@
 # Alfred Dev -- install script for Claude Code
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/main/install.sh | bash
 #   bash ./install.sh
 #
 # What it does:

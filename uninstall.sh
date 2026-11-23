@@ -3,7 +3,7 @@
 # Alfred Dev -- uninstall script
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/main/uninstall.sh | bash
 #   bash ./uninstall.sh
 #
 # Strategy:

@@ -2,7 +2,7 @@
 # Alfred Dev -- uninstall script (Windows)
 #
 # Usage:
-#   irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.ps1 | iex
+#   irm https://raw.githubusercontent.com/grigoriev/alfred-dev/main/uninstall.ps1 | iex
 #
 # Strategy:
 #   1. If Claude CLI is available, uninstall the plugin and remove the

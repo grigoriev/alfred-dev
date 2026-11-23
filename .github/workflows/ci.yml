@@ -1,0 +1,225 @@
+# CI for Alfred Dev.
+#
+# lint: ShellCheck, actionlint and zizmor.
+# test: pytest and the release audit on Python 3.15.
+# plugin: installs the Claude CLI on Linux, macOS and Windows, validates the
+#   plugin, installs it from the checkout and uninstalls it.
+# sonar: pytest with coverage, then the SonarCloud scan.
+#
+# No dynamic user input (issue titles, PR bodies, commit messages) goes into
+# run: blocks.
+
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new push to a pull request cancels its older run. Each push to main gets
+# its own group, so a queued main run is never replaced by a newer one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
+        with:
+          scandir: .
+          severity: warning
+
+      # Checks the workflows themselves: expressions, inputs, shell in run.
+      - name: actionlint
+        uses: docker://rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+
+      # Security audit of the workflows, for example template injection or
+      # credentials left in the checkout. Informational findings do not fail.
+      - name: zizmor
+        uses: zizmorcore/zizmor-action@bd12b495c90993a4301c73398142281a61499af3 # v0.9.0
+        with:
+          advanced-security: false
+          min-severity: low
+          version: 1.33.0
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15"
+
+      - name: Install test dependencies
+        run: python -m pip install --only-binary=":all:" --require-hashes -r .github/requirements/test.txt
+
+      - name: Run tests
+        run: python -m pytest tests/ -q --tb=short
+
+      - name: Release audit
+        run: python scripts/release_audit.py --with-human-contracts --with-external-contracts --with-continuity --with-syntax
+
+  plugin:
+    name: plugin (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15"
+
+      # The CLI comes from .github/claude-cli/package-lock.json: npm ci checks
+      # every package against its integrity hash. Renovate updates the version.
+      # Lifecycle scripts stay off; only the CLI's own installer runs, to link
+      # the native binary of the platform package.
+      - name: Install Claude CLI
+        run: |
+          npm ci --prefix .github/claude-cli --ignore-scripts --no-audit --no-fund
+          node .github/claude-cli/node_modules/@anthropic-ai/claude-code/install.cjs
+          bin_dir="$PWD/.github/claude-cli/node_modules/.bin"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            bin_dir="$(cygpath -w "$bin_dir")"
+          fi
+          echo "$bin_dir" >> "$GITHUB_PATH"
+
+      - name: Check Claude CLI
+        run: |
+          command -v claude
+          claude --version
+
+      - name: Validate marketplace
+        run: claude plugin validate . --strict
+
+      - name: Validate plugin
+        run: claude plugin validate .claude-plugin/plugin.json --strict
+
+      - name: Register local marketplace
+        env:
+          WORKSPACE: ${{ github.workspace }}
+        run: claude plugin marketplace add "$WORKSPACE" --scope user
+
+      - name: Install alfred-dev
+        run: claude plugin install alfred-dev@alfred-dev --scope user -y
+
+      - name: Check installed inventory
+        run: |
+          claude plugin list
+          claude plugin details alfred-dev@alfred-dev > "$RUNNER_TEMP/alfred-details.txt"
+          cat "$RUNNER_TEMP/alfred-details.txt"
+          python -c '
+          import json
+          import os
+          from pathlib import Path
+          version = json.loads(Path(".claude-plugin/plugin.json").read_text(encoding="utf-8"))["version"]
+          text = Path(os.environ["RUNNER_TEMP"], "alfred-details.txt").read_text(encoding="utf-8")
+          needed = (version, "Skills (11)", "Agents (10)", "MCP servers (1)")
+          missing = [item for item in needed if item not in text]
+          if missing:
+              raise SystemExit("Incomplete inventory: " + ", ".join(missing))
+          print("inventory ok:", ", ".join(needed))
+          '
+
+      - name: Uninstall (Linux, macOS)
+        if: runner.os != 'Windows'
+        run: bash uninstall.sh
+
+      - name: Validate PowerShell syntax
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $errors = $null
+          foreach ($script in @('install.ps1', 'uninstall.ps1')) {
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              (Join-Path $PWD $script),
+              [ref]$null,
+              [ref]$errors
+            )
+            if ($errors) {
+              $errors | ForEach-Object { Write-Error $_.ToString() }
+              exit 1
+            }
+          }
+          Write-Host "PowerShell syntax ok: install.ps1 uninstall.ps1"
+
+      - name: Uninstall (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./uninstall.ps1
+
+      - name: Check that the plugin is gone
+        run: |
+          python -c '
+          import json
+          import shutil
+          import subprocess
+          claude = shutil.which("claude")
+          if claude is None:
+              raise SystemExit("claude is not on PATH")
+          raw = subprocess.check_output([claude, "plugin", "list", "--json"], text=True)
+          entries = json.loads(raw)
+          leftover = [
+              item.get("id")
+              for item in entries
+              if isinstance(item, dict) and "alfred" in str(item.get("id", ""))
+          ]
+          if leftover:
+              raise SystemExit("Still present after uninstall: " + ", ".join(leftover))
+          print("uninstall ok: no alfred-dev in claude plugin list")
+          '
+
+  sonar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15"
+
+      - name: Install test dependencies
+        run: python -m pip install --only-binary=":all:" --require-hashes -r .github/requirements/test.txt
+
+      - name: Run tests with coverage
+        run: |
+          python -m coverage run -m pytest tests/ -q --tb=short
+          python -m coverage xml -o coverage.xml
+          python -m coverage report
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4 # v8.5.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io

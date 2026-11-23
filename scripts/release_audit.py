@@ -2618,7 +2618,7 @@ def check_install_update_contracts() -> list[str]:
             "does not touch `~/.claude/skills`",
             "Do not use `claude plugin update --scope local`",
             "`claude plugin update --scope project`",
-            "curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash",
+            "curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/main/install.sh | bash",
             "run **`/reload-plugins`**",
             "`/reload-plugins --force`",
             "A Claude Code restart is required",

@@ -46,17 +46,14 @@ python3 -m pytest tests/ -v
 
 ## Текущий CI
 
-Автоматизация GitHub находится в `.github/workflows/test.yml`.
+Автоматизация GitHub находится в `.github/workflows/ci.yml`. CI запускается на каждый `pull_request` и на `push` в `main`.
 
-Сейчас CI:
+- job `lint`: ShellCheck, actionlint и zizmor;
+- job `test`: Python 3.15, `pytest` и `release_audit` с контрактами;
+- job `plugin`: Ubuntu, macOS и Windows (`fail-fast: false`); устанавливает Claude CLI, проверяет плагин, устанавливает его из checkout, показывает инвентарь и удаляет плагин;
+- job `sonar`: `pytest` с покрытием и анализ SonarCloud (`sonar-project.properties`).
 
-- запускается на `push` и `pull_request` в `main`;
-- job `test`: Python `3.10`–`3.13`, `pytest`, а на `3.12` также `release_audit` и покрытие 60%;
-- job `plugin`: та же последовательность на Ubuntu, macOS и Windows (`fail-fast: false`); устанавливает Claude CLI, проверяет, устанавливает 0.7.0 из checkout, показывает инвентарь и удаляет плагин;
-- не устанавливает FastMCP (у локального сервера есть fallback);
-- не использует `curl` из GitHub `main`; устанавливает checkout из CI.
-
-Поэтому матрица Python становится частью контракта репозитория: если ты добавишь зависимость или синтаксис, несовместимый с одним из этих интерпретаторов, ты сломаешь релиз.
+Все actions закреплены по SHA. Зависимости тестов лежат в `.github/requirements/test.txt` с хешами; Renovate обновляет их.
 
 ---
 

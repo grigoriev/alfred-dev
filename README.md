@@ -98,7 +98,7 @@ timeline
 нормализует их и переустанавливает с `--scope user`. Официальный маркетплейс Anthropic не используется: нативный CLI регистрирует собственный неофициальный источник.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/main/install.sh | bash
 ```
 
 Если репозиторий уже клонирован локально, можно запустить так:
@@ -118,7 +118,7 @@ Alfred Dev без перезапуска. Если Claude Code предупре�
 В Windows (PowerShell):
 
 ```powershell
-irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.ps1 | iex
+irm https://raw.githubusercontent.com/grigoriev/alfred-dev/main/install.ps1 | iex
 ```
 
 Требования:
@@ -130,7 +130,7 @@ irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.ps1 | iex
 
 ```bash
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/main/uninstall.sh | bash
 ```
 
 ```bash
@@ -140,7 +140,7 @@ bash ./uninstall.sh
 
 ```powershell
 # Windows
-irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/grigoriev/alfred-dev/main/uninstall.ps1 | iex
 ```
 
 Деинсталлятор удаляет плагин и источник маркетплейса в scope `user`.
@@ -149,7 +149,7 @@ irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.ps1 | ie
 
 `/alfred-dev:update` сравнивает установленную версию с последним GitHub Release
 и ведёт через обновление. Добавление маркетплейса `grigoriev/alfred-dev` ставит
-то, что лежит в ветке по умолчанию `ru` (русская версия; `main` повторяет upstream).
+то, что лежит в ветке по умолчанию `main`.
 
 ## Быстрый старт
 

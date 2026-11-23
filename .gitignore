@@ -20,6 +20,7 @@ __pycache__/
 .pytest_cache/
 .coverage
 coverage-html/
+coverage.xml
 .venv/
 venv/
 *.egg-info/
@@ -30,3 +31,6 @@ node_modules/
 .env.*
 !.env.example
 .DS_Store
+
+# IDE
+.idea/

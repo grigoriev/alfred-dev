@@ -1,0 +1,8 @@
+{
+  "name": "alfred-dev-ci-claude-cli",
+  "private": true,
+  "description": "Claude CLI for the plugin job of ci.yml, installed from the lock file.",
+  "dependencies": {
+    "@anthropic-ai/claude-code": "2.1.330"
+  }
+}

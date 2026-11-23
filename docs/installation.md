@@ -121,7 +121,7 @@ sequenceDiagram
 **Использование:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/main/install.sh | bash
 ```
 
 Если репозиторий уже клонирован или скачан локально, можно запустить тот же
@@ -233,7 +233,7 @@ claude mcp get plugin:alfred-dev:alfred-memory
 **Использование (PowerShell):**
 
 ```powershell
-irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.ps1 | iex
+irm https://raw.githubusercontent.com/grigoriev/alfred-dev/main/install.ps1 | iex
 ```
 
 Подход тот же, что в Bash: реальную установку выполняет CLI Claude Code,
@@ -266,7 +266,7 @@ irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.ps1 | iex
 **macOS / Linux:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/main/uninstall.sh | bash
 ```
 
 Из локальной копии репозитория:
@@ -278,7 +278,7 @@ bash ./uninstall.sh
 **Windows (PowerShell):**
 
 ```powershell
-irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/grigoriev/alfred-dev/main/uninstall.ps1 | iex
 ```
 
 ### Что удаляется
@@ -357,8 +357,8 @@ irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.ps1 | ie
   команда заранее это объясняет: обновление приводит установку к глобальной
   пользовательской.
 
-- **macOS / Linux:** `curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash`
-- **Windows:** `irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.ps1 | iex`
+- **macOS / Linux:** `curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/main/install.sh | bash`
+- **Windows:** `irm https://raw.githubusercontent.com/grigoriev/alfred-dev/main/install.ps1 | iex`
 
 - Для scope `managed` она не пытается обновлять: сообщает, что установкой
   управляет политика администратора.
@@ -442,7 +442,7 @@ update alfred-dev` перед установкой.
 Рекомендуемое восстановление: снова запустить установщик:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/main/install.sh | bash
 ```
 
 Если нужно починить вручную, эквивалентный процесс такой:
