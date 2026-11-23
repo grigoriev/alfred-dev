@@ -495,30 +495,30 @@ def _evaluate_ai_review(github: Dict[str, Any], greptile_cli: Optional[Dict[str,
                         fix_items: List[Dict[str, Any]], wait_items: List[str],
                         actions: List[str]) -> Tuple[Dict[str, Any], str]:
     """Return the Greptile data and which AI review counts: greptile, claude or empty."""
-    if mode == GREPTILE_REQUIRED:
-        greptile = _evaluate_greptile_required(github, greptile_cli, fix_items, wait_items, actions)
-        current = greptile.get("status") == "ok" and not greptile.get("stale")
-        return greptile, "greptile" if current else ""
     if mode == GREPTILE_OPTIONAL:
         bot = parse_greptile(github)
         if bot["status"] == "ok" and not bot["stale"]:
             return bot, "greptile"
-    claude = claude_review_status(github)
-    if claude == "ok":
-        return {"status": "off"}, "claude"
-    if mode == GREPTILE_OPTIONAL and _no_claude_workflow(github):
-        # No Claude Code review workflow in this repository: Greptile decides.
+    greptile_decides = mode == GREPTILE_REQUIRED or (
+        mode == GREPTILE_OPTIONAL and _no_claude_workflow(github))
+    if greptile_decides:
         greptile = _evaluate_greptile_required(github, greptile_cli, fix_items, wait_items, actions)
         current = greptile.get("status") == "ok" and not greptile.get("stale")
         return greptile, "greptile" if current else ""
+    if claude_review_status(github) == "ok":
+        return {"status": "off"}, "claude"
+    _wait_for_claude(github, wait_items, actions)
+    return {"status": "off"}, ""
+
+
+def _wait_for_claude(github: Dict[str, Any], wait_items: List[str], actions: List[str]) -> None:
     if _claude_review_running(github):
         wait_items.append("Ревью Claude Code ещё выполняется.")
-    elif claude == "stale":
+    elif claude_review_status(github) == "stale":
         wait_items.append("Ревью Claude Code относится к старому коммиту: нужен повторный ревью.")
         actions.append("rerun_claude_review")
     else:
         wait_items.append("Нет ревью Claude Code (и текущего ревью Greptile).")
-    return {"status": "off"}, ""
 
 
 def _evaluate_greptile_score(greptile: Dict[str, Any], blockers: List[str]) -> None:
