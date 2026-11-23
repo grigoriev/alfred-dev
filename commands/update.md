@@ -70,16 +70,16 @@ If the request fails (no network, rate limit, timeout), report the error and sug
 
 ## Step 3: compare versions
 
-Check that `tag_name` is valid semver: it must match `v?X.Y.Z(-ru)?`, where X, Y, Z are numbers (for example `v0.3.0`, `0.3.0` or `v0.3.0-ru`). The `-ru` suffix marks a Russian fork release, not a pre-release. If it does not match, show a warning and stop: the release format is not as expected.
+Check that `tag_name` is valid semver: it must match `v?X.Y.Z`, where X, Y, Z are numbers (for example `v0.3.0` or `0.3.0`). If it does not match, show a warning and stop: the release format is not as expected.
 
-Normalize `tag_name` (without the leading `v` and the `-ru` suffix) and the installed version to numeric tuples `(major, minor, patch)` and compare them as real semver. **Never** compare versions as plain text (`0.10.0` is greater than `0.9.0`).
+Normalize `tag_name` (without the leading `v`) and the installed version to numeric tuples `(major, minor, patch)` and compare them as real semver. **Never** compare versions as plain text (`0.10.0` is greater than `0.9.0`).
 
 For a deterministic comparison, run with Bash:
 
 ```bash
 python3 - <<'PY'
 def parse(value):
-    value = value.strip().lstrip('v').removesuffix('-ru')
+    value = value.strip().lstrip('v')
     return tuple(int(part) for part in value.split('.'))
 
 installed = "INSTALLED_VERSION"
