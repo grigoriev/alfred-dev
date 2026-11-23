@@ -96,23 +96,16 @@ jobs:
         with:
           python-version: "3.15"
 
-      - name: Install Claude CLI (Linux, macOS)
-        if: runner.os != 'Windows'
+      # The CLI comes from .github/claude-cli/package-lock.json: npm ci checks
+      # every package against its integrity hash. Renovate updates the version.
+      - name: Install Claude CLI
         run: |
-          curl -fsSL https://claude.ai/install.sh | bash
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          echo "$HOME/.claude/local/bin" >> "$GITHUB_PATH"
-
-      - name: Install Claude CLI (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          irm https://claude.ai/install.ps1 | iex
-          Add-Content $env:GITHUB_PATH "$env:USERPROFILE\.local\bin"
-          Add-Content $env:GITHUB_PATH "$env:USERPROFILE\.claude\local\bin"
-          if ($env:LOCALAPPDATA) {
-            Add-Content $env:GITHUB_PATH "$env:LOCALAPPDATA\Programs\claude"
-          }
+          npm ci --prefix .github/claude-cli --no-audit --no-fund
+          bin_dir="$PWD/.github/claude-cli/node_modules/.bin"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            bin_dir="$(cygpath -w "$bin_dir")"
+          fi
+          echo "$bin_dir" >> "$GITHUB_PATH"
 
       - name: Check Claude CLI
         run: |
