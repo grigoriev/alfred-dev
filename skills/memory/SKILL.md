@@ -1,15 +1,17 @@
 ---
 name: memory
-description: This skill should be used when the user asks to record a design decision, search past project decisions, inspect the Alfred memory timeline, or work with the alfred-memory MCP server. Use it to call the namespaced MCP tools instead of inventing history.
+description: This skill should be used when the user asks to record a design decision, search past project decisions, inspect the Alfred memory timeline, or work with the alfred-memory MCP server. Use it to call the namespaced MCP tools instead of inventing history. Triggers: запиши решение, почему мы решили, что мы делали в прошлый раз, память, история решений.
 ---
 
-# Постоянная память Alfred
+# Alfred persistent memory
 
-Записывать и запрашивать решения проекта через MCP-сервер `alfred-memory`. Не выдумывать историю. Если инструмент недоступен, сказать об этом и не имитировать результаты.
+Communicate with the user in Russian.
 
-## Реальные имена tools
+Record and query project decisions through the `alfred-memory` MCP server. Do not invent history. If a tool is unavailable, say so and do not simulate results.
 
-Claude Code экспонирует tools плагина с MCP-префиксом. Использовать эти имена, а не короткие:
+## Real tool names
+
+Claude Code exposes plugin tools with an MCP prefix. Use these names, not the short ones:
 
 - `mcp__plugin_alfred-dev_alfred-memory__memory_search`
 - `mcp__plugin_alfred-dev_alfred-memory__memory_get_decisions`
@@ -21,26 +23,26 @@ Claude Code экспонирует tools плагина с MCP-префиксо�
 - `mcp__plugin_alfred-dev_alfred-memory__memory_link_decisions`
 - `mcp__plugin_alfred-dev_alfred-memory__memory_health`
 
-Если runtime показывает другой префикс, использовать тот, что есть в списке tools, всегда от сервера `alfred-memory`.
+If the runtime shows a different prefix, use the one in the tool list, always from the `alfred-memory` server.
 
-## Что записывается, а что нет
+## What is recorded and what is not
 
-Да: архитектурные и проектные решения, результаты gates, handoffs, UAT и коммиты, сделанные в сессии Alfred.
+Yes: architecture and design decisions, gate results, handoffs, UAT and commits made in an Alfred session.
 
-Нет: старая история Git, каждый Read/Glob/Grep, операционные советы и пустой kanban.
+No: old Git history, every Read/Glob/Grep, operational tips and an empty kanban.
 
-Вызывать `memory_log_decision` только при реальном выборе в дизайне, безопасности или поставке. Не регистрировать каждый edit. Если решение касается архитектуры или compliance, то человек читает живой Markdown (`docs/adr/`, `docs/project/compliance.md`); память его не заменяет.
+Call `memory_log_decision` only for a real choice in design, security or delivery. Do not log every edit. If a decision concerns architecture or compliance, the human reads the living Markdown (`docs/adr/`, `docs/project/compliance.md`); memory does not replace it.
 
-Минимальные поля: заголовок, контекст, отброшенные альтернативы, обоснование, теги.
+Minimum fields: title, context, rejected alternatives, rationale, tags.
 
-## Запрос
+## Query
 
-Для «почему мы решили X» или «что мы делали в прошлый раз»: `memory_search` или `memory_get_decisions` с термином и, если применимо, диапазоном или тегами.
+For «почему мы решили X» or «что мы делали в прошлый раз»: `memory_search` or `memory_get_decisions` with the term and, if applicable, a range or tags.
 
-Если записей нет, ответить, что записей нет. Не домысливать.
+If there are no records, say there are no records. Do not speculate.
 
-Агента `librarian` не существует. Этот skill и `/alfred-dev:memory-ui` это путь для обращения к истории.
+The `librarian` agent does not exist. This skill and `/alfred-dev:memory-ui` are the way to access history.
 
 ## UI
 
-Графическое представление: `/alfred-dev:memory-ui`. Этот skill не запускает HTTP-сервер. Чтобы закрыть его: `/alfred-dev:memory-ui stop`. При завершении сессии Claude он останавливается сам.
+Graphical view: `/alfred-dev:memory-ui`. This skill does not start the HTTP server. To close it: `/alfred-dev:memory-ui stop`. It stops by itself when the Claude session ends.

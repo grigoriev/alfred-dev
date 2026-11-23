@@ -1,36 +1,38 @@
 ---
 name: sonarqube
-description: "Поднять SonarQube в Docker, проанализировать код и предложить улучшения. Также: статический анализ, технический долг, code smells, покрытие, автоматизированное качество."
+description: "Start SonarQube in Docker, analyze the code and propose improvements. Triggers: статический анализ, технический долг, code smells, покрытие, автоматизированное качество."
 disable-model-invocation: true
 ---
 
-# Анализ качества с SonarQube
+# Quality analysis with SonarQube
 
-## Резюме
+Communicate with the user in Russian.
 
-Этот skill поднимает экземпляр SonarQube в Docker, запускает анализ кода проекта и переводит результаты в практичные предложения по улучшению. SonarQube находит баги, уязвимости, code smells и проблемы покрытия, которые не ловят линтеры.
+## Summary
 
-Он не заменяет qa-engineer и security-officer: он дополняет их работу автоматизированным вторым мнением на основе статических правил, проверенных на миллионах проектов.
+Start a SonarQube instance in Docker, analyze the project code and turn the results into actionable improvements. SonarQube finds bugs, vulnerabilities, code smells and coverage gaps that linters miss.
 
-## Процесс
+It does not replace qa-engineer or security-officer. It adds an automated second opinion based on static rules.
 
-### Шаг 1: preflight Docker и прав
+## Process
 
-Проверить, доступен ли Docker и отвечает ли демон:
+### Step 1: Docker and permission preflight
+
+Check that Docker is available and the daemon responds:
 
 ```bash
 docker --version
 docker info
 ```
 
-Интерпретируй результат по этим правилам:
+Interpret the result:
 
-- **Если `docker --version` падает**: Docker не установлен. Объясни пользователю, что он нужен SonarQube и что установка может потребовать прав администратора.
-- **Если `docker --version` работает, а `docker info` падает**: Docker установлен, но демон недоступен. Объясни пользователю, что перед продолжением нужно запустить Docker Desktop или системную службу.
+- **If `docker --version` fails**: Docker is not installed. Tell the user that SonarQube needs it and that installation can require administrator rights.
+- **If `docker --version` works but `docker info` fails**: Docker is installed but the daemon is not available. Tell the user to start Docker Desktop or the system service before you continue.
 
-**Не устанавливай Docker, не открывай Docker Desktop и не запускай демон без явного одобрения пользователя.** Если команда пришла из `/alfred audit`, соблюдай решение, принятое в её preflight. Если предварительного разрешения нет, запроси его сейчас и жди ответа.
+**Do not install Docker, open Docker Desktop or start the daemon without explicit user approval.** If the command came from `/alfred audit`, follow the decision made in its preflight. If there is no prior permission, ask for it now and wait for the answer.
 
-Если пользователь разрешает установку, установи последнюю стабильную версию для своей платформы:
+If the user allows installation, install the latest stable version for their platform:
 
 **macOS:**
 ```bash
@@ -45,12 +47,12 @@ sudo systemctl start docker
 sudo usermod -aG docker $USER
 ```
 
-**Windows (PowerShell от администратора):**
+**Windows (PowerShell as administrator):**
 ```powershell
 winget install Docker.DockerDesktop
 ```
 
-Если пользователь разрешает запуск Docker, когда он установлен, но демон не отвечает, используй минимально необходимую для платформы стратегию:
+If the user allows starting Docker when it is installed but the daemon does not respond, use the minimal strategy for the platform:
 
 **macOS:**
 ```bash
@@ -67,42 +69,42 @@ sudo systemctl start docker
 Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"
 ```
 
-После установки или запуска Docker проверь ещё раз через `docker info`.
+After you install or start Docker, check again with `docker info`.
 
-- Если `docker info` отвечает корректно, продолжай.
-- Если пользователь отказался от установки или запуска, либо демон по-прежнему не отвечает, **остановь здесь ветку SonarQube** и верни явный результат: «SonarQube пропущен по решению пользователя или из-за нехватки прав». Не пытайся обойти это другими путями.
+- If `docker info` responds correctly, continue.
+- If the user declined installation or start, or the daemon still does not respond, **stop the SonarQube branch here** and return an explicit result: «SonarQube пропущен по решению пользователя или из-за нехватки прав». Do not try to work around this.
 
-### Шаг 2: поднять SonarQube
+### Step 2: Start SonarQube
 
-Перед запуском контейнера:
+Before you start the container:
 
-- Проверь, существует ли `sonarqube-alfred`. Если он остался от предыдущего запуска, сначала удали его, чтобы избежать конфликтов:
+- Check whether `sonarqube-alfred` exists. If it is left from a previous run, remove it first to avoid conflicts:
 
 ```bash
 docker rm -f sonarqube-alfred 2>/dev/null || true
 ```
 
-- Проверь, занят ли порт `9000`. Если занят, останови выполнение и спроси пользователя, хочет ли он освободить порт или продолжить без SonarQube. Не убивай процессы самостоятельно.
+- Check whether port `9000` is in use. If it is, stop and ask the user whether to free the port or continue without SonarQube. Do not kill processes yourself.
 
 ```bash
 docker run -d --name sonarqube-alfred -p 9000:9000 sonarqube:community
 ```
 
-Дождаться готовности SonarQube (может занять 1-2 минуты):
+Wait until SonarQube is ready (can take 1-2 minutes):
 
-Используй именно этот цикл или эквивалентный. **Не используй переменную `status` в shell-скриптах**: в `zsh` она доступна только для чтения и сломает ожидание. Если нужно сохранить состояние в переменной, используй `sonar_status`.
+Use exactly this loop or an equivalent. **Do not use the `status` variable in shell scripts**: in `zsh` it is read-only and breaks the wait. If you need to store the state in a variable, use `sonar_status`.
 
 ```bash
 until curl -s http://localhost:9000/api/system/status | grep -q '"status":"UP"'; do sleep 5; done
 ```
 
-Учётные данные по умолчанию: admin/admin. Сменить пароль при первом входе.
+Default credentials: admin/admin. Change the password at first login.
 
-### Шаг 3: настроить проект
+### Step 3: Configure the project
 
-- Создать проект в SonarQube (через API или веб-интерфейс).
-- Сгенерировать токен аутентификации для анализа.
-- Создать или проверить файл `sonar-project.properties` в корне проекта:
+- Create the project in SonarQube (API or web UI).
+- Generate an authentication token for the analysis.
+- Create or check `sonar-project.properties` in the project root:
 
 ```properties
 sonar.projectKey=my-project
@@ -112,64 +114,64 @@ sonar.language=ts
 sonar.sourceEncoding=UTF-8
 ```
 
-Адаптировать под стек проекта (язык, каталоги кода и тестов).
+Adapt it to the project stack (language, source and test directories).
 
-### Шаг 4: выполнить анализ
+### Step 4: Run the analysis
 
-Для проектов Node/TypeScript:
+Node/TypeScript projects:
 
 ```bash
 npx sonarqube-scanner
 ```
 
-Для проектов Python:
+Python projects:
 
 ```bash
 pip install pysonar-scanner && pysonar-scanner
 ```
 
-Универсальная альтернатива через Docker:
+Universal alternative with Docker:
 
 ```bash
 docker run --rm -v "$(pwd):/usr/src" sonarsource/sonar-scanner-cli
 ```
 
-### Шаг 5: интерпретировать результаты
+### Step 5: Interpret the results
 
-Открыть http://localhost:9000 и просмотреть дашборд проекта. Классифицировать находки по:
+Open http://localhost:9000 and review the project dashboard. Classify findings by:
 
-- **Bugs**: ошибки, способные вызвать неверное поведение. Высокий приоритет.
-- **Уязвимости**: проблемы безопасности, найденные правилами OWASP/CWE. Уведомить security-officer.
-- **Code smells**: проблемы сопровождаемости. Приоритизировать те, что дают наибольший эффект.
-- **Покрытие**: доля кода, покрытого тестами. Выявить критичные зоны без покрытия.
+- **Bugs**: errors that can cause wrong behavior. High priority.
+- **Vulnerabilities**: security issues found by OWASP/CWE rules. Notify security-officer.
+- **Code smells**: maintainability issues. Prioritize those with the largest effect.
+- **Coverage**: share of code covered by tests. Identify critical uncovered areas.
 
-### Шаг 6: сформировать отчёт об улучшениях
+### Step 6: Produce the improvement report
 
-Создать отчёт с:
+Create a report with:
 
-- Кратким резюме: основные метрики (bugs, уязвимости, покрытие, технический долг).
-- Топ-10 находок по влиянию с предлагаемым исправлением.
-- Зонами кода с наибольшей плотностью проблем.
-- Сравнением с предыдущим анализом, если он есть.
+- Short summary: key metrics (bugs, vulnerabilities, coverage, technical debt).
+- Top 10 findings by impact with a proposed fix.
+- Code areas with the highest issue density.
+- Comparison with the previous analysis, if one exists.
 
-### Шаг 7: очистить
+### Step 7: Clean up
 
-Когда анализ завершён и результаты просмотрены:
+When the analysis is done and the results are reviewed:
 
 ```bash
 docker stop sonarqube-alfred && docker rm sonarqube-alfred
 ```
 
-Если анализ упал на полпути, всё равно попытайся выполнить финальную очистку временного контейнера перед выходом.
+If the analysis failed midway, still try to do the final cleanup of the temporary container before you exit.
 
-## Чего НЕ делать
+## Do NOT
 
-- Не оставлять SonarQube работать бесконечно. Это инструмент разового анализа, а не постоянный сервис.
-- Не устанавливать Docker, не запускать демон и не открывать Docker Desktop без явного разрешения пользователя.
-- Не считать все находки равными. Приоритизировать по реальному влиянию, а не по количеству.
-- Не исправлять находки, не поняв, почему SonarQube их помечает. Иногда бывают ложные срабатывания.
-- Не заменять человеческие code reviews на SonarQube. Они дополняют друг друга.
+- Do not leave SonarQube running. It is a one-time analysis tool, not a permanent service.
+- Do not install Docker, start the daemon or open Docker Desktop without explicit user permission.
+- Do not treat all findings as equal. Prioritize by real impact, not by count.
+- Do not fix findings before you understand why SonarQube flags them. False positives happen.
+- Do not replace human code reviews with SonarQube. They complement each other.
 
-## Ссылка на стек
+## Stack reference
 
-Сверься с определённым стеком в конфигурации Alfred, чтобы выбрать подходящий scanner (Node.js, Python и т. д.) и автоматически настроить файл `sonar-project.properties` с правильным языком и каталогами.
+Check the stack defined in the Alfred configuration to choose the right scanner (Node.js, Python, etc.) and configure `sonar-project.properties` with the correct language and directories.

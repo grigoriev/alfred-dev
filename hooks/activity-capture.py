@@ -1285,6 +1285,14 @@ def _dispatch_notebook(db, data: dict) -> None:
     )
 
 
+_HARNESS_MESSAGE_RE = re.compile(r"^\s*<(task-notification|system-reminder)>")
+
+
+def _is_harness_message(text: str) -> bool:
+    """Return True for messages that the harness sends, not the user."""
+    return bool(_HARNESS_MESSAGE_RE.match(text))
+
+
 def _dispatch_prompt(db, data: dict) -> None:
     """Capture the prompt sent by the user.
 
@@ -1296,7 +1304,7 @@ def _dispatch_prompt(db, data: dict) -> None:
         data: UserPromptSubmit or UserPromptExpansion hook data.
     """
     prompt_text = data.get("prompt", "") or data.get("content", "")
-    if not prompt_text:
+    if not prompt_text or _is_harness_message(prompt_text):
         return
 
     _ensure_plugin_root_on_path()

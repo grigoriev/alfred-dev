@@ -29,8 +29,8 @@ class TestMemoryUIContract(unittest.TestCase):
         self.assertIn('consume-prefetch "$PWD" --expected memory-ui', command)
         self.assertNotIn("allow-stop-once", command)
         self.assertIn('python3 .claude/alfred-continuity.py memory-ui "$PWD" --raw "$ARGUMENTS"', command)
-        self.assertIn("используй его как есть в качестве итогового ответа", command)
-        self.assertIn("НЕ добавляй второе объяснение", command)
+        self.assertIn("use it as is as the final answer", command)
+        self.assertIn("DO NOT add a second explanation", command)
         self.assertIn(".claude/alfred-memory.db", command)
         self.assertIn("/alfred-dev:memory-ui stop", command)
         self.assertIn("$ARGUMENTS", command)
@@ -39,14 +39,14 @@ class TestMemoryUIContract(unittest.TestCase):
         alfred = _read("agents/alfred.md")
         self.assertIn("/alfred-dev:memory-ui", alfred)
         self.assertIn("alfred-memory", alfred)
-        self.assertIn("этого агента больше нет", alfred)
+        self.assertIn("it no longer exists", alfred)
         self.assertNotIn("invocando al subagente `librarian`", alfred)
 
     def test_memory_skill_points_to_ui_and_mcp(self):
         skill = _read("skills/memory/SKILL.md")
         self.assertIn("/alfred-dev:memory-ui", skill)
         self.assertIn("memory_search", skill)
-        self.assertIn("Агента `librarian` не существует", skill)
+        self.assertIn("The `librarian` agent does not exist", skill)
 
     def test_plugin_json_references_memory_ui_command(self):
         plugin = json.loads(_read(".claude-plugin/plugin.json"))

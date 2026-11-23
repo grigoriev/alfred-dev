@@ -5930,7 +5930,7 @@ def _build_next_action_payload(
     *,
     focus: str,
     directive: str,
-    urgency: str = "media",
+    urgency: str = "medium",
 ) -> Dict[str, str]:
     return {
         "command": command,
@@ -5963,7 +5963,7 @@ def suggest_verify_action(project_dir: str) -> Optional[Dict[str, str]]:
                 "Подготовь или запиши UAT последнего результата, прежде чем открывать "
                 "новый процесс."
             ),
-            urgency="alta",
+            urgency="high",
         )
 
     if uat.get("status") == "pending":
@@ -5976,7 +5976,7 @@ def suggest_verify_action(project_dir: str) -> Optional[Dict[str, str]]:
                 "Заверши или обнови незакрытую UAT, прежде чем начинать "
                 "новый цикл работы."
             ),
-            urgency="alta",
+            urgency="high",
         )
 
     return None
@@ -5997,7 +5997,7 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
                 f"Возобнови `{command}` в `{phase}` и работай над незакрытой gate, "
                 "не открывая другой процесс."
             ),
-            urgency="alta",
+            urgency="high",
         )
 
     handoff = load_handoff(project_dir)
@@ -6014,7 +6014,7 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
                 f"Продолжи `{handoff['command']}` с `{handoff['phase']}` через "
                 f"`{handoff.get('resume_command', '/alfred-dev:resume')}`."
             ),
-            urgency="alta",
+            urgency="high",
         )
 
     verify_suggestion = suggest_verify_action(project_dir)
@@ -6034,7 +6034,7 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
                 "Создай карту brownfield до открытия нового процесса, чтобы "
                 "рабочий контекст был сохранён."
             ),
-            urgency="alta",
+            urgency="high",
         )
 
     discovery_md = _read_text_if_exists(project_dir, DISCOVERY_MD_RELATIVE_PATH)
@@ -6052,7 +6052,7 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
                 f"Продолжи с `/alfred-dev:{_public_command(discovery_command)}`, опираясь на сохранённое "
                 "уточнение как на рабочую основу."
             ),
-            urgency="media",
+            urgency="medium",
         )
 
     current_md = _read_text_if_exists(project_dir, CURRENT_RELATIVE_PATH)
@@ -6070,7 +6070,7 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
                 f"Продолжи с `/alfred-dev:{_public_command(current_command)}`, опираясь на "
                 "`docs/project/current.md` и уже созданные артефакты."
             ),
-            urgency="media",
+            urgency="medium",
         )
 
     if project_has_codebase(project_dir):
@@ -6086,7 +6086,7 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
                 "Открой `/alfred`, чтобы выбрать следующий процесс на основе "
                 "уже существующего контекста проекта."
             ),
-            urgency="media",
+            urgency="medium",
         )
 
     return _build_next_action_payload(
@@ -6101,7 +6101,7 @@ def suggest_next_action(project_dir: str) -> Dict[str, str]:
             "Начни с `/alfred`, чтобы выбрать правильный процесс и "
             "заложить начальный контекст."
         ),
-        urgency="media",
+        urgency="medium",
     )
 
 

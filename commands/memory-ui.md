@@ -5,61 +5,57 @@ argument-hint: "[stop]"
 
 # /alfred-dev:memory-ui
 
-Ты Alfred. Эта команда существует, чтобы **открывать или закрывать память проекта
-в локальном графическом UI**, а не чтобы импровизировать ручной анализ в чате.
+Communicate with the user in Russian.
 
-Свободный аргумент пользователя: $ARGUMENTS
+You are Alfred. This command exists to **open or close the project memory in a local graphical UI**, not to improvise manual analysis in the chat.
 
-## Семантика
+User's free argument: $ARGUMENTS
 
-- Без аргумента: открывает или переиспользует UI на `http://127.0.0.1`.
-- `stop`: выключает локальный сервер, если он жив.
+## Semantics
 
-При завершении сессии Claude `SessionEnd` останавливает UI, если он ещё работает.
+- No argument: opens or reuses the UI at `http://127.0.0.1`.
+- `stop`: shuts down the local server if it is alive.
 
-## Протокол
+When the Claude session ends, `SessionEnd` stops the UI if it is still running.
 
-Шаг 0: если `UserPromptSubmit` уже подготовил helper-first UI в этой
-же сессии, используй его ДО всего остального. Немедленно выполни этот Bash
-и, если он вернул текст, используй его как есть в качестве итогового ответа:
+## Protocol
+
+Step 0: if `UserPromptSubmit` already prepared a helper-first UI in this session, use it BEFORE anything else. Run this Bash immediately. If it returns text, use it as is as the final answer:
 
 ```bash
 python3 .claude/alfred-continuity.py consume-prefetch "$PWD" --expected memory-ui
 ```
 
-Если он ничего не вернул или упал, продолжай.
+If it returns nothing or fails, continue.
 
-Затем немедленно выполни детерминированный helper:
+Then run the deterministic helper immediately:
 
 ```bash
 python3 .claude/alfred-continuity.py memory-ui "$PWD" --raw "$ARGUMENTS"
 ```
 
-Helper также принимает `--stop` как алиас `stop`.
+The helper also accepts `--stop` as an alias for `stop`.
 
-Если helper возвращает валидный ответ, используй его как есть в качестве итогового ответа
-и не оборачивай в дополнительную прозу. Helper уже показывает URL, состояние
-UI или подтверждение закрытия.
+If the helper returns a valid answer, use it as is as the final answer. Do not wrap it in extra prose. The helper already shows the URL, the UI state or the shutdown confirmation.
 
-Только если helper падает, переходи в ручной режим.
+Only if the helper fails, switch to manual mode.
 
-## Что должен показывать ответ
+## What the answer must show
 
-Если UI открывается:
+If the UI opens:
 
-- открытый или переиспользованный локальный URL;
-- что источник истины это `.claude/alfred-memory.db`;
-- что вид показывает overview, timeline, решения, граф, коммиты и поиск;
-- как закрыть: `/alfred-dev:memory-ui stop`.
+- the opened or reused local URL;
+- that the source of truth is `.claude/alfred-memory.db`;
+- that the view shows overview, timeline, decisions, graph, commits and search;
+- how to close: `/alfred-dev:memory-ui stop`.
 
-Если закрывается: подтверждение, что процесс остановлен или что он не был
-запущен.
+If it closes: confirmation that the process stopped or that it was not running.
 
-## Правила
+## Rules
 
-- НЕ превращай эту команду в длинный текстовый отчёт.
-- НЕ читай SQLite «вручную», если helper сработал.
-- НЕ запускай мультиагентный процесс.
-- НЕ добавляй второе объяснение поверх Markdown, который уже возвращает helper.
-- Если память пока пуста, скажи об этом прямо, но всё равно открой UI.
-- НЕ используй `AskUserQuestion` как обязательный шаг.
+- DO NOT turn this command into a long text report.
+- DO NOT read SQLite by hand if the helper worked.
+- DO NOT launch a multi-agent flow.
+- DO NOT add a second explanation on top of the Markdown the helper already returns.
+- If memory is still empty, say so directly, but open the UI anyway.
+- DO NOT use `AskUserQuestion` as a mandatory step.

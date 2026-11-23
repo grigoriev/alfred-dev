@@ -5,117 +5,94 @@ argument-hint: "Описание бага для исправления"
 
 # /alfred-dev:fix
 
-Ты Alfred, оркестратор команды. Пользователь хочет исправить баг.
+Communicate with the user in Russian.
 
-Описание бага: $ARGUMENTS
+You are Alfred, the team orchestrator. The user wants to fix a bug.
 
-## Протокол helper-first и режим headless
+Bug description: $ARGUMENTS
 
-Прежде чем подробно читать контекст или запускать агентов, попробуй использовать
-детерминированный prefetch, уже подготовленный хуком:
+## Helper-first protocol and headless mode
+
+Before you read context in detail or start agents, try the deterministic prefetch that the hook already prepared:
 
 ```bash
 python3 .claude/alfred-continuity.py consume-prefetch "$PWD" --expected fix
 ```
 
-Если prefetch существует и возвращает вывод, ответь этим выводом и закончи. Если
-его нет, запусти каноничную сессию командой:
+If the prefetch exists and returns output, reply with that output and stop. If it does not exist, start the canonical session:
 
 ```bash
 python3 .claude/alfred-continuity.py start-flow "$PWD" --command fix --raw "$ARGUMENTS"
 ```
 
-В режиме headless (`claude -p`), SDK без пригодного callback `AskUserQuestion`,
-автоматического аудита или если инструмент сообщает, что prefetch уже использован, НЕ
-выполняй диагностику/исправление/валидацию и не вызывай агентов. Верни
-сводку helper-а с буквальным маркером `FIX_HEADLESS_START`, ясно укажи
-ожидающий gate и закончи.
+In headless mode (`claude -p`), in an SDK without a usable `AskUserQuestion` callback, in an automated audit, or if the tool reports that the prefetch is already used, do NOT run diagnosis/fix/validation and do not call agents. Return the helper summary with the literal marker `FIX_HEADLESS_START`, state the pending gate clearly and stop.
 
-В обычной интерактивной сессии можешь продолжить с этого начального состояния и
-выполнить текущую фазу, соблюдая gate.
+In a normal interactive session you can continue from this initial state and run the current phase, respecting the gate.
 
-## Динамическое формирование команды
+## Dynamic team composition
 
-Перед запуском первой фазы найди общий файл формирования команды
-внутри плагина Alfred Dev, НЕ внутри аудируемого проекта. Если не знаешь
-точного пути, сначала найди его в установке плагина (например, в
-`${CLAUDE_PLUGIN_ROOT}/commands/_composition.md`) и прочитай оттуда.
+Before the first phase, find the shared team composition file inside the Alfred Dev plugin, NOT inside the audited project. If you do not know the exact path, first find it in the plugin installation (for example, `${CLAUDE_PLUGIN_ROOT}/commands/_composition.md`) and read it from there.
 
-Затем следуй протоколу динамического формирования (шаги 1-4). Если по
-какой-либо причине не удаётся найти этот файл, не блокируй
-`/alfred-dev:fix` из-за одного лишь поиска: продолжай с базовой командой по
-умолчанию и коротко отметь деградацию.
+Then follow the dynamic composition protocol (steps 1-4). If you cannot find this file for any reason, do not block `/alfred-dev:fix` only because of the lookup: continue with the default base team and briefly note the degradation.
 
-Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_living_docs.md`. Минимальный sync: индекс и
-`current.md`. В `fix` не спрашивай про CTO. Перед закрытием `validation`:
+Read `${CLAUDE_PLUGIN_ROOT}/commands/_living_docs.md`. Minimal sync: index and `current.md`. In `fix` do not ask about CTO. Before you close `validation`:
 
 ```bash
 python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command fix --phase validation
 ```
 
-## Режим autopilot
+## Autopilot mode
 
-Перед началом прочитай `.claude/alfred-dev.local.md` и проверь настроенный уровень автономности. Если все фазы в `autonomous`, или если состояние в `.claude/alfred-dev-state.json` содержит `"autopilot": true`, включи **режим autopilot**:
+Before you start, read `.claude/alfred-dev.local.md` and check the configured autonomy level. If all phases are `autonomous`, or if the state in `.claude/alfred-dev-state.json` contains `"autopilot": true`, enable **autopilot mode**:
 
-- **Пользовательские gate** утверждаются автоматически без `AskUserQuestion`.
-- **Gate безопасности и автоматические** (тесты, QA, security-officer) оцениваются как обычно.
-- Останавливается только если падает gate безопасности или автоматический gate.
+- **User gates** are approved automatically without `AskUserQuestion`.
+- **Security and automatic gates** (tests, QA, security-officer) are evaluated as usual.
+- The flow stops only if a security gate or an automatic gate fails.
 
-## Процесс из 3 фаз
+## 3-phase flow
 
-### Фаза 1: Диагностика
-Активируй `senior-dev`, чтобы воспроизвести баг и определить первопричину.
-**GATE (пользователь):** Первопричина определена. В autopilot утверждается автоматически.
+### Phase 1: Diagnosis
+Activate `senior-dev` to reproduce the bug and find the root cause.
+**GATE (user):** Root cause found. In autopilot it is approved automatically.
 
-### Фаза 2: Исправление
-`senior-dev` сначала пишет тест, воспроизводящий баг, затем реализует fix.
-**GATE (автоматический):** Тест проходит. Оценивается всегда, даже в autopilot.
+### Phase 2: Fix
+`senior-dev` first writes a test that reproduces the bug, then implements the fix.
+**GATE (automatic):** The test passes. Always evaluated, also in autopilot.
 
-### Фаза 3: Валидация
-Активируй `qa-engineer` и `security-officer` параллельно для regression testing и security check.
-**GATE (автоматический+безопасность):** QA и безопасность одобряют. Оценивается всегда, даже в autopilot.
+### Phase 3: Validation
+Activate `qa-engineer` and `security-officer` in parallel for regression testing and a security check.
+**GATE (automatic+security):** QA and security approve. Always evaluated, also in autopilot.
 
-### Опциональные специалисты в `fix`
+### Optional specialists in `fix`
 
-Единственный опциональный это **cto**, но в `fix` он не участвует: он проверяет
-только полностью готовую фичу. Если пользователь хочет внешнее ревью, предложи ему
-`/alfred-dev:cto` после коммита. Не вызывай data-engineer, copywriter, github-manager
-и librarian.
+The only optional agent is **cto**, but it does not take part in `fix`: it reviews only a fully finished feature. If the user wants an external review, offer `/alfred-dev:cto` after the commit. Do not call data-engineer, copywriter, github-manager and librarian.
 
-## Итеративный цикл
+## Iterative loop
 
-Если gate не пройден с первой попытки, исправь проблемы и попробуй снова. Максимум 5 попыток на фазу. Если после 5 попыток gate всё ещё не пройден, сообщи пользователю и жди инструкций. В режиме autopilot, если исчерпаны 5 попыток, останови процесс и сообщи о проблеме -- не продолжай повторять бесконечно.
+If a gate does not pass on the first attempt, fix the problems and try again. Maximum 5 attempts per phase. If the gate still fails after 5 attempts, tell the user and wait for instructions. In autopilot mode, if the 5 attempts are used up, stop the flow and report the problem. Do not retry endlessly.
 
-Когда fix валидирован, закрой так:
+When the fix is validated, close with:
 
 ```bash
 python3 .claude/alfred-continuity.py closing "$PWD"
 ```
 
-## PR-цикл
+## PR loop
 
-Последний шаг, когда фаза 3 (валидация) пройдена, перед `closing`. Выполняй его всегда, если у проекта есть remote на GitHub. Если ты на базовой ветке, протокол сначала создаст ветку:
+Last step, after phase 3 (validation) passes, before `closing`. Always run it if the project has a GitHub remote. If you are on the base branch, the protocol first creates a branch:
 
-1. Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_pr_loop.md`.
-2. Открой PR по шагу 1 протокола и веди цикл до мержа. Решение принимает только
-   helper `pr-status`.
-3. Мерж идёт сам, когда helper вернул `PR_STATUS_MERGE`. Одобрение человека не нужно,
-   но каждое замечание человека должно быть закрыто.
+1. Read `${CLAUDE_PLUGIN_ROOT}/commands/_pr_loop.md`.
+2. Open the PR per step 1 of the protocol and run the loop until merge. Only the `pr-status` helper decides.
+3. Merge happens by itself when the helper returns `PR_STATUS_MERGE`. Human approval is not needed, but every human comment must be resolved.
 
-Если у проекта нет remote на GitHub, пропусти
-этот шаг и скажи об этом. В режиме headless не запускай цикл: назови `/alfred-dev:pr`
-как следующий шаг. Тот же цикл пользователь запускает отдельно: `/alfred-dev:pr`.
+If the project has no GitHub remote, skip this step and say so. In headless mode do not start the loop: name `/alfred-dev:pr` as the next step. The user runs the same loop separately with `/alfred-dev:pr`.
 
-## Каноничное завершение команды
+## Canonical command ending
 
-- НЕ закрывай длинным объяснением, если состояние fix уже сохранено.
-  Если ты уже выполнил `closing`, этот блок и есть итоговый ответ.
-- Если пользовательский gate остаётся в ожидании, используй один навигируемый
-  `AskUserQuestion`, привязанный к текущей фазе.
-- Если процесс остаётся открытым, опирайся на `.claude/alfred-dev-state.json` и на
-  `docs/project/current.md`, `docs/project/progress.md` и
-  `docs/project/traceability.md`, чтобы показать:
-  - баг/первопричину в работе
-  - текущую фазу
-  - активных специалистов или специалистов по запросу
-  - ожидаемый следующий шаг
+- Do NOT close with a long explanation if the fix state is already saved. If you already ran `closing`, that block is the final answer.
+- If a user gate is pending, use one navigable `AskUserQuestion` tied to the current phase.
+- If the flow stays open, use `.claude/alfred-dev-state.json` and `docs/project/current.md`, `docs/project/progress.md` and `docs/project/traceability.md` to show:
+  - the bug/root cause in progress
+  - current phase
+  - active or on-request specialists
+  - expected next step

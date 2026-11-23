@@ -843,6 +843,14 @@ class TestValidateEquipoSesion(unittest.TestCase):
         self.assertTrue(_validate_session_team(persisted))
 
 
+def _enable_cto(project_dir):
+    """Write a project config that enables the optional CTO agent."""
+    claude_dir = os.path.join(project_dir, ".claude")
+    os.makedirs(claude_dir, exist_ok=True)
+    with open(os.path.join(claude_dir, "alfred-dev.local.md"), "w", encoding="utf-8") as handle:
+        handle.write("---\noptional_agents:\n  cto: true\n---\n")
+
+
 class TestRunFlow(unittest.TestCase):
     """Tests for run_flow, which creates a session with a team."""
 
@@ -851,6 +859,14 @@ class TestRunFlow(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             session = run_flow("feature", "New feature", project_dir=tmpdir)
         self.assertIn("session_team", session)
+        self.assertIsNone(session["session_team"])
+        self.assertIsNone(session["session_team_error"])
+
+    def test_tc15b_team_from_project_config(self):
+        """TC-15b: run_flow takes CTO from the project config when it is enabled."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            _enable_cto(tmpdir)
+            session = run_flow("feature", "New feature", project_dir=tmpdir)
         self.assertTrue(session["session_team"]["active_optionals"]["cto"])
         self.assertEqual(session["session_team"]["source"], "persisted_config")
         self.assertIsNone(session["session_team_error"])
@@ -869,6 +885,7 @@ class TestRunFlow(unittest.TestCase):
         sys.stderr = captured
         try:
             with tempfile.TemporaryDirectory() as tmpdir:
+                _enable_cto(tmpdir)
                 session = run_flow(
                     "feature",
                     "Test",
@@ -988,10 +1005,10 @@ class TestRunFlow(unittest.TestCase):
             **VALID_SESSION_TEAM["active_optionals"],
             "cto": True,
         }
-        ejecucion = get_effective_agents("scoped_execution", optionals)
+        execution = get_effective_agents("scoped_execution", optionals)
         validation = get_effective_agents("quick_validation", optionals)
-        self.assertEqual(ejecucion["parallel"], [])
-        self.assertEqual(ejecucion["sequential"], [])
+        self.assertEqual(execution["parallel"], [])
+        self.assertEqual(execution["sequential"], [])
         self.assertNotIn("cto", validation["sequential"])
 
     def test_fix_flow_uses_optional_agents_on_bug_phases(self):

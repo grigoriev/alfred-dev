@@ -55,9 +55,9 @@ class TestDesignerStyleDirection(unittest.TestCase):
                     "name": "Warm editorial",
                     "concept": "An interface with editorial hierarchy and a premium tone.",
                     "palette": {
-                        "primario": "#f5f0e8",
-                        "secundario": "#c8a96e",
-                        "texto": "#2c2c2c",
+                        "primary": "#f5f0e8",
+                        "secondary": "#c8a96e",
+                        "text": "#2c2c2c",
                     },
                     "typography": {
                         "headings": "Fraunces",
@@ -139,7 +139,7 @@ class TestDesignerStyleDirection(unittest.TestCase):
                 "choice": "C",
                 "name": "Vibrant minimalism",
                 "concept": "Clean system with an energetic accent.",
-                "palette": [{"role": "primario", "value": "#0d7377"}],
+                "palette": [{"role": "primary", "value": "#0d7377"}],
                 "typography": {"headings": "Sora", "body": "Inter"},
                 "spacing_density": "Airy",
                 "tone": "Modern and light",
@@ -245,7 +245,7 @@ class TestDesignerStyleDirection(unittest.TestCase):
                         {
                             "choice": "A",
                             "name": "Warm editorial",
-                            "palette": {"primario": "#f5f0e8"},
+                            "palette": {"primary": "#f5f0e8"},
                             "typography": {"headings": "Fraunces"},
                         }
                     ]

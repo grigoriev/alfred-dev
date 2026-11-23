@@ -29,7 +29,7 @@ class TestSessionBrief(unittest.TestCase):
             self.assertIn("slash command", text.lower())
             self.assertIn("Открытой сессии нет", text)
 
-    def test_active_session_points_to_retomar(self):
+    def test_active_session_points_to_resume(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             claude = os.path.join(tmpdir, ".claude")
             os.makedirs(claude, exist_ok=True)

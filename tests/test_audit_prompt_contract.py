@@ -32,22 +32,22 @@ class TestAuditCommandContract(unittest.TestCase):
         cls.audit_norm = _normalize(cls.audit)
 
     def test_audit_has_sonarqube_preflight_section(self):
-        self.assertIn("## Preflight SonarQube", self.audit)
+        self.assertIn("## SonarQube preflight", self.audit)
         self.assertIn("docker --version", self.audit)
         self.assertIn("docker info", self.audit)
 
     def test_audit_asks_before_installing_or_starting_docker(self):
         self.assertIn("AskUserQuestion", self.audit)
-        self.assertIn("НЕ пытайся установить его сам", self.audit)
-        self.assertIn("НЕ пытайся запустить его сам", self.audit)
+        self.assertIn("do NOT try to install it yourself", self.audit)
+        self.assertIn("do NOT try to start it yourself", self.audit)
 
     def test_audit_keeps_permission_prompt_even_in_autopilot(self):
-        self.assertIn("даже если проект в режиме autopilot", self.audit)
-        self.assertIn("требуют явного подтверждения пользователя", self.audit)
+        self.assertIn("even if the project is in autopilot mode", self.audit)
+        self.assertIn("needs explicit user confirmation", self.audit)
 
     def test_audit_forbids_silent_sonarqube_skip(self):
-        self.assertIn("НИКОГДА не пропускай его, не записав это письменно", self.audit)
-        self.assertIn("SonarQube пропущен по явному решению пользователя", self.audit)
+        self.assertIn("NEVER skip it without recording it in writing", self.audit)
+        self.assertIn("SonarQube was skipped by explicit user decision", self.audit)
 
     def test_audit_locates_plugin_files_outside_the_project(self):
         self.assertIn("${CLAUDE_PLUGIN_ROOT}/commands/_composition.md", self.audit)
@@ -61,22 +61,22 @@ class TestSonarQubeSkillContract(unittest.TestCase):
 
     def test_skill_requires_explicit_permission_for_docker_changes(self):
         self.assertIn(
-            "Не устанавливай Docker, не открывай Docker Desktop и не запускай демон без явного одобрения пользователя.",
+            "Do not install Docker, open Docker Desktop or start the daemon without explicit user approval.",
             self.skill,
         )
         self.assertIn(
-            "Если предварительного разрешения нет, запроси его сейчас и жди ответа.",
+            "If there is no prior permission, ask for it now and wait for the answer.",
             self.skill,
         )
 
     def test_skill_handles_port_conflicts_and_cleanup(self):
-        self.assertIn("Проверь, занят ли порт `9000`", self.skill)
+        self.assertIn("Check whether port `9000` is in use", self.skill)
         self.assertIn("docker rm -f sonarqube-alfred", self.skill)
-        self.assertIn("всё равно попытайся выполнить финальную очистку временного контейнера", self.skill)
+        self.assertIn("still try to do the final cleanup of the temporary container", self.skill)
 
     def test_skill_mentions_zsh_safe_status_variable(self):
-        self.assertIn("Не используй переменную `status`", self.skill)
-        self.assertIn("используй `sonar_status`", self.skill)
+        self.assertIn("Do not use the `status` variable", self.skill)
+        self.assertIn("use `sonar_status`", self.skill)
 
 
 class TestHelpContract(unittest.TestCase):

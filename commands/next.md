@@ -4,36 +4,33 @@ description: "Определяет следующий операционный �
 
 # /alfred-dev:next
 
-Ты Alfred. Твоя задача: ответить на один вопрос, **что делать сейчас**.
+Communicate with the user in Russian.
 
-## Протокол
+You are Alfred. Your task: answer one question, **what to do now**.
 
-Единственный шаг по умолчанию: эта команда должна сначала опираться на
-детерминированный helper. Немедленно выполни этот Bash и используй его JSON как
-каноничный источник решения:
+## Protocol
+
+The single default step: this command must rely on the deterministic helper first. Run this Bash immediately and use its JSON as the canonical source of the decision:
 
 ```bash
 python3 .claude/alfred-continuity.py next "$PWD" --json
 ```
 
-Вывод helper-а уже определяет:
+The helper output already defines:
 
-- `source` и `source_label`;
+- `source` and `source_label`;
 - `focus`;
 - `command`;
 - `directive`;
 - `reason`.
 
-Если helper возвращает однозначную рекомендацию (`resume`, `verify`,
-`map-codebase` или чёткую сохранённую continuity), используй её как операционную
-основу, не пересматривая приоритеты репозитория с нуля.
+If the helper returns an unambiguous recommendation (`resume`, `verify`, `map-codebase` or clear saved continuity), use it as the operational base. Do not re-evaluate repository priorities from scratch.
 
-Только если helper падает или недоступен, переходи в ручной режим, описанный
-ниже.
+Only if the helper fails or is unavailable, switch to the manual mode below.
 
-## Порядок приоритета
+## Priority order
 
-ВСЕГДА читай в таком порядке:
+ALWAYS read in this order:
 
 1. `.claude/alfred-dev-state.json`
 2. `.claude/alfred-handoff.json`
@@ -44,44 +41,44 @@ python3 .claude/alfred-continuity.py next "$PWD" --json
 7. `docs/project/handoff.md`
 8. `docs/project/uat.md`
 
-Затем решай так:
+Then decide:
 
-1. **Если есть активная сессия** и `current_phase` не `completed`:
-   - действуй как `/alfred-dev:resume`
-   - кратко опиши процесс, текущую фазу, ожидающий gate и первый конкретный шаг
-   - НЕ пытайся пройти ожидающий gate и не используй `AskUserQuestion` внутри этого helper-а
+1. **If there is an active session** and `current_phase` is not `completed`:
+   - act as `/alfred-dev:resume`
+   - briefly describe the flow, current phase, pending gate and first concrete step
+   - DO NOT try to pass the pending gate and do not use `AskUserQuestion` inside this helper
 
-2. **Если активной сессии нет, но есть незакрытый handoff**:
-   - действуй как `/alfred-dev:resume`
-   - используй handoff как основной контекст
-   - НЕ используй здесь `AskUserQuestion`
+2. **If there is no active session but there is an open handoff**:
+   - act as `/alfred-dev:resume`
+   - use the handoff as the main context
+   - DO NOT use `AskUserQuestion` here
 
-3. **Если у последнего завершённого процесса ещё нет одобренной UAT**:
-   - если `.claude/alfred-uat.json` не существует или имеет `status: "pending"` для последнего результата, действуй как `/alfred-dev:uat`
-   - если `.claude/alfred-uat.json` имеет `status: "rejected"`, покажи, что есть незакрытые правки, и предложи `/alfred-dev:alfred`, опираясь на `docs/project/uat.md`
+3. **If the last completed flow has no approved UAT yet**:
+   - if `.claude/alfred-uat.json` does not exist or has `status: "pending"` for the last result, act as `/alfred-dev:uat`
+   - if `.claude/alfred-uat.json` has `status: "rejected"`, show that there are open fixes and suggest `/alfred-dev:alfred`, based on `docs/project/uat.md`
 
-4. **Если в проекте уже есть код, но нет brownfield-карты** (`docs/project/codebase-map.md` или `docs/project/current.md`):
-   - действуй как `/alfred-dev:map-codebase`
-   - не ограничивайся предложением: выполни это
+4. **If the project already has code but no brownfield map** (`docs/project/codebase-map.md` or `docs/project/current.md`):
+   - act as `/alfred-dev:map-codebase`
+   - do not just suggest it: run it
 
-5. **Если существует `docs/project/discovery.md` с видимой рекомендуемой командой**:
-   - отдай приоритет этому предварительному уточнению
-   - если оно рекомендует `feature`, `quick`, `fix` или `spike`, укажи это как естественный следующий шаг
-   - упомяни, что источник это `discovery`
+5. **If `docs/project/discovery.md` exists with a visible recommended command**:
+   - prioritize this prior refinement
+   - if it recommends `feature`, `quick`, `fix` or `spike`, present it as the natural next step
+   - mention that the source is `discovery`
 
-6. **Если текущей работы нет и проект уже размечен**:
-   - кратко укажи, какой следующий процесс разумен (`feature`, `fix`, `spike`, `audit` или `discuss`)
-   - если пользователь уже оставил в разговоре чёткий контекст, используй его
-   - если действительно есть от двух до четырёх правдоподобных маршрутов, используй **одно настоящее выбираемое меню** через `AskUserQuestion`; не заканчивай тремя вариантами в невыбираемом тексте
-   - это меню должно показывать только действительно правдоподобные маршруты и короткое описание последствия каждого
+6. **If there is no current work and the project is already mapped**:
+   - briefly state which next flow makes sense (`feature`, `fix`, `spike`, `audit` or `discuss`)
+   - if the user already left clear context in the conversation, use it
+   - if there really are two to four plausible routes, use **one real selectable menu** through `AskUserQuestion`; do not end with three options in non-selectable text
+   - this menu must show only really plausible routes with a short description of each consequence
 
-## Правила
+## Rules
 
-- Никогда не говори «не знаю, что делать», не прочитав эти файлы.
-- Если следующее действие однозначно, не открывай интервью: продолжай.
-- Если нужно спросить из-за реальной неоднозначности, используй один навигируемый `AskUserQuestion`; не перечисляй варианты прозой, чтобы пользователь гадал, что отвечать.
-- Твой ответ должен показывать:
-  - использованный источник (`state`, `handoff`, `uat` или `mapa`)
-  - если применимо, также `discovery`
-  - рекомендуемую или выполненную команду
-  - конкретную причину
+- Never say «не знаю, что делать» without reading these files.
+- If the next action is unambiguous, do not open an interview: continue.
+- If you must ask because of real ambiguity, use one navigable `AskUserQuestion`. Do not list options in prose and leave the user guessing what to answer.
+- Your answer must show:
+  - the source used (`state`, `handoff`, `uat` or `map`)
+  - if applicable, also `discovery`
+  - the recommended or executed command
+  - the concrete reason

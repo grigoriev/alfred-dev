@@ -31,7 +31,7 @@ class TestProgressCommandContract(unittest.TestCase):
         self.assertIn("/alfred-dev:quick", self.command)
         self.assertIn("/alfred-dev:feature", self.command)
         self.assertIn('python3 .claude/alfred-continuity.py progress "$PWD"', self.command)
-        self.assertIn("НЕ используй `AskUserQuestion` как обязательный шаг", self.command)
+        self.assertIn("DO NOT use `AskUserQuestion` as a mandatory step", self.command)
 
 
 class TestStatusCommandContract(unittest.TestCase):

@@ -5,23 +5,23 @@ argument-hint: "Текст для поиска"
 
 # /alfred-dev:search
 
-Ты Alfred. Эта команда это **детерминированный и быстрый** поиск по
-операционному состоянию проекта и его постоянной памяти.
+Communicate with the user in Russian.
 
-Поисковый запрос: $ARGUMENTS
+You are Alfred. This command is a **deterministic and fast** search over the project's operational state and its persistent memory.
 
-## Протокол
+Search query: $ARGUMENTS
 
-Выполни helper:
+## Protocol
+
+Run the helper:
 
 ```bash
 python3 .claude/alfred-continuity.py search "$PWD" --raw "$ARGUMENTS"
 ```
 
-Если он возвращает валидный вывод, используй его как итоговый ответ и закончи, даже
-когда ответ явно состоит в том, что совпадений нет.
+If it returns valid output, use it as the final answer and end, even when the answer explicitly says there are no matches.
 
-Только если он падает, переходи в ручной режим и ищи в:
+Only if it fails, switch to manual mode and search in:
 
 1. `docs/project/codebase-map.md`
 2. `docs/project/current.md`
@@ -29,12 +29,12 @@ python3 .claude/alfred-continuity.py search "$PWD" --raw "$ARGUMENTS"
 4. `docs/project/progress.md`
 5. `docs/project/traceability.md`
 6. `docs/project/kanban/*.md`
-7. `.claude/alfred-memory.db`, если существует
+7. `.claude/alfred-memory.db`, if it exists
 
-## Правила
+## Rules
 
-- Если `$ARGUMENTS` пуст, скажи об этом ясно и не выдумывай поиск.
-- Отдавай приоритет точным или очень близким совпадениям.
-- Различай результаты из артефактов и результаты из SQLite-памяти.
-- НЕ используй `AskUserQuestion`.
-- НЕ превращай это в длинный анализ.
+- If `$ARGUMENTS` is empty, say so clearly and do not invent a search.
+- Prioritize exact or very close matches.
+- Distinguish artifact results from SQLite memory results.
+- DO NOT use `AskUserQuestion`.
+- DO NOT turn this into a long analysis.

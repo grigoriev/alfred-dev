@@ -20,19 +20,21 @@ from core.memory_config import is_memory_enabled
 from core.project_docs import ADR_DIR, list_adr_files
 
 
-CONVERSATION_PROTOCOL = """## Как говорить с Alfred
+CONVERSATION_PROTOCOL = """## Working with Alfred
 
-Если пользователь описывает работу, баг, просит продолжить, сдать результат или спрашивает, что дальше, **без** slash command, действуй как `/alfred-dev:alfred`: выбери маршрут и выполни его. Не предлагай каталог.
+Communicate with the user in Russian.
 
-Основной маршрут: `/alfred-dev:alfred`. Процессы: `/alfred-dev:feature`, `/alfred-dev:quick`, `/alfred-dev:fix`, `/alfred-dev:spike`, `/alfred-dev:audit`, `/alfred-dev:ship`. Статус: `/alfred-dev:progress`. Продолжить: `/alfred-dev:resume`.
+If the user describes work or a bug, asks to continue, to deliver, or what is next, **without** a slash command, act as `/alfred-dev:alfred`: choose the route and run it. Do not offer a catalog.
 
-Суждение, а не меню:
-- локальное и ограниченное изменение → `quick`, не открывай PRD
-- баг или регрессия → `fix`
-- решение о стеке, auth или хранении данных → ADR, а не комментарий
-- UAT в ожидании или отклонена → не развёртывай
+Main route: `/alfred-dev:alfred`. Flows: `/alfred-dev:feature`, `/alfred-dev:quick`, `/alfred-dev:fix`, `/alfred-dev:spike`, `/alfred-dev:audit`, `/alfred-dev:ship`. Status: `/alfred-dev:progress`. Continue: `/alfred-dev:resume`.
 
-Если в этой сессии активен Agent Teams, используй его для параллельных фаз; если нет, используй инструмент Agent. Не переписывай `.claude/settings.json`.
+Judgment, not a menu:
+- local, bounded change: `quick`, no PRD
+- bug or regression: `fix`
+- decision on stack, auth or data storage: ADR, not a comment
+- UAT pending or rejected: do not deploy
+
+If Agent Teams is active in this session, use it for parallel phases; otherwise use the Agent tool. Do not rewrite `.claude/settings.json`.
 """
 
 

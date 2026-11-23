@@ -29,7 +29,7 @@
 
 Здесь лежат исходные промпты, которые Claude Code находит в каталоге `agents/`. 10 опубликованных агентов лежат в `agents/*.md`; единственный опциональный агент: CTO. Разница описана в их карточках и в движке личности, а не через подкаталог `agents/optional/`.
 
-Документация для людей лежит в `docs/agents/`. Если ты меняешь исходный агент, проверь его карточку в `docs/agents/` и все упоминания в `docs/README.md`, `docs/personality.md` и `docs/flows.md`.
+Документация для людей лежит в `docs/agents/`. Если ты меняешь исходный агент, проверь его карточку в `docs/agents/` и все упоминания в `docs/README.md` и `docs/flows.md`.
 
 ### `commands/`
 
@@ -52,7 +52,6 @@
 
 - `orchestrator.py`: процессы, фазы, gates и сохранение сессии;
 - `config_loader.py`: определение стека, загрузка конфигурации и подсказки;
-- `personality.py`: каталог личностей и метаданные агентов;
 - `memory.py`, `memory_sync.py`, `memory_ui_server.py`: постоянная память, нативная синхронизация и UI;
 - `optional_agents.py`: динамический состав команды;
 - `designer_*`: визуальный runtime Designer.
@@ -97,7 +96,7 @@
 | Если будешь менять... | Начни с... | Потом проверь... |
 |---|---|---|
 | Процесс | `commands/*.md` | `core/orchestrator.py`, `docs/flows.md` |
-| Агента | `agents/*.md` | `docs/agents/`, `core/personality.py` |
+| Агента | `agents/*.md` | `docs/agents/` |
 | Конфигурацию | `core/config_loader.py` | `docs/configuration.md` |
 | Память | `core/memory.py` | `core/memory_sync.py`, `mcp/memory_server.py`, `docs/memory.md` |
 | Хуки | `hooks/hooks.json` | конкретный скрипт, его тесты и `docs/hooks.md` |

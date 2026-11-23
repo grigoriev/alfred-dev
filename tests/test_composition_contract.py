@@ -20,7 +20,7 @@ class TestCompositionContract(unittest.TestCase):
         cls.command = _read("commands/_composition.md")
 
     def test_missing_autonomy_bootstraps_cli_defaults(self):
-        self.assertIn("НЕ используй `AskUserQuestion` в этом начальном bootstrap", self.command)
+        self.assertIn("Do NOT use `AskUserQuestion` in this initial bootstrap", self.command)
         self.assertIn("product: autonomous", self.command)
         self.assertIn("architecture: autonomous", self.command)
         self.assertIn("development: autonomous", self.command)

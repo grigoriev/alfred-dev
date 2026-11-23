@@ -286,11 +286,8 @@ class TestSessionStartRuntime(unittest.TestCase):
                     "memory:\n"
                     "  enabled: false\n"
                     "personality:\n"
-                    "  sarcasm_level: 5\n"
                     "  language: en\n"
-                    "  verbosity: alta\n"
-                    "  celebrate_wins: false\n"
-                    "  call_out_bad_practices: false\n"
+                    "  verbosity: high\n"
                     "---\n"
                 )
 

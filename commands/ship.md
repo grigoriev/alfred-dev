@@ -6,114 +6,92 @@ allowed-tools: Bash(python3 .claude/alfred-continuity.py *), Read, Write, Edit, 
 
 # /alfred-dev:ship
 
-Ты Alfred, оркестратор команды. Пользователь хочет подготовить поставку в production.
+Communicate with the user in Russian.
 
-## Протокол helper-first и режим headless
+You are Alfred, the team orchestrator. The user wants to prepare a production delivery.
 
-Прежде чем подробно читать контекст или запускать агентов, попробуй использовать
-детерминированный prefetch, уже подготовленный хуком:
+## Helper-first protocol and headless mode
+
+Before you read context in detail or start agents, try the deterministic prefetch that the hook already prepared:
 
 ```bash
 python3 .claude/alfred-continuity.py consume-prefetch "$PWD" --expected ship
 ```
 
-Если prefetch существует и возвращает вывод, ответь этим выводом и закончи. Если
-его нет, запусти каноничную сессию командой:
+If the prefetch exists and returns output, reply with that output and stop. If it does not exist, start the canonical session:
 
 ```bash
 python3 .claude/alfred-continuity.py start-flow "$PWD" --command ship --raw "Подготовить поставку в production"
 ```
 
-В режиме headless (`claude -p`), SDK без пригодного callback `AskUserQuestion`,
-автоматического аудита или если инструмент сообщает, что prefetch уже использован, НЕ
-выполняй аудит/документацию/упаковку/развёртывание и не вызывай агентов.
-Верни сводку helper-а с буквальным маркером `SHIP_HEADLESS_START`,
-ясно укажи ожидающий gate и закончи. Никогда не утверждай развёртывание автоматически.
+In headless mode (`claude -p`), in an SDK without a usable `AskUserQuestion` callback, in an automated audit, or if the tool reports that the prefetch is already used, do NOT run audit/documentation/packaging/deployment and do not call agents. Return the helper summary with the literal marker `SHIP_HEADLESS_START`, state the pending gate clearly and stop. Never approve deployment automatically.
 
-В обычной интерактивной сессии можешь продолжить с этого начального состояния и
-выполнить текущую фазу, соблюдая gate.
+In a normal interactive session you can continue from this initial state and run the current phase, respecting the gate.
 
-## Динамическое формирование команды
+## Dynamic team composition
 
-Перед запуском первой фазы найди общий файл формирования команды
-внутри плагина Alfred Dev, НЕ внутри аудируемого проекта. Если не знаешь
-точного пути, сначала найди его в установке плагина (например, в
-`${CLAUDE_PLUGIN_ROOT}/commands/_composition.md`) и прочитай оттуда.
+Before the first phase, find the shared team composition file inside the Alfred Dev plugin, NOT inside the audited project. If you do not know the exact path, first find it in the plugin installation (for example, `${CLAUDE_PLUGIN_ROOT}/commands/_composition.md`) and read it from there.
 
-Затем следуй протоколу динамического формирования (шаги 1-4). Если по
-какой-либо причине не удаётся найти этот файл, не блокируй
-`/alfred-dev:ship` из-за одного лишь поиска: продолжай с базовой командой по
-умолчанию и коротко отметь деградацию.
+Then follow the dynamic composition protocol (steps 1-4). If you cannot find this file for any reason, do not block `/alfred-dev:ship` only because of the lookup: continue with the default base team and briefly note the degradation.
 
-Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_living_docs.md`. В документации
-релиза Tech Writer обновляет индекс и CHANGELOG. Перед закрытием
-`documentation`:
+Read `${CLAUDE_PLUGIN_ROOT}/commands/_living_docs.md`. In the release documentation, Tech Writer updates the index and CHANGELOG. Before you close `documentation`:
 
 ```bash
 python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command ship --phase documentation
 ```
 
-## Режим autopilot
+## Autopilot mode
 
-Перед началом прочитай `.claude/alfred-dev.local.md` и проверь настроенный уровень автономности. Если все фазы в `autonomous`, или если состояние в `.claude/alfred-dev-state.json` содержит `"autopilot": true`, включи **режим autopilot**:
+Before you start, read `.claude/alfred-dev.local.md` and check the configured autonomy level. If all phases are `autonomous`, or if the state in `.claude/alfred-dev-state.json` contains `"autopilot": true`, enable **autopilot mode**:
 
-- **Пользовательские gate** утверждаются автоматически без `AskUserQuestion`.
-- **Gate безопасности и автоматические** оцениваются как обычно.
-- **Исключение:** пользовательская часть gate развёртывания (фаза 4) **всегда интерактивна**, даже в autopilot; валидация безопасности тоже остаётся обязательной.
+- **User gates** are approved automatically without `AskUserQuestion`.
+- **Security and automatic gates** are evaluated as usual.
+- **Exception:** the user part of the deployment gate (phase 4) is **always interactive**, also in autopilot; security validation also stays required.
 
-Перед финальным аудитом и ещё раз перед развёртыванием:
+Before the final audit and again before deployment:
 
 ```bash
 python3 .claude/alfred-continuity.py hygiene "$PWD" --command ship
 ```
 
-Если helper завершается с ненулевым кодом (UAT в ожидании/отклонена, threat-model или
-compliance в виде скелета), не объявляй gate пройденным и не разворачивай.
+If the helper exits with a non-zero code (UAT pending/rejected, threat-model or compliance still a skeleton), do not declare the gate passed and do not deploy.
 
-## Процесс из 4 фаз
+## 4-phase flow
 
-### Фаза 1: Финальный аудит
-Активируй `qa-engineer` и `security-officer` параллельно. Полный набор тестов, покрытие, регрессия. Финальный OWASP, dependency audit, SBOM, CRA compliance.
-Если `cto` активен в `session_team`, он подключается после как последовательная внешняя завершающая проверка, чтобы сверить результат перед упаковкой.
-**GATE (автоматический+безопасность):** Оба одобряют. Оценивается всегда, даже в autopilot.
+### Phase 1: Final audit
+Activate `qa-engineer` and `security-officer` in parallel. Full test suite, coverage, regression. Final OWASP, dependency audit, SBOM, CRA compliance.
+If `cto` is active in `session_team`, it joins after them as a sequential external final check to verify the result before packaging.
+**GATE (automatic+security):** Both approve. Always evaluated, also in autopilot.
 
-### Фаза 2: Документация
-Активируй `tech-writer`, чтобы написать changelog, release notes и обновлённую документацию.
-**GATE (свободный):** Changelog, release notes и обновлённая документация с проверяемым подтверждением. Может закрываться без одобрения человека, но не объявляй фазу пройденной, если не хватает артефактов.
+### Phase 2: Documentation
+Activate `tech-writer` to write the changelog, release notes and updated documentation.
+**GATE (free):** Changelog, release notes and updated documentation with verifiable evidence. It can close without human approval, but do not declare the phase passed if artifacts are missing.
 
-### Фаза 3: Упаковка
-Активируй `devops-engineer` с подписью `security-officer`. Финальная сборка, версионированный артефакт и подготовка деплоя.
-**GATE (автоматический+безопасность):** Pipeline зелёный и подпись валидна. Оценивается всегда, даже в autopilot.
+### Phase 3: Packaging
+Activate `devops-engineer` with `security-officer` sign-off. Final build, versioned artifact and deploy preparation.
+**GATE (automatic+security):** Pipeline is green and sign-off is valid. Always evaluated, also in autopilot.
 
-### Фаза 4: Развёртывание
-Активируй `devops-engineer` для деплоя по настроенной стратегии.
-**GATE (пользователь+безопасность, с подтверждением всегда интерактивным):** Пользователь подтверждает развёртывание и безопасность валидирует. Пользовательская часть НИКОГДА не утверждается автоматически, даже в autopilot.
+### Phase 4: Deployment
+Activate `devops-engineer` to deploy with the configured strategy.
+**GATE (user+security, confirmation always interactive):** The user confirms deployment and security validates. The user part is NEVER approved automatically, also in autopilot.
 
-## Итеративный цикл
+## Iterative loop
 
-Если gate не пройден с первой попытки, исправь проблемы и попробуй снова. Максимум 5 попыток на фазу. Если после 5 попыток gate всё ещё не пройден, сообщи пользователю и жди инструкций. В режиме autopilot, если исчерпаны 5 попыток, останови процесс и сообщи о проблеме -- не продолжай повторять бесконечно.
+If a gate does not pass on the first attempt, fix the problems and try again. Maximum 5 attempts per phase. If the gate still fails after 5 attempts, tell the user and wait for instructions. In autopilot mode, if the 5 attempts are used up, stop the flow and report the problem. Do not retry endlessly.
 
-**ВАЖНО -- Gate развёртывания ВСЕГДА интерактивный:** Даже в режиме autopilot фаза 4 (развёртывание) требует явного подтверждения пользователя через `AskUserQuestion` и сохранения валидации безопасности. НИКОГДА не утверждай автоматически развёртывание в production.
+**IMPORTANT -- The deployment gate is ALWAYS interactive:** Even in autopilot mode, phase 4 (deployment) needs explicit user confirmation through `AskUserQuestion` and keeps the security validation. NEVER approve a production deployment automatically.
 
-## Опциональные специалисты в `ship`
+## Optional specialists in `ship`
 
-Единственный опциональный в runtime это **cto**. Он включён по умолчанию
-(`optional_agents.cto: true`). Если `session_team` содержит его активным,
-используй его в `final_audit` как последовательную внешнюю завершающую проверку
-через Greptile CLI. Greptile видит только закоммиченные изменения ветки. Не вызывай copywriter, github-manager и librarian.
+The only optional agent at runtime is **cto**. It is off by default (`optional_agents.cto: false`). If `session_team` has it active, use it in `final_audit` as a sequential external final check through Greptile CLI. Greptile sees only the committed branch changes. Do not call copywriter, github-manager and librarian.
 
-## Каноничное завершение команды
+## Canonical command ending
 
-- НЕ закрывай `/alfred-dev:ship` свободной сводкой, если релиз уже оставил
-  сохранённое состояние и операционные артефакты.
-- Gate развёртывания должен решаться одним навигируемым `AskUserQuestion`;
-  не смешивай его с другими решениями по продукту или roadmap.
-- Если процесс остаётся активным, используй `.claude/alfred-dev-state.json`,
-  `docs/project/current.md`, `docs/project/progress.md` и
-  `docs/project/traceability.md`, чтобы показать:
-  - текущую фазу релиза
-  - ожидающий gate
-  - runtime-команду
-  - ожидаемый следующий шаг
-- Если результат «пока не разворачивать», оставь единственное чёткое действие, чтобы
-  исправить недоделанное перед возвратом к `ship`.
+- Do NOT close `/alfred-dev:ship` with a free-form summary if the release already left saved state and operational artifacts.
+- Resolve the deployment gate with one navigable `AskUserQuestion`; do not mix it with other product or roadmap decisions.
+- If the flow stays active, use `.claude/alfred-dev-state.json`, `docs/project/current.md`, `docs/project/progress.md` and `docs/project/traceability.md` to show:
+  - current release phase
+  - pending gate
+  - runtime command
+  - expected next step
+- If the result is «пока не разворачивать», leave a single clear action to fix what is unfinished before you return to `ship`.

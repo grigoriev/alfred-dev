@@ -543,7 +543,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         def fake_read(path):
             text = original_read(path)
             if path == "agents/alfred.md":
-                return text.replace("model: inherit", "model: llama", 1)
+                return text.replace("model: opus", "model: llama", 1)
             return text
 
         release_audit._read = fake_read
@@ -564,7 +564,7 @@ class TestReleaseAuditScript(unittest.TestCase):
         def fake_read(path):
             text = original_read(path)
             if path == "agents/qa-engineer.md":
-                return text.replace("model: inherit", "model: haiku", 1)
+                return text.replace("model: opus", "model: haiku", 1)
             return text
 
         release_audit._read = fake_read
@@ -836,8 +836,8 @@ class TestReleaseAuditScript(unittest.TestCase):
         def fake_read(path):
             if path == "commands/ship.md":
                 return original_read(path).replace(
-                    "Может закрываться без одобрения человека, но не объявляй фазу пройденной, если не хватает артефактов.",
-                    "Всегда одобряется.",
+                    "It can close without human approval, but do not declare the phase passed if artifacts are missing.",
+                    "Always approved.",
                     1,
                 )
             return original_read(path)

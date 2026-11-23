@@ -1,19 +1,21 @@
 ---
 name: sbom-generate
-description: "Использовать для генерации Software Bill of Materials для соответствия CRA. Также: Software Bill of Materials, SBOM, инвентаризация компонентов, CycloneDX, SPDX, цепочка поставок."
+description: "Use to generate a Software Bill of Materials for CRA compliance: SBOM, component inventory, CycloneDX, SPDX, supply chain. Triggers: SBOM, инвентаризация компонентов, цепочка поставок, соответствие CRA."
 ---
 
-# Генерация SBOM (Software Bill of Materials)
+# SBOM generation (Software Bill of Materials)
 
-## Резюме
+Communicate with the user in Russian.
 
-Этот skill формирует полный перечень всех программных компонентов проекта, как прямых, так и транзитивных зависимостей. SBOM является требованием европейского Cyber Resilience Act (CRA) и рекомендуемой практикой безопасности цепочки поставок.
+## Summary
 
-SBOM позволяет быстро отвечать на вопросы вроде «используем ли мы версию, затронутую этой уязвимостью?», не изучая вручную каждый проект.
+This skill builds a complete inventory of all software components in the project, both direct and transitive dependencies. An SBOM is required by the EU Cyber Resilience Act (CRA) and is a recommended supply chain security practice.
 
-## Процесс
+An SBOM lets you quickly answer questions like «используем ли мы версию, затронутую этой уязвимостью?» without inspecting each project by hand.
 
-1. **Определить экосистему и источники зависимостей.** Найти все lock-файлы и манифесты проекта:
+## Process
+
+1. **Identify the ecosystem and dependency sources.** Find all lock files and manifests:
 
    - Node.js: `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`.
    - Python: `requirements.txt`, `Pipfile.lock`, `poetry.lock`.
@@ -22,40 +24,40 @@ SBOM позволяет быстро отвечать на вопросы вро
    - Java: `pom.xml`, `build.gradle`.
    - PHP: `composer.lock`.
 
-2. **Перечислить прямые зависимости.** Для каждой прямой зависимости записать:
+2. **List direct dependencies.** For each, record:
 
-   - Имя пакета.
-   - Точную установленную версию.
-   - Лицензию.
-   - Поставщика или автора.
-   - URL репозитория.
-   - Хеш для проверки (если он есть в lock-файле).
+   - Package name.
+   - Exact installed version.
+   - License.
+   - Supplier or author.
+   - Repository URL.
+   - Verification hash (if the lock file has one).
 
-3. **Перечислить транзитивные зависимости.** Повторить тот же процесс для всех зависимостей зависимостей. Транзитивные обычно составляют большинство, и их сложнее всего отслеживать.
+3. **List transitive dependencies.** Repeat for all dependencies of dependencies. Transitive ones are usually the majority and the hardest to track.
 
-4. **Включить компоненты, не управляемые пакетными менеджерами.** Некоторые компоненты включаются вручную:
+4. **Include components not managed by package managers.** Some components are added by hand:
 
-   - Библиотеки, скопированные напрямую (vendoring).
-   - Сторонние скрипты, подключённые через CDN.
-   - Предкомпилированные бинарники.
-   - Компоненты базовой операционной системы (особенно важно в контейнерах Docker).
+   - Libraries copied directly (vendoring).
+   - Third-party scripts loaded from a CDN.
+   - Precompiled binaries.
+   - Base operating system components (especially important in Docker containers).
 
-5. **Сформировать в стандартном формате.** Использовать один из двух форматов, принятых в индустрии:
+5. **Produce a standard format.** Use one of the two industry formats:
 
-   - **CycloneDX:** формат JSON или XML, предпочтителен для OWASP. Легче и ориентирован на безопасность.
-   - **SPDX:** стандарт ISO (ISO/IEC 5962:2021). Полнее по информации о лицензиях.
+   - **CycloneDX:** JSON or XML, preferred by OWASP. Lighter and security-focused.
+   - **SPDX:** ISO standard (ISO/IEC 5962:2021). Richer license information.
 
-   Если для экосистемы есть автоматические инструменты (такие как `cyclonedx-npm`, `syft`, `cdxgen`), использовать их. Если нет, сформировать вручную по шаблону `templates/sbom.md`.
+   If the ecosystem has automated tools (such as `cyclonedx-npm`, `syft`, `cdxgen`), use them. If not, produce it by hand with the `templates/sbom.md` template.
 
-6. **Проверить полноту.** Сверить сформированный SBOM с lock-файлом, чтобы убедиться, что ни одна зависимость не пропущена. Проверить, что все лицензии определены (ни одной «неизвестной»).
+6. **Check completeness.** Compare the SBOM with the lock file to make sure no dependency is missing. Check that all licenses are identified (none "unknown").
 
-7. **Подписать или версионировать SBOM.** Привязать SBOM к конкретной версии ПО (тег Git, версия пакета). SBOM нужно пересоздавать при каждом релизе.
+7. **Sign or version the SBOM.** Tie the SBOM to a specific software version (Git tag, package version). Regenerate the SBOM on every release.
 
-## Критерии успеха
+## Success criteria
 
-- SBOM включает все прямые и транзитивные зависимости.
-- У каждого компонента есть: имя, версия, лицензия, поставщик и хеш.
-- Формат совместим с CycloneDX или SPDX.
-- Нет лицензий, помеченных как «неизвестная», без обоснования.
-- SBOM привязан к конкретной версии ПО.
-- Полнота проверена по lock-файлу проекта.
+- The SBOM includes all direct and transitive dependencies.
+- Each component has: name, version, license, supplier and hash.
+- The format is CycloneDX or SPDX compatible.
+- No license is marked "unknown" without justification.
+- The SBOM is tied to a specific software version.
+- Completeness is checked against the project lock file.

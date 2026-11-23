@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-VERSION = "0.9.0"
+VERSION = "0.10.0"
 OLD_VERSION = "0.5" + ".3"
 INSTALLED_PLUGIN_DIR = Path.home() / ".claude" / "plugins" / "cache" / "alfred-dev" / "alfred-dev" / VERSION
 GLOBAL_ALFRED_ALIAS_FILE = Path.home() / ".claude" / "skills" / "alfred" / "SKILL.md"
@@ -227,7 +227,7 @@ SUBAGENT_UNAVAILABLE_TOOLS = {
     "ScheduleWakeup",
     "WaitForMcpServers",
 }
-ALFRED_AGENT_MODEL_POLICY = Counter({"inherit": 10})
+ALFRED_AGENT_MODEL_POLICY = Counter({"opus": 10})
 
 
 class AuditError(AssertionError):
@@ -687,7 +687,7 @@ def check_inventory() -> list[str]:
         "agent frontmatter compatible with plugins",
         "agent tools validated against official Claude Code names",
         "unavailable tools excluded from subagents",
-        "inherit models in all 10 agents",
+        "opus model in all 10 agents",
         "11 flat skills",
         "skill frontmatter compatible with current Claude Code",
         "skill frontmatter values validated against current Claude Code",
@@ -1128,7 +1128,7 @@ def check_command_execution_contracts() -> list[str]:
         if re.search(r"\bTask\b", text):
             problems.append(f"{name}: contains obsolete Task naming")
         if re.search(
-            r"\*\*GATE \((?:libre|свободный)\):\*\*.*\b(?:Se aprueba siempre|Всегда одобряется)\b",
+            r"\*\*GATE \((?:libre|свободный|free)\):\*\*.*\b(?:Se aprueba siempre|Всегда одобряется|Always approved)\b",
             text,
         ):
             problems.append(
@@ -1139,18 +1139,18 @@ def check_command_execution_contracts() -> list[str]:
         "alfred": [
             'consume-prefetch "$PWD" --expected alfred',
             'alfred-continuity.py next "$PWD" --json',
-            "По умолчанию не предлагай меню",
+            "By default do not offer a menu",
         ],
         "discuss": [
             'consume-prefetch "$PWD" --expected discuss',
             'alfred-continuity.py discuss "$PWD" --raw "$ARGUMENTS"',
-            "итогового ответа",
+            "as the final answer",
             "commands/_living_docs.md",
         ],
         "map-codebase": [
             'consume-prefetch "$PWD" --expected map-codebase',
             'alfred-continuity.py map-codebase "$PWD" --raw "$ARGUMENTS"',
-            "НЕ выдумывай стек, точки входа или риски",
+            "DO NOT invent the stack, entry points or risks",
             "commands/_living_docs.md",
         ],
         "memory-ui": [
@@ -1160,54 +1160,54 @@ def check_command_execution_contracts() -> list[str]:
         ],
         "next": [
             'alfred-continuity.py next "$PWD" --json',
-            "один навигируемый `AskUserQuestion`",
+            "one navigable `AskUserQuestion`",
         ],
         "pause": [
             'alfred-continuity.py pause "$PWD"',
-            "Сначала выполни детерминированный helper",
-            "Не оборачивай его во вторую сводку",
+            "First run the deterministic plugin helper",
+            "Do not wrap it in a second summary",
         ],
         "progress": [
             'alfred-continuity.py progress "$PWD"',
-            "используй её как итоговый ответ",
-            "НЕ используй `AskUserQuestion`",
+            "use it as the final answer",
+            "DO NOT use `AskUserQuestion`",
         ],
         "quick": [
             'alfred-continuity.py quick "$PWD" --raw "$ARGUMENTS"',
-            "НЕ используй\n   `Write` и `Edit`",
-            "## Каноничное завершение команды",
+            "do NOT use `Write` and `Edit`",
+            "## Canonical command ending",
         ],
         "search": [
             'alfred-continuity.py search "$PWD" --raw "$ARGUMENTS"',
-            "Если `$ARGUMENTS` пуст, скажи об этом ясно",
+            "If `$ARGUMENTS` is empty, say so clearly",
         ],
         "sync-github": [
             'alfred-continuity.py sync-github "$PWD" --raw "$ARGUMENTS"',
-            "Сохраняй локальную истину",
+            "Keep the local truth",
         ],
         "uat": [
             'alfred-continuity.py verify "$PWD" --raw "$ARGUMENTS"',
-            "НЕ помечай UAT как одобренную без явного указания",
-            "НЕ добавляй второй слой сводки",
+            "DO NOT mark the UAT as approved without an explicit user statement",
+            "DO NOT add a second summary layer",
         ],
         "resume": [
             'alfred-continuity.py resume "$PWD"',
-            "Сначала выполни детерминированный helper",
+            "First run the deterministic plugin helper",
         ],
         "pr": [
-            "Аргументы пользователя: $ARGUMENTS",
+            "User arguments: $ARGUMENTS",
             "${CLAUDE_PLUGIN_ROOT}/commands/_pr_loop.md",
             'alfred-continuity.py pr-status "$PWD" --pr',
             "PR_STATUS_<ВЕРДИКТ>",
-            "## Каноничное завершение команды",
-            "Мерж только после `PR_STATUS_MERGE`",
+            "## Canonical command ending",
+            "Merge only after `PR_STATUS_MERGE`",
         ],
         "_pr_loop": [
             'alfred-continuity.py pr-status "$PWD" --pr',
-            "Не мержи, пока helper не вернул `PR_STATUS_MERGE`",
-            "Не используй `--force`, `--admin` и `--no-verify`",
-            "100% покрытия нового кода",
-            "Предел: 5 раундов",
+            "Do not merge until the helper returns `PR_STATUS_MERGE`",
+            "Do not use `--force`, `--admin` and `--no-verify`",
+            "100% coverage of new code",
+            "Limit: 5 rounds",
         ],
     }
     commands_for_contracts = dict(commands)
@@ -1223,56 +1223,56 @@ def check_command_execution_contracts() -> list[str]:
 
     flow_contracts = {
         "feature": [
-            "Процесс до 7 фаз",
+            "Flow of up to 7 phases",
             "## HARD-GATES",
-            "Максимум 5 попыток",
-            "## Каноничное завершение команды",
-            "ожидаемый следующий шаг",
+            "Maximum 5 attempts",
+            "## Canonical command ending",
+            "expected next step",
             "commands/_living_docs.md",
             "check-project-docs",
             "${CLAUDE_PLUGIN_ROOT}/commands/_pr_loop.md",
             "/alfred-dev:pr",
         ],
         "fix": [
-            "Процесс из 3 фаз",
-            "тест, воспроизводящий баг",
-            "Максимум 5 попыток",
-            "## Каноничное завершение команды",
-            "баг/первопричину в работе",
+            "3-phase flow",
+            "a test that reproduces the bug",
+            "Maximum 5 attempts",
+            "## Canonical command ending",
+            "bug/root cause in progress",
             "commands/_living_docs.md",
             "${CLAUDE_PLUGIN_ROOT}/commands/_pr_loop.md",
             "/alfred-dev:pr",
         ],
         "quick": [
-            "Лёгкий процесс из 2 фаз",
-            "Когда quick перестаёт быть quick",
-            "## Каноничное завершение команды",
+            "Light 2-phase flow",
+            "When quick stops being quick",
+            "## Canonical command ending",
             "/alfred-dev:uat",
             "commands/_living_docs.md",
-            "завершение",
+            "the ending must be short",
             "${CLAUDE_PLUGIN_ROOT}/commands/_pr_loop.md",
             "/alfred-dev:pr",
         ],
         "spike": [
-            "Процесс из 2 фаз",
-            "Spike НЕ создают production-код",
-            "## Каноничное завершение команды",
+            "2-phase process",
+            "A spike does NOT produce production code",
+            "## Canonical command ending",
             "ADR",
             "пока не реализовывать",
         ],
         "ship": [
-            "Процесс из 4 фаз",
-            "Gate развёртывания ВСЕГДА интерактивный",
-            "НИКОГДА не утверждай автоматически развёртывание",
-            "## Каноничное завершение команды",
+            "4-phase flow",
+            "The deployment gate is ALWAYS interactive",
+            "NEVER approve a production deployment automatically",
+            "## Canonical command ending",
             "commands/_living_docs.md",
             "hygiene",
         ],
         "audit": [
-            "Preflight SonarQube",
-            "Запусти 4 агентов ПАРАЛЛЕЛЬНО",
-            "Код не трогай, только генерируй отчёты",
-            "## Каноничное завершение команды",
+            "SonarQube preflight",
+            "Start 4 agents IN PARALLEL",
+            "Do not touch code, only produce reports",
+            "## Canonical command ending",
             "commands/_living_docs.md",
         ],
     }
@@ -1314,31 +1314,31 @@ def check_command_execution_contracts() -> list[str]:
 
     interactive_contracts = {
         "config": [
-            "главное меню",
+            "navigable main menu",
             "core/config_cli.py",
             "CONFIG_HEADLESS_MENU",
-            "не вызывай `AskUserQuestion`",
-            "возвращается отменённым",
+            "do not call `AskUserQuestion`",
+            "returns canceled",
             "build_config_section_summaries()",
             "build_config_section_menu()",
             "build_config_section_change_preview()",
             "update_config_section()",
         ],
         "cto": [
-            "Аргументы пользователя: $ARGUMENTS",
+            "User arguments: $ARGUMENTS",
             "greptile login",
             "scope=all",
-            "Не реализуй ни один пункт",
-            "проверяемый следующий шаг",
+            "Do not implement any item",
+            "verifiable next step",
         ],
         "update": [
-            "как настоящий semver",
+            "compare them as real semver",
             "0.10.0",
-            "один `AskUserQuestion`",
-            "выполнить **`/reload-plugins`**",
+            "one `AskUserQuestion`",
+            "run **`/reload-plugins`**",
             "`/reload-plugins --force`",
-            "нужно перезапустить",
-            "## Каноничное завершение команды",
+            "A Claude Code restart is required",
+            "## Canonical command ending",
         ],
     }
     for name, needles in interactive_contracts.items():
@@ -1385,7 +1385,6 @@ def check_public_claims() -> list[str]:
     alfred_agent = _read("agents/alfred.md")
     cto_agent = _read("agents/cto.md")
     agents_readme = _read("docs/agents/README.md")
-    personality = _read("docs/personality.md")
     changelog = _read("CHANGELOG.md")
 
     agent_count = len(list((ROOT / "agents").glob("*.md")))
@@ -1436,14 +1435,14 @@ def check_public_claims() -> list[str]:
             "снижают вариативность",
         ],
         "agents/cto.md": [
-            "Не меняй модель и настройки ревью по собственной инициативе",
+            "Do not change the review model or settings on your own",
             "Greptile CLI (конфигурация репозитория)",
             "greptile review --agent --json",
             "--instructions",
             "greptile init --json",
             "greptile_report",
             "status --porcelain=v1 -z",
-            "только когда фича полностью готова",
+            "only when the feature is fully done",
         ],
         "CHANGELOG.md": [
             "displayName: \"Alfred Dev\"",
@@ -1485,9 +1484,10 @@ def check_public_claims() -> list[str]:
         "agents/alfred.md": [
             "непреодолим",
             "НИКОГДА нельзя пропускать",
+            "insurmountable",
+            "must NEVER be skipped",
         ],
         "agents/cto.md": ["GPT-5.4", "gpt-5.4"],
-        "docs/personality.md": ["GPT-5.4"],
         "CHANGELOG.md": [
             "GPT-5.4",
             "gpt-5.4",
@@ -1501,6 +1501,9 @@ def check_public_claims() -> list[str]:
             "Без исключений",
             "непреодолим",
             "ничто с известными уязвимостями",
+            "No exceptions",
+            "insurmountable",
+            "nothing with known vulnerabilities",
         ],
     }
     stale_sources = {
@@ -1510,7 +1513,6 @@ def check_public_claims() -> list[str]:
         "commands/alfred.md": help_command,
         "agents/alfred.md": alfred_agent,
         "agents/cto.md": cto_agent,
-        "docs/personality.md": personality,
         "CHANGELOG.md": changelog,
     }
     stale_hits: list[str] = []
@@ -1663,7 +1665,7 @@ def check_config_contracts() -> list[str]:
             "bundler": "vite",
         },
         "optional_agents": {
-            "cto": False,
+            "cto": True,
         },
         "memory": {
             "enabled": True,
@@ -1681,10 +1683,8 @@ def check_config_contracts() -> list[str]:
             "deploy": True,
         },
         "personality": {
-            "sarcasm_level": 1,
-            "verbosity": "alta",
-            "language": "es-ES",
-            "celebrate_wins": False,
+            "verbosity": "high",
+            "language": "en",
         },
     }
     if tuple(section_updates) != expected_sections:
@@ -1836,9 +1836,18 @@ def check_config_contracts() -> list[str]:
         "commands/_composition.md",
         _read("commands/_composition.md"),
     )
-    # commands/config.md and docs/configuration.md are translated to Russian.
-    # Both surfaces use the same labels.
+    # The commands/config.md body is in English (model-facing).
+    # docs/configuration.md stays in Russian (user-facing).
     required_command_labels = [
+        "autonomy per phase",
+        "project",
+        "optional agents",
+        "persistent memory",
+        "compliance",
+        "integrations",
+        "personality",
+    ]
+    required_docs_labels = [
         "автономность по фазам",
         "проект",
         "опциональные агенты",
@@ -1851,7 +1860,7 @@ def check_config_contracts() -> list[str]:
     for label in required_command_labels:
         if _normalize(label) not in command_norm:
             missing.append(f"commands/config.md: {label}")
-    for label in required_command_labels:
+    for label in required_docs_labels:
         if _normalize(label) not in docs_norm:
             missing.append(f"docs/configuration.md: {label}")
 
@@ -1997,7 +2006,7 @@ def check_flow_gate_claims() -> list[str]:
     )
     frontend_session = advance_phase(frontend_session, result="approved")
     if frontend_session["current_phase"] != "visual_style":
-        problems.append("feature with frontend does not enter visual_style after producto")
+        problems.append("feature with frontend does not enter visual_style after product")
 
     backend_session = create_session(
         "feature",
@@ -2011,7 +2020,7 @@ def check_flow_gate_claims() -> list[str]:
         if phase.get("name") == "visual_style"
     ]
     if backend_session["current_phase"] != "architecture" or not skipped_style:
-        problems.append("feature without frontend does not skip visual_style to arquitectura")
+        problems.append("feature without frontend does not skip visual_style to architecture")
     elif skipped_style[0].get("result") != "skipped":
         problems.append(f"skipped visual_style records an unexpected result: {skipped_style[0]}")
 
@@ -2601,18 +2610,18 @@ def check_install_update_contracts() -> list[str]:
         ],
         "commands/update.md": [
             "claude plugin list --json",
-            "как настоящий semver",
-            "один `AskUserQuestion`",
+            "compare them as real semver",
+            "one `AskUserQuestion`",
             "Обновить сейчас",
             "Не сейчас",
-            "нормализует их в `--scope user`",
-            "не затрагивает `~/.claude/skills`",
-            "Не используй `claude plugin update --scope local`",
+            "normalizes them to `--scope user`",
+            "does not touch `~/.claude/skills`",
+            "Do not use `claude plugin update --scope local`",
             "`claude plugin update --scope project`",
             "curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash",
-            "выполнить **`/reload-plugins`**",
+            "run **`/reload-plugins`**",
             "`/reload-plugins --force`",
-            "нужно перезапустить",
+            "A Claude Code restart is required",
         ],
         "docs/installation.md": [
             "--scope user",
@@ -3145,42 +3154,42 @@ def check_human_contracts() -> list[str]:
 
     requirements = {
         "clarifying questions": [
-            ("Используй `AskUserQuestion` только если действительно есть два правдоподобных пути", commands["alfred"]),
-            ("один короткий вопрос", commands["alfred"]),
-            ("один `AskUserQuestion` с настоящим выбираемым меню", commands["alfred"]),
-            ("Если нужно спросить из-за реальной неоднозначности", commands["next"]),
-            ("один навигируемый `AskUserQuestion`", commands["next"]),
-            ("НЕ используй `AskUserQuestion` по умолчанию", commands["discuss"]),
+            ("Use `AskUserQuestion` only if there really are two plausible paths", commands["alfred"]),
+            ("ask one short question", commands["alfred"]),
+            ("one `AskUserQuestion` with a real selectable menu", commands["alfred"]),
+            ("If you must ask because of real ambiguity", commands["next"]),
+            ("one navigable `AskUserQuestion`", commands["next"]),
+            ("DO NOT use `AskUserQuestion` by default", commands["discuss"]),
             ("меню не нужно", commands["discuss"]),
             ("DISCUSS_ROUTE_MENU_HEADLESS", commands["discuss"]),
-            ("возвращается отменённым", commands["discuss"]),
-            ("главное меню", commands["config"]),
+            ("returns canceled", commands["discuss"]),
+            ("navigable main menu", commands["config"]),
             ("config_headless_menu", commands_norm["config"]),
-            ("один `AskUserQuestion`", commands["update"]),
+            ("one `AskUserQuestion`", commands["update"]),
         ],
         "human gates": [
-            ("Если пользовательский gate остаётся в ожидании, используй один навигируемый", commands["feature"]),
-            ("Если пользовательский gate остаётся в ожидании, используй один навигируемый", commands["fix"]),
-            ("Gate развёртывания ВСЕГДА интерактивный", commands["ship"]),
-            ("НИКОГДА не утверждай автоматически развёртывание", commands["ship"]),
-            ("НЕ помечай UAT как одобренную без явного указания пользователя", commands["uat"]),
+            ("If a user gate is pending, use one navigable `AskUserQuestion`", commands["feature"]),
+            ("If a user gate is pending, use one navigable `AskUserQuestion`", commands["fix"]),
+            ("The deployment gate is ALWAYS interactive", commands["ship"]),
+            ("NEVER approve a production deployment automatically", commands["ship"]),
+            ("DO NOT mark the UAT as approved without an explicit user statement", commands["uat"]),
             ("`/alfred-dev:uat approved`", commands["uat"]),
         ],
         "operational honesty": [
-            ("Операционная честность и запрет имитации", commands["_composition"]),
-            ("Не говори «я выполнил», «прошло» или «проверено», если ты только предположил это", commands["_composition"]),
-            ("Всегда различай «рекомендую выполнить X» и «я выполнил X", commands["_composition"]),
-            ("Не имитируй подтверждение", commands["alfred"]),
-            ("вывод инструмента", commands["alfred"]),
-            ("проверяемый следующий шаг", commands["alfred"]),
-            ("Не имитируй подтвержден", alfred_agent),
-            ("явного подтверждения пользователя", alfred_agent),
+            ("Operational honesty, no simulation", commands["_composition"]),
+            ("Do not say «я выполнил», «прошло» or «проверено» if you only assumed it", commands["_composition"]),
+            ("Always separate «рекомендую выполнить X» from «я выполнил X", commands["_composition"]),
+            ("Do not simulate confirmation", commands["alfred"]),
+            ("tool output", commands["alfred"]),
+            ("verifiable next step", commands["alfred"]),
+            ("Do not fake evidence", alfred_agent),
+            ("explicit user confirmation", alfred_agent),
         ],
         "grounded fallbacks": [
-            ("НЕ выдумывай стек, точки входа или риски", commands["map-codebase"]),
-            ("НЕ выдумывай handoff", commands["pause"]),
-            ("преждевременную ручную приёмку", commands["uat"]),
-            ("Если `$ARGUMENTS` пуст, скажи об этом ясно и не выдумывай поиск", commands["search"]),
+            ("DO NOT invent the stack, entry points or risks", commands["map-codebase"]),
+            ("DO NOT invent a handoff", commands["pause"]),
+            ("DO NOT invent a premature manual acceptance", commands["uat"]),
+            ("If `$ARGUMENTS` is empty, say so clearly and do not invent a search", commands["search"]),
         ],
     }
     missing: list[str] = []
@@ -3210,6 +3219,12 @@ def check_human_contracts() -> list[str]:
             "не продолжай исследование",
             "второй слой",
             "не оборачивай",
+            "final answer",
+            "as is",
+            "do not continue the research",
+            "second summary",
+            "second layer",
+            "do not wrap",
         )
     )
     for name in helper_wrappers:
@@ -3219,9 +3234,9 @@ def check_human_contracts() -> list[str]:
         if not any(marker in text_norm for marker in final_markers):
             missing.append(f"helper-first {name}: final output rule without rewrapping is missing")
 
-    if "Не говори" not in commands["_composition"] or "проверяемый следующий шаг" not in commands["alfred"]:
+    if "Do not say" not in commands["_composition"] or "verifiable next step" not in commands["alfred"]:
         missing.append("humanity: central anti-pretending contract is missing")
-    if "Не имитируй подтвержден" not in alfred_agent:
+    if "Do not fake evidence" not in alfred_agent:
         missing.append("humanity: anti-pretending contract is missing in the Alfred agent")
 
     if missing:
@@ -3250,46 +3265,46 @@ def check_external_contracts() -> list[str]:
             ("docker --version", audit),
             ("docker info", audit),
             ("AskUserQuestion", audit),
-            ("НЕ пытайся установить его сам", audit),
-            ("НЕ пытайся запустить его сам", audit),
-            ("даже если проект в режиме autopilot", audit),
-            ("SonarQube пропущен по явному решению пользователя", audit),
+            ("do NOT try to install it yourself", audit),
+            ("do NOT try to start it yourself", audit),
+            ("even if the project is in autopilot mode", audit),
+            ("SonarQube was skipped by explicit user decision", audit),
         ],
         "sonarqube skill permission": [
-            ("Не устанавливай Docker, не открывай Docker Desktop и не запускай демон без явного одобрения пользователя.", sonarqube),
-            ("Если предварительного разрешения нет, запроси его сейчас и жди ответа.", sonarqube),
-            ("Проверь, занят ли порт `9000`", sonarqube),
+            ("Do not install Docker, open Docker Desktop or start the daemon without explicit user approval.", sonarqube),
+            ("If there is no prior permission, ask for it now and wait for the answer.", sonarqube),
+            ("Check whether port `9000` is in use", sonarqube),
             ("docker rm -f sonarqube-alfred", sonarqube),
-            ("всё равно попытайся выполнить финальную очистку временного контейнера", sonarqube),
+            ("still try to do the final cleanup of the temporary container", sonarqube),
         ],
         "sync-github safe mirror": [
             ('python3 .claude/alfred-continuity.py sync-github "$PWD" --raw "$ARGUMENTS"', sync),
             ("gh --version", sync),
             ("gh auth status", sync),
-            ("НЕ используй `AskUserQuestion` по умолчанию", sync),
-            ("Не удаляй issues, не относящиеся к Alfred", sync),
-            ("Сохраняй локальную истину", sync),
+            ("DO NOT use `AskUserQuestion` by default", sync),
+            ("Do not delete issues that do not belong to Alfred", sync),
+            ("Keep the local truth", sync),
         ],
         "cto external audit": [
             ("greptile --version", cto_all),
             ("greptile login", cto_all),
-            ("явное подтверждение", cto_all),
+            ("get explicit confirmation", cto_all),
             ("greptile review --agent --json", cto_all),
             ("greptile init --json", cto_all),
             ("--instructions", cto_all),
             ("greptile_report", cto_all),
             ("status --porcelain=v1 -z", cto_all),
-            ("Никогда не включай инструкции, позволяющие изменять файлы", cto_all),
-            ("Ты никогда не запускаешь код проекта", cto_all),
-            ("Ты не заменяешь `qa-engineer`, `security-officer` и `architect`", cto_all),
-            ("не заменяет канонический sign-off", cto_all),
+            ("Never include instructions that allow changing files", cto_all),
+            ("never run project code", cto_all),
+            ("You do not replace `qa-engineer`, `security-officer` or `architect`", cto_all),
+            ("does not replace the flow's canonical sign-off", cto_all),
         ],
         "ship deploy gate": [
-            ("Gate развёртывания", ship),
-            ("ВСЕГДА интерактивный", ship),
-            ("одним навигируемым `AskUserQuestion`", ship),
-            ("НИКОГДА не утверждай автоматически развёртывание", ship),
-            ("пользователь+безопасность", ship),
+            ("The deployment gate", ship),
+            ("ALWAYS interactive", ship),
+            ("Resolve the deployment gate with one navigable `AskUserQuestion`", ship),
+            ("NEVER approve a production deployment automatically", ship),
+            ("user+security", ship),
         ],
     }
     missing: list[str] = []

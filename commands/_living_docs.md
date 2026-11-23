@@ -2,83 +2,81 @@
 description: "Внутренний протокол живой документации: какой файл обновляется на каждом gate."
 ---
 
-# Живая документация проекта
+# Living project documentation
 
-Общий протокол. Его читают `feature`, `fix`, `quick`, `spike`, `audit`, `ship`,
-`map-codebase` и `discuss`. Это не slash-команда.
+Communicate with the user in Russian.
 
-## Шаг 0 -- скелет
+Shared protocol. Read by `feature`, `fix`, `quick`, `spike`, `audit`, `ship`, `map-codebase` and `discuss`. This is not a slash command.
 
-Перед первой фазой (или при составлении карты / обсуждении) выполни:
+## Step 0 -- skeleton
+
+Before the first phase (or when mapping / discussing), run:
 
 ```bash
 python3 .claude/alfred-continuity.py sync-project-docs "$PWD"
 ```
 
-Это создаёт, если их нет:
+It creates, if missing:
 
-- `docs/project/README.md` (индекс)
+- `docs/project/README.md` (index)
 - `docs/project/architecture.md`
 - `docs/project/compliance.md`
 - `docs/project/threat-model.md`
 - `docs/project/dependencies.md`
 - `docs/adr/`
 
-Прозу он не заполняет. Скелеты содержат `<!-- alfred-doc:scaffold -->`.
+It does not write prose. Skeletons contain `<!-- alfred-doc:scaffold -->`.
 
-## Что трогать в каждый момент
+## What to touch at each moment
 
-Обновляй только то, что изменила фаза. Остальное не переписывай.
+Update only what the phase changed. Do not rewrite the rest.
 
-| Момент | Кто | Файлы |
+| Moment | Who | Files |
 |--------|-----|-------|
-| `discuss` | Alfred | индекс (существует) + `discovery.md` |
-| `map-codebase` | helper + Alfred | индекс + скелет архитектуры |
-| Продукт утверждён | product-owner | PRD; индекс обновляется |
-| Архитектура | architect + security-officer | `architecture.md` (заполнен), ADR при наличии решения, `threat-model.md` (заполнен) |
-| Новая зависимость | architect или security-officer | `dependencies.md` |
-| Разработка / quick / fix | tech-writer (короткий sync) + senior-dev | индекс; заголовки/docstrings затронутого кода; `current.md` |
-| Качество / audit | security-officer | `compliance.md` с подтверждением |
-| Закрывающая документация / ship | tech-writer | индекс, CHANGELOG, release notes |
-| Пауза | helper | handoff (без изменения architecture/compliance) |
+| `discuss` | Alfred | index (exists) + `discovery.md` |
+| `map-codebase` | helper + Alfred | index + architecture skeleton |
+| Product approved | product-owner | PRD; index is updated |
+| Architecture | architect + security-officer | `architecture.md` (filled), ADR if a decision exists, `threat-model.md` (filled) |
+| New dependency | architect or security-officer | `dependencies.md` |
+| Development / quick / fix | tech-writer (short sync) + senior-dev | index; headers/docstrings of affected code; `current.md` |
+| Quality / audit | security-officer | `compliance.md` with evidence |
+| Closing documentation / ship | tech-writer | index, CHANGELOG, release notes |
+| Pause | helper | handoff (no change to architecture/compliance) |
 
-## Перед закрытием gate
+## Before closing a gate
 
 ```bash
 python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command <команда> --phase <фаза>
 ```
 
-Если helper завершается с ненулевым кодом, gate не считается пройденным. Заполни
-пробел и проверь снова.
+If the helper exits with a non-zero code, the gate is not passed. Fill the gap and check again.
 
-Документ считается заполненным, когда в нём есть `<!-- alfred-doc:filled -->` или
-когда он уже существовал с реальным содержимым (без маркера скелета).
+A document counts as filled when it contains `<!-- alfred-doc:filled -->` or when it already existed with real content (without the skeleton marker).
 
 ## ADR
 
-Если фаза архитектуры (или spike) принимает новое решение:
+If the architecture phase (or a spike) makes a new decision:
 
 ```bash
 python3 .claude/alfred-continuity.py next-adr "$PWD" --title "Короткое название решения"
 ```
 
-Затем architect заполняет файл с помощью skill `write-adr`.
+Then architect fills the file with the `write-adr` skill.
 
 ## Skills
 
-- `sync-project-docs` -- как синхронизировать, не выдумывая прозу
-- `write-adr` -- как закрыть ADR
-- `evaluate-dependency` -- как отметить зависимость
-- `compliance-check` -- как заполнить реестр
-- `threat-model` -- как заполнить модель
+- `sync-project-docs` -- how to sync without inventing prose
+- `write-adr` -- how to close an ADR
+- `evaluate-dependency` -- how to record a dependency
+- `compliance-check` -- how to fill the register
+- `threat-model` -- how to fill the model
 
 ## Tech Writer
 
-После каждой фазы (не только в конце) запускай короткий sync от `tech-writer`:
+After each phase (not only at the end), run a short sync by `tech-writer`:
 
 1. `sync-project-docs`
-2. обновить только затронутые секции
-3. `check-project-docs` текущей фазы
+2. update only the affected sections
+3. `check-project-docs` for the current phase
 
-В `quick` и `fix` sync минимальный: индекс + заметка в `current.md`. ADR
-только если изменение сдвигает границу архитектуры.
+In `quick` and `fix` the sync is minimal: index + a note in `current.md`. ADR only if the change moves an architecture boundary.
