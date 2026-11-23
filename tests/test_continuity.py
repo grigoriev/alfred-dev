@@ -188,7 +188,7 @@ class TestContinuitySuggestions(unittest.TestCase):
 
         self.assertEqual(suggestion["focus"], "Продолжить текущий процесс")
         self.assertEqual(suggestion["source_label"], "активная сессия")
-        self.assertEqual(suggestion["urgency"], "alta")
+        self.assertEqual(suggestion["urgency"], "high")
         self.assertIn("Возобнови `feature`", suggestion["directive"])
 
     def test_unresolved_handoff_suggests_resume(self):

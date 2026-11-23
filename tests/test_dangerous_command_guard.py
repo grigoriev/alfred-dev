@@ -95,7 +95,7 @@ class TestDangerousCommands(unittest.TestCase):
     # --- Destructive SQL ---
 
     def test_drop_database(self):
-        self.assertTrue(_is_dangerous("DROP DATABASE produccion"))
+        self.assertTrue(_is_dangerous("DROP DATABASE production"))
 
     def test_drop_table(self):
         self.assertTrue(_is_dangerous("DROP TABLE users"))
@@ -104,7 +104,7 @@ class TestDangerousCommands(unittest.TestCase):
         self.assertTrue(_is_dangerous("DROP SCHEMA public"))
 
     def test_drop_case_insensitive(self):
-        self.assertTrue(_is_dangerous("drop database produccion"))
+        self.assertTrue(_is_dangerous("drop database production"))
 
     # --- Docker prune ---
 

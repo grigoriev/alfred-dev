@@ -697,8 +697,8 @@ def run_flow(
         ValueError: if the command does not match a defined flow.
 
     Example:
-        >>> session = run_flow("feature", "Login con OAuth", session_team={...})
-        >>> session["session_team"]["active_optionals"]["github-manager"]
+        >>> session = run_flow("feature", "Login with OAuth", session_team={...})
+        >>> session["session_team"]["active_optionals"]["cto"]
         True
     """
     # --- 1. Validate that the command exists ---

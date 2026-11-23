@@ -278,7 +278,7 @@ class TestMemoryUI(unittest.TestCase):
                     "command": "feature",
                     "description": "New checkout",
                     "current_phase": "completed",
-                    "objetivo": "New checkout",
+                    "goal": "New checkout",
                     "completed_phases": ["product", "architecture", "development"],
                 },
                 fh,

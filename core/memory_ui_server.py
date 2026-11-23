@@ -640,9 +640,9 @@ HTML_TEMPLATE = """<!doctype html>
     });
 
     const URGENCY_META = Object.freeze({
-      alta: { label: "высокий приоритет", className: "danger" },
-      media: { label: "средний приоритет", className: "warn" },
-      baja: { label: "низкий приоритет", className: "" },
+      high: { label: "высокий приоритет", className: "danger" },
+      medium: { label: "средний приоритет", className: "warn" },
+      low: { label: "низкий приоритет", className: "" },
     });
 
     function statusLabel(status, { uppercase = false } = {}) {
