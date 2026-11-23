@@ -17,6 +17,15 @@ class TestPromptRoute(unittest.TestCase):
         self.assertIsNone(classify_prompt("/alfred-dev:fix логин"))
         self.assertIsNone(classify_prompt("/compact"))
 
+    def test_harness_messages_are_ignored(self):
+        notification = (
+            "<task-notification>\n<status>completed</status>\n"
+            "<summary>Agent finished</summary>\n<result>что дальше? продолжай</result>\n"
+            "</task-notification>"
+        )
+        self.assertIsNone(classify_prompt(notification))
+        self.assertIsNone(classify_prompt("<system-reminder>что дальше?</system-reminder>"))
+
     def test_classifies_common_russian_phrases(self):
         cases = {
             "продолжай с того места": "resume",
@@ -124,7 +133,7 @@ class TestPromptRoute(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("/alfred-dev:fix", context)
-        self.assertIn("Действуй как эта команда", context)
+        self.assertIn("Act as that command", context)
 
     def test_hook_is_silent_without_signal(self):
         script = os.path.join(os.path.dirname(__file__), "..", "hooks", "prompt-route.py")

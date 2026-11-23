@@ -688,6 +688,16 @@ class TestDispatchPrompt(_DBTestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0].get("content"), full_text)
 
+    def test_harness_notification_is_not_saved(self):
+        """A task notification from the harness is not a user prompt."""
+        for text in (
+            "<task-notification> <task-id>abc</task-id> done </task-notification>",
+            "  <system-reminder>context</system-reminder>",
+        ):
+            _capture._dispatch_prompt(self._db, {"prompt": text})
+
+        self.assertEqual(self._get_events("user_prompt"), [])
+
     def test_summary_truncated(self):
         """The summary contains only the first line, truncated."""
         long_prompt = "First line of the prompt\nSecond line with more details\nThird"

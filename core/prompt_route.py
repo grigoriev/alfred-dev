@@ -216,9 +216,17 @@ _COMMAND_HINT = {
 }
 
 
+_HARNESS_MESSAGE_RE = re.compile(r"^\s*<(task-notification|system-reminder)>")
+
+
+def _is_harness_message(text: str) -> bool:
+    """Return True for messages that the harness sends, not the user."""
+    return bool(_HARNESS_MESSAGE_RE.match(text))
+
+
 def classify_prompt(text: str) -> Optional[Dict[str, str]]:
     """Return the suggested route, or None if there is no signal or a slash command is present."""
-    if not (text or "").strip() or _has_slash_command(text):
+    if not (text or "").strip() or _has_slash_command(text) or _is_harness_message(text):
         return None
     folded = _fold(text)
     if len(folded) < 4:
@@ -237,10 +245,10 @@ def render_route_hint(match: Dict[str, str]) -> str:
     command = match["command"]
     if match["route"] == "memory":
         return (
-            f"Этот запрос спрашивает о решении. Загляни в память "
-            f"или `docs/adr/` и действуй как `{command}`. Не выдумывай историю."
+            f"This prompt asks about a past decision. Check the memory "
+            f"or `docs/adr/` and act as `{command}`. Do not invent history."
         )
     return (
-        f"Этот запрос без slash подходит под `{command}`. "
-        f"Действуй как эта команда. Не проси пользователя её вводить."
+        f"This prompt without a slash command matches `{command}`. "
+        f"Act as that command. Do not ask the user to type it."
     )
