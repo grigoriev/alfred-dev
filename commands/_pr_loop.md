@@ -49,7 +49,7 @@ Repeat until the helper returns `PR_STATUS_MERGE`, `PR_STATUS_DONE` or `PR_STATU
 Checks or reviews are not ready yet. Waiting does not count as a round.
 
 - If the output has an «Действие» section with `greptile review`, run the Greptile CLI review from the repository root: `greptile review --agent --json`. In the PR loop, do this without separate confirmation: the user enabled the loop, and the review is part of it. CTO fills this role.
-- The Claude Code review runs when a PR opens or reopens, and it counts only for the head commit. If «Действие» asks to repeat the review, close and reopen the PR: `gh pr close <номер>`, then `gh pr reopen <номер>`. Do the same once if the review is missing and the PR is older than 15 minutes.
+- The Claude Code review runs when a PR opens or reopens, and it counts only for the head commit. If «Действие» asks to repeat the review, close and reopen the PR: `gh pr close <номер>`, then `gh pr reopen <номер>`. Reopen at most once per head commit; while the review runs, the helper only waits. Do the same once if the review is missing and the PR is older than 15 minutes.
 - Then wait for checks: `gh pr checks <номер> --watch --interval 30`.
 - Call `pr-status` again.
 - If waiting takes more than 60 minutes, stop and tell the user what you are waiting for.

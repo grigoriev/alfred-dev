@@ -195,6 +195,26 @@ class TestEvaluate(unittest.TestCase):
     def test_sonar_not_configured_needs_user(self):
         self.assertEqual(evaluate(_github(), {"status": "not_configured"})["verdict"], VERDICT_NEEDS_USER)
 
+    def test_pending_status_context_waits(self):
+        checks = [{"context": "SonarCloud Code Analysis", "state": "PENDING"}]
+        self.assertEqual(evaluate(_github(statusCheckRollup=checks), GREEN_SONAR)["verdict"], VERDICT_WAIT)
+
+    def test_sonar_error_needs_user(self):
+        result = evaluate(_github(), {"status": "error", "error": "timeout"})
+        self.assertEqual(result["verdict"], VERDICT_NEEDS_USER)
+        self.assertIn("timeout", result["blockers"][0])
+
+    def test_sonar_unknown_status_is_ignored(self):
+        self.assertEqual(evaluate(_github(), {"status": "skipped"})["verdict"], VERDICT_MERGE)
+
+    def test_sonar_gate_not_computed_waits(self):
+        sonar = dict(GREEN_SONAR, gate="NONE")
+        self.assertEqual(evaluate(_github(), sonar)["verdict"], VERDICT_WAIT)
+
+    def test_sonar_coverage_not_computed_waits(self):
+        sonar = dict(GREEN_SONAR, new_coverage=None, new_lines_to_cover=5.0)
+        self.assertEqual(evaluate(_github(), sonar)["verdict"], VERDICT_WAIT)
+
     def test_draft_needs_user(self):
         self.assertEqual(evaluate(_github(isDraft=True), GREEN_SONAR)["verdict"], VERDICT_NEEDS_USER)
 
@@ -324,9 +344,72 @@ class TestGreptileModes(unittest.TestCase):
         }])
         self.assertEqual(evaluate(github, GREEN_SONAR, greptile_mode="off")["verdict"], VERDICT_WAIT)
 
+    def test_running_claude_review_does_not_ask_for_another_reopen(self):
+        old = dict(_claude_review(), commit={"oid": "old"})
+        checks = _github()["statusCheckRollup"] + [
+            {"name": "claude-review / claude-review", "status": "IN_PROGRESS", "conclusion": None,
+             "startedAt": "2026-11-22T12:40:00Z", "workflowName": "Claude Code Review"},
+        ]
+        result = evaluate(_github(reviews=[old], statusCheckRollup=checks), GREEN_SONAR, greptile_mode="optional")
+        self.assertEqual(result["verdict"], VERDICT_WAIT)
+        self.assertNotIn("rerun_claude_review", result["actions"])
+
+    def test_claude_found_among_other_reviewers(self):
+        github = _github(reviews=[_greptile(3, commit="old"), _claude_review()])
+        self.assertEqual(evaluate(github, GREEN_SONAR, greptile_mode="off")["verdict"], VERDICT_MERGE)
+
+    def test_claude_review_without_commit_uses_time(self):
+        review = {"author": {"login": "claude[bot]"}, "body": "No issues.", "submittedAt": "2026-11-22T12:30:00Z"}
+        self.assertEqual(evaluate(_github(reviews=[review]), GREEN_SONAR, greptile_mode="off")["verdict"],
+                         VERDICT_MERGE)
+
+    def test_render_lists_every_item_kind(self):
+        result = {
+            "verdict": VERDICT_FIX, "pr": 7,
+            "greptile": {"status": "ok", "confidence": 4, "explanation": "cannot run the E2E tests",
+                         "source": "cli", "stale": False},
+            "blockers": ["Quality gate SonarCloud: ERROR."],
+            "fix_items": [
+                {"kind": "thread", "id": "T1", "author": "alice", "path": "a.py", "line": 3, "body": "Rename."},
+                {"kind": "check", "name": "lint", "outcome": "FAILURE", "url": "u"},
+                {"kind": "greptile", "path": "", "line": None, "body": "General remark."},
+                {"kind": "sonar", "rule": "python:S1", "component": "c", "line": 9, "message": "Fix it."},
+            ],
+            "actions": ["run_greptile_review"],
+        }
+        text = render_pr_status(result)
+        for needle in ("### Блокеры", "Тред `T1` (alice, a.py:3)", "Check `lint`: FAILURE u",
+                       "Greptile (общее): General remark.", "Sonar `python:S1` c:9", "4/5 (Greptile CLI)",
+                       "Что не может проверить: cannot run the E2E tests", "greptile review --agent --json"):
+            self.assertIn(needle, text)
+        self.assertNotIn("Greptile:", render_pr_status({"verdict": VERDICT_WAIT, "greptile": {"status": "missing"}}))
+
     def test_unknown_mode_falls_back_to_required(self):
         result = evaluate(_github(reviews=[_claude_review()]), GREEN_SONAR, greptile_mode="sometimes")
         self.assertEqual(result["verdict"], VERDICT_WAIT)
+
+    def test_pr_status_in_required_mode_asks_the_cli(self):
+        github = _github(reviews=[])
+        threads = {"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": []}}}}}
+        cli_calls = []
+
+        def run(args):
+            if args[:2] == ["pr", "view"]:
+                return json.dumps({k: v for k, v in github.items() if k != "reviewThreads"})
+            return json.dumps(threads)
+
+        def greptile_run(args):
+            cli_calls.append(args)
+            return 0, ""
+
+        with tempfile.TemporaryDirectory() as tmp:
+            os.makedirs(os.path.join(tmp, ".claude"))
+            with open(os.path.join(tmp, ".claude", "alfred-dev.local.md"), "w", encoding="utf-8") as fh:
+                fh.write("---\npr_loop:\n  greptile: required\n---\n")
+            result = pr_status(tmp, "7", run=run, fetch=lambda url: {}, greptile_run=greptile_run)
+
+        self.assertTrue(cli_calls)
+        self.assertEqual(result["greptile_mode"], "required")
 
     def test_bare_yaml_off_and_booleans_map_to_modes(self):
         from core.pr_status import greptile_mode
