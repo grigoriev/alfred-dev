@@ -17,6 +17,7 @@
 ### Added
 
 - `SECURITY.md`, `.editorconfig`, `renovate.json` и `sonar-project.properties`.
+- **Ревью Claude Code** для каждого PR (`claude-code-review.yml`) и `CLAUDE.md` с разделом Review focus.
 
 ### Fixed
 
