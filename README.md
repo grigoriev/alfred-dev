@@ -7,6 +7,15 @@
 ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝  ╚═╝╚══════╝╚═════╝     ╚═════╝ ╚══════╝  ╚═══╝
 ```
 
+[![CI](https://github.com/grigoriev/alfred-dev/actions/workflows/ci.yml/badge.svg)](https://github.com/grigoriev/alfred-dev/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/grigoriev/alfred-dev/badge)](https://scorecard.dev/viewer/?uri=github.com/grigoriev/alfred-dev)
+[![Release](https://img.shields.io/github/v/release/grigoriev/alfred-dev)](https://github.com/grigoriev/alfred-dev/releases)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=grigoriev_alfred-dev&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=grigoriev_alfred-dev)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=grigoriev_alfred-dev&metric=coverage)](https://sonarcloud.io/summary/new_code?id=grigoriev_alfred-dev)
+
 > **Русский форк** [686f6c61/alfred-dev](https://github.com/686f6c61/alfred-dev). Промпты, хуки и вывод ядра переведены на русский. Агенты `selina` и `lucius` переименованы в `designer` и `cto`. Автор оригинального плагина: 686f6c61 (лицензия MIT сохранена). Форк: [grigoriev/alfred-dev](https://github.com/grigoriev/alfred-dev).
 
 **Плагин автоматизированной программной инженерии для [Claude Code](https://code.claude.com/docs/en/overview).**

@@ -1,6 +1,7 @@
 # Designer visual server sessions
 .alfred-dev/visual/
-.claude/
+.claude/*
+!.claude/CLAUDE.md
 .tmp/
 internal/
 site/test-results/

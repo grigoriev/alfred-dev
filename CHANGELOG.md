@@ -18,6 +18,8 @@
 ### Added
 
 - `SECURITY.md`, `.editorconfig`, `renovate.json` и `sonar-project.properties`.
+- **Ревью Claude Code** для каждого PR (`claude-code-review.yml`) и `.claude/CLAUDE.md` с разделом Review focus. Файл лежит в `.claude/`, потому что строгая проверка плагина не принимает `CLAUDE.md` в корне плагина.
+- **OpenSSF Scorecard** (`scorecard.yml`) и бейджи CI, Scorecard, релиза и SonarCloud в README.
 
 ### Fixed
 
