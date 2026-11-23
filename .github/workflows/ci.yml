@@ -98,9 +98,12 @@ jobs:
 
       # The CLI comes from .github/claude-cli/package-lock.json: npm ci checks
       # every package against its integrity hash. Renovate updates the version.
+      # Lifecycle scripts stay off; only the CLI's own installer runs, to link
+      # the native binary of the platform package.
       - name: Install Claude CLI
         run: |
-          npm ci --prefix .github/claude-cli --no-audit --no-fund
+          npm ci --prefix .github/claude-cli --ignore-scripts --no-audit --no-fund
+          node .github/claude-cli/node_modules/@anthropic-ai/claude-code/install.cjs
           bin_dir="$PWD/.github/claude-cli/node_modules/.bin"
           if [ "$RUNNER_OS" = "Windows" ]; then
             bin_dir="$(cygpath -w "$bin_dir")"
@@ -175,8 +178,12 @@ jobs:
         run: |
           python -c '
           import json
+          import shutil
           import subprocess
-          raw = subprocess.check_output(["claude", "plugin", "list", "--json"], text=True)
+          claude = shutil.which("claude")
+          if claude is None:
+              raise SystemExit("claude is not on PATH")
+          raw = subprocess.check_output([claude, "plugin", "list", "--json"], text=True)
           entries = json.loads(raw)
           leftover = [
               item.get("id")
