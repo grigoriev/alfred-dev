@@ -41,6 +41,8 @@ GREPTILE_REQUIRED = "required"
 GREPTILE_OPTIONAL = "optional"
 GREPTILE_OFF = "off"
 GREPTILE_MODES = (GREPTILE_REQUIRED, GREPTILE_OPTIONAL, GREPTILE_OFF)
+_MODE_ALIASES = {"false": GREPTILE_OFF, "no": GREPTILE_OFF, "true": GREPTILE_REQUIRED,
+                 "yes": GREPTILE_REQUIRED, "on": GREPTILE_REQUIRED}
 
 _CONFIDENCE_RE = re.compile(r"confidence(?:\s+score)?\s*[:\-]?\s*\**\s*(\d)\s*/\s*5", re.IGNORECASE)
 _UNVERIFIABLE_RE = re.compile(
@@ -320,13 +322,37 @@ def parse_greptile(github: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def has_claude_review(github: Dict[str, Any]) -> bool:
-    """Return True if the Claude Code review left a review or a comment on the PR."""
-    for item in (github.get("reviews") or []) + (github.get("comments") or []):
-        login = ((item.get("author") or {}).get("login") or "").lower()
-        if login in {"claude", "claude[bot]"} and (item.get("body") or "").strip():
-            return True
-    return False
+_CLAUDE_LOGINS = {"claude", "claude[bot]"}
+
+
+def claude_review_status(github: Dict[str, Any]) -> str:
+    """Return ok, stale or missing for the Claude Code review of the head commit."""
+    head = github.get("headRefOid", "")
+    head_time = _head_commit_time(github)
+    found = False
+    for review in github.get("reviews") or []:
+        if not _is_claude_entry(review):
+            continue
+        found = True
+        commit = (review.get("commit") or {}).get("oid", "")
+        if (commit and commit == head) or (not commit and _not_older(review.get("submittedAt"), head_time)):
+            return "ok"
+    for comment in github.get("comments") or []:
+        if not _is_claude_entry(comment):
+            continue
+        found = True
+        if _not_older(comment.get("updatedAt") or comment.get("createdAt"), head_time):
+            return "ok"
+    return "stale" if found else "missing"
+
+
+def _is_claude_entry(item: Dict[str, Any]) -> bool:
+    login = ((item.get("author") or {}).get("login") or "").lower()
+    return login in _CLAUDE_LOGINS and bool((item.get("body") or "").strip())
+
+
+def _not_older(at: Optional[str], head_time: str) -> bool:
+    return not head_time or bool(at and at >= head_time)
 
 
 def _head_commit_time(github: Dict[str, Any]) -> str:
@@ -348,23 +374,51 @@ def evaluate(github: Dict[str, Any], sonar: Dict[str, Any],
 
     greptile_mode: required needs a current Greptile score; optional checks a
     current Greptile score if there is one and otherwise accepts the Claude
-    Code review; off ignores Greptile and needs the Claude Code review.
+    Code review of the head commit; off ignores Greptile and needs that review.
     """
     if greptile_mode not in GREPTILE_MODES:
         greptile_mode = GREPTILE_REQUIRED
-    blockers: List[str] = []
-    fix_items: List[Dict[str, Any]] = []
-    wait_items: List[str] = []
-
     state = github.get("state", "")
     if state in {"MERGED", "CLOSED"}:
         return {"verdict": VERDICT_DONE, "state": state, "blockers": [], "fix_items": [], "wait_items": []}
 
+    blockers: List[str] = []
+    fix_items: List[Dict[str, Any]] = []
+    wait_items: List[str] = []
+    actions: List[str] = []
     conflict = github.get("mergeable") == "CONFLICTING" or github.get("mergeStateStatus") == "DIRTY"
 
-    # Review threads and decisions.
-    unresolved = [t for t in github.get("reviewThreads") or [] if not t.get("isResolved")]
-    for thread in unresolved:
+    _evaluate_threads(github, blockers, fix_items)
+    _evaluate_checks(github, fix_items, wait_items)
+    greptile, ai_review = _evaluate_ai_review(github, greptile_cli, greptile_mode,
+                                              fix_items, wait_items, actions)
+    _evaluate_greptile_score(greptile, blockers)
+    needs_user = _evaluate_sonar(sonar, blockers, fix_items, wait_items)
+    if needs_user:
+        return _result(VERDICT_NEEDS_USER, [needs_user], fix_items, wait_items, greptile, sonar, conflict)
+
+    if conflict:
+        verdict = VERDICT_CONFLICT
+    elif fix_items or blockers:
+        verdict = VERDICT_FIX
+    elif wait_items:
+        verdict = VERDICT_WAIT
+    elif github.get("isDraft"):
+        verdict = VERDICT_NEEDS_USER
+        blockers.append("PR в статусе draft.")
+    else:
+        verdict = VERDICT_MERGE
+    result = _result(verdict, blockers, fix_items, wait_items, greptile, sonar, conflict)
+    result["actions"] = actions
+    result["ai_review"] = ai_review
+    result["greptile_mode"] = greptile_mode
+    return result
+
+
+def _evaluate_threads(github: Dict[str, Any], blockers: List[str], fix_items: List[Dict[str, Any]]) -> None:
+    for thread in github.get("reviewThreads") or []:
+        if thread.get("isResolved"):
+            continue
         first = ((thread.get("comments") or {}).get("nodes") or [{}])[0]
         fix_items.append({
             "kind": "thread",
@@ -378,89 +432,100 @@ def evaluate(github: Dict[str, Any], sonar: Dict[str, Any],
     if github.get("reviewDecision") == "CHANGES_REQUESTED":
         blockers.append("Есть ревью с запросом изменений.")
 
-    # CI checks.
-    for check in github.get("statusCheckRollup") or []:
-        if "status" in check:
-            # CheckRun: status shows progress, conclusion shows the result.
-            if (check.get("status") or "").upper() != "COMPLETED":
-                wait_items.append(f"Check `{_check_name(check)}` ещё выполняется.")
-                continue
-            outcome = (check.get("conclusion") or "").upper()
-        else:
-            # StatusContext: one state field.
-            outcome = (check.get("state") or "").upper()
-            if outcome in _PENDING_STATES:
-                wait_items.append(f"Check `{_check_name(check)}` ещё выполняется.")
-                continue
-        if outcome not in _PASSING_CONCLUSIONS:
+
+def _latest_checks(checks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Keep the newest run per check: a rerun supersedes a cancelled or failed one."""
+    latest: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    for check in checks:
+        key = (check.get("workflowName") or "", _check_name(check))
+        stamp = check.get("startedAt") or check.get("createdAt") or ""
+        current = latest.get(key)
+        if current is None or stamp >= (current.get("startedAt") or current.get("createdAt") or ""):
+            latest[key] = check
+    return list(latest.values())
+
+
+def _check_outcome(check: Dict[str, Any]) -> str:
+    """Return the upper-case outcome, or an empty string while the check runs."""
+    if "status" in check:
+        # CheckRun: status shows progress, conclusion shows the result.
+        if (check.get("status") or "").upper() != "COMPLETED":
+            return ""
+        return (check.get("conclusion") or "").upper()
+    # StatusContext: one state field.
+    outcome = (check.get("state") or "").upper()
+    return "" if outcome in _PENDING_STATES else outcome
+
+
+def _evaluate_checks(github: Dict[str, Any], fix_items: List[Dict[str, Any]], wait_items: List[str]) -> None:
+    for check in _latest_checks(github.get("statusCheckRollup") or []):
+        outcome = _check_outcome(check)
+        if not outcome:
+            wait_items.append(f"Check `{_check_name(check)}` ещё выполняется.")
+        elif outcome not in _PASSING_CONCLUSIONS:
             fix_items.append({"kind": "check", "name": _check_name(check), "outcome": outcome,
                               "url": check.get("detailsUrl") or check.get("targetUrl") or ""})
 
-    actions: List[str] = []
-    ai_review = ""
-    if greptile_mode == GREPTILE_REQUIRED:
+
+def _evaluate_ai_review(github: Dict[str, Any], greptile_cli: Optional[Dict[str, Any]], mode: str,
+                        fix_items: List[Dict[str, Any]], wait_items: List[str],
+                        actions: List[str]) -> Tuple[Dict[str, Any], str]:
+    """Return the Greptile data and which AI review counts: greptile, claude or empty."""
+    if mode == GREPTILE_REQUIRED:
         greptile = _evaluate_greptile_required(github, greptile_cli, fix_items, wait_items, actions)
-        ai_review = "greptile" if greptile.get("status") == "ok" and not greptile.get("stale") else ""
+        current = greptile.get("status") == "ok" and not greptile.get("stale")
+        return greptile, "greptile" if current else ""
+    if mode == GREPTILE_OPTIONAL:
+        bot = parse_greptile(github)
+        if bot["status"] == "ok" and not bot["stale"]:
+            return bot, "greptile"
+    claude = claude_review_status(github)
+    if claude == "ok":
+        return {"status": "off"}, "claude"
+    if claude == "stale":
+        wait_items.append("Ревью Claude Code относится к старому коммиту: нужен повторный ревью.")
+        actions.append("rerun_claude_review")
     else:
-        greptile = {"status": "off"}
-        if greptile_mode == GREPTILE_OPTIONAL:
-            bot = parse_greptile(github)
-            if bot["status"] == "ok" and not bot["stale"]:
-                greptile = bot
-                ai_review = "greptile"
-        if not ai_review and has_claude_review(github):
-            ai_review = "claude"
-        if not ai_review:
-            wait_items.append("Нет ревью Claude Code (и текущего ревью Greptile).")
-    if greptile.get("status") == "ok" and not greptile.get("stale"):
-        if greptile["confidence"] < 4:
-            blockers.append(f"Greptile: уверенность {greptile['confidence']}/5, нужно 5/5.")
-        elif greptile["confidence"] == 4 and not greptile["explanation"]:
-            blockers.append("Greptile: 4/5 без объяснения, что он не может проверить.")
+        wait_items.append("Нет ревью Claude Code (и текущего ревью Greptile).")
+    return {"status": "off"}, ""
 
-    # SonarCloud.
-    sonar_status = sonar.get("status")
-    if sonar_status == "not_configured":
-        return _result(VERDICT_NEEDS_USER, ["SonarCloud не настроен: ключ проекта не найден."],
-                       fix_items, wait_items, greptile, sonar, conflict)
-    if sonar_status == "no_analysis":
+
+def _evaluate_greptile_score(greptile: Dict[str, Any], blockers: List[str]) -> None:
+    if greptile.get("status") != "ok" or greptile.get("stale"):
+        return
+    if greptile["confidence"] < 4:
+        blockers.append(f"Greptile: уверенность {greptile['confidence']}/5, нужно 5/5.")
+    elif greptile["confidence"] == 4 and not greptile["explanation"]:
+        blockers.append("Greptile: 4/5 без объяснения, что он не может проверить.")
+
+
+def _evaluate_sonar(sonar: Dict[str, Any], blockers: List[str], fix_items: List[Dict[str, Any]],
+                    wait_items: List[str]) -> str:
+    """Add Sonar findings. Return a blocker text when a human must decide."""
+    status = sonar.get("status")
+    if status == "not_configured":
+        return "SonarCloud не настроен: ключ проекта не найден."
+    if status == "error":
+        return f"SonarCloud недоступен: {sonar.get('error', '')}."
+    if status == "no_analysis":
         wait_items.append("SonarCloud ещё не проанализировал этот PR.")
-    elif sonar_status == "error":
-        return _result(VERDICT_NEEDS_USER, [f"SonarCloud недоступен: {sonar.get('error', '')}."],
-                       fix_items, wait_items, greptile, sonar, conflict)
-    elif sonar_status == "ok":
-        if sonar.get("gate") == "NONE":
-            wait_items.append("Quality gate SonarCloud ещё не рассчитан.")
-        elif sonar.get("gate") != "OK":
-            blockers.append(f"Quality gate SonarCloud: {sonar.get('gate')}.")
-        if sonar.get("issues_total", 0) > 0:
-            for issue in sonar.get("issues", []):
-                fix_items.append({"kind": "sonar", **issue})
-        coverage = sonar.get("new_coverage")
-        lines_to_cover = sonar.get("new_lines_to_cover")
-        if coverage is None:
-            if lines_to_cover not in (None, 0.0):
-                wait_items.append("SonarCloud ещё не посчитал покрытие нового кода.")
-        elif coverage < REQUIRED_COVERAGE:
-            blockers.append(f"Покрытие нового кода {coverage:g}%, нужно 100%.")
-
-    result_actions = actions
-    if conflict:
-        verdict = VERDICT_CONFLICT
-    elif fix_items or blockers:
-        verdict = VERDICT_FIX
-    elif wait_items:
-        verdict = VERDICT_WAIT
-    elif github.get("isDraft"):
-        verdict = VERDICT_NEEDS_USER
-        blockers.append("PR в статусе draft.")
-    else:
-        verdict = VERDICT_MERGE
-    result = _result(verdict, blockers, fix_items, wait_items, greptile, sonar, conflict)
-    result["actions"] = result_actions
-    result["ai_review"] = ai_review
-    result["greptile_mode"] = greptile_mode
-    return result
+        return ""
+    if status != "ok":
+        return ""
+    if sonar.get("gate") == "NONE":
+        wait_items.append("Quality gate SonarCloud ещё не рассчитан.")
+    elif sonar.get("gate") != "OK":
+        blockers.append(f"Quality gate SonarCloud: {sonar.get('gate')}.")
+    if sonar.get("issues_total", 0) > 0:
+        for issue in sonar.get("issues", []):
+            fix_items.append({"kind": "sonar", **issue})
+    coverage = sonar.get("new_coverage")
+    if coverage is None:
+        if sonar.get("new_lines_to_cover") not in (None, 0.0):
+            wait_items.append("SonarCloud ещё не посчитал покрытие нового кода.")
+    elif coverage < REQUIRED_COVERAGE:
+        blockers.append(f"Покрытие нового кода {coverage:g}%, нужно 100%.")
+    return ""
 
 
 def _evaluate_greptile_required(github: Dict[str, Any], greptile_cli: Optional[Dict[str, Any]],
@@ -514,7 +579,12 @@ def greptile_mode(project_dir: str) -> str:
     from core.config_loader import load_config
 
     config = load_config(os.path.join(project_dir, ".claude", "alfred-dev.local.md"))
-    mode = str((config.get("pr_loop") or {}).get("greptile", GREPTILE_OPTIONAL)).strip().lower()
+    raw = (config.get("pr_loop") or {}).get("greptile", GREPTILE_OPTIONAL)
+    # YAML 1.1 reads a bare off/no as false and on/yes as true.
+    if isinstance(raw, bool):
+        return GREPTILE_REQUIRED if raw else GREPTILE_OFF
+    mode = str(raw).strip().lower()
+    mode = _MODE_ALIASES.get(mode, mode)
     return mode if mode in GREPTILE_MODES else GREPTILE_REQUIRED
 
 
@@ -605,6 +675,9 @@ def render_pr_status(result: Dict[str, Any]) -> str:
                 lines.append(f"- Sonar `{item.get('rule')}` {item.get('component')}:{item.get('line')}: {item.get('message')}")
     if result.get("wait_items"):
         lines += ["", "### Ожидание", ""] + [f"- {item}" for item in result["wait_items"]]
+    if "rerun_claude_review" in (result.get("actions") or []):
+        lines += ["", "### Действие", "",
+                  "- Повтори ревью: закрой и снова открой PR (`gh pr close <номер>`, затем `gh pr reopen <номер>`)."]
     if "run_greptile_review" in (result.get("actions") or []):
         lines += ["", "### Действие", "",
                   "- Запусти ревью Greptile CLI для текущего коммита ветки: `greptile review --agent --json`."]

@@ -16,8 +16,8 @@ The PR merges automatically, without confirmation, only when all conditions are 
 2. All CI checks are green.
 3. AI review, per `pr_loop.greptile` in `.claude/alfred-dev.local.md`:
    - `required`: a Greptile score for the head commit, 5/5, or 4/5 if Greptile states explicitly what exactly it cannot check.
-   - `optional` (default): a current Greptile score must meet the same bar; without one, the Claude Code review on the PR is enough.
-   - `off`: Greptile does not count; the Claude Code review on the PR is required.
+   - `optional` (default): a current Greptile score must meet the same bar; without one, the Claude Code review of the head commit is enough.
+   - `off`: Greptile does not count; the Claude Code review of the head commit is required.
 4. SonarCloud: quality gate green, 0 open issues, 100% coverage of new code.
 5. No conflicts with the base branch.
 
@@ -49,7 +49,7 @@ Repeat until the helper returns `PR_STATUS_MERGE`, `PR_STATUS_DONE` or `PR_STATU
 Checks or reviews are not ready yet. Waiting does not count as a round.
 
 - If the output has an «Действие» section with `greptile review`, run the Greptile CLI review from the repository root: `greptile review --agent --json`. In the PR loop, do this without separate confirmation: the user enabled the loop, and the review is part of it. CTO fills this role.
-- If the only wait item is the missing Claude Code review and the PR is older than 15 minutes, the review did not start. Close and reopen the PR once (`gh pr close <номер>` then `gh pr reopen <номер>`); the review runs on `reopened`.
+- The Claude Code review runs when a PR opens or reopens, and it counts only for the head commit. If «Действие» asks to repeat the review, close and reopen the PR: `gh pr close <номер>`, then `gh pr reopen <номер>`. Do the same once if the review is missing and the PR is older than 15 minutes.
 - Then wait for checks: `gh pr checks <номер> --watch --interval 30`.
 - Call `pr-status` again.
 - If waiting takes more than 60 minutes, stop and tell the user what you are waiting for.

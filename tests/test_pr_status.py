@@ -91,6 +91,24 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(result["verdict"], VERDICT_FIX)
         self.assertEqual(result["fix_items"][0]["name"], "build")
 
+    def test_cancelled_run_superseded_by_a_newer_one_is_ignored(self):
+        checks = [
+            {"name": "lint", "status": "COMPLETED", "conclusion": "CANCELLED",
+             "startedAt": "2026-11-22T11:00:00Z", "workflowName": "CI"},
+            {"name": "lint", "status": "COMPLETED", "conclusion": "SUCCESS",
+             "startedAt": "2026-11-22T11:01:00Z", "workflowName": "CI"},
+        ]
+        self.assertEqual(evaluate(_github(statusCheckRollup=checks), GREEN_SONAR)["verdict"], VERDICT_MERGE)
+
+    def test_latest_failed_run_still_needs_fix(self):
+        checks = [
+            {"name": "lint", "status": "COMPLETED", "conclusion": "SUCCESS",
+             "startedAt": "2026-11-22T11:00:00Z", "workflowName": "CI"},
+            {"name": "lint", "status": "COMPLETED", "conclusion": "FAILURE",
+             "startedAt": "2026-11-22T11:01:00Z", "workflowName": "CI"},
+        ]
+        self.assertEqual(evaluate(_github(statusCheckRollup=checks), GREEN_SONAR)["verdict"], VERDICT_FIX)
+
     def test_running_check_waits(self):
         checks = [{"name": "build", "status": "IN_PROGRESS", "conclusion": ""},
                   {"context": "ci/legacy", "state": "PENDING"}]
@@ -292,9 +310,34 @@ class TestGreptileModes(unittest.TestCase):
         self.assertEqual(result["verdict"], VERDICT_MERGE)
         self.assertEqual(result["greptile"], {"status": "off"})
 
+    def test_claude_review_of_an_older_commit_is_stale(self):
+        old = dict(_claude_review(), commit={"oid": "old"})
+        result = evaluate(_github(reviews=[old]), GREEN_SONAR, greptile_mode="optional")
+        self.assertEqual(result["verdict"], VERDICT_WAIT)
+        self.assertIn("rerun_claude_review", result["actions"])
+        self.assertIn("Повтори ревью: закрой и снова открой PR", render_pr_status(result))
+
+    def test_claude_comment_older_than_head_is_stale(self):
+        github = _github(reviews=[], comments=[{
+            "author": {"login": "claude"}, "body": "No issues found.",
+            "createdAt": "2026-11-22T10:00:00Z",
+        }])
+        self.assertEqual(evaluate(github, GREEN_SONAR, greptile_mode="off")["verdict"], VERDICT_WAIT)
+
     def test_unknown_mode_falls_back_to_required(self):
         result = evaluate(_github(reviews=[_claude_review()]), GREEN_SONAR, greptile_mode="sometimes")
         self.assertEqual(result["verdict"], VERDICT_WAIT)
+
+    def test_bare_yaml_off_and_booleans_map_to_modes(self):
+        from core.pr_status import greptile_mode
+        cases = {"off": "off", "false": "off", "no": "off", "optional": "optional",
+                 "required": "required", "true": "required", "on": "required"}
+        for raw, expected in cases.items():
+            with self.subTest(raw=raw), tempfile.TemporaryDirectory() as tmp:
+                os.makedirs(os.path.join(tmp, ".claude"))
+                with open(os.path.join(tmp, ".claude", "alfred-dev.local.md"), "w", encoding="utf-8") as fh:
+                    fh.write(f"---\npr_loop:\n  greptile: {raw}\n---\n")
+                self.assertEqual(greptile_mode(tmp), expected)
 
     def test_pr_status_reads_mode_from_config_and_skips_cli(self):
         github = _github(reviews=[_claude_review()])
