@@ -11,6 +11,7 @@
 
 ### Changed
 
+- **Greptile в PR-цикле необязателен.** Новая настройка `pr_loop.greptile`: `required`, `optional` (по умолчанию) или `off`. В режиме `optional` текущая оценка Greptile проверяется, если она есть, а без неё достаточно ревью Claude Code. Greptile CLI в этом режиме не вызывается.
 - **Основная ветка `main`.** Ветка `ru` переименована в `main`. Установщики и README ссылаются на `main`.
 - **CI по стандарту репозиториев.** `ci.yml` вместо `test.yml`: lint (ShellCheck, actionlint, zizmor), тесты и аудит релиза на Python 3.15, установка плагина на трёх ОС и анализ SonarCloud. Actions закреплены по SHA.
 
