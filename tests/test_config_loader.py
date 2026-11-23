@@ -60,9 +60,7 @@ class TestLoadConfig(unittest.TestCase):
                 "delivery": "autonomous",
             },
         )
-        self.assertEqual(config["personality"]["sarcasm_level"], 3)
-        self.assertTrue(config["personality"]["celebrate_wins"])
-        self.assertTrue(config["personality"]["call_out_bad_practices"])
+        self.assertEqual(config["personality"], {"verbosity": "normal", "language": "ru"})
         self.assertEqual(config["memory"]["sync_commits_limit"], 10)
         self.assertFalse(config["memory"]["enabled"])
 
@@ -106,11 +104,11 @@ class TestLoadConfig(unittest.TestCase):
 
     def test_parses_frontmatter_after_leading_blank_lines(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
-            f.write("\n\n---\npersonality:\n  sarcasm_level: 4\n---\n")
+            f.write("\n\n---\npersonality:\n  verbosity: high\n---\n")
             f.flush()
             config = load_config(f.name)
         os.unlink(f.name)
-        self.assertEqual(config["personality"]["sarcasm_level"], 4)
+        self.assertEqual(config["personality"]["verbosity"], "high")
 
     def test_load_project_config_applies_detected_stack_by_default(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -165,10 +163,10 @@ class TestLoadConfig(unittest.TestCase):
         config["optional_agents"]["cto"] = False
         self.assertIsNone(build_session_team_from_config(config))
 
-    def test_build_session_team_from_config_enables_cto_by_default(self):
+    def test_build_session_team_from_config_keeps_cto_off_by_default(self):
         config = load_config("/path/that/does/not/exist")
-        team = build_session_team_from_config(config)
-        self.assertTrue(team["active_optionals"]["cto"])
+        self.assertFalse(config["optional_agents"]["cto"])
+        self.assertIsNone(build_session_team_from_config(config))
 
     def test_build_session_team_from_config_preserves_catalog_and_memory(self):
         config = load_config("/path/that/does/not/exist")
@@ -442,7 +440,7 @@ class TestLoadConfig(unittest.TestCase):
                 "bundler": "vite",
             },
             "optional_agents": {
-                "cto": False,
+                "cto": True,
             },
             "memory": {
                 "enabled": True,
@@ -460,10 +458,8 @@ class TestLoadConfig(unittest.TestCase):
                 "deploy": True,
             },
             "personality": {
-                "sarcasm_level": 1,
-                "verbosity": "alta",
-                "language": "es-ES",
-                "celebrate_wins": False,
+                "verbosity": "high",
+                "language": "en",
             },
         }
 
@@ -772,7 +768,7 @@ class TestOptionalAgents(unittest.TestCase):
         self.assertIn("optional_agents", DEFAULT_CONFIG)
         agents = DEFAULT_CONFIG["optional_agents"]
         self.assertEqual(set(agents.keys()), {"cto"})
-        self.assertTrue(agents["cto"])
+        self.assertFalse(agents["cto"])
 
     def test_optional_agent_catalog_keeps_group_distribution(self):
         grouped = get_optional_agents_by_group()

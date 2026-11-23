@@ -1,46 +1,47 @@
 ---
 name: evaluate-dependency
-description: "Использовать перед принятием новой зависимости. Также: аудит пакета, лицензия, CVE, транзитивные зависимости, размер bundle, npm install, pip, cargo add."
+description: "Use before adopting a new dependency: package audit, license, CVE, transitive dependencies, bundle size, npm install, pip, cargo add. Triggers: аудит пакета, лицензия, транзитивные зависимости, размер bundle, новая зависимость."
 ---
 
-# Оценка зависимости
+# Dependency evaluation
 
-## Резюме
+Communicate with the user in Russian.
 
-Перед добавлением пакета оцени его и оставь вердикт в
-`docs/project/dependencies.md`. Helper может создать скелет; строку
-пишешь ты.
+## Summary
 
-## Процесс
+Before you add a package, evaluate it and record the verdict in
+`docs/project/dependencies.md`. The helper can create a scaffold; you write the row.
 
-1. Убедись, что пакета ещё нет в реестре.
+## Process
 
-2. Собери проверяемые данные (lockfile, реестр, advisory):
+1. Make sure the package is not in the registry yet.
 
-   - имя и точная версия
-   - примерный вес или влияние на bundle
-   - последний релиз и поддержка
-   - лицензия и совместимость с проектом
-   - известные CVE или «не найдено» (с источником)
-   - число транзитивных зависимостей
-   - более лёгкая или нативная альтернатива
+2. Collect verifiable data (lockfile, registry, advisory):
 
-3. Вердикт: `APROBAR`, `RECHAZAR` или `APROBAR CON CONDICIONES`.
+   - name and exact version
+   - approximate weight or bundle impact
+   - last release and maintenance
+   - license and compatibility with the project
+   - known CVEs or «не найдено» (with source)
+   - number of transitive dependencies
+   - a lighter or native alternative
 
-4. Добавь или обнови строку в `docs/project/dependencies.md`. Если файл был
-   скелетом и уже есть реальная оценка, замени
-   `<!-- alfred-doc:scaffold -->` на `<!-- alfred-doc:filled -->`.
+3. Verdict: `ОДОБРИТЬ`, `ОТКЛОНИТЬ` or `ОДОБРИТЬ С УСЛОВИЯМИ`.
 
-5. Если вердикт не `APROBAR`, не устанавливай пакет. Предложи альтернативу.
+4. Add or update the row in `docs/project/dependencies.md`. If the file was a
+   scaffold and now has a real evaluation, replace
+   `<!-- alfred-doc:scaffold -->` with `<!-- alfred-doc:filled -->`.
 
-## Критерии успеха
+5. If the verdict is not `ОДОБРИТЬ`, do not install the package. Suggest an alternative.
 
-- Строка существует с версией, лицензией и вердиктом.
-- CVE «не применимо» сопровождается технической фразой, а не предположением.
-- Реестр живёт в репозитории, а не только в чате.
+## Success criteria
 
-## Чего НЕ делать
+- The row exists with version, license and verdict.
+- A CVE "not applicable" comes with a technical reason, not a guess.
+- The registry lives in the repository, not only in the chat.
 
-- Не оценивай по памяти, не заглянув в lockfile или манифест.
-- Не одобряй зависимость по принципу «мы все её уже используем» без данных.
-- Не оставляй лицензии неизвестными, не сказав об этом.
+## Do NOT
+
+- Do not evaluate from memory without checking the lockfile or manifest.
+- Do not approve a dependency on "we all use it already" without data.
+- Do not leave licenses unknown without saying so.

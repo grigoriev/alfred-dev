@@ -1,52 +1,54 @@
 ---
 name: sync-project-docs
-description: "Использовать для синхронизации живой документации проекта после фазы. Также: обновить docs/project, индекс, architecture.md, compliance.md, threat-model."
+description: "Use to sync living project documentation after a phase: update docs/project, the index, architecture.md, compliance.md, threat-model. Triggers: обновить docs/project, синхронизировать документацию, индекс, живая документация."
 ---
 
-# Синхронизация живой документации
+# Living documentation sync
 
-## Резюме
+Communicate with the user in Russian.
 
-После фазы обновляй только то, что изменилось. Helper создаёт скелеты
-и проверяет gate. Содержимое пишешь ты.
+## Summary
 
-## Процесс
+After a phase, update only what changed. The helper creates scaffolds
+and checks the gate. You write the content.
 
-1. Скелет и индекс:
+## Process
+
+1. Scaffold and index:
 
    ```bash
    python3 .claude/alfred-continuity.py sync-project-docs "$PWD"
    ```
 
-2. Прочитай `docs/project/README.md` и протокол `commands/_living_docs.md`.
+2. Read `docs/project/README.md` and the protocol `commands/_living_docs.md`.
 
-3. Обновляй только файлы этой фазы. Если нового API не было, не
-   трогай руководство по API. Если решения не было, не выдумывай ADR.
+3. Update only this phase's files. If there was no new API, do not
+   touch the API guide. If there was no decision, do not invent an ADR.
 
-4. Когда в скелете появилось реальное содержимое, оставь `<!-- alfred-doc:filled -->`
-   и убери `<!-- alfred-doc:scaffold -->`.
+4. When a scaffold gets real content, leave `<!-- alfred-doc:filled -->`
+   and remove `<!-- alfred-doc:scaffold -->`.
 
-5. Проверь gate:
+5. Check the gate:
 
    ```bash
    python3 .claude/alfred-continuity.py check-project-docs "$PWD" --command <команда> --phase <фаза>
    ```
 
-6. Если helper падает, не объявляй фазу закрытой.
+6. If the helper fails, do not declare the phase closed.
 
-## В quick и fix
+## In quick and fix
 
-Минимальная синхронизация: индекс + `docs/project/current.md`. ADR только если изменение сдвигает
-границу (auth, хранение данных, интеграция).
+Minimal sync: index + `docs/project/current.md`. ADR only if the change moves
+a boundary (auth, data storage, integration).
 
-## Критерии успеха
+## Success criteria
 
-- Индекс отражает реальное состояние (`scaffold` или `filled`).
-- Нет выдуманного текста о коде, которого не касались.
-- `check-project-docs` завершается с кодом 0 до закрытия gate.
+- The index reflects the real state (`scaffold` or `filled`).
+- No invented text about code you did not touch.
+- `check-project-docs` exits with code 0 before the gate closes.
 
-## Чего НЕ делать
+## Do NOT
 
-- Не переписывай весь `docs/` в каждой фазе.
-- Не копируй чат в Markdown.
-- Не ставь `filled`, пока остаются `_(заполнить)_`.
+- Do not rewrite all of `docs/` in every phase.
+- Do not copy the chat into Markdown.
+- Do not set `filled` while `_(заполнить)_` remains.

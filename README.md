@@ -177,7 +177,7 @@ irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/uninstall.ps1 | ie
 
 ## Новое в v0.7.0
 
-Сокращение под SDK Claude Code: 10 агентов (`inherit`), 11 плоских skills, 19 опубликованных команд. Точка входа: `/alfred-dev:alfred`. Публичная непрерывность: `alfred`, `progress` и `resume`. Без глобального алиаса `/alfred`, без stop-hook Ralph и без перезаписи `settings.json`. Сервер памяти использует современный MCP stdio и запускает `mcp/memory_server.py` с FastMCP, если установлен пакет `mcp`. Secret-guard покрывает Write, Edit, Bash и MCP-инструменты записи. Agent Teams только если пользователь уже включил их. Живой аудит: [docs/release.md](docs/release.md). История 0.6.x: [changelog](CHANGELOG.md).
+Сокращение под SDK Claude Code: 10 агентов (`opus`), 11 плоских skills, 19 опубликованных команд. Точка входа: `/alfred-dev:alfred`. Публичная непрерывность: `alfred`, `progress` и `resume`. Без глобального алиаса `/alfred`, без stop-hook Ralph и без перезаписи `settings.json`. Сервер памяти использует современный MCP stdio и запускает `mcp/memory_server.py` с FastMCP, если установлен пакет `mcp`. Secret-guard покрывает Write, Edit, Bash и MCP-инструменты записи. Agent Teams только если пользователь уже включил их. Живой аудит: [docs/release.md](docs/release.md). История 0.6.x: [changelog](CHANGELOG.md).
 
 ## Команды
 
@@ -240,21 +240,21 @@ Alfred запускает процесс до 7 фаз:
 
 | Агент | Роль | Модель | Ответственность |
 |-------|------|--------|-----------------|
-| **Alfred** | Оркестратор | inherit | Координирует процессы, активирует агентов, оценивает gates между фазами |
-| **Product Owner** | Продукт | inherit | PRD, пользовательские истории, критерии приёмки, конкурентный анализ |
-| **Designer** | Визуальное направление | inherit | Три варианта в браузере, артефакт `docs/style-direction.md`, gate стиля |
-| **Architect** | Архитектура | inherit | Проектирование систем, ADR, диаграммы Mermaid, матрицы решений |
-| **Senior Dev** | Разработка | inherit | Реализация по TDD, рефакторинг, атомарные коммиты |
-| **Security Officer** | Безопасность | inherit | OWASP Top 10, threat modeling STRIDE, SBOM, compliance GDPR (RGPD)/NIS2/CRA |
-| **QA Engineer** | Качество | inherit | Test plans, code review, исследовательское тестирование, интеграция, E2E, регрессия |
-| **DevOps Engineer** | Поставка | inherit | Docker multi-stage, CI/CD, deploy, monitoring, observability |
-| **Tech Writer** | Документация | inherit | Короткий sync по фазе (заголовки, docstrings, `docs/project/`); в фазе документации: API docs, архитектура, руководства, changelogs |
+| **Alfred** | Оркестратор | opus, effort high | Координирует процессы, активирует агентов, оценивает gates между фазами |
+| **Product Owner** | Продукт | opus | PRD, пользовательские истории, критерии приёмки, конкурентный анализ |
+| **Designer** | Визуальное направление | opus | Три варианта в браузере, артефакт `docs/style-direction.md`, gate стиля |
+| **Architect** | Архитектура | opus, effort high | Проектирование систем, ADR, диаграммы Mermaid, матрицы решений |
+| **Senior Dev** | Разработка | opus | Реализация по TDD, рефакторинг, атомарные коммиты |
+| **Security Officer** | Безопасность | opus, effort high | OWASP Top 10, threat modeling STRIDE, SBOM, compliance GDPR (RGPD)/NIS2/CRA |
+| **QA Engineer** | Качество | opus, effort high | Test plans, code review, исследовательское тестирование, интеграция, E2E, регрессия |
+| **DevOps Engineer** | Поставка | opus | Docker multi-stage, CI/CD, deploy, monitoring, observability |
+| **Tech Writer** | Документация | opus | Короткий sync по фазе (заголовки, docstrings, `docs/project/`); в фазе документации: API docs, архитектура, руководства, changelogs |
 
-Все 10 агентов объявляют `model: inherit` и используют модель сессии. Designer занимает условную фазу между продуктом и архитектурой. Активируется только если `has_frontend(stack)` истинно.
+Все 10 агентов объявляют `model: opus`. Оркестратор и проверяющие (Alfred, Architect, QA Engineer, Security Officer) дополнительно объявляют `effort: high`. Designer занимает условную фазу между продуктом и архитектурой. Активируется только если `has_frontend(stack)` истинно.
 
 ### Опциональный агент (CTO)
 
-Единственный опциональный агент рантайма: **CTO**, внешнее ревью готовой фичи через Greptile CLI. Он включён по умолчанию, но в процессах работает только на закрытии качества `feature` и на финальном аудите `ship`. В `quick`, `fix`, `spike` и `audit` он не участвует. `/alfred-dev:cto` запускает ревью вручную в любой момент. Выключить CTO можно через `/alfred-dev:config`. Нужны Greptile CLI, вход через `greptile login` и подключённый репозиторий. Нет data-engineer, ux-reviewer, github-manager и остального каталога 0.6. Подробнее в [документации по конфигурации](docs/configuration.md#динамический-состав-команды).
+Единственный опциональный агент рантайма: **CTO**, внешнее ревью готовой фичи через Greptile CLI. Он выключен по умолчанию. Если его включить, в процессах он работает только на закрытии качества `feature` и на финальном аудите `ship`. В `quick`, `fix`, `spike` и `audit` он не участвует. `/alfred-dev:cto` запускает ревью вручную в любой момент. Включить CTO можно через `/alfred-dev:config`. PR-цикл запускает ревью Greptile и без него. Нужны Greptile CLI, вход через `greptile login` и подключённый репозиторий. Нет data-engineer, ux-reviewer, github-manager и остального каталога 0.6. Подробнее в [документации по конфигурации](docs/configuration.md#динамический-состав-команды).
 
 ### Skills (11)
 
@@ -316,7 +316,6 @@ Skills с побочными эффектами (`style-direction`, `sonarqube`,
 | Семейство | Основные модули | Функция |
 |-----------|-----------------|---------|
 | Оркестрация | `orchestrator.py` | Конечный автомат 6 процессов, сессии, gates, autopilot, итеративный цикл |
-| Личность | `personality.py` | Фразы, тон, анонсы и формат вердикта |
 | Конфигурация | `config_loader.py`, `optional_agents.py`, `config_cli.py` | Загрузка конфига, определение стека, меню `/alfred-dev:config` и CTO |
 | Непрерывность | `continuity.py`, `session_report.py`, `session_brief.py`, `hygiene.py` | Хелперы, пауза/возобновление, брифинг, гигиена ship и UAT |
 | Живые доки | `project_docs.py` | Каркас и проверка `docs/project/` и `docs/adr/` |
@@ -438,7 +437,7 @@ autonomy:
   delivery: autonomous
 
 optional_agents:
-  cto: true
+  cto: false
 
 memory:
   enabled: true
@@ -449,11 +448,8 @@ memory:
   retention_days: 365
 
 personality:
-  sarcasm_level: 3
   verbosity: normal
   language: ru
-  celebrate_wins: true
-  call_out_bad_practices: true
 ---
 
 Дополнительные заметки по проекту, которые Alfred должен учитывать.

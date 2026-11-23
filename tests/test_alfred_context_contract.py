@@ -31,17 +31,17 @@ class TestAlfredContextContract(unittest.TestCase):
         self.assertIn('python3 .claude/alfred-continuity.py next "$PWD" --json', self.command)
 
     def test_routes_to_operational_commands_first(self):
-        self.assertIn("действуй как `/alfred-dev:resume`", self.command)
-        self.assertIn("действуй как `/alfred-dev:pause`", self.command)
-        self.assertIn("действуй как `/alfred-dev:progress`", self.command)
-        self.assertIn("действуй как `/alfred-dev:uat`", self.command)
-        self.assertIn("действуй как `/alfred-dev:update`", self.command)
-        self.assertIn("действуй как `/alfred-dev:cto`", self.command)
-        self.assertIn("действуй как `/alfred-dev:discuss`", self.command)
-        self.assertIn("действуй как `/alfred-dev:quick`", self.command)
-        self.assertIn("действуй как `/alfred-dev:map-codebase`", self.command)
-        self.assertIn("также отдавай приоритет", self.command)
-        self.assertIn("не запускал мультиагентную команду «вслепую»", self.command)
+        self.assertIn("act as `/alfred-dev:resume`", self.command)
+        self.assertIn("act as `/alfred-dev:pause`", self.command)
+        self.assertIn("act as `/alfred-dev:progress`", self.command)
+        self.assertIn("act as `/alfred-dev:uat`", self.command)
+        self.assertIn("act as `/alfred-dev:update`", self.command)
+        self.assertIn("act as `/alfred-dev:cto`", self.command)
+        self.assertIn("act as `/alfred-dev:discuss`", self.command)
+        self.assertIn("act as `/alfred-dev:quick`", self.command)
+        self.assertIn("act as `/alfred-dev:map-codebase`", self.command)
+        self.assertIn("also give priority", self.command)
+        self.assertIn("does not start a multi-agent team \"blind\"", self.command)
 
     def test_routes_new_work_to_core_flows(self):
         self.assertIn("/alfred-dev:feature", self.command)
@@ -54,15 +54,15 @@ class TestAlfredContextContract(unittest.TestCase):
         self.assertIn("/alfred-dev:ship", self.command)
         self.assertIn("/alfred-dev:cto", self.command)
         self.assertIn("/alfred-dev:update", self.command)
-        self.assertIn("НЕ оставляй это немым перенаправлением", self.command)
-        self.assertIn("НЕ повторяй `Bash`", self.command)
+        self.assertIn("do NOT leave it as a silent redirect", self.command)
+        self.assertIn("do NOT retry `Bash`", self.command)
 
     def test_avoids_old_command_prefix_and_default_menu(self):
-        self.assertIn("НЕ используй старые названия плагина без префикса `-dev`", self.command)
+        self.assertIn("Do NOT use old plugin names without the `-dev` prefix", self.command)
         self.assertNotIn("`/alfred feature`", self.command)
-        self.assertIn("НЕ предлагай общее меню, если следующий шаг очевиден", self.command)
+        self.assertIn("Do NOT offer a general menu if the next step is obvious", self.command)
         self.assertIn("AskUserQuestion", self.command)
-        self.assertIn("настоящим выбираемым меню", self.command)
+        self.assertIn("a real selectable menu", self.command)
 
 
 if __name__ == "__main__":

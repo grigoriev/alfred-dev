@@ -7,48 +7,48 @@ allowed-tools: Bash(python3 .claude/alfred-continuity.py *), Bash(gh *), Read, W
 
 # /alfred-dev:sync-github
 
-Ты Alfred. Твоя задача здесь: выполнить **SonIA Sync**, то есть опубликовать
-операционное состояние SonIA в GitHub Issues, не потеряв локальный источник
-истины проекта.
+Communicate with the user in Russian.
 
-Необязательный репозиторий: $ARGUMENTS
+You are Alfred. Your task here: run **SonIA Sync**, that is, publish the SonIA operational state to GitHub Issues without losing the project's local source of truth.
 
-## Цель
+Optional repository: $ARGUMENTS
 
-Синхронизировать задачи локального kanban с GitHub и обновить:
+## Goal
+
+Sync the local kanban tasks with GitHub and update:
 
 - `.claude/alfred-github-sync.json`
 - `docs/project/github-sync.md`
 
-## Протокол
+## Protocol
 
-Немедленно выполни детерминированный helper:
+Run the deterministic helper immediately:
 
 ```bash
 python3 .claude/alfred-continuity.py sync-github "$PWD" --raw "$ARGUMENTS"
 ```
 
-Если helper возвращает валидный вывод:
+If the helper returns valid output:
 
-- используй его как итоговый ответ и закончи;
-- считай, что он уже записал `.claude/alfred-github-sync.json` и `docs/project/github-sync.md`;
-- допускай, что он также мог убрать ранее синхронизированные issues Alfred, если их больше нет в локальной SonIA;
-- оставляй видимыми `focus`, `source`, `command`, `directive` и `reason`, если helper их показывает;
-- в `claude -p` или headless-аудите держи завершение короче 12 строк;
-- не добавляй блоки `Insight`, таблицы, педагогические объяснения или дополнительное чтение;
-- не продолжай исследование, не повторяй sync вручную и не добавляй второе повествование поверх сводки helper-а.
+- use it as the final answer and end;
+- treat it as having already written `.claude/alfred-github-sync.json` and `docs/project/github-sync.md`;
+- assume it may also have removed previously synced Alfred issues that no longer exist in the local SonIA;
+- keep `focus`, `source`, `command`, `directive` and `reason` visible if the helper shows them;
+- in `claude -p` or a headless audit, keep the ending shorter than 12 lines;
+- do not add `Insight` blocks, tables, teaching explanations or extra reading;
+- do not continue the research, do not repeat the sync by hand and do not add a second narrative on top of the helper summary.
 
-Только если helper падает или `gh` не готов, переходи в ручной режим. В ручном:
+Only if the helper fails or `gh` is not ready, switch to manual mode. In manual mode:
 
-1. проверь `gh --version` и `gh auth status`;
-2. определи репозиторий по `origin` или используй `$ARGUMENTS`, если там `owner/repo`;
-3. прочитай `docs/project/kanban/backlog.md`, `in-progress.md`, `done.md`, `blocked.md`;
-4. используй GitHub Issues как совместное зеркало SonIA Sync, а не как основной источник истины.
+1. check `gh --version` and `gh auth status`;
+2. determine the repository from `origin`, or use `$ARGUMENTS` if it contains `owner/repo`;
+3. read `docs/project/kanban/backlog.md`, `in-progress.md`, `done.md`, `blocked.md`;
+4. use GitHub Issues as the shared SonIA Sync mirror, not as the main source of truth.
 
-## Правила
+## Rules
 
-- НЕ используй `AskUserQuestion` по умолчанию.
-- Если нет `gh` или аутентификации, сообщи об этом ясно и не имитируй sync.
-- Не удаляй issues, не относящиеся к Alfred.
-- Если задачи Alfred больше нет на локальной доске, удалённое зеркало должно убрать или закрыть её, не трогая чужие issues.
-- Сохраняй локальную истину в `docs/project/` и `.claude/`.
+- DO NOT use `AskUserQuestion` by default.
+- If `gh` or authentication is missing, report it clearly and do not simulate a sync.
+- Do not delete issues that do not belong to Alfred.
+- If an Alfred task is no longer on the local board, the remote mirror must remove or close it without touching other issues.
+- Keep the local truth in `docs/project/` and `.claude/`.

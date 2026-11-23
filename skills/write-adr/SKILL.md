@@ -1,53 +1,55 @@
 ---
 name: write-adr
-description: "Использовать для написания или закрытия Architecture Decision Record. Также: ADR, docs/adr, решение по стеку, хранению данных, аутентификации или границам архитектуры."
+description: "Use to write or close an Architecture Decision Record: ADR, docs/adr, a decision on stack, data storage, authentication or architecture boundaries. Triggers: ADR, записать решение, решение по стеку, хранению данных, аутентификации, границам архитектуры."
 ---
 
-# Написание ADR
+# Writing an ADR
 
-## Резюме
+Communicate with the user in Russian.
 
-Документирует значимое архитектурное решение в `docs/adr/`. ADR это не
-дневник: он пишется только при реальном выборе (стек, хранение данных,
-auth, границы, интеграция).
+## Summary
 
-## Процесс
+Documents a significant architecture decision in `docs/adr/`. An ADR is not a
+diary. Write one only for a real choice (stack, data storage,
+auth, boundaries, integration).
 
-1. Создай скелет через helper. Не придумывай номер вручную:
+## Process
+
+1. Create the scaffold with the helper. Do not pick the number by hand:
 
    ```bash
    python3 .claude/alfred-continuity.py next-adr "$PWD" --title "Короткий заголовок"
    ```
 
-2. Прочитай `templates/adr.md`, если он есть, и только что созданный файл.
+2. Read `templates/adr.md` if it exists, and the file you just created.
 
-3. Заполни фактами из репозитория:
+3. Fill it with facts from the repository:
 
-   - контекст и ограничения
-   - минимум два реальных варианта, с плюсами и минусами
-   - решение и почему
-   - последствия и принятый долг
+   - context and constraints
+   - at least two real options, with pros and cons
+   - the decision and why
+   - consequences and accepted debt
 
-4. Начальный статус: `proposed`, пока пользователь или gate архитектуры
-   его не примут. Тогда `accepted`. Если позже решение изменится, создай новый ADR,
-   ссылающийся на прежний; старый не переписывай.
+4. Initial status: `proposed`, until the user or the architecture gate
+   accepts it. Then `accepted`. If the decision changes later, create a new ADR
+   that references the old one; do not rewrite the old one.
 
-5. Замени `<!-- alfred-doc:scaffold -->` на `<!-- alfred-doc:filled -->`.
+5. Replace `<!-- alfred-doc:scaffold -->` with `<!-- alfred-doc:filled -->`.
 
-6. Выполни `sync-project-docs`, чтобы обновить индекс.
+6. Run `sync-project-docs` to update the index.
 
-7. Если решение касается дизайна, зарегистрируй его также через `memory_log_decision`.
-   Память не заменяет ADR.
+7. If the decision concerns design, also record it with `memory_log_decision`.
+   Memory does not replace the ADR.
 
-## Критерии успеха
+## Success criteria
 
-- Файл находится в `docs/adr/ADR-NNN-....md`.
-- Оценено минимум два варианта.
-- Решение и его последствия можно прочитать без чата.
-- Маркер: `filled`.
+- The file is at `docs/adr/ADR-NNN-....md`.
+- At least two options are evaluated.
+- The decision and its consequences are readable without the chat.
+- Marker: `filled`.
 
-## Чего НЕ делать
+## Do NOT
 
-- Не открывай ADR из-за переименования или локальной правки в `quick`.
-- Не оставляй `_(заполнить)_` в ADR, который объявляешь закрытым.
-- Не копируй типовой ADR, в котором не упоминается репозиторий.
+- Do not open an ADR for a rename or a local edit in `quick`.
+- Do not leave `_(заполнить)_` in an ADR you declare closed.
+- Do not copy a generic ADR that does not mention the repository.

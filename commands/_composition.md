@@ -2,21 +2,19 @@
 description: "Внутренний общий протокол динамического формирования команды Alfred по задаче, стеку и runtime-сигналам."
 ---
 
-# Протокол динамического формирования команды
+# Dynamic team composition protocol
 
-Этот файл определяет общий протокол формирования команды для каждой сессии.
-Его используют все команды Alfred (feature, quick, fix, spike, audit, ship). Любое
-изменение здесь отражается во всех процессах.
+Communicate with the user in Russian.
 
-## Шаг 0 -- Начальная настройка проекта
+This file defines the shared team composition protocol for each session. All Alfred commands use it (feature, quick, fix, spike, audit, ship). Any change here affects all flows.
 
-Прежде всего проверь, настроен ли в проекте режим автономности. Прочитай
-`.claude/alfred-dev.local.md` и найди секцию `autonomy:` во frontmatter YAML.
+## Step 0 -- Initial project setup
 
-**Если секции `autonomy:` НЕТ** (Alfred используется в этом проекте впервые):
+First check if the project has an autonomy mode configured. Read `.claude/alfred-dev.local.md` and find the `autonomy:` section in the YAML frontmatter.
 
-1. Напрямую запиши конфигурацию по умолчанию, совместимую с Claude Code
-   CLI, в `.claude/alfred-dev.local.md`:
+**If there is NO `autonomy:` section** (first use of Alfred in this project):
+
+1. Write the default configuration, compatible with Claude Code CLI, directly to `.claude/alfred-dev.local.md`:
 
    ```yaml
    autonomy:
@@ -28,117 +26,81 @@ description: "Внутренний общий протокол динамиче�
      delivery: autonomous
    ```
 
-2. НЕ используй `AskUserQuestion` в этом начальном bootstrap. Цель в том, чтобы
-   Alfred мог действовать автоматически с первой сессии, если пользователь
-   вызовет `/alfred`, `/alfred-dev:feature`, `/alfred-dev:quick`, `/alfred-dev:fix`,
-   `/alfred-dev:spike`, `/alfred-dev:audit` или `/alfred-dev:ship`.
+2. Do NOT use `AskUserQuestion` in this initial bootstrap. The goal is that Alfred can act automatically from the first session if the user calls `/alfred`, `/alfred-dev:feature`, `/alfred-dev:quick`, `/alfred-dev:fix`, `/alfred-dev:spike`, `/alfred-dev:audit` or `/alfred-dev:ship`.
 
-3. Покажи короткое сообщение: Alfred включил режим autopilot по умолчанию,
-   чтобы не блокировать процесс в первой сессии, а пользователь может изменить
-   его позже через `/alfred-dev:config`.
+3. Show a short message: Alfred enabled autopilot mode by default so the flow does not block in the first session, and the user can change it later with `/alfred-dev:config`.
 
-**Если секция `autonomy:` УЖЕ существует:** пропусти этот шаг и сразу продолжай.
+**If the `autonomy:` section ALREADY exists:** skip this step and continue.
 
-**Примечание:** пользователь может сменить режим в любой момент через `/alfred-dev:config`.
+**Note:** the user can change the mode at any time with `/alfred-dev:config`.
 
-## Шаг 1 -- Контекст проекта
+## Step 1 -- Project context
 
-Вызови `suggest_optional_agents(project_dir)`, чтобы получить сигналы на основе I/O
-проекта (обнаруженный стек, наличие ORM, фронтенд, публичный HTML, remote GitHub,
-размер проекта, активная память). Эти сигналы объективны и дополняют твоё
-семантическое рассуждение.
+Call `suggest_optional_agents(project_dir)` to get signals from project I/O (detected stack, ORM, frontend, public HTML, GitHub remote, project size, active memory). These signals are objective and complement your semantic reasoning.
 
-## Шаг 2 -- Семантическое рассуждение
+## Step 2 -- Semantic reasoning
 
-Прочитай описание задачи и сигналы проекта. Реши, какие опциональные агенты
-релевантны, опираясь на семантическое понимание, а не на ключевые слова. Рассуждай
-о предметной области задачи, а не об отдельных словах.
+Read the task description and the project signals. Decide which optional agents are relevant from semantic understanding, not keywords. Reason about the task domain, not individual words.
 
-### Каталог опциональных агентов
+### Optional agent catalog
 
-Runtime поддерживает только **CTO**. Не предлагай и не активируй data-engineer,
-performance-engineer, github-manager, librarian, ux-reviewer, seo-specialist,
-copywriter и i18n-specialist.
+The runtime supports only **CTO**. Do not offer or activate data-engineer, performance-engineer, github-manager, librarian, ux-reviewer, seo-specialist, copywriter and i18n-specialist.
 
-| Агент | Специализация | Когда полезен |
+| Agent | Specialization | When useful |
 |-------|---------------|---------------|
-| **cto** | Внешнее ревью готовой фичи через Greptile CLI, только чтение. Включён по умолчанию | Только закрытие качества `feature` (`quality`) и финальный аудит `ship` (`final_audit`) |
+| **cto** | External review of a finished feature through Greptile CLI, read only. Off by default | Only the `feature` quality closure (`quality`) and the `ship` final audit (`final_audit`) |
 
-### Критерии решения
+### Decision criteria
 
-Задай себе один вопрос: **эта задача закрывает полностью готовую фичу в `feature`
-или `ship`?** Если нет, никого больше не активируй. Ядро покрывает
-продукт, дизайн, код, безопасность, QA, документацию и поставку.
+Ask yourself one question: **does this task close a fully finished feature in `feature` or `ship`?** If not, activate nobody else. The core covers product, design, code, security, QA, documentation and delivery.
 
-## Шаг 2b -- Проверка autopilot
+## Step 2b -- Autopilot check
 
-Прежде чем задавать вопросы пользователю, проверь, активен ли режим autopilot:
+Before you ask the user anything, check if autopilot mode is active:
 
-1. Прочитай `.claude/alfred-dev.local.md` и проверь, что все фазы автономности имеют значение `autonomous`.
-2. Прочитай `.claude/alfred-dev-state.json` и проверь, есть ли `"autopilot": true`.
+1. Read `.claude/alfred-dev.local.md` and check that all autonomy phases are `autonomous`.
+2. Read `.claude/alfred-dev-state.json` and check for `"autopilot": true`.
 
-**Если команда `quick`, `fix`, `spike` или `audit`:** переходи к шагу 4. Не спрашивай про CTO и не открывай меню опциональных агентов. Ядра достаточно. CTO не участвует в фазах этих процессов, даже если он включён. Если пользователь хочет внешнее ревью, предложи `/alfred-dev:cto` как отдельный шаг.
+**If the command is `quick`, `fix`, `spike` or `audit`:** go to step 4. Do not ask about CTO and do not open the optional agents menu. The core is enough. CTO does not take part in the phases of these flows, even if it is on. If the user wants an external review, offer `/alfred-dev:cto` as a separate step.
 
-**Если autopilot активен:** переходи сразу к шагу 4. Используй опциональных агентов, настроенных в `.claude/alfred-dev.local.md` (если они есть), или тех, кого твоё семантическое рассуждение (шаг 2) отметило как релевантных. Не используй `AskUserQuestion`. Покажи короткое сообщение о том, какие агенты активируются и почему.
+**If autopilot is active:** go directly to step 4. Use the optional agents configured in `.claude/alfred-dev.local.md` (if any), or those your semantic reasoning (step 2) marked as relevant. Do not use `AskUserQuestion`. Show a short message about which agents are activated and why.
 
-**Если autopilot НЕ активен:** продолжай с шага 3 (интерактивное представление пользователю).
+**If autopilot is NOT active:** continue with step 3 (interactive presentation to the user).
 
-## Шаг 2c -- Проверка подтверждения перед автоматическими gate
+## Step 2c -- Evidence check before automatic gates
 
-Прежде чем продвигать фазу с автоматическим gate или автоматическим+безопасность,
-прочитай `.claude/alfred-evidence.json` и проверь, что последняя запись имеет
-`result: "pass"` и timestamp за последние 10 минут. Если подтверждения нет
-или последний результат не `pass`, НЕ продвигайся. Сначала запусти
-тесты.
+Before you advance a phase with an automatic or automatic+security gate, read `.claude/alfred-evidence.json` and check that the last entry has `result: "pass"` and a timestamp within the last 10 minutes. If there is no evidence or the last result is not `pass`, do NOT advance. Run the tests first.
 
-## Шаг 2d -- Сохранение состояния после gate
+## Step 2d -- Save state after a gate
 
-После каждой попытки пройти gate (успешной или нет) сохрани обновлённое
-состояние в `.claude/alfred-dev-state.json`. Это включает счётчик
-итераций текущей фазы.
+After each attempt to pass a gate (successful or not), save the updated state to `.claude/alfred-dev-state.json`. This includes the iteration counter of the current phase.
 
-## Шаг 2e -- Операционная честность и запрет имитации
+## Step 2e -- Operational honesty, no simulation
 
-Прежде чем объявить gate пройденным, тест выполненным, аудит
-завершённым или внешнюю интеграцию проверенной, убедись, что у тебя есть
-прямое подтверждение: вывод инструмента, сохранённый артефакт или
-явный ответ пользователя.
+Before you declare a gate passed, a test run, an audit finished or an external integration verified, make sure you have direct evidence: tool output, a saved artifact or an explicit user answer.
 
-- Не говори «я выполнил», «прошло» или «проверено», если ты только предположил это.
-- Если helper, команда, агент или внешний сервис падает, скажи об этом с
-  соответствующей ошибкой и оставь следующий шаг проверяемым; не превращай это в успех.
-- Если не хватает учётных данных, прав, Docker, сети или контекста, обозначь предел и
-  оставь процесс в состоянии ожидания или блокировки.
-- Всегда различай «рекомендую выполнить X» и «я выполнил X с таким
-  результатом».
+- Do not say «я выполнил», «прошло» or «проверено» if you only assumed it.
+- If a helper, command, agent or external service fails, say so with the matching error and keep the next step verifiable; do not turn it into success.
+- If credentials, permissions, Docker, network or context are missing, state the limit and leave the flow pending or blocked.
+- Always separate «рекомендую выполнить X» from «я выполнил X с таким результатом».
 
-## Шаг 3 -- Представление пользователю
+## Step 3 -- Presentation to the user
 
-Перед вопросами покажи информационное сообщение:
+Before the questions, show an info message:
 
 > **Базовая команда** (всегда активна): Alfred, Product Owner, Designer, если есть
 > фронтенд, Architect, Senior Dev, Security Officer, QA Engineer, Tech Writer,
 > DevOps. Kanban пишет runtime, а не отдельный агент.
 
-CTO включён по умолчанию. Если в `.claude/alfred-dev.local.md` уже есть
-`optional_agents.cto`, используй это значение и не спрашивай. Иначе считай CTO
-активным для `feature` и `ship`.
+CTO is off by default. If `.claude/alfred-dev.local.md` already has `optional_agents.cto`, use that value and do not ask. Otherwise treat CTO as inactive.
 
-Используй `AskUserQuestion` с **одним меню** группы `Аудит`, только если
-пользователь хочет изменить выбор CTO для этой сессии. Каноничный источник: `core/optional_agents.py`
-(`build_optional_agent_group_menu`). Не придумывай группы Технические или Контент.
+Use `AskUserQuestion` with **one menu** for the `Аудит` group only if the user wants to change the CTO choice for this session. Canonical source: `core/optional_agents.py` (`build_optional_agent_group_menu`). Do not invent Technical or Content groups.
 
-Агенты, которых ты счёл релевантными (шаг 2), должны иметь
-"(Рекомендуется)" в конце label. `description` каждого варианта должна
-объяснять, почему он релевантен для этой конкретной задачи, а не быть общим описанием
-агента.
+Agents you found relevant (step 2) must have "(Рекомендуется)" at the end of the label. The `description` of each option must explain why it is relevant for this specific task, not be a generic agent description.
 
-**ВАЖНО:** не выводи статический список из трёх блоков без реального
-выбора. Каждая группа должна быть выбираемым меню. Если пользователь хочет больше
-одного агента из той же группы, повтори меню и позволь выбирать **по одному за
-взаимодействие**, пока он не выберет `Продолжить без включения`.
+**IMPORTANT:** do not print a static list of three blocks without a real choice. Each group must be a selectable menu. If the user wants more than one agent from the same group, repeat the menu and let the user pick **one per interaction** until they pick `Продолжить без включения`.
 
-Пример одной группы:
+Example of one group:
 
 ```text
 AskUserQuestion({
@@ -156,28 +118,25 @@ AskUserQuestion({
 })
 ```
 
-Если пользователь выбирает агента, добавь его в накопленный выбор и снова
-покажи ту же группу с оставшимися вариантами. Когда он выберет выход из
-группы, переходи к следующей.
+If the user picks an agent, add it to the accumulated choice and show the same group again with the remaining options. When the user picks the group exit, go to the next group.
 
-Для группы аудита минимальное меню должно оставлять видимым вариант:
+For the audit group, the minimal menu must keep this option visible:
 
 ```text
 { label: "CTO", description: "<контекстная причина>" }
 ```
 
-В `description` каждого варианта:
-- Если агент **рекомендован**: объясни, почему он релевантен для этой задачи.
-  Пример: `"Проект использует Prisma, а задача включает миграцию схемы (Рекомендуется)"`.
-- Если **не рекомендован**: используй краткое описание его специализации.
-  Пример: `"Оптимизация позиций в поиске и Core Web Vitals"`.
+In the `description` of each option:
+- If the agent is **recommended**: explain why it is relevant for this task.
+  Example: `"Проект использует Prisma, а задача включает миграцию схемы (Рекомендуется)"`.
+- If **not recommended**: use a short description of its specialization.
+  Example: `"Оптимизация позиций в поиске и Core Web Vitals"`.
 
-Пользователь может выбрать, отменить выбор или добавить любую комбинацию. Решает
-его выбор, независимо от твоих рекомендаций.
+The user can select, deselect or add any combination. The user's choice decides, regardless of your recommendations.
 
-## Шаг 4 -- Построение session_team
+## Step 4 -- Build session_team
 
-По ответу пользователя построй словарь `session_team`:
+From the user's answer, build the `session_team` dictionary:
 
 ```
 session_team = {
@@ -191,6 +150,4 @@ session_team = {
 }
 ```
 
-Передай `session_team` внутри процесса. С этого момента каждая фаза обращается к
-`session_team` вместо постоянной конфигурации, чтобы решить, какие опциональные
-агенты участвуют.
+Pass `session_team` through the flow. From now on each phase uses `session_team` instead of the persistent configuration to decide which optional agents take part.

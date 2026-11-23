@@ -4,92 +4,62 @@ description: "Настраивает Alfred Dev: автономность, пр�
 
 # /alfred-dev:config
 
-Прочитай файл `.claude/alfred-dev.local.md`, если он существует. Если нет, создай его с текущей каноничной конфигурацией плагина.
+Communicate with the user in Russian.
 
-Всегда записывай во frontmatter только каноничные ключи, например `autonomy`. Runtime читает только их.
+Read `.claude/alfred-dev.local.md` if it exists. If not, create it with the current canonical plugin configuration.
 
-## Шаг 0: детерминированный helper
+Write only canonical keys to the frontmatter, for example `autonomy`. The runtime reads only them.
 
-Прежде чем рассуждать или спрашивать, немедленно выполни этот Bash, чтобы загрузить или
-создать конфигурацию, определить стек, собрать 7 секций и сгенерировать
-каноничное меню:
+## Step 0: deterministic helper
+
+Before you reason or ask anything, run this Bash immediately. It loads or creates the configuration, detects the stack, builds the 7 sections and generates the canonical menu:
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/core/config_cli.py" "$PWD" --headless
 ```
 
-Сохрани этот stdout как `CONFIG_SUMMARY`. Если команда падает, потому что
-`CLAUDE_PLUGIN_ROOT` не существует в локальной разработке, повтори один раз с
-`python3 core/config_cli.py "$PWD" --headless`, только если ты находишься в репозитории
-плагина. В режиме headless `CONFIG_SUMMARY` должен содержать буквальный маркер
-`CONFIG_HEADLESS_MENU`.
+Save this stdout as `CONFIG_SUMMARY`. If the command fails because `CLAUDE_PLUGIN_ROOT` does not exist in local development, retry once with `python3 core/config_cli.py "$PWD" --headless`, only if you are in the plugin repository. In headless mode `CONFIG_SUMMARY` must contain the literal marker `CONFIG_HEADLESS_MENU`.
 
-## Неинтерактивный режим / `claude -p`
+## Non-interactive mode / `claude -p`
 
-Если этот вызов выполняется в неинтерактивном/headless режиме
-(`claude -p`, SDK без callback `canUseTool`, автоматизированный аудит или любой
-контекст, где ты не можешь получить выбор пользователя в этом же
-вызове), **не вызывай `AskUserQuestion`**. В этом режиме:
+If this call runs in non-interactive/headless mode (`claude -p`, SDK without a `canUseTool` callback, automated audit, or any context where you cannot get the user's choice in the same call), **do not call `AskUserQuestion`**. In this mode:
 
-1. верни `CONFIG_SUMMARY` как есть, не переписывая его другой таблицей;
-2. не открывай подменю;
-3. не заканчивай открытым вопросом.
+1. return `CONFIG_SUMMARY` as is, do not rewrite it as another table;
+2. do not open submenus;
+3. do not end with an open question.
 
-Не жди бесконечно ответа человека в режиме headless и не открывай подменю
-опциональных агентов или памяти без реального выбора пользователя.
-Если ты вызываешь `AskUserQuestion`, а инструмент возвращается отменённым, без выбора,
-без пригодного ответа или с любым признаком того, что пользователь не смог выбрать,
-считай это режимом headless: верни `CONFIG_SUMMARY` как есть. Не
-превращай эту отмену в открытый вопрос вроде «над какой секцией
-работать?».
+In headless mode, do not wait indefinitely for a human answer. Do not open the optional agents or memory submenus without a real user choice.
+If you call `AskUserQuestion` and the tool returns canceled, with no choice, with no usable answer, or with any sign that the user could not choose, treat it as headless mode: return `CONFIG_SUMMARY` as is. Do not turn this cancellation into an open question such as «над какой секцией работать?».
 
-Покажи пользователю текущую конфигурацию, организованную по секциям:
+Show the user the current configuration by section:
 
-1. **Автономность по фазам** (`interactive` / `semi-autonomous` / `autonomous`): product, architecture, development, quality, documentation, delivery
-2. **Проект** (определён или задан вручную): runtime, язык, framework, ORM, test runner, bundler
-3. **Опциональные агенты**: только CTO
-4. **Постоянная память**: enabled, sync_to_native, sync_commits_limit, capture_decisions, capture_commits, retention_days
+1. **Autonomy per phase** (`interactive` / `semi-autonomous` / `autonomous`): product, architecture, development, quality, documentation, delivery
+2. **Project** (detected or set manually): runtime, language, framework, ORM, test runner, bundler
+3. **Optional agents**: CTO only
+4. **Persistent memory**: enabled, sync_to_native, sync_commits_limit, capture_decisions, capture_commits, retention_days
 5. **Compliance**: style, lint, format_on_save
-6. **Интеграции**: git, ci, deploy
-7. **Личность**: sarcasm_level (1-5), verbosity, language, celebrate_wins, call_out_bad_practices
+6. **Integrations**: git, ci, deploy
+7. **Personality**: language, verbosity
 
-Используй AskUserQuestion, чтобы спросить, какую секцию изменить, через **навигируемое
-главное меню**. Не придумывай это меню вручную, если можно этого избежать: опирайся
-на каноничные функции из `core/config_loader.py`
-(`build_config_section_summaries()` и `build_config_section_menu()`), чтобы
-описания каждой секции брались из реальной эффективной конфигурации, а не
-из текста, восстановленного в промпте. После каждого изменения обновляй
-файл `.local.md`.
+Use AskUserQuestion to ask which section to change, through a **navigable main menu**. Do not build this menu by hand if you can avoid it: use the canonical functions from `core/config_loader.py` (`build_config_section_summaries()` and `build_config_section_menu()`), so each section description comes from the real effective configuration, not from text rebuilt in the prompt. Update the `.local.md` file after each change.
 
-Перед сохранением построй **preview до/после** затронутой секции.
-Не импровизируй этот diff прозой, если можно этого избежать: опирайся на
-`build_config_section_change_preview()`, чтобы подтвердить, что реально меняется, и
-обнаружить no-op до перезаписи файла.
+Before saving, build a **before/after preview** of the affected section. Do not improvise this diff in prose if you can avoid it: use `build_config_section_change_preview()` to confirm what actually changes and to detect a no-op before you overwrite the file.
 
-Когда пользователь подтвердит, не собирай цикл «загрузить → применить →
-сохранить» вручную: опирайся на `update_config_section()` или
-`update_project_config_section()`, чтобы сохранить только затронутую секцию,
-не потеряв заметки, стабильный порядок и каноничные ключи.
+When the user confirms, do not build the "load → apply → save" loop by hand: use `update_config_section()` or `update_project_config_section()` to save only the affected section without losing notes, stable order and canonical keys.
 
-Не переписывай frontmatter «вручную», если можно этого избежать: опирайся на
-каноничные функции из `core/config_loader.py` (`render_config_markdown()`,
-`save_config()`, `save_project_config()` и `apply_config_section_update()`), чтобы
-сохранить стабильный порядок, каноничные ключи и чистый round-trip с
-`load_config()`.
+Do not rewrite the frontmatter by hand if you can avoid it: use the canonical functions from `core/config_loader.py` (`render_config_markdown()`, `save_config()`, `save_project_config()` and `apply_config_section_update()`) to keep stable order, canonical keys and a clean round-trip with `load_config()`.
 
-Если у проекта нет конфигурации и в текущем каталоге есть файлы, выполни автоматическое определение стека и покажи результаты пользователю для подтверждения. Если это первая сессия проекта, может оказаться, что SessionStart уже создал `.claude/alfred-dev.local.md` с автономностью по фазам `autonomous` и включённой памятью.
+If the project has no configuration and the current directory has files, run automatic stack detection and show the results to the user for confirmation. On the first project session, SessionStart may already have created `.claude/alfred-dev.local.md` with `autonomous` autonomy for all phases and memory enabled.
 
-## Секция опциональных агентов
+## Optional agents section
 
-Runtime поддерживает только **CTO**. Не предлагай data-engineer, github-manager,
-copywriter, librarian и остальной каталог 0.6.
+The runtime supports only **CTO**. Do not offer data-engineer, github-manager, copywriter, librarian or the rest of the 0.6 catalog.
 
-| Агент | Роль | Когда полезен |
-|-------|------|---------------|
-| **cto** | CTO | Внешнее ревью готовой фичи через Greptile CLI. Включён по умолчанию. Работает только на закрытии качества `feature` и на финальном аудите `ship` |
+| Agent | Role | When useful |
+|-------|------|-------------|
+| **cto** | CTO | External review of a finished feature through Greptile CLI. Disabled by default. Runs only at the `feature` quality close and the `ship` final audit |
 
-Используй каноничное меню из `core/optional_agents.py`
-(`build_optional_agent_group_menu`) с единственной группой `Аудит`.
+Use the canonical menu from `core/optional_agents.py` (`build_optional_agent_group_menu`) with the single group `Аудит`.
 
 ```text
 AskUserQuestion({
@@ -107,40 +77,37 @@ AskUserQuestion({
 })
 ```
 
-Сохраняй только этот ключ. Значение по умолчанию `true`:
+Save only this key. The default is `false`:
 
 ```yaml
 optional_agents:
-  cto: true
+  cto: false
 ```
 
-Если пользователь выключает CTO, запиши `cto: false`.
+If the user enables CTO, write `cto: true`.
 
-## Секция постоянной памяти
+## Persistent memory section
 
-Постоянная память хранит решения, gate, handoff, UAT и коммиты, сделанные
-в сессии Alfred. Она не импортирует старую историю Git и не наполняет
-UI операционными советами. Для обращения к ней используй MCP-инструменты `alfred-memory`
-или `/alfred-dev:memory-ui`.
+Persistent memory stores decisions, gates, handoffs, UAT and commits made in an Alfred session. It does not import old Git history and does not fill the UI with operational tips. To access it, use the `alfred-memory` MCP tools or `/alfred-dev:memory-ui`.
 
-### Шаг 1: проверить текущее состояние
+### Step 1: check the current state
 
-Сначала прочитай эффективную конфигурацию и проверь `memory.enabled`:
+First read the effective configuration and check `memory.enabled`:
 
-- **Если `memory.enabled` равен `true` и существует `.claude/alfred-memory.db`**: прочитай статистику MCP-инструментом `memory_stats` и покажи компактную сводку: число решений, зарегистрированных коммитов, итераций и дату самой старой записи. Укажи, что память **активна**.
-- **Если `memory.enabled` равен `true`, но БД ещё нет**: укажи, что память **настроена как активная** и что база данных будет инициализирована при следующем запуске или как только она понадобится runtime.
-- **Если `memory.enabled` равен `false`**: укажи, что память **неактивна**, хотя в `.claude/alfred-memory.db` могут существовать исторические данные.
+- **If `memory.enabled` is `true` and `.claude/alfred-memory.db` exists**: read statistics with the MCP tool `memory_stats` and show a compact summary: number of decisions, logged commits, iterations and the date of the oldest record. State that memory is **active**.
+- **If `memory.enabled` is `true` but the DB does not exist yet**: state that memory is **configured as active** and that the database will be initialized on the next run or when the runtime needs it.
+- **If `memory.enabled` is `false`**: state that memory is **inactive**, although historical data can exist in `.claude/alfred-memory.db`.
 
-### Шаг 2: спросить пользователя
+### Step 2: ask the user
 
-Используй AskUserQuestion, чтобы спросить пользователя, хочет ли он включить или выключить постоянную память. Представь варианты чётко:
+Use AskUserQuestion to ask whether the user wants to enable or disable persistent memory. Present the options clearly:
 
-- **Включить**: Alfred будет регистрировать проектные решения, gate, handoff, UAT и коммиты сессии.
-- **Выключить**: ничего нового регистрироваться не будет. Существующие данные сохраняются, но Alfred не будет ни собирать их, ни использовать в работе.
+- **Включить**: Alfred will log project decisions, gates, handoffs, UAT and session commits.
+- **Выключить**: nothing new is logged. Existing data is kept, but Alfred does not collect or use it.
 
-### Шаг 3: применить конфигурацию
+### Step 3: apply the configuration
 
-Если пользователь выбирает **включить** память, запиши (или обнови) секцию `memory:` во frontmatter `.claude/alfred-dev.local.md` с этими значениями:
+If the user chooses to **enable** memory, write (or update) the `memory:` section in the `.claude/alfred-dev.local.md` frontmatter with these values:
 
 ```yaml
 memory:
@@ -152,16 +119,16 @@ memory:
   retention_days: 365
 ```
 
-Если пользователь выбирает **выключить** память, обнови секцию до:
+If the user chooses to **disable** memory, update the section to:
 
 ```yaml
 memory:
   enabled: false
 ```
 
-### Шаг 4: подтвердить
+### Step 4: confirm
 
-Сообщи пользователю результат:
+Tell the user the result:
 
-- Если включили: подтверди, что будет регистрироваться только полезное (решения, gate, handoff, UAT, коммиты сессии).
-- Если выключили: подтверди, что память неактивна, но существующие данные не удаляются.
+- If enabled: confirm that only useful items are logged (decisions, gates, handoffs, UAT, session commits).
+- If disabled: confirm that memory is inactive, but existing data is not deleted.

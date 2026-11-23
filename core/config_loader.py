@@ -89,7 +89,7 @@ _SECURITY_PHASES = ("architecture", "quality", "delivery")
 # - project: project metadata (detect_stack fills it)
 # - compliance: compliance and style rules
 # - integrations: enabled external services
-# - personality: agent tone and sarcasm level
+# - personality: reply language and verbosity
 # - notes: free user text with extra preferences
 
 DEFAULT_CONFIG = {
@@ -113,14 +113,11 @@ DEFAULT_CONFIG = {
         "deploy": False,
     },
     "personality": {
-        "sarcasm_level": 3,
         "verbosity": "normal",
         "language": "ru",
-        "celebrate_wins": True,
-        "call_out_bad_practices": True,
     },
     # Optional agents: predefined agents that the user enables per project.
-    # The catalog sets the default per agent (CTO is on).
+    # The catalog sets the default per agent (CTO is off).
     # /alfred-dev:config changes them per project.
     "optional_agents": build_optional_agent_flags(),
     "memory": dict(DEFAULT_MEMORY_CONFIG),
@@ -796,7 +793,6 @@ def _describe_config_section(
         personality = config.get("personality", {})
         summary = (
             f"язык={personality.get('language', 'ru')}, "
-            f"сарказм={personality.get('sarcasm_level', 3)}/5, "
             f"подробность={personality.get('verbosity', 'normal')}."
         )
         details = [

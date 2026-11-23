@@ -57,22 +57,22 @@ class TestPmCommandWrappers(unittest.TestCase):
     def test_discuss_uses_helper_without_reopening_the_interview(self):
         command = _read("commands/discuss.md")
         self.assertIn('python3 .claude/alfred-continuity.py discuss "$PWD" --raw "$ARGUMENTS"', command)
-        self.assertIn("фокус, объём, риск, ключевой открытый вопрос и", command)
-        self.assertIn("НЕ оборачивай это вторым интервью", command)
+        self.assertIn("focus, scope, risk, the key open question and", command)
+        self.assertIn("DO NOT wrap it in a second interview", command)
 
     def test_verify_uses_helper_first_and_does_not_rewrap(self):
         command = _read("commands/uat.md")
         self.assertIn('python3 .claude/alfred-continuity.py verify "$PWD" --raw "$ARGUMENTS"', command)
-        self.assertIn("Если helper возвращает валидный ответ, используй его как итоговый ответ", command)
-        self.assertIn("НЕ добавляй второй слой сводки", command)
+        self.assertIn("If the helper returns a valid answer, use it as the final answer", command)
+        self.assertIn("DO NOT add a second summary layer", command)
 
     def test_search_uses_helper(self):
         command = _read("commands/search.md")
         self.assertNotIn("allow-stop-once", command)
         self.assertIn('python3 .claude/alfred-continuity.py search "$PWD" --raw "$ARGUMENTS"', command)
-        self.assertIn("даже", command)
-        self.assertIn("совпадений нет", command)
-        self.assertIn("НЕ используй `AskUserQuestion`", command)
+        self.assertIn("even when", command)
+        self.assertIn("there are no matches", command)
+        self.assertIn("DO NOT use `AskUserQuestion`", command)
         self.assertIn(".claude/alfred-memory.db", command)
 
     def test_sync_github_uses_helper(self):
@@ -81,7 +81,7 @@ class TestPmCommandWrappers(unittest.TestCase):
         self.assertIn('python3 .claude/alfred-continuity.py sync-github "$PWD" --raw "$ARGUMENTS"', command)
         self.assertIn(".claude/alfred-github-sync.json", command)
         self.assertIn("docs/project/github-sync.md", command)
-        self.assertIn("используй его как итоговый ответ и закончи", command)
+        self.assertIn("use it as the final answer and end", command)
 
 
 class TestPluginManifestIncludesPmCommands(unittest.TestCase):

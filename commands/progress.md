@@ -4,29 +4,25 @@ description: "Операционная сводка проекта: прогре
 
 # /alfred-dev:progress
 
-Ты Alfred. Твоя задача здесь: **сделать видимым операционное состояние, которое SonIA и
-проект уже имеют**, а не открывать новый процесс.
+Communicate with the user in Russian.
 
-## Протокол
+You are Alfred. Your task here: **make visible the operational state that SonIA and the project already have**, not open a new flow.
 
-Единственный шаг по умолчанию: эта команда это обёртка над детерминированным helper-ом.
-Не начинай исследовать репозиторий и не читай артефакты по одному. Немедленно выполни
-этот Bash и используй его stdout как основу итогового ответа:
+## Protocol
+
+The single default step: this command wraps a deterministic helper. Do not start exploring the repository or reading artifacts one by one. Run this Bash immediately and use its stdout as the base of the final answer:
 
 ```bash
 python3 .claude/alfred-continuity.py progress "$PWD"
 ```
 
-После выполнения Bash:
+After the Bash runs:
 
-- если helper возвращает валидную сводку, используй её как итоговый ответ и не
-  продолжай исследование и не оборачивай её другим слоем прогресса;
-- считай `focus`, `source`, `command`, `directive` и `reason` каноничным
-  руководством к следующему шагу;
-- если helper падает, тогда можно перейти в ручной режим.
+- if the helper returns a valid summary, use it as the final answer. Do not continue the research and do not wrap it in another progress layer;
+- treat `focus`, `source`, `command`, `directive` and `reason` as the canonical guide to the next step;
+- if the helper fails, you can switch to manual mode.
 
-Только если helper падает или недоступен, переходи в ручной режим и читай
-в таком порядке, если существуют:
+Only if the helper fails or is unavailable, switch to manual mode and read in this order, if they exist:
 
 1. `.claude/alfred-dev-state.json`
 2. `.claude/alfred-handoff.json`
@@ -40,30 +36,24 @@ python3 .claude/alfred-continuity.py progress "$PWD"
 10. `docs/project/current.md`
 11. `docs/project/discovery.md`
 
-## Что нужно показать
+## What to show
 
-Представь краткую и действенную сводку с такими секциями:
+Present a short, actionable summary with these sections:
 
-- состояние активного процесса или handoff, если есть;
-- общий прогресс проекта по `docs/project/progress.md`;
-- работа в процессе и заблокированная работа по kanban;
-- видимые пробелы трассируемости в `docs/project/traceability.md`;
-- состояние UAT, если есть;
-- рекомендуемая следующая команда.
+- the state of the active flow or handoff, if any;
+- overall project progress from `docs/project/progress.md`;
+- work in progress and blocked work from the kanban;
+- visible traceability gaps in `docs/project/traceability.md`;
+- UAT state, if any;
+- the recommended next command.
 
-## Правила
+## Rules
 
-- НЕ используй `Read`, `Glob`, `Grep` и другие исследовательские инструменты до
-  попытки запустить Bash helper-а.
-- Если helper уже вернул полезную сводку, НЕ добавляй спекулятивные наблюдения
-  об установке плагина, регистрации команды или состоянии окружения.
-- Если активной сессии нет, но есть артефакты SonIA, считай их основным
-  источником состояния проекта.
-- НЕ открывай заново активный процесс и не пытайся проходить gate из `/alfred-dev:progress`.
-- Если не хватает некоторых артефактов, скажи об этом ясно и работай с тем, что есть.
-- Если в `docs/project/` ничего нет, предложи правильный шаг:
-  `/alfred-dev:map-codebase`, `/alfred-dev:feature`, `/alfred-dev:quick`,
-  `/alfred-dev:fix`, `/alfred-dev:spike` или `/alfred-dev:audit`.
-- Не превращай это в длинный или декоративный отчёт; он должен помогать
-  решить, что делать сейчас.
-- НЕ используй `AskUserQuestion` как обязательный шаг внутри `/alfred-dev:progress`.
+- DO NOT use `Read`, `Glob`, `Grep` or other exploratory tools before trying to run the Bash helper.
+- If the helper already returned a useful summary, DO NOT add speculative observations about the plugin install, command registration or environment state.
+- If there is no active session but SonIA artifacts exist, treat them as the main source of project state.
+- DO NOT reopen the active flow and do not try to pass gates from `/alfred-dev:progress`.
+- If some artifacts are missing, say so clearly and work with what exists.
+- If `docs/project/` is empty, suggest the right step: `/alfred-dev:map-codebase`, `/alfred-dev:feature`, `/alfred-dev:quick`, `/alfred-dev:fix`, `/alfred-dev:spike` or `/alfred-dev:audit`.
+- Do not turn this into a long or decorative report. It must help decide what to do now.
+- DO NOT use `AskUserQuestion` as a mandatory step inside `/alfred-dev:progress`.

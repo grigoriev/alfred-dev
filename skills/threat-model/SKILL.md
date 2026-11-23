@@ -1,74 +1,76 @@
 ---
 name: threat-model
-description: "Использовать для моделирования угроз по методологии STRIDE. Также: анализ угроз, STRIDE, поверхность атаки, векторы атаки, threat modeling, моделирование угроз."
+description: "Use for STRIDE threat modeling: threat analysis, attack surface, attack vectors. Triggers: анализ угроз, STRIDE, поверхность атаки, векторы атаки, моделирование угроз."
 ---
 
-# Моделирование угроз STRIDE
+# STRIDE threat modeling
 
-## Резюме
+Communicate with the user in Russian.
 
-Этот skill применяет методологию STRIDE для выявления и классификации угроз безопасности в системе. STRIDE это модель, разработанная Microsoft, которая делит угрозы на шесть типов и даёт системный framework, чтобы ничего не упустить.
+## Summary
 
-Моделирование угроз лучше всего проводить в начале разработки (когда исправлять дешевле), но оно также полезно как периодическое упражнение для существующих систем.
+This skill applies STRIDE to identify and classify security threats in a system. STRIDE is a Microsoft model that splits threats into six types and gives a systematic framework so nothing is missed.
 
-## Процесс
+Threat modeling works best early in development (fixes are cheaper), but it is also useful as a periodic exercise for existing systems.
 
-1. **Определить компоненты системы.** Перечислить все значимые элементы:
+## Process
 
-   - Приложения и сервисы.
-   - Базы данных и хранилища данных.
-   - API и внешние интерфейсы.
-   - Инфраструктура (серверы, сети, балансировщики).
-   - Пользователи и роли.
-   - Потоки данных между компонентами.
+1. **Identify system components.** List all significant elements:
 
-2. **Построить диаграмму потоков данных (DFD).** Нарисовать в Mermaid потоки данных между компонентами, отметив границы доверия (trust boundaries). Угрозы обычно концентрируются там, где данные пересекают границу доверия.
+   - Applications and services.
+   - Databases and data stores.
+   - APIs and external interfaces.
+   - Infrastructure (servers, networks, load balancers).
+   - Users and roles.
+   - Data flows between components.
 
-3. **Применить STRIDE к каждому компоненту.** Для каждого элемента диаграммы оценить шесть категорий:
+2. **Build a data flow diagram (DFD).** Draw data flows between components in Mermaid and mark trust boundaries. Threats usually concentrate where data crosses a trust boundary.
 
-   | Категория | Описание | Ключевой вопрос |
+3. **Apply STRIDE to each component.** For each diagram element, assess six categories:
+
+   | Category | Description | Key question |
    |-----------|----------|-----------------|
-   | **S**poofing (подмена) | Атакующий выдаёт себя за другого пользователя или систему. | Как проверяется личность в этой точке? |
-   | **T**ampering (подделка) | Атакующий изменяет данные при передаче или хранении. | Как гарантируется целостность данных? |
-   | **R**epudiation (отказ от авторства) | Пользователь отрицает, что выполнил действие. | Есть ли надёжный журнал аудита? |
-   | **I**nformation Disclosure (утечка информации) | Чувствительные данные становятся доступны тем, кто не должен их видеть. | Какие данные раскрываются и кому? |
-   | **D**enial of Service (отказ в обслуживании) | Система становится недоступной для легитимных пользователей. | Какие ресурсы можно исчерпать? |
-   | **E**levation of Privilege (повышение привилегий) | Пользователь получает права, которые ему не положены. | Как применяются средства контроля доступа? |
+   | **S**poofing | An attacker poses as another user or system. | How is identity verified at this point? |
+   | **T**ampering | An attacker changes data in transit or at rest. | How is data integrity ensured? |
+   | **R**epudiation | A user denies performing an action. | Is there a reliable audit log? |
+   | **I**nformation Disclosure | Sensitive data becomes visible to those who must not see it. | What data is exposed and to whom? |
+   | **D**enial of Service | The system becomes unavailable to legitimate users. | Which resources can be exhausted? |
+   | **E**levation of Privilege | A user gains rights they must not have. | How are access controls enforced? |
 
-4. **Классифицировать каждую угрозу по риску.** Использовать матрицу вероятности и влияния:
+4. **Classify each threat by risk.** Use a likelihood and impact matrix:
 
-   - **Вероятность:** высокая (легко эксплуатировать, атакующему не нужна высокая квалификация) / средняя / низкая (требует внутреннего доступа и специальных знаний).
-   - **Влияние:** критическое (потеря данных, брешь в безопасности) / высокое (прерывание сервиса) / среднее (частичная деградация) / низкое (мелкое неудобство).
+   - **Likelihood:** high (easy to exploit, no special attacker skill needed) / medium / low (needs insider access and special knowledge).
+   - **Impact:** critical (data loss, security breach) / high (service interruption) / medium (partial degradation) / low (minor inconvenience).
 
-5. **Предложить меры по снижению для каждой угрозы.** Меры должны быть конкретными и выполнимыми:
+5. **Propose a mitigation for each threat.** Mitigations must be specific and actionable:
 
-   - Нет: «улучшить безопасность».
-   - Да: «внедрить rate limiting 100 запросов/минуту на endpoint логина».
+   - No: «улучшить безопасность».
+   - Yes: «внедрить rate limiting 100 запросов/минуту на endpoint логина».
 
-6. **Приоритизировать по соотношению риск/усилия.** Меры с высоким влиянием и малыми усилиями идут первыми. Меры с низким влиянием и большими усилиями документируются, но откладываются.
+6. **Prioritize by risk/effort.** High-impact, low-effort mitigations go first. Low-impact, high-effort mitigations are documented but deferred.
 
-7. **Задокументировать модель.** Каноническое место: `docs/project/threat-model.md`.
-   Если файла нет, создай его через `sync-project-docs`. Исходи из реальных компонентов и
-   потоков, а не из общего списка. Используй `templates/threat-model.md`
-   как форму. Замени `<!-- alfred-doc:scaffold -->` на
+7. **Document the model.** Canonical location: `docs/project/threat-model.md`.
+   If the file does not exist, create it with `sync-project-docs`. Base it on real components and
+   flows, not a generic list. Use `templates/threat-model.md`
+   as the form. Replace `<!-- alfred-doc:scaffold -->` with
    `<!-- alfred-doc:filled -->`.
 
-## Критерии успеха
+## Success criteria
 
-- Все компоненты системы оценены по 6 категориям STRIDE.
-- Угрозы классифицированы по вероятности и влиянию.
-- У каждой угрозы есть хотя бы одна предложенная мера.
-- Меры приоритизированы по соотношению риск/усилия.
-- Модель находится в `docs/project/threat-model.md` с маркером `filled`.
-- Угрозы и меры записаны в память проекта.
+- All system components are assessed against the 6 STRIDE categories.
+- Threats are classified by likelihood and impact.
+- Each threat has at least one proposed mitigation.
+- Mitigations are prioritized by risk/effort.
+- The model is in `docs/project/threat-model.md` with the `filled` marker.
+- Threats and mitigations are recorded in project memory.
 
-## Шаг памяти
+## Memory step
 
-Записать выявленные угрозы и предложенные меры в память проекта через `memory_log_decision`. Это позволяет отслеживать состояние мер между сессиями и замечать новые поверхности атаки по мере развития системы.
+Record the identified threats and proposed mitigations in project memory with `memory_log_decision`. This tracks mitigation status across sessions and helps spot new attack surfaces as the system evolves.
 
-## Чего НЕ делать
+## Do NOT
 
-- Не моделировать угрозы абстрактно, не зная реальной архитектуры системы. Модель должна исходить из конкретных компонентов и потоков данных, а не из общего списка.
-- Не ограничиваться техническими угрозами. Организационные угрозы (социальная инженерия, физический доступ, инсайдеры) тоже важны, если система работает с чувствительными данными.
-- Не оставлять модель угроз статичным документом. Её нужно пересматривать при изменении архитектуры, добавлении интеграций или развёртывании в новом окружении.
-- Не предлагать расплывчатые меры вроде «улучшить безопасность». Каждая мера должна быть конкретной, реализуемой и проверяемой.
+- Do not model threats in the abstract without knowing the real architecture. Base the model on concrete components and data flows, not a generic list.
+- Do not limit the model to technical threats. Organizational threats (social engineering, physical access, insiders) also matter if the system handles sensitive data.
+- Do not leave the threat model static. Review it when the architecture changes, integrations are added, or it is deployed to a new environment.
+- Do not propose vague mitigations like «улучшить безопасность». Each mitigation must be specific, implementable and verifiable.

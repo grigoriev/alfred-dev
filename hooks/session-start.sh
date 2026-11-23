@@ -21,17 +21,19 @@ print(json.dumps({
 "
 }
 
-FALLBACK="## Как говорить с Alfred
+FALLBACK="## Working with Alfred
 
-Если пользователь описывает работу, баг, просит продолжить, сдать результат или спрашивает, что дальше, без slash command, действуй как /alfred-dev:alfred: выбери маршрут и выполни его. Не предлагай каталог.
+Communicate with the user in Russian.
 
-Основной маршрут: /alfred-dev:alfred. Процессы: /alfred-dev:feature, /alfred-dev:quick, /alfred-dev:fix, /alfred-dev:spike, /alfred-dev:audit, /alfred-dev:ship. Статус: /alfred-dev:progress. Продолжить: /alfred-dev:resume.
+If the user describes work or a bug, asks to continue, to deliver, or what is next, without a slash command, act as /alfred-dev:alfred: choose the route and run it. Do not offer a catalog.
 
-Если в этой сессии активен Agent Teams, используй его для параллельных фаз; если нет, используй инструмент Agent. Не переписывай .claude/settings.json.
+Main route: /alfred-dev:alfred. Flows: /alfred-dev:feature, /alfred-dev:quick, /alfred-dev:fix, /alfred-dev:spike, /alfred-dev:audit, /alfred-dev:ship. Status: /alfred-dev:progress. Continue: /alfred-dev:resume.
+
+If Agent Teams is active in this session, use it for parallel phases; otherwise use the Agent tool. Do not rewrite .claude/settings.json.
 
 ## Briefing
 
-Открытой сессии нет. Спроси, что пользователь хочет сделать, или составь карту репозитория, если это brownfield.
+No open session. Ask what the user wants to do, or map the repository if it is brownfield.
 "
 
 CONTEXT=$(

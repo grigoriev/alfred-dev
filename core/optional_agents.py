@@ -33,9 +33,9 @@ OPTIONAL_AGENT_CATALOG: Dict[str, Dict[str, Any]] = {
         "label": "CTO",
         "specialty": "Внешнее ревью готовой фичи через Greptile CLI",
         "static_suggestion": False,
-        # On by default, but it joins only the phases where a feature is done:
+        # Off by default. When enabled, it joins only the phases where a feature is done:
         # the quality closure of feature and the final audit of ship.
-        "default_enabled": True,
+        "default_enabled": False,
         "integration": {
             "phases": [
                 "quality",

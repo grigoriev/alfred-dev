@@ -4,46 +4,46 @@ description: "Ставит текущую работу на паузу и ост
 
 # /alfred-dev:pause
 
-Ты Alfred. Ты собираешься поставить текущую сессию на паузу, не потеряв нить.
+Communicate with the user in Russian.
 
-## Протокол
+You are Alfred. You are about to pause the current session without losing the thread.
 
-Сначала выполни детерминированный helper плагина:
+## Protocol
+
+First run the deterministic plugin helper:
 
 ```bash
 python3 .claude/alfred-continuity.py pause "$PWD"
 ```
 
-Если он возвращает полезный вывод, используй его как итоговый ответ и закончи.
-Не оборачивай его во вторую сводку: helper уже показывает процесс, фазу, gate,
-handoff и следующее действие.
+If it returns useful output, use it as the final answer and end. Do not wrap it in a second summary: the helper already shows the flow, phase, gate, handoff and next action.
 
-Только если helper падает, переходи в ручной режим:
+Only if the helper fails, switch to manual mode:
 
-1. Прочитай `.claude/alfred-dev-state.json`.
-2. Если его нет или сессия уже завершена, скажи об этом ясно и НЕ выдумывай handoff.
-3. Если есть активная сессия:
-   - опиши команду, описание, текущую фазу и завершённые фазы;
-   - определи ожидающий gate;
-   - определи конкретный следующий шаг для продолжения.
-4. Запиши эти артефакты:
+1. Read `.claude/alfred-dev-state.json`.
+2. If it does not exist or the session is already completed, say so clearly and DO NOT invent a handoff.
+3. If there is an active session:
+   - describe the command, description, current phase and completed phases;
+   - identify the pending gate;
+   - identify the concrete next step to continue.
+4. Write these artifacts:
    - `.claude/alfred-handoff.json`
    - `docs/project/handoff.md`
-   - обнови `.claude/alfred-dev-state.json`, добавив `paused_at` и `paused_via: "/alfred-dev:pause"`
-5. Handoff должен включать как минимум:
-   - активный процесс
-   - описание
-   - текущую фазу и номер
-   - завершённые фазы
-   - ожидающий gate
-   - зарегистрированные артефакты
-   - команду возврата `/alfred-dev:resume`
-   - конкретное следующее действие по возвращении
-6. Поскольку `.claude/*` в Claude Code чувствителен, НЕ используй `Write` или `Edit` для этих файлов. Если действительно приходится переходить в ручной режим, используй Bash.
+   - update `.claude/alfred-dev-state.json`, adding `paused_at` and `paused_via: "/alfred-dev:pause"`
+5. The handoff must include at least:
+   - the active flow
+   - description
+   - current phase and number
+   - completed phases
+   - pending gate
+   - recorded artifacts
+   - the return command `/alfred-dev:resume`
+   - the concrete next action on return
+6. Because `.claude/*` is sensitive in Claude Code, DO NOT use `Write` or `Edit` for these files. If you really must switch to manual mode, use Bash.
 
-## Ограничения
+## Constraints
 
-- НЕ помечай сессию как завершённую.
-- НЕ удаляй `.claude/alfred-dev-state.json`.
-- НЕ делай пустой или общий handoff.
-- Закончи кратким подтверждением, где сохранён handoff.
+- DO NOT mark the session as completed.
+- DO NOT delete `.claude/alfred-dev-state.json`.
+- DO NOT create an empty or generic handoff.
+- End with a short confirmation of where the handoff is saved.

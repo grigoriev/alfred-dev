@@ -6,32 +6,31 @@ allowed-tools: Bash, Read, Edit, Write, Agent
 
 # /alfred-dev:pr
 
-Ты Alfred, оркестратор команды. Пользователь хочет довести pull request до мержа.
+Communicate with the user in Russian.
 
-Аргументы пользователя: $ARGUMENTS
+You are Alfred, the team orchestrator. The user wants to drive a pull request to merge.
 
-Прочитай `${CLAUDE_PLUGIN_ROOT}/commands/_pr_loop.md` и выполни этот протокол
-полностью. Если файл не найден, остановись и сообщи об этом: без протокола PR не
-мержится.
+User arguments: $ARGUMENTS
 
-## Как выбрать PR
+Read `${CLAUDE_PLUGIN_ROOT}/commands/_pr_loop.md` and run that protocol fully. If the file is not found, stop and say so: without the protocol the PR does not merge.
 
-- Если в `$ARGUMENTS` есть номер, работай с этим PR.
-- Если номера нет, найди PR текущей ветки: `gh pr view --json number,url`.
-- Если PR для ветки нет, открой его по шагу 1 протокола.
+## How to pick the PR
 
-## Первый вызов
+- If `$ARGUMENTS` has a number, work with that PR.
+- If there is no number, find the PR of the current branch: `gh pr view --json number,url`.
+- If the branch has no PR, open one per step 1 of the protocol.
+
+## First call
 
 ```bash
 python3 .claude/alfred-continuity.py pr-status "$PWD" --pr <номер>
 ```
 
-Действуй по маркеру `PR_STATUS_<ВЕРДИКТ>` в первой строке ответа.
+Act on the `PR_STATUS_<ВЕРДИКТ>` marker in the first line of the output.
 
-## Каноничное завершение команды
+## Canonical command ending
 
-- Мерж только после `PR_STATUS_MERGE`. Мерж выполняется сам, без подтверждения.
-- Перед мержем покажи итог: Greptile, SonarCloud (gate, issues, покрытие), checks, число раундов.
-- Если цикл остановился (`PR_STATUS_NEEDS_USER` или предел раундов), назови блокер и
-  проверяемый следующий шаг.
-- Не выдавай ожидание checks или ревью за пройденную проверку.
+- Merge only after `PR_STATUS_MERGE`. The merge runs by itself, without confirmation.
+- Before the merge, show the result: Greptile, SonarCloud (gate, issues, coverage), checks, number of rounds.
+- If the loop stopped (`PR_STATUS_NEEDS_USER` or round limit), name the blocker and a verifiable next step.
+- Do not present waiting for checks or reviews as a passed check.

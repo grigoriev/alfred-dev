@@ -2,122 +2,106 @@
 description: "Внутренний общий протокол PR-цикла: ревью людей и ИИ, Greptile, SonarCloud, конфликты и автоматический мерж по зелёному."
 ---
 
-# Протокол PR-цикла
+# PR loop protocol
 
-Этот файл определяет, как Alfred доводит pull request до мержа. Его используют
-`/alfred-dev:pr` и все процессы, которые заканчиваются PR: `feature`, `fix` и
-`quick`. Любое изменение здесь отражается во всех них.
+Communicate with the user in Russian.
 
-## Условия мержа
+This file defines how Alfred drives a pull request to merge. `/alfred-dev:pr` uses it, and so do all flows that end with a PR: `feature`, `fix` and `quick`. Any change here affects all of them.
 
-PR мержится автоматически, без подтверждения, только когда выполнены все условия:
+## Merge conditions
 
-1. Все review threads закрыты, ни одно ревью не запрашивает изменений. Замечания
-   людей и ИИ обрабатываются одинаково. Одобрение человека не обязательно.
-2. Все CI checks зелёные.
-3. Greptile: уверенность 5/5, или 4/5, если Greptile прямо пишет, что именно он не
-   может проверить.
-4. SonarCloud: quality gate зелёный, 0 открытых issues, 100% покрытия нового кода.
-5. Нет конфликтов с базовой веткой.
+The PR merges automatically, without confirmation, only when all conditions are met:
 
-Решение принимает helper, а не ты:
+1. All review threads are resolved, no review requests changes. Human and AI comments are handled the same way. Human approval is not required.
+2. All CI checks are green.
+3. Greptile: confidence 5/5, or 4/5 if Greptile states explicitly what exactly it cannot check.
+4. SonarCloud: quality gate green, 0 open issues, 100% coverage of new code.
+5. No conflicts with the base branch.
+
+The helper decides, not you:
 
 ```bash
 python3 .claude/alfred-continuity.py pr-status "$PWD" --pr <номер>
 ```
 
-Первая строка ответа: маркер `PR_STATUS_<ВЕРДИКТ>`. Действуй только по нему.
+First line of the output: the `PR_STATUS_<ВЕРДИКТ>` marker. Act only on it.
 
-## Шаг 1 -- Открыть PR
+## Step 1 -- Open the PR
 
-Если PR для текущей ветки ещё нет:
+If the current branch has no PR yet:
 
-1. Проверь, что ты не на базовой ветке. Если на ней, создай ветку `type/description`.
-2. Закоммить всю работу. Прогони тесты проекта. Не открывай PR с красными тестами.
-3. Запушь ветку: `git push -u origin <ветка>`. Никогда не используй `--force`.
-4. Создай PR по skill `pr-workflow` (`gh pr create`). Запомни номер PR.
+1. Check that you are not on the base branch. If you are, create a `type/description` branch.
+2. Commit all work. Run the project tests. Do not open a PR with red tests.
+3. Push the branch: `git push -u origin <ветка>`. Never use `--force`.
+4. Create the PR per the `pr-workflow` skill (`gh pr create`). Remember the PR number.
 
-Если `gh` в форке обращается к upstream, выполни `gh repo set-default <owner>/<repo>`.
+If `gh` in a fork targets upstream, run `gh repo set-default <owner>/<repo>`.
 
-## Шаг 2 -- Цикл
+## Step 2 -- Loop
 
-Повторяй, пока helper не вернёт `PR_STATUS_MERGE`, `PR_STATUS_DONE` или
-`PR_STATUS_NEEDS_USER`. Считай раунды исправлений: каждый `FIX` или `CONFLICT` это
-один раунд. Предел: 5 раундов.
+Repeat until the helper returns `PR_STATUS_MERGE`, `PR_STATUS_DONE` or `PR_STATUS_NEEDS_USER`. Count fix rounds: each `FIX` or `CONFLICT` is one round. Limit: 5 rounds.
 
 ### `PR_STATUS_WAIT`
 
-Проверки или ревью ещё не готовы. Ожидание не считается раундом.
+Checks or reviews are not ready yet. Waiting does not count as a round.
 
-- Если в ответе есть раздел «Действие» с `greptile review`, запусти ревью Greptile
-  CLI из корня репозитория: `greptile review --agent --json`. В PR-цикле это делается
-  без отдельного подтверждения: пользователь включил цикл, и ревью входит в него.
-  Эту роль выполняет CTO.
-- Затем жди checks: `gh pr checks <номер> --watch --interval 30`.
-- Снова вызови `pr-status`.
-- Если ожидание длится больше 60 минут, остановись и сообщи пользователю, чего ты ждёшь.
+- If the output has an «Действие» section with `greptile review`, run the Greptile CLI review from the repository root: `greptile review --agent --json`. In the PR loop, do this without separate confirmation: the user enabled the loop, and the review is part of it. CTO fills this role.
+- Then wait for checks: `gh pr checks <номер> --watch --interval 30`.
+- Call `pr-status` again.
+- If waiting takes more than 60 minutes, stop and tell the user what you are waiting for.
 
 ### `PR_STATUS_CONFLICT`
 
-Активируй `senior-dev`:
+Activate `senior-dev`:
 
-1. `git fetch origin` и `git merge origin/<база>` в ветку PR. Не делай rebase и force push.
-2. Разреши каждый конфликт так, чтобы сохранились намерения обеих сторон. Если смысл
-   конфликта неясен, остановись и спроси пользователя.
-3. Прогони все тесты проекта. Закоммить merge и запушь.
-4. Снова вызови `pr-status`.
+1. `git fetch origin` and `git merge origin/<база>` into the PR branch. Do not rebase or force push.
+2. Resolve each conflict so that the intent of both sides is kept. If the meaning of a conflict is unclear, stop and ask the user.
+3. Run all project tests. Commit the merge and push.
+4. Call `pr-status` again.
 
 ### `PR_STATUS_FIX`
 
-Активируй `senior-dev` и передай ему весь раздел «Что исправить» и «Блокеры».
+Activate `senior-dev` and pass it the full «Что исправить» and «Блокеры» sections.
 
-- **Тред ревью** (человек или ИИ): исправь замечание, сначала тест, потом код. Если
-  замечание фактически неверно, ответь в треде с доказательством. Никогда не закрывай
-  тред без исправления или ответа.
-- **Упавший check**: прочитай лог (`gh run view <id> --log-failed`) и исправь причину.
-  Не отключай check и не ослабляй его.
-- **Замечание Greptile**: исправь его так же, как тред.
-- **Greptile ниже 5/5 без отдельных замечаний**: прочитай обоснование уверенности и
-  устрани названные риски.
-- **Issue SonarCloud**: исправь каждое. Не помечай issue как false positive без
-  явного решения пользователя.
-- **Покрытие ниже 100%**: допиши тесты на непокрытые строки нового кода.
+- **Review thread** (human or AI): fix the comment, test first, then code. If the comment is factually wrong, reply in the thread with evidence. Never resolve a thread without a fix or a reply.
+- **Failed check**: read the log (`gh run view <id> --log-failed`) and fix the cause. Do not disable or weaken the check.
+- **Greptile comment**: fix it the same way as a thread.
+- **Greptile below 5/5 without separate comments**: read the confidence rationale and remove the named risks.
+- **SonarCloud issue**: fix each one. Do not mark an issue as false positive without an explicit user decision.
+- **Coverage below 100%**: add tests for uncovered lines of new code.
 
-После исправлений:
+After the fixes:
 
-1. Прогони тесты проекта локально. Закоммить и запушь (без `--force`).
-2. На каждый исправленный тред ответь «Исправлено в `<sha>`» и закрой его:
+1. Run the project tests locally. Commit and push (without `--force`).
+2. Reply «Исправлено в `<sha>`» to each fixed thread and resolve it:
    `gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "<id>"}) { thread { isResolved } } }'`
-3. Снова вызови `pr-status`. После пуша нужен новый ревью Greptile: helper попросит его.
+3. Call `pr-status` again. After a push a new Greptile review is needed: the helper asks for it.
 
 ### `PR_STATUS_MERGE`
 
-Смержи сам, без вопроса:
+Merge yourself, without asking:
 
-1. Узнай разрешённые способы: `gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`.
-2. Предпочитай squash: `gh pr merge <номер> --squash --delete-branch`. Если squash
-   запрещён, используй разрешённый способ.
-3. Никогда не используй `--admin` и не обходи защиту ветки.
-4. Сообщи пользователю: PR, итоговые оценки Greptile и SonarCloud, число раундов.
+1. Get the allowed methods: `gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`.
+2. Prefer squash: `gh pr merge <номер> --squash --delete-branch`. If squash is not allowed, use an allowed method.
+3. Never use `--admin` and never bypass branch protection.
+4. Tell the user: the PR, final Greptile and SonarCloud scores, number of rounds.
 
 ### `PR_STATUS_DONE`
 
-PR уже смержен или закрыт. Сообщи это и закончи.
+The PR is already merged or closed. Say so and stop.
 
 ### `PR_STATUS_NEEDS_USER`
 
-Остановись. Покажи блокеры из ответа helper и спроси пользователя, что делать.
-Примеры: SonarCloud не настроен, `gh` не авторизован, PR в draft.
+Stop. Show the blockers from the helper output and ask the user what to do. Examples: SonarCloud not configured, `gh` not authenticated, PR in draft.
 
-### Предел раундов
+### Round limit
 
-Если после 5 раундов вердикт не `MERGE`, остановись. Покажи последний статус и что
-осталось открытым. Спроси пользователя, продолжать ли.
+If the verdict is not `MERGE` after 5 rounds, stop. Show the last status and what is still open. Ask the user whether to continue.
 
-## Запреты
+## Prohibitions
 
-- Не мержи, пока helper не вернул `PR_STATUS_MERGE`.
-- Не используй `--force`, `--admin` и `--no-verify`.
-- Не ослабляй пороги SonarCloud, правила CI и проверки тестов, чтобы пройти gate.
-- Не закрывай тред без исправления или ответа по существу.
-- Не выдавай ожидание или предположение за проверенный результат.
+- Do not merge until the helper returns `PR_STATUS_MERGE`.
+- Do not use `--force`, `--admin` and `--no-verify`.
+- Do not weaken SonarCloud thresholds, CI rules or test checks to pass a gate.
+- Do not resolve a thread without a fix or a substantive reply.
+- Do not present waiting or an assumption as a verified result.

@@ -13,7 +13,7 @@
 | Если меняешь... | Проверь также... |
 |---|---|
 | `commands/*.md` | `.claude-plugin/plugin.json`, `README.md`, `docs/commands.md`, контрактные тесты |
-| `agents/*.md` | `.claude-plugin/plugin.json`, `docs/agents/`, `docs/personality.md`, связанные тесты |
+| `agents/*.md` | `.claude-plugin/plugin.json`, `docs/agents/`, связанные тесты |
 | `skills/` | `.claude-plugin/plugin.json`, `docs/skills.md`, тесты публичной поверхности |
 | `hooks/` | `hooks/hooks.json`, `docs/hooks.md`, тесты hook |
 | `core/memory*` | `docs/memory.md`, `docs/mcp.md`, тесты памяти/UI/MCP |
