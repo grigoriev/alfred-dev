@@ -133,13 +133,13 @@ uname -s 2>/dev/null || echo "Windows"
 ### macOS / Linux
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/grigoriev/alfred-dev/main/install.sh | bash
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.ps1 | iex
+irm https://raw.githubusercontent.com/grigoriev/alfred-dev/main/install.ps1 | iex
 ```
 
 ### Scope managed

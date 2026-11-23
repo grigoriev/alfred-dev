@@ -2,7 +2,7 @@
 # Alfred Dev -- install script for Claude Code (Windows)
 #
 # Usage:
-#   irm https://raw.githubusercontent.com/grigoriev/alfred-dev/ru/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/grigoriev/alfred-dev/main/install.ps1 | iex
 #
 # What it does:
 #   1. Checks that Claude Code is installed

@@ -7,6 +7,17 @@
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **Основная ветка `main`.** Ветка `ru` переименована в `main`. Установщики и README ссылаются на `main`.
+- **CI по стандарту репозиториев.** `ci.yml` вместо `test.yml`: lint (ShellCheck, actionlint, zizmor), тесты и аудит релиза на Python 3.15, установка плагина на трёх ОС и анализ SonarCloud. Actions закреплены по SHA.
+
+### Added
+
+- `SECURITY.md`, `.editorconfig`, `renovate.json` и `sonar-project.properties`.
+
 ## [0.10.0] - 2026-11-23
 
 Релиз `v0.10.0`.
